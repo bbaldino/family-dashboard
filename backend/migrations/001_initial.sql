@@ -21,12 +21,6 @@ CREATE TABLE IF NOT EXISTS chore_completions (
     UNIQUE(assignment_id, completed_date)
 );
 
-CREATE TABLE IF NOT EXISTS lunch_menus (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    week_of TEXT NOT NULL UNIQUE,
-    menu_data TEXT NOT NULL
-);
-
 CREATE TABLE IF NOT EXISTS google_tokens (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     access_token TEXT NOT NULL,
