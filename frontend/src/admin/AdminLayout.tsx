@@ -34,7 +34,7 @@ export function AdminLayout() {
           ))}
         </nav>
       </header>
-      <main className="p-6 max-w-4xl mx-auto">
+      <main className="p-6">
         <Outlet />
       </main>
     </div>

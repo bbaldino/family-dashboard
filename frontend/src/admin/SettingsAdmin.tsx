@@ -100,7 +100,7 @@ export function SettingsAdmin() {
       </nav>
 
       {/* Content */}
-      <div className="flex-1">
+      <div className="flex-1 max-w-2xl">
         {error && (
           <div className="bg-error/10 text-error rounded-lg p-3 mb-4 text-sm">
             {error}
