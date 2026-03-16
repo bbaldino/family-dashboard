@@ -44,12 +44,25 @@ function formatDate(date: Date): string {
   return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`
 }
 
+const KNOWN_SIDES = ['variety of milk', 'milk', 'salad station']
+
+function isKnownSide(name: string): boolean {
+  return KNOWN_SIDES.includes(name.toLowerCase())
+}
+
 function isEntree(item: NutriSliceDay['menu_items'][number]): boolean {
-  // Items with category "entree" are entrees
   const cat = item.food?.food_category || item.food_category || ''
   if (cat === 'entree') return true
-  // Items with a text field but no food object are top-level entrees (e.g. "Carne Asada Rice Bowl")
+  // Items with a text field but no food object are top-level entrees
   if (item.text && !item.food) return true
+  return false
+}
+
+function isSide(item: NutriSliceDay['menu_items'][number]): boolean {
+  const cat = item.food?.food_category || item.food_category || ''
+  if (['grain', 'vegetable', 'fruit', 'milk', 'condiment'].includes(cat)) return true
+  const name = item.text || item.food?.name || ''
+  if (isKnownSide(name)) return true
   return false
 }
 
@@ -65,7 +78,8 @@ function parseDayMenu(day: NutriSliceDay | undefined): LunchMenuDay | null {
   const entrees: LunchMenuItem[] = []
   const sides: LunchMenuItem[] = []
 
-  for (const item of validItems) {
+  for (let i = 0; i < validItems.length; i++) {
+    const item = validItems[i]
     const name = item.text || item.food?.name || ''
     if (!name) continue
 
@@ -73,12 +87,25 @@ function parseDayMenu(day: NutriSliceDay | undefined): LunchMenuDay | null {
       sides.push({ name })
     } else if (isEntree(item)) {
       entrees.push({ name })
-    } else {
+    } else if (isSide(item)) {
       sides.push({ name })
+    } else {
+      // Ambiguous: first item is likely the primary entree
+      if (i === 0) {
+        entrees.push({ name })
+      } else {
+        // If we haven't found any entrees yet, this is probably an entree
+        // Otherwise default to side
+        if (entrees.length === 0) {
+          entrees.push({ name })
+        } else {
+          sides.push({ name })
+        }
+      }
     }
   }
 
-  // If no entrees detected, treat the first item as an entree
+  // If still no entrees, promote first side
   if (entrees.length === 0 && sides.length > 0) {
     entrees.push(sides.shift()!)
   }
