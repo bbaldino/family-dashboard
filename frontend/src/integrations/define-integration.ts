@@ -12,16 +12,19 @@ export interface IntegrationDef<T extends z.ZodObject<z.ZodRawShape>> {
   name: string
   schema: T
   fields: Record<keyof z.infer<T>, FieldMeta>
+  hasBackend?: boolean
   settingsComponent?: ComponentType
 }
 
+export interface IntegrationApi {
+  get: <R>(path: string) => Promise<R>
+  post: <R>(path: string, body: unknown) => Promise<R>
+  put: <R>(path: string, body: unknown) => Promise<R>
+  del: (path: string) => Promise<void>
+}
+
 export interface Integration<T extends z.ZodObject<z.ZodRawShape>> extends IntegrationDef<T> {
-  api: {
-    get: <R>(path: string) => Promise<R>
-    post: <R>(path: string, body: unknown) => Promise<R>
-    put: <R>(path: string, body: unknown) => Promise<R>
-    del: (path: string) => Promise<void>
-  }
+  api?: IntegrationApi
 }
 
 async function apiRequest<R>(baseUrl: string, path: string, options?: RequestInit): Promise<R> {
@@ -37,10 +40,11 @@ async function apiRequest<R>(baseUrl: string, path: string, options?: RequestIni
 export function defineIntegration<T extends z.ZodObject<z.ZodRawShape>>(
   def: IntegrationDef<T>,
 ): Integration<T> {
-  const baseUrl = `/api/${def.id}`
-  return {
-    ...def,
-    api: {
+  const result: Integration<T> = { ...def }
+
+  if (def.hasBackend !== false) {
+    const baseUrl = `/api/${def.id}`
+    result.api = {
       get: <R>(path: string) => apiRequest<R>(baseUrl, path),
       post: <R>(path: string, body: unknown) =>
         apiRequest<R>(baseUrl, path, {
@@ -56,6 +60,8 @@ export function defineIntegration<T extends z.ZodObject<z.ZodRawShape>>(
         }),
       del: (path: string) =>
         apiRequest<void>(baseUrl, path, { method: 'DELETE' }),
-    },
+    }
   }
+
+  return result
 }

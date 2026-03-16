@@ -4,6 +4,7 @@ import { defineIntegration } from '../define-integration'
 export const doorbellIntegration = defineIntegration({
   id: 'doorbell',
   name: 'Doorbell Camera',
+  hasBackend: false,
   schema: z.object({
     go2rtc_url: z.string().min(1, 'go2rtc URL is required'),
     stream_name: z.string().min(1, 'Stream name is required'),
