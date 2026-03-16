@@ -1,13 +1,16 @@
 import { useRef, useState, useCallback, useEffect } from 'react'
 
-const GO2RTC_URL = import.meta.env.VITE_GO2RTC_URL || 'http://frigate:1984'
-
 interface UseWebRtcStreamOptions {
+  go2rtcUrl: string
   streamName: string
   enabled?: boolean
 }
 
-export function useWebRtcStream({ streamName, enabled = true }: UseWebRtcStreamOptions) {
+export function useWebRtcStream({
+  go2rtcUrl,
+  streamName,
+  enabled = true,
+}: UseWebRtcStreamOptions) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const pcRef = useRef<RTCPeerConnection | null>(null)
   const [isConnected, setIsConnected] = useState(false)
@@ -36,7 +39,7 @@ export function useWebRtcStream({ streamName, enabled = true }: UseWebRtcStreamO
       await pc.setLocalDescription(offer)
 
       const response = await fetch(
-        `${GO2RTC_URL}/api/webrtc?src=${encodeURIComponent(streamName)}`,
+        `${go2rtcUrl}/api/webrtc?src=${encodeURIComponent(streamName)}`,
         {
           method: 'POST',
           body: offer.sdp,
@@ -50,7 +53,7 @@ export function useWebRtcStream({ streamName, enabled = true }: UseWebRtcStreamO
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to connect')
     }
-  }, [streamName])
+  }, [go2rtcUrl, streamName])
 
   const disconnect = useCallback(() => {
     if (pcRef.current) {
