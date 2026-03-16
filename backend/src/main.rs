@@ -11,15 +11,7 @@ async fn main() {
 
     let pool = db::init_pool().await;
 
-    let google_config = dashboard_backend::models::google::GoogleOAuthConfig {
-        client_id: std::env::var("GOOGLE_CLIENT_ID").unwrap_or_default(),
-        client_secret: std::env::var("GOOGLE_CLIENT_SECRET").unwrap_or_default(),
-        redirect_uri: std::env::var("GOOGLE_REDIRECT_URI")
-            .unwrap_or_else(|_| "http://localhost:3042/api/google/callback".to_string()),
-    };
-
-    let api_routes =
-        routes::router(pool.clone(), google_config).merge(integrations::router(pool.clone()));
+    let api_routes = routes::router(pool.clone()).merge(integrations::router(pool.clone()));
 
     // SPA fallback: serve static files, but fall back to index.html for client-side routes
     let spa_service =

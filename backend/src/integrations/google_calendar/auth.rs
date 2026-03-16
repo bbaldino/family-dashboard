@@ -9,40 +9,41 @@ use sqlx::SqlitePool;
 use std::collections::HashMap;
 
 use crate::error::AppError;
-use crate::models::google::GoogleOAuthConfig;
+use crate::integrations::IntegrationConfig;
 
-#[derive(Clone)]
-pub struct GoogleAuthState {
-    pub pool: SqlitePool,
-    pub config: GoogleOAuthConfig,
-}
+use super::INTEGRATION_ID;
 
-pub fn router(pool: SqlitePool, config: GoogleOAuthConfig) -> Router {
-    let state = GoogleAuthState { pool, config };
+pub fn router(pool: SqlitePool) -> Router {
     Router::new()
-        .route("/google/auth", get(google_auth))
-        .route("/google/callback", get(google_callback))
-        .with_state(state)
+        .route("/auth", get(google_auth))
+        .route("/callback", get(google_callback))
+        .with_state(pool)
 }
 
-async fn google_auth(State(state): State<GoogleAuthState>) -> Redirect {
-    let client_id = urlencoding::encode(&state.config.client_id);
-    let redirect_uri = urlencoding::encode(&state.config.redirect_uri);
+async fn google_auth(State(pool): State<SqlitePool>) -> Result<Redirect, AppError> {
+    let config = IntegrationConfig::new(&pool, INTEGRATION_ID);
+    let client_id_raw = config.get("client_id").await?;
+    let redirect_uri_raw = config.get("redirect_uri").await?;
+
+    let client_id = urlencoding::encode(&client_id_raw);
+    let redirect_uri = urlencoding::encode(&redirect_uri_raw);
     let scope = urlencoding::encode("https://www.googleapis.com/auth/calendar.readonly");
 
     let url = format!(
         "https://accounts.google.com/o/oauth2/v2/auth?\
          client_id={}&redirect_uri={}&response_type=code&scope={}&\
-         access_type=offline&prompt=consent",
+         access_type=offline&prompt=consent&\
+         device_id=kitchen-dashboard&device_name=Kitchen+Dashboard",
         client_id, redirect_uri, scope
     );
 
-    Redirect::temporary(&url)
+    Ok(Redirect::temporary(&url))
 }
 
 #[derive(Debug, Deserialize)]
 struct CallbackParams {
-    code: String,
+    code: Option<String>,
+    error: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -53,16 +54,32 @@ struct TokenResponse {
 }
 
 async fn google_callback(
-    State(state): State<GoogleAuthState>,
+    State(pool): State<SqlitePool>,
     Query(params): Query<CallbackParams>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    if let Some(error) = params.error {
+        return Err(AppError::BadRequest(format!(
+            "Google OAuth error: {}",
+            error
+        )));
+    }
+
+    let code = params
+        .code
+        .ok_or_else(|| AppError::BadRequest("Missing authorization code".to_string()))?;
+
+    let config = IntegrationConfig::new(&pool, INTEGRATION_ID);
+    let client_id = config.get("client_id").await?;
+    let client_secret = config.get("client_secret").await?;
+    let redirect_uri = config.get("redirect_uri").await?;
+
     let client = reqwest::Client::new();
 
     let mut form = HashMap::new();
-    form.insert("code", params.code.as_str());
-    form.insert("client_id", state.config.client_id.as_str());
-    form.insert("client_secret", state.config.client_secret.as_str());
-    form.insert("redirect_uri", state.config.redirect_uri.as_str());
+    form.insert("code", code.as_str());
+    form.insert("client_id", client_id.as_str());
+    form.insert("client_secret", client_secret.as_str());
+    form.insert("redirect_uri", redirect_uri.as_str());
     form.insert("grant_type", "authorization_code");
 
     let resp = client
@@ -106,7 +123,7 @@ async fn google_callback(
     .bind(&token_resp.access_token)
     .bind(&refresh_token)
     .bind(&expires_at_str)
-    .execute(&state.pool)
+    .execute(&pool)
     .await?;
 
     Ok(Json(serde_json::json!({"status": "authenticated"})))

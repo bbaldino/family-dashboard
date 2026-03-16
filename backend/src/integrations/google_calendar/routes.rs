@@ -7,25 +7,21 @@ use sqlx::SqlitePool;
 use std::collections::HashMap;
 
 use crate::error::AppError;
-use crate::models::google::*;
+use crate::integrations::IntegrationConfig;
 
-#[derive(Clone)]
-pub struct CalendarState {
-    pub pool: SqlitePool,
-    pub config: GoogleOAuthConfig,
-}
+use super::INTEGRATION_ID;
+use super::models::*;
 
-pub fn router(pool: SqlitePool, config: GoogleOAuthConfig) -> Router {
-    let state = CalendarState { pool, config };
+pub fn router(pool: SqlitePool) -> Router {
     Router::new()
-        .route("/google/calendars", get(list_calendars))
-        .route("/google/events", get(list_events))
-        .with_state(state)
+        .route("/calendars", get(list_calendars))
+        .route("/events", get(list_events))
+        .with_state(pool)
 }
 
-async fn get_valid_token(state: &CalendarState) -> Result<String, AppError> {
+async fn get_valid_token(pool: &SqlitePool) -> Result<String, AppError> {
     let token = sqlx::query_as::<_, GoogleToken>("SELECT * FROM google_tokens WHERE id = 1")
-        .fetch_optional(&state.pool)
+        .fetch_optional(pool)
         .await?
         .ok_or_else(|| AppError::NotFound("Not authenticated with Google".to_string()))?;
 
@@ -40,10 +36,14 @@ async fn get_valid_token(state: &CalendarState) -> Result<String, AppError> {
     }
 
     // Token expired or about to expire, refresh it
+    let config = IntegrationConfig::new(pool, INTEGRATION_ID);
+    let client_id = config.get("client_id").await?;
+    let client_secret = config.get("client_secret").await?;
+
     let client = reqwest::Client::new();
     let mut form = HashMap::new();
-    form.insert("client_id", state.config.client_id.as_str());
-    form.insert("client_secret", state.config.client_secret.as_str());
+    form.insert("client_id", client_id.as_str());
+    form.insert("client_secret", client_secret.as_str());
     form.insert("refresh_token", token.refresh_token.as_str());
     form.insert("grant_type", "refresh_token");
 
@@ -79,16 +79,16 @@ async fn get_valid_token(state: &CalendarState) -> Result<String, AppError> {
     sqlx::query("UPDATE google_tokens SET access_token = ?, expires_at = ? WHERE id = 1")
         .bind(&refresh_resp.access_token)
         .bind(&new_expires_at_str)
-        .execute(&state.pool)
+        .execute(pool)
         .await?;
 
     Ok(refresh_resp.access_token)
 }
 
 async fn list_calendars(
-    State(state): State<CalendarState>,
+    State(pool): State<SqlitePool>,
 ) -> Result<Json<Vec<CalendarListEntry>>, AppError> {
-    let token = get_valid_token(&state).await?;
+    let token = get_valid_token(&pool).await?;
 
     let client = reqwest::Client::new();
     let resp = client
@@ -122,10 +122,10 @@ struct EventsParams {
 }
 
 async fn list_events(
-    State(state): State<CalendarState>,
+    State(pool): State<SqlitePool>,
     Query(params): Query<EventsParams>,
 ) -> Result<Json<Vec<CalendarEvent>>, AppError> {
-    let token = get_valid_token(&state).await?;
+    let token = get_valid_token(&pool).await?;
 
     let calendar_id = urlencoding::encode(&params.calendar);
     let url = format!(
