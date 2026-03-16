@@ -44,16 +44,6 @@ export interface ChoreAssignment {
   completed: boolean
 }
 
-export interface LunchDay {
-  day: string
-  items: string[]
-}
-
-export interface LunchMenu {
-  week_of: string
-  days: LunchDay[]
-}
-
 export interface CalendarListEntry {
   id: string
   summary: string
@@ -96,15 +86,6 @@ export const choresApi = {
     request(`/chores/assignments/${assignmentId}/complete`, {
       method: 'POST',
       body: JSON.stringify({ date }),
-    }),
-}
-
-export const lunchMenuApi = {
-  get: (week: string) => request<LunchMenu>(`/lunch-menu?week=${week}`),
-  upsert: (week: string, data: { days: LunchDay[] }) =>
-    request<LunchMenu>(`/lunch-menu/${week}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
     }),
 }
 
