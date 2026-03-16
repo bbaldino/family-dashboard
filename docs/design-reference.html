@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Hybrid Exploration</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100vw; height: 100vh; overflow: hidden; }
+  body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; background: #f3efe9; color: #2a2520; }
+
+  .picker { width: 100vw; height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
+  .picker h1 { font-size: 32px; font-weight: 400; }
+  .picker-sub { font-size: 14px; color: #8a7f72; max-width: 700px; text-align: center; line-height: 1.5; }
+  .picker-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 900px; }
+  .picker-btn {
+    background: #fff; border: 3px solid #e8e4de; border-radius: 20px;
+    padding: 24px; cursor: pointer; transition: border-color 0.2s, transform 0.15s;
+  }
+  .picker-btn:active { transform: scale(0.97); }
+  .picker-btn:hover { border-color: #c06830; }
+  .picker-btn .label { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+  .picker-btn .desc { font-size: 13px; color: #8a7f72; line-height: 1.5; }
+
+  .back-btn {
+    position: fixed; top: 8px; left: 12px; background: rgba(0,0,0,0.06); border: none;
+    color: #8a7f72; padding: 8px 18px; border-radius: 16px; font-size: 14px; font-weight: 600;
+    cursor: pointer; z-index: 100; display: none;
+  }
+  .dashboard-view { display: none; width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; }
+  .dashboard-view.active { display: block; }
+  .style-tag { position: absolute; top: 8px; right: 16px; padding: 4px 12px; border-radius: 16px; font-size: 11px; font-weight: 600; z-index: 10; background: rgba(0,0,0,0.05); color: #8a7f72; }
+
+  /* Shared tab bar */
+  .tbar {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 52px;
+    background: #fff; border-top: 1px solid #e8e4de;
+    display: flex; align-items: center; justify-content: center; gap: 64px;
+  }
+  .tb { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 4px 16px; border-radius: 10px; }
+  .tb.active { background: rgba(192,104,48,0.1); }
+  .tb-i { font-size: 20px; color: #b0a89e; }
+  .tb.active .tb-i { color: #c06830; }
+  .tb-l { font-size: 10px; font-weight: 500; color: #b0a89e; }
+  .tb.active .tb-l { color: #c06830; }
+
+  /* ===========================================================
+     OPTION H1: Compact Hero + Rich Cards
+     Hero strip across top (time, weather, next event) — not a
+     full column, just a prominent top bar. Cards below have more
+     visual character.
+     =========================================================== */
+  .h1-grid {
+    width: 100vw; height: 100vh; background: #f3efe9;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    grid-template-rows: auto 1fr 1fr;
+    gap: 8px;
+    padding: 8px 10px 58px 10px;
+  }
+
+  .h1-hero {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    background: #fff;
+    border-radius: 14px;
+    padding: 12px 28px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    gap: 20px;
+  }
+  .h1-dark-time { font-size: 52px; font-weight: 200; letter-spacing: -2px; line-height: 1; color: #2a2520; }
+  .h1-dark-date { font-size: 15px; color: #8a7f72; margin-top: 2px; }
+  .h1-dark-sep { width: 1px; height: 48px; background: rgba(0,0,0,0.08); flex-shrink: 0; }
+  .h1-dark-next { flex: 1; }
+  .h1-dark-next-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #c06830; margin-bottom: 4px; }
+  .h1-dark-next-events { display: flex; gap: 12px; }
+  .h1-dark-next-item { display: flex; align-items: center; gap: 8px; }
+  .h1-dark-next-item + .h1-dark-next-item { padding-left: 12px; border-left: 1px solid rgba(0,0,0,0.08); }
+  .h1-dark-next-event { font-size: 16px; font-weight: 500; color: #2a2520; }
+  .h1-dark-next-time { font-size: 13px; font-weight: 600; color: #c06830; white-space: nowrap; }
+  .h1-dark-next-detail { font-size: 11px; color: #b0a89e; }
+  .h1-dark-weather { display: flex; align-items: center; gap: 10px; }
+  .h1-dark-weather-icon { font-size: 30px; }
+  .h1-dark-weather-temp { font-size: 30px; font-weight: 300; color: #2a2520; line-height: 1; }
+  .h1-dark-weather-cond { font-size: 12px; color: #8a7f72; }
+
+  .h1-card {
+    background: #fff; border-radius: 14px; padding: 12px 14px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05); overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .h1-card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 6px; padding-bottom: 6px;
+    border-bottom: 2px solid #f0ece6;
+  }
+  .h1-card-title { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; }
+  .h1-card-badge { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 8px; }
+
+  /* Calendar card */
+  .h1-cal .h1-card-title { color: #c06830; }
+  .h1-cal .h1-card-badge { background: rgba(192,104,48,0.1); color: #c06830; }
+  .h1-cal { grid-row: 2 / 4; }
+  .h1-event { display: flex; gap: 10px; align-items: flex-start; padding: 5px 0; border-bottom: 1px solid #f5f2ed; }
+  .h1-event:last-child { border: none; }
+  .h1-event-time {
+    font-size: 13px; font-weight: 600; color: #c06830; min-width: 64px;
+    padding-top: 1px;
+  }
+  .h1-event-name { font-size: 15px; font-weight: 500; color: #2a2520; }
+  .h1-event-detail { font-size: 12px; color: #b0a89e; margin-top: 1px; }
+  .h1-event-now {
+    background: rgba(192,104,48,0.06); border-radius: 8px; padding: 6px 8px;
+    margin: 0 -8px; border: none;
+  }
+
+  /* Chores card */
+  .h1-chores { grid-row: 2 / 4; }
+  .h1-chores .h1-card-title { color: #4a8a4a; }
+  .h1-chores .h1-card-badge { background: rgba(74,138,74,0.1); color: #4a8a4a; }
+  .h1-child { font-size: 13px; font-weight: 600; color: #7a6a5a; margin-top: 6px; margin-bottom: 3px; display: flex; align-items: center; gap: 6px; }
+  .h1-child:first-of-type { margin-top: 0; }
+  .h1-child-avatar { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; color: white; font-weight: 700; }
+  .h1-chore { display: flex; align-items: center; gap: 10px; padding: 3px 0; }
+  .h1-chk {
+    width: 22px; height: 22px; border-radius: 6px; border: 2px solid #ccc;
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 13px; color: white; transition: all 0.15s;
+  }
+  .h1-chk.done { background: #4a8a4a; border-color: #4a8a4a; }
+  .h1-chore-name { font-size: 15px; font-weight: 400; }
+  .h1-chore-name.done { text-decoration: line-through; color: #c0b8ae; }
+
+  /* Info card (countdowns + sports) */
+  .h1-info .h1-card-title { color: #4a7a9a; }
+  .h1-info .h1-card-badge { background: rgba(74,122,154,0.1); color: #4a7a9a; }
+  .h1-cnt { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #f0ece6; }
+  .h1-cnt:last-child { border: none; }
+  .h1-cnt-label { font-size: 14px; font-weight: 400; }
+  .h1-cnt-num { font-size: 18px; font-weight: 700; color: #4a7a9a; }
+  .h1-cnt-unit { font-size: 11px; font-weight: 400; color: #a0b0c0; margin-left: 2px; }
+  .h1-sports-sep { margin-top: 6px; padding-top: 6px; border-top: 2px solid #f0ece6; }
+  .h1-score-line { display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 14px; }
+  .h1-team-logo { width: 22px; height: 22px; border-radius: 5px; background: #e8f0f8; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: #4a7a9a; }
+  .h1-score-val { font-size: 18px; font-weight: 700; }
+  .h1-vs { font-size: 11px; color: #b0b8c0; margin: 0 2px; }
+  .h1-score-meta { font-size: 11px; color: #a0b0c0; margin-top: 1px; }
+
+  /* Food card */
+  .h1-food .h1-card-title { color: #9a7a30; }
+  .h1-food .h1-card-badge { background: rgba(154,122,48,0.1); color: #9a7a30; }
+  .h1-lunch-day { font-size: 11px; font-weight: 700; color: #b0a070; text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; }
+  .h1-lunch-item { font-size: 14px; padding: 2px 0; display: flex; align-items: center; gap: 6px; }
+  .h1-lunch-dot { width: 5px; height: 5px; border-radius: 50%; background: #d4c080; flex-shrink: 0; }
+  .h1-food-sep { margin-top: 6px; padding-top: 4px; border-top: 1px solid #f0ece6; }
+
+  /* Grocery card */
+  .h1-grocery .h1-card-title { color: #8a5a9a; }
+  .h1-grocery .h1-card-badge { background: rgba(138,90,154,0.1); color: #8a5a9a; }
+  .h1-gitem { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+  .h1-gchk {
+    width: 20px; height: 20px; border-radius: 50%; border: 2px solid #d0c0d8;
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: white;
+  }
+  .h1-gchk.done { background: #b0a0b8; border-color: #b0a0b8; }
+  .h1-gtxt { font-size: 14px; }
+  .h1-gtxt.done { text-decoration: line-through; color: #c0b8c8; }
+
+  /* ===========================================================
+     OPTION H2: Same layout, different card treatment —
+     No colored headers, instead uses subtle left accent bars
+     and warmer, softer overall feel
+     =========================================================== */
+  .h2-grid {
+    width: 100vw; height: 100vh; background: #f5f1ec;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: auto 1fr 1fr;
+    gap: 10px;
+    padding: 10px 12px 62px 12px;
+  }
+
+  .h2-hero {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 24px;
+    background: linear-gradient(135deg, #3d3028 0%, #4a3830 100%);
+    border-radius: 16px; padding: 16px 28px; color: #f0e8df;
+  }
+  .h2-time { font-size: 56px; font-weight: 200; letter-spacing: -2px; line-height: 1; color: #f0e8df; }
+  .h2-date { font-size: 16px; color: #c0b0a0; font-weight: 400; margin-top: 2px; }
+  .h2-sep { width: 1px; height: 48px; background: rgba(255,255,255,0.12); }
+  .h2-next-wrap { flex: 1; }
+  .h2-next-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #d0a878; }
+  .h2-next-event { font-size: 20px; font-weight: 400; color: #f0e8df; margin-top: 2px; }
+  .h2-next-time { font-size: 14px; color: #d0a878; font-weight: 600; margin-top: 2px; }
+  .h2-next-detail { font-size: 12px; color: #a09080; }
+  .h2-weather { display: flex; align-items: center; gap: 10px; }
+  .h2-weather-icon { font-size: 30px; }
+  .h2-weather-temp { font-size: 30px; font-weight: 300; color: #f0e8df; line-height: 1; }
+  .h2-weather-cond { font-size: 12px; color: #a09080; }
+
+  .h2-card {
+    background: #fff; border-radius: 14px; padding: 16px 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05); overflow: hidden;
+    border-left: 4px solid #e8e0d8;
+  }
+  .h2-card-title { font-size: 12px; font-weight: 600; color: #8a7f72; margin-bottom: 10px; letter-spacing: 0.3px; }
+
+  .h2-cal { grid-row: 2 / 4; border-left-color: #d4845a; }
+  .h2-chores { border-left-color: #6aaa6a; }
+  .h2-info { border-left-color: #5a8aba; }
+  .h2-food { border-left-color: #c4a054; }
+  .h2-grocery { border-left-color: #9a70aa; }
+
+  .h2-event { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-bottom: 1px solid #f5f2ed; }
+  .h2-event:last-child { border: none; }
+  .h2-event-time { font-size: 13px; font-weight: 600; color: #c06830; min-width: 60px; }
+  .h2-event-name { font-size: 15px; font-weight: 450; }
+  .h2-event-detail { font-size: 11px; color: #b0a89e; margin-top: 1px; }
+
+  .h2-child { font-size: 12px; font-weight: 600; color: #7a6a5a; margin-top: 10px; margin-bottom: 4px; }
+  .h2-child:first-of-type { margin-top: 0; }
+  .h2-chore { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+  .h2-chk { width: 22px; height: 22px; border-radius: 6px; border: 2px solid #c8c0b8; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; color: white; }
+  .h2-chk.done { background: #6aaa6a; border-color: #6aaa6a; }
+  .h2-chore-name { font-size: 15px; }
+  .h2-chore-name.done { text-decoration: line-through; color: #c0b8ae; }
+
+  .h2-cnt { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid #f0ece6; }
+  .h2-cnt:last-child { border: none; }
+  .h2-cnt-label { font-size: 14px; }
+  .h2-cnt-num { font-size: 17px; font-weight: 700; color: #5a8aba; }
+  .h2-cnt-unit { font-size: 11px; font-weight: 400; color: #a0b0c0; margin-left: 2px; }
+
+  .h2-sports-sep { margin-top: 8px; padding-top: 8px; border-top: 1px solid #f0ece6; }
+  .h2-score-line { display: flex; align-items: center; gap: 5px; padding: 4px 0; font-size: 13px; }
+  .h2-team-logo { width: 20px; height: 20px; border-radius: 4px; background: #e8f0f8; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: #5a8aba; }
+  .h2-score-val { font-size: 17px; font-weight: 700; }
+  .h2-vs { font-size: 11px; color: #b0b8c0; margin: 0 2px; }
+  .h2-score-meta { font-size: 11px; color: #a0b0c0; margin-top: 1px; }
+
+  .h2-lunch-day { font-size: 11px; font-weight: 600; color: #b0a070; text-transform: uppercase; margin-bottom: 4px; }
+  .h2-lunch-item { font-size: 14px; padding: 3px 0; }
+  .h2-food-sep { margin-top: 8px; padding-top: 6px; border-top: 1px solid #f0ece6; }
+
+  .h2-gitem { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+  .h2-gchk { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #c8b8d0; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; color: white; }
+  .h2-gchk.done { background: #b0a0b8; border-color: #b0a0b8; }
+  .h2-gtxt { font-size: 14px; }
+  .h2-gtxt.done { text-decoration: line-through; color: #c0b8c8; }
+
+  .h2-tbar {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 52px;
+    background: #3d3028; display: flex; align-items: center; justify-content: center; gap: 64px;
+  }
+  .h2-tbar .tb-i { color: #806a56; }
+  .h2-tbar .tb.active .tb-i { color: #d0a878; }
+  .h2-tbar .tb-l { color: #806a56; }
+  .h2-tbar .tb.active .tb-l { color: #d0a878; }
+  .h2-tbar .tb.active { background: rgba(208,168,120,0.1); }
+</style>
+</head>
+<body>
+
+<div class="picker" id="picker">
+  <h1>Refined Hybrid Options</h1>
+  <p class="picker-sub">Compact hero strip + richer card designs. Two card style treatments.</p>
+  <div class="picker-grid">
+    <div class="picker-btn" onclick="show('h1')">
+      <div class="label">Colored Headers</div>
+      <div class="desc">Each card has a colored header bar with title and badge. Light top strip with inline "Next Up" highlight. Categories are color-coded in the headers.</div>
+    </div>
+    <div class="picker-btn" onclick="show('h2')">
+      <div class="label">Dark Strip + Left Accents</div>
+      <div class="desc">Dark walnut hero strip with "Next Up" as a prominent element. Cards use colored left borders for category identity. Warmer, more grounded feel.</div>
+    </div>
+  </div>
+</div>
+
+<button class="back-btn" id="backBtn" onclick="showPicker()">&#8592; Back</button>
+
+<!-- H1: Colored Headers -->
+<div class="dashboard-view" id="view-h1">
+  <div class="style-tag">Colored Headers</div>
+  <div class="h1-grid">
+    <div class="h1-hero">
+      <div>
+        <div class="h1-dark-time">10:34</div>
+        <div class="h1-dark-date">Saturday, March 15</div>
+      </div>
+      <div class="h1-dark-sep"></div>
+      <div class="h1-dark-next">
+        <div class="h1-dark-next-label">Right Now</div>
+        <div class="h1-dark-next-events">
+          <div class="h1-dark-next-item">
+            <div>
+              <div class="h1-dark-next-event">Morning standup</div>
+              <div class="h1-dark-next-detail">Zoom</div>
+            </div>
+            <div class="h1-dark-next-time">8:00 AM</div>
+          </div>
+          <div class="h1-dark-next-item">
+            <div>
+              <div class="h1-dark-next-event">Dentist - Emma</div>
+              <div class="h1-dark-next-detail">Dr. Chen, Main St</div>
+            </div>
+            <div class="h1-dark-next-time">9:30 AM</div>
+          </div>
+        </div>
+      </div>
+      <div class="h1-dark-sep"></div>
+      <div class="h1-dark-weather">
+        <span class="h1-dark-weather-icon">&#9925;</span>
+        <div>
+          <div class="h1-dark-weather-temp">52&deg;</div>
+          <div class="h1-dark-weather-cond">Partly Cloudy</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Col 1: Calendar (spans 2 rows) -->
+    <div class="h1-card h1-cal">
+      <div class="h1-card-header">
+        <span class="h1-card-title">Today's Schedule</span>
+        <span class="h1-card-badge">7 events</span>
+      </div>
+      <div class="h1-event h1-event-now"><span class="h1-event-time">9:30 AM</span><div><div class="h1-event-name">Dentist - Emma</div><div class="h1-event-detail">Dr. Chen, Main St</div></div></div>
+      <div class="h1-event"><span class="h1-event-time">11:00 AM</span><div class="h1-event-name">Grocery pickup</div></div>
+      <div class="h1-event"><span class="h1-event-time">2:00 PM</span><div><div class="h1-event-name">Soccer practice</div><div class="h1-event-detail">Riverside Park</div></div></div>
+      <div class="h1-event"><span class="h1-event-time">3:30 PM</span><div class="h1-event-name">Vet appointment</div></div>
+      <div class="h1-event"><span class="h1-event-time">4:30 PM</span><div class="h1-event-name">Piano - Jake</div></div>
+      <div class="h1-event"><span class="h1-event-time">6:00 PM</span><div class="h1-event-name">Family dinner</div></div>
+      <div class="h1-event"><span class="h1-event-time">7:30 PM</span><div class="h1-event-name">Movie night</div></div>
+    </div>
+
+    <!-- Col 2: Chores (spans 2 rows) -->
+    <div class="h1-card h1-chores">
+      <div class="h1-card-header">
+        <span class="h1-card-title">Chores</span>
+        <span class="h1-card-badge">2 of 8 done</span>
+      </div>
+      <div class="h1-child"><span class="h1-child-avatar" style="background:#e88a6a;">E</span> Emma</div>
+      <div class="h1-chore"><span class="h1-chk done">&#10003;</span><span class="h1-chore-name done">Make bed</span></div>
+      <div class="h1-chore"><span class="h1-chk"></span><span class="h1-chore-name">Empty dishwasher</span></div>
+      <div class="h1-chore"><span class="h1-chk"></span><span class="h1-chore-name">Wipe counters</span></div>
+      <div class="h1-chore"><span class="h1-chk"></span><span class="h1-chore-name">Homework folder</span></div>
+      <div class="h1-child"><span class="h1-child-avatar" style="background:#6a9aba;">J</span> Jake</div>
+      <div class="h1-chore"><span class="h1-chk"></span><span class="h1-chore-name">Take out trash</span></div>
+      <div class="h1-chore"><span class="h1-chk"></span><span class="h1-chore-name">Feed the dog</span></div>
+      <div class="h1-chore"><span class="h1-chk done">&#10003;</span><span class="h1-chore-name done">Set the table</span></div>
+      <div class="h1-chore"><span class="h1-chk"></span><span class="h1-chore-name">Pick up toys</span></div>
+    </div>
+
+    <!-- Col 3, Row 1: Countdowns -->
+    <div class="h1-card h1-info">
+      <div class="h1-card-header">
+        <span class="h1-card-title">Coming Up</span>
+      </div>
+      <div class="h1-cnt"><span class="h1-cnt-label">Spring Break</span><span class="h1-cnt-num">12<span class="h1-cnt-unit"> days</span></span></div>
+      <div class="h1-cnt"><span class="h1-cnt-label">Emma's Bday</span><span class="h1-cnt-num">34<span class="h1-cnt-unit"> days</span></span></div>
+      <div class="h1-cnt"><span class="h1-cnt-label">Beach Trip</span><span class="h1-cnt-num">67<span class="h1-cnt-unit"> days</span></span></div>
+    </div>
+
+    <!-- Col 4, Row 1: Sports -->
+    <div class="h1-card h1-info">
+      <div class="h1-card-header">
+        <span class="h1-card-title">Sports</span>
+      </div>
+      <div class="h1-score-line">
+        <span class="h1-team-logo">NE</span> Patriots <span class="h1-vs">vs</span> <span class="h1-team-logo">BUF</span> Bills
+      </div>
+      <div class="h1-score-meta">Sun 1:00 PM &middot; CBS</div>
+      <div class="h1-score-line" style="margin-top: 6px;">
+        <span class="h1-team-logo">BOS</span> Celtics <span class="h1-score-val">112</span><span class="h1-vs">-</span><span class="h1-score-val">98</span> <span class="h1-team-logo">LAL</span> Lakers
+      </div>
+      <div class="h1-score-meta">Final</div>
+    </div>
+
+    <!-- Col 3, Row 2: Lunch Menu -->
+    <div class="h1-card h1-food">
+      <div class="h1-card-header">
+        <span class="h1-card-title">Lunch Menu</span>
+      </div>
+      <div class="h1-lunch-day">Today</div>
+      <div class="h1-lunch-item"><span class="h1-lunch-dot"></span> Chicken tenders</div>
+      <div class="h1-lunch-item"><span class="h1-lunch-dot"></span> Mac &amp; cheese</div>
+      <div class="h1-lunch-item"><span class="h1-lunch-dot"></span> Green beans</div>
+      <div class="h1-lunch-item"><span class="h1-lunch-dot"></span> Fruit cup</div>
+    </div>
+
+    <!-- Col 4, Row 2: Grocery List -->
+    <div class="h1-card h1-grocery">
+      <div class="h1-card-header">
+        <span class="h1-card-title">Grocery List</span>
+        <span class="h1-card-badge">2 of 9</span>
+      </div>
+      <div class="h1-gitem"><span class="h1-gchk done">&#10003;</span><span class="h1-gtxt done">Milk</span></div>
+      <div class="h1-gitem"><span class="h1-gchk done">&#10003;</span><span class="h1-gtxt done">Eggs</span></div>
+      <div class="h1-gitem"><span class="h1-gchk"></span><span class="h1-gtxt">Bread</span></div>
+      <div class="h1-gitem"><span class="h1-gchk"></span><span class="h1-gtxt">Bananas</span></div>
+      <div class="h1-gitem"><span class="h1-gchk"></span><span class="h1-gtxt">Chicken breast</span></div>
+      <div class="h1-gitem"><span class="h1-gchk"></span><span class="h1-gtxt">Pasta sauce</span></div>
+      <div class="h1-gitem"><span class="h1-gchk"></span><span class="h1-gtxt">Yogurt</span></div>
+      <div class="h1-gitem"><span class="h1-gchk"></span><span class="h1-gtxt">Apples</span></div>
+    </div>
+
+    <div class="tbar">
+      <div class="tb active"><span class="tb-i">&#8962;</span><span class="tb-l">Home</span></div>
+      <div class="tb"><span class="tb-i">&#9835;</span><span class="tb-l">Media</span></div>
+      <div class="tb"><span class="tb-i">&#9783;</span><span class="tb-l">Cameras</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- H2: Dark Strip + Left Accents -->
+<div class="dashboard-view" id="view-h2">
+  <div class="style-tag">Dark Strip + Left Accents</div>
+  <div class="h2-grid">
+    <div class="h2-hero">
+      <div>
+        <div class="h2-time">10:34</div>
+        <div class="h2-date">Saturday, March 15</div>
+      </div>
+      <div class="h2-sep"></div>
+      <div class="h2-next-wrap">
+        <div class="h2-next-label">Next Up</div>
+        <div class="h2-next-event">Dentist - Emma</div>
+        <div class="h2-next-time">9:30 AM</div>
+        <div class="h2-next-detail">Dr. Chen, Main St</div>
+      </div>
+      <div class="h2-sep"></div>
+      <div class="h2-weather">
+        <span class="h2-weather-icon">&#9925;</span>
+        <div>
+          <div class="h2-weather-temp">52&deg;</div>
+          <div class="h2-weather-cond">Partly Cloudy</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendar -->
+    <div class="h2-card h2-cal" style="grid-row: 2/4;">
+      <div class="h2-card-title">Today's Schedule</div>
+      <div class="h2-event"><span class="h2-event-time">9:30 AM</span><div><div class="h2-event-name">Dentist - Emma</div><div class="h2-event-detail">Dr. Chen, Main St</div></div></div>
+      <div class="h2-event"><span class="h2-event-time">11:00 AM</span><div class="h2-event-name">Grocery pickup</div></div>
+      <div class="h2-event"><span class="h2-event-time">2:00 PM</span><div><div class="h2-event-name">Soccer practice</div><div class="h2-event-detail">Riverside Park</div></div></div>
+      <div class="h2-event"><span class="h2-event-time">3:30 PM</span><div class="h2-event-name">Vet appointment</div></div>
+      <div class="h2-event"><span class="h2-event-time">4:30 PM</span><div class="h2-event-name">Piano - Jake</div></div>
+      <div class="h2-event"><span class="h2-event-time">6:00 PM</span><div class="h2-event-name">Family dinner</div></div>
+      <div class="h2-event"><span class="h2-event-time">7:30 PM</span><div class="h2-event-name">Movie night</div></div>
+      <div class="h2-event"><span class="h2-event-time">8:30 PM</span><div class="h2-event-name">Kids bedtime</div></div>
+    </div>
+
+    <!-- Chores -->
+    <div class="h2-card h2-chores">
+      <div class="h2-card-title">Chores</div>
+      <div class="h2-child">Emma</div>
+      <div class="h2-chore"><span class="h2-chk done">&#10003;</span><span class="h2-chore-name done">Make bed</span></div>
+      <div class="h2-chore"><span class="h2-chk"></span><span class="h2-chore-name">Empty dishwasher</span></div>
+      <div class="h2-chore"><span class="h2-chk"></span><span class="h2-chore-name">Wipe counters</span></div>
+      <div class="h2-chore"><span class="h2-chk"></span><span class="h2-chore-name">Homework folder</span></div>
+      <div class="h2-child">Jake</div>
+      <div class="h2-chore"><span class="h2-chk"></span><span class="h2-chore-name">Take out trash</span></div>
+      <div class="h2-chore"><span class="h2-chk"></span><span class="h2-chore-name">Feed the dog</span></div>
+      <div class="h2-chore"><span class="h2-chk done">&#10003;</span><span class="h2-chore-name done">Set the table</span></div>
+      <div class="h2-chore"><span class="h2-chk"></span><span class="h2-chore-name">Pick up toys</span></div>
+    </div>
+
+    <!-- Info -->
+    <div class="h2-card h2-info">
+      <div class="h2-card-title">Coming Up</div>
+      <div class="h2-cnt"><span class="h2-cnt-label">Spring Break</span><span class="h2-cnt-num">12<span class="h2-cnt-unit"> days</span></span></div>
+      <div class="h2-cnt"><span class="h2-cnt-label">Emma's Birthday</span><span class="h2-cnt-num">34<span class="h2-cnt-unit"> days</span></span></div>
+      <div class="h2-cnt"><span class="h2-cnt-label">Beach Vacation</span><span class="h2-cnt-num">67<span class="h2-cnt-unit"> days</span></span></div>
+      <div class="h2-sports-sep">
+        <div class="h2-card-title">Sports</div>
+        <div class="h2-score-line">
+          <span class="h2-team-logo">NE</span> Patriots <span class="h2-vs">vs</span> <span class="h2-team-logo">BUF</span> Bills
+        </div>
+        <div class="h2-score-meta">Sun 1:00 PM &middot; CBS</div>
+        <div class="h2-score-line" style="margin-top: 4px;">
+          <span class="h2-team-logo">BOS</span> Celtics <span class="h2-score-val">112</span><span class="h2-vs">-</span><span class="h2-score-val">98</span> <span class="h2-team-logo">LAL</span> Lakers
+        </div>
+        <div class="h2-score-meta">Final</div>
+      </div>
+    </div>
+
+    <!-- Food -->
+    <div class="h2-card h2-food">
+      <div class="h2-card-title">Lunch Menu</div>
+      <div class="h2-lunch-day">Today</div>
+      <div class="h2-lunch-item">Chicken tenders</div>
+      <div class="h2-lunch-item">Mac &amp; cheese</div>
+      <div class="h2-lunch-item">Green beans</div>
+      <div class="h2-lunch-item">Fruit cup</div>
+      <div class="h2-food-sep">
+        <div class="h2-lunch-day">Tomorrow</div>
+        <div class="h2-lunch-item">Turkey sandwich</div>
+        <div class="h2-lunch-item">Tomato soup</div>
+        <div class="h2-lunch-item">Carrot sticks</div>
+      </div>
+    </div>
+
+    <!-- Grocery -->
+    <div class="h2-card h2-grocery">
+      <div class="h2-card-title">Grocery List</div>
+      <div class="h2-gitem"><span class="h2-gchk done">&#10003;</span><span class="h2-gtxt done">Milk</span></div>
+      <div class="h2-gitem"><span class="h2-gchk done">&#10003;</span><span class="h2-gtxt done">Eggs</span></div>
+      <div class="h2-gitem"><span class="h2-gchk"></span><span class="h2-gtxt">Bread</span></div>
+      <div class="h2-gitem"><span class="h2-gchk"></span><span class="h2-gtxt">Bananas</span></div>
+      <div class="h2-gitem"><span class="h2-gchk"></span><span class="h2-gtxt">Chicken breast</span></div>
+      <div class="h2-gitem"><span class="h2-gchk"></span><span class="h2-gtxt">Pasta sauce</span></div>
+      <div class="h2-gitem"><span class="h2-gchk"></span><span class="h2-gtxt">Yogurt</span></div>
+      <div class="h2-gitem"><span class="h2-gchk"></span><span class="h2-gtxt">Apples</span></div>
+      <div class="h2-gitem"><span class="h2-gchk"></span><span class="h2-gtxt">Cheddar cheese</span></div>
+    </div>
+
+    <div class="h2-tbar">
+      <div class="tb active"><span class="tb-i">&#8962;</span><span class="tb-l">Home</span></div>
+      <div class="tb"><span class="tb-i">&#9835;</span><span class="tb-l">Media</span></div>
+      <div class="tb"><span class="tb-i">&#9783;</span><span class="tb-l">Cameras</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function show(id) {
+  document.getElementById('picker').style.display = 'none';
+  ['h1','h2'].forEach(v => document.getElementById('view-' + v).classList.remove('active'));
+  document.getElementById('view-' + id).classList.add('active');
+  document.getElementById('backBtn').style.display = 'block';
+}
+function showPicker() {
+  ['h1','h2'].forEach(v => document.getElementById('view-' + v).classList.remove('active'));
+  document.getElementById('picker').style.display = 'flex';
+  document.getElementById('backBtn').style.display = 'none';
+}
+</script>
+
+</body>
+</html>
