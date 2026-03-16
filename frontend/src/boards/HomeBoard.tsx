@@ -42,7 +42,7 @@ function getHeroEvents(days: CalendarDay[] | null): { name: string; time: string
   })
 }
 
-function WeatherHeroStrip({ heroEvents }: { heroEvents: { name: string; time: string; detail?: string }[] }) {
+function HeroStripWithData({ heroEvents }: { heroEvents: { name: string; time: string; detail?: string }[] }) {
   const weather = useHeroWeather()
   const [showForecast, setShowForecast] = useState(false)
 
@@ -78,7 +78,7 @@ export function HomeBoard() {
     >
       {/* Hero strip -- full width */}
       <div style={{ gridColumn: '1 / -1' }}>
-        <WeatherHeroStrip heroEvents={heroEvents} />
+        <HeroStripWithData heroEvents={heroEvents} />
       </div>
 
       {/* Calendar -- col 1, spans 2 rows */}
