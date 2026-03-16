@@ -4,7 +4,7 @@ export interface NutriSliceDay {
   date: string
   menu_items: Array<{
     text: string
-    food?: { name?: string }
+    food?: { name?: string; food_category?: string }
     food_category?: string
     is_holiday?: boolean
     is_section_title?: boolean
@@ -22,7 +22,8 @@ export interface LunchMenuItem {
 export interface LunchMenuDay {
   date: string
   dayName: string
-  items: LunchMenuItem[]
+  entrees: LunchMenuItem[]
+  sides: LunchMenuItem[]
 }
 
 export interface LunchMenuData {
@@ -43,21 +44,53 @@ function formatDate(date: Date): string {
   return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`
 }
 
+function isEntree(item: NutriSliceDay['menu_items'][number]): boolean {
+  // Items with category "entree" are entrees
+  const cat = item.food?.food_category || item.food_category || ''
+  if (cat === 'entree') return true
+  // Items with a text field but no food object are top-level entrees (e.g. "Carne Asada Rice Bowl")
+  if (item.text && !item.food) return true
+  return false
+}
+
 function parseDayMenu(day: NutriSliceDay | undefined): LunchMenuDay | null {
   if (!day) return null
 
-  const items = day.menu_items
-    .filter((item) => !item.is_holiday && !item.is_section_title)
-    .map((item) => ({ name: item.text || item.food?.name || '' }))
-    .filter((item) => item.name.length > 0)
+  const validItems = day.menu_items.filter(
+    (item) => !item.is_holiday && (item.text || item.food?.name),
+  )
 
-  if (items.length === 0) return null
+  if (validItems.length === 0) return null
+
+  const entrees: LunchMenuItem[] = []
+  const sides: LunchMenuItem[] = []
+
+  for (const item of validItems) {
+    const name = item.text || item.food?.name || ''
+    if (!name) continue
+
+    if (item.is_section_title) {
+      sides.push({ name })
+    } else if (isEntree(item)) {
+      entrees.push({ name })
+    } else {
+      sides.push({ name })
+    }
+  }
+
+  // If no entrees detected, treat the first item as an entree
+  if (entrees.length === 0 && sides.length > 0) {
+    entrees.push(sides.shift()!)
+  }
+
+  if (entrees.length === 0 && sides.length === 0) return null
 
   const date = new Date(day.date + 'T12:00:00')
   return {
     date: day.date,
     dayName: date.toLocaleDateString([], { weekday: 'long' }),
-    items,
+    entrees,
+    sides,
   }
 }
 
