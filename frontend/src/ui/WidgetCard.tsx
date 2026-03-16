@@ -19,17 +19,28 @@ interface WidgetCardProps {
   children: ReactNode
   visible?: boolean
   className?: string
+  onExpand?: () => void
+  onCollapse?: () => void
 }
 
 export function WidgetCard({
   title, category, badge, detail, children, visible = true, className = '',
+  onExpand, onCollapse,
 }: WidgetCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const color = categoryColors[category]
 
   const handleTap = useCallback(() => {
-    if (detail) setIsExpanded(true)
-  }, [detail])
+    if (detail) {
+      setIsExpanded(true)
+      onExpand?.()
+    }
+  }, [detail, onExpand])
+
+  const handleClose = useCallback(() => {
+    setIsExpanded(false)
+    onCollapse?.()
+  }, [onCollapse])
 
   if (!visible) return null
 
@@ -60,7 +71,7 @@ export function WidgetCard({
         <div className="flex-1">{children}</div>
       </div>
       {detail && (
-        <BottomSheet isOpen={isExpanded} onClose={() => setIsExpanded(false)}>
+        <BottomSheet isOpen={isExpanded} onClose={handleClose}>
           {detail}
         </BottomSheet>
       )}
