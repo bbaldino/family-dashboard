@@ -26,54 +26,6 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return response.json()
 }
 
-// --- Interfaces matching backend models ---
-
-export interface Chore {
-  id: number
-  name: string
-  description: string | null
-  created_at: string
-}
-
-export interface ChoreAssignment {
-  id: number
-  chore_id: number
-  chore_name: string
-  child_name: string
-  day_of_week: number
-  completed: boolean
-}
-
-// --- Typed API objects ---
-
-export const choresApi = {
-  list: () => request<Chore[]>('/chores'),
-  create: (data: { name: string; description?: string }) =>
-    request<Chore>('/chores', { method: 'POST', body: JSON.stringify(data) }),
-  update: (id: number, data: { name?: string; description?: string }) =>
-    request<Chore>(`/chores/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    }),
-  delete: (id: number) =>
-    request<void>(`/chores/${id}`, { method: 'DELETE' }),
-  getAssignments: (date: string) =>
-    request<ChoreAssignment[]>(`/chores/assignments?date=${date}`),
-  setAssignments: (
-    choreId: number,
-    assignments: { child_name: string; day_of_week: number }[],
-  ) =>
-    request(`/chores/${choreId}/assignments`, {
-      method: 'PUT',
-      body: JSON.stringify({ assignments }),
-    }),
-  completeAssignment: (assignmentId: number, date: string) =>
-    request(`/chores/assignments/${assignmentId}/complete`, {
-      method: 'POST',
-      body: JSON.stringify({ date }),
-    }),
-}
-
 export const configApi = {
   getAll: () => request<Record<string, string>>('/config'),
   get: (key: string) =>

@@ -1,4 +1,4 @@
-import type { ChoreAssignment } from '@/lib/dashboard-api'
+import type { ChoreAssignment } from './types'
 import type { ChoresByChild } from './useChores'
 
 const childColors: Record<string, string> = {}

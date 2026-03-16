@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button } from '@/ui/Button'
-import { choresApi, type Chore } from '@/lib/dashboard-api'
+import { choresIntegration, type Chore } from '@/integrations/chores'
 
 const DAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'] as const
 
@@ -34,7 +34,7 @@ export function ChoreAdmin() {
     setLoading(true)
     setError(null)
     try {
-      const data = await choresApi.list()
+      const data = await choresIntegration.api.get<Chore[]>('/')
       setChores(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load chores')
@@ -52,7 +52,7 @@ export function ChoreAdmin() {
     if (!newName.trim()) return
     setError(null)
     try {
-      const chore = await choresApi.create({
+      const chore = await choresIntegration.api.post<Chore>('/', {
         name: newName.trim(),
         description: newDescription.trim() || undefined,
       })
@@ -67,7 +67,7 @@ export function ChoreAdmin() {
   async function handleDeleteChore(id: number) {
     setError(null)
     try {
-      await choresApi.delete(id)
+      await choresIntegration.api.del(`/${id}`)
       setChores((prev) => prev.filter((c) => c.id !== id))
       setLocalAssignments((prev) => {
         const next = { ...prev }
@@ -113,7 +113,7 @@ export function ChoreAdmin() {
         child_name: form.childName.trim(),
         day_of_week: day,
       }))
-      await choresApi.setAssignments(choreId, assignments)
+      await choresIntegration.api.put(`/${choreId}/assignments`, { assignments })
 
       // Track locally
       setLocalAssignments((prev) => ({

@@ -1,6 +1,7 @@
 import { useCallback, useState, useEffect, useRef } from 'react'
 import { usePolling, type UsePollingResult } from '@/hooks/usePolling'
-import { choresApi, type ChoreAssignment } from '@/lib/dashboard-api'
+import { choresIntegration } from './config'
+import type { ChoreAssignment } from './types'
 
 export interface ChoresByChild {
   [childName: string]: ChoreAssignment[]
@@ -29,7 +30,7 @@ export function useChores(): ChoresData {
     fetcher: () => {
       const today = new Date()
       const dateStr = today.toISOString().split('T')[0]
-      return choresApi.getAssignments(dateStr)
+      return choresIntegration.api.get<ChoreAssignment[]>(`/assignments?date=${dateStr}`)
     },
     intervalMs: 60 * 1000,
   })
@@ -62,7 +63,7 @@ export function useChores(): ChoresData {
 
       try {
         const today = new Date().toISOString().split('T')[0]
-        await choresApi.completeAssignment(assignmentId, today)
+        await choresIntegration.api.post(`/assignments/${assignmentId}/complete`, { date: today })
         // Refetch to get canonical server state
         await polling.refetch()
       } catch (e) {

@@ -1,4 +1,4 @@
-import type { ChoreAssignment } from '@/lib/dashboard-api'
+import type { ChoreAssignment } from './types'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
 import { ErrorDisplay } from '@/ui/ErrorDisplay'
 import { WidgetCard } from '@/ui/WidgetCard'
