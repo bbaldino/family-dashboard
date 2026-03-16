@@ -1,2 +1,3 @@
-export const HA_URL =
-  import.meta.env.VITE_HA_URL || 'http://homeassistant.local:8123'
+// Only set if VITE_HA_URL is explicitly configured — don't default to a URL
+// that will block the app trying to connect
+export const HA_URL: string | undefined = import.meta.env.VITE_HA_URL || undefined
