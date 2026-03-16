@@ -11,9 +11,10 @@ interface HeroStripProps {
   weatherTemp?: string
   weatherCondition?: string
   weatherIcon?: string
+  onWeatherClick?: () => void
 }
 
-export function HeroStrip({ events = [], weatherTemp, weatherCondition, weatherIcon = '\u2601' }: HeroStripProps) {
+export function HeroStrip({ events = [], weatherTemp, weatherCondition, weatherIcon = '\u2601', onWeatherClick }: HeroStripProps) {
   const [now, setNow] = useState(new Date())
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000)
@@ -51,7 +52,10 @@ export function HeroStrip({ events = [], weatherTemp, weatherCondition, weatherI
         )}
       </div>
       <div className="w-px h-12 bg-separator flex-shrink-0" />
-      <div className="flex items-center gap-[10px]">
+      <div
+        className={`flex items-center gap-[10px] ${onWeatherClick ? 'cursor-pointer active:opacity-70 transition-opacity rounded-xl px-2 py-1 -mx-2 -my-1' : ''}`}
+        onClick={onWeatherClick}
+      >
         <span className="text-[30px]">{weatherIcon}</span>
         <div>
           <div className="text-[30px] font-light leading-none text-text-primary">{weatherTemp || '--'}&deg;</div>
