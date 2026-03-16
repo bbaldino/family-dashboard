@@ -1,4 +1,5 @@
 import { usePolling, type UsePollingResult } from '@/hooks/usePolling'
+import { nutrisliceIntegration } from './config'
 
 export interface NutriSliceDay {
   date: string
@@ -125,12 +126,7 @@ async function fetchMenu(): Promise<LunchMenuData> {
   const now = new Date()
   const dateStr = formatDate(now)
 
-  const resp = await fetch(`/api/nutrislice/menu?date=${encodeURIComponent(dateStr)}`)
-  if (!resp.ok) {
-    throw new Error(`Menu fetch failed: ${resp.status}`)
-  }
-
-  const data: NutriSliceResponse = await resp.json()
+  const data = await nutrisliceIntegration.api.get<NutriSliceResponse>(`/menu?date=${encodeURIComponent(dateStr)}`)
 
   const todayStr = now.toISOString().split('T')[0]
   const tomorrow = new Date(now)
