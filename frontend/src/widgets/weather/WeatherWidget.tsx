@@ -76,7 +76,7 @@ export function WeatherWidget() {
     <WidgetCard
       title="Weather"
       category="info"
-      detail={weather.forecast ? <WeatherDetail weather={weather} /> : undefined}
+      detail={<WeatherDetail weather={weather} />}
     >
       <div className="flex items-center gap-3">
         <span className="text-[36px]">{weather.icon}</span>
