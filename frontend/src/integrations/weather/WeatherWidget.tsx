@@ -1,6 +1,7 @@
 import { WidgetCard } from '@/ui/WidgetCard'
 import { usePolling } from '@/hooks/usePolling'
 import { WeatherDetail } from './WeatherDetail'
+import { weatherIntegration } from './config'
 
 export interface WeatherData {
   temp: number
@@ -28,11 +29,7 @@ const conditionIcons: Record<string, string> = {
 
 export function useWeatherData() {
   return usePolling<WeatherData>({
-    fetcher: async () => {
-      const r = await fetch('/api/weather/current')
-      if (!r.ok) throw new Error(`${r.status}`)
-      return r.json()
-    },
+    fetcher: () => weatherIntegration.api.get<WeatherData>('/current'),
     intervalMs: 15 * 60 * 1000, // 15 minutes
   })
 }

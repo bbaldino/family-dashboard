@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { weatherIntegration } from './config'
 
 interface ForecastDay {
   date: string
@@ -43,13 +44,10 @@ export function WeatherDetail() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/weather/forecast')
-      .then((r) => {
-        if (!r.ok) throw new Error(`${r.status}`)
-        return r.json()
-      })
+    weatherIntegration.api
+      .get<ForecastData>('/forecast')
       .then(setForecast)
-      .catch((e) => setError(e.message))
+      .catch((e: Error) => setError(e.message))
   }, [])
 
   if (error) {

@@ -6,8 +6,7 @@ import { useGoogleCalendar } from '@/widgets/calendar'
 import { CalendarWidget } from '@/widgets/calendar'
 import { useChores, ChoresWidget } from '@/widgets/chores'
 import { LunchMenuWidget } from '@/integrations/nutrislice'
-import { useHeroWeather } from '@/widgets/weather'
-import { WeatherDetail } from '@/widgets/weather/WeatherDetail'
+import { useHeroWeather, WeatherDetail } from '@/integrations/weather'
 import type { CalendarDay } from '@/widgets/calendar/useGoogleCalendar'
 
 function getHeroEvents(days: CalendarDay[] | null): { name: string; time: string; detail?: string }[] {
