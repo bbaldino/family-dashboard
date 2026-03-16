@@ -1,70 +1,70 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/ui/Button'
-import {
-  configApi,
-  googleCalendarApi,
-  type CalendarListEntry,
-} from '@/lib/dashboard-api'
+import { integrations } from '@/integrations/registry'
 
 export function SettingsAdmin() {
-  const [calendars, setCalendars] = useState<CalendarListEntry[]>([])
-  const [selectedCalendars, setSelectedCalendars] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [allConfig, setAllConfig] = useState<Record<string, string>>({})
+  const [localConfig, setLocalConfig] = useState<Record<string, string>>({})
   const [status, setStatus] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
+  const loadConfig = useCallback(async () => {
     try {
-      setLoading(true)
-      setError(null)
-
-      const [cals, config] = await Promise.all([
-        googleCalendarApi.listCalendars().catch(() => [] as CalendarListEntry[]),
-        configApi.getAll(),
-      ])
-
-      setCalendars(cals)
-
-      const saved = config['google_calendar_ids']
-      if (saved) {
-        setSelectedCalendars(JSON.parse(saved))
-      } else if (cals.length > 0) {
-        // Default to primary calendar
-        const primary = cals.find((c) => c.primary)
-        setSelectedCalendars(primary ? [primary.id] : [cals[0].id])
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load settings')
-    } finally {
-      setLoading(false)
+      const resp = await fetch('/api/config')
+      const data = await resp.json()
+      setAllConfig(data)
+      setLocalConfig(data)
+    } catch {
+      setError('Failed to load settings')
     }
   }, [])
 
   useEffect(() => {
-    load()
-  }, [load])
+    loadConfig()
+  }, [loadConfig])
 
-  const toggleCalendar = (id: string) => {
-    setSelectedCalendars((prev) =>
-      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
-    )
+  const handleChange = (fullKey: string, value: string) => {
+    setLocalConfig((prev) => ({ ...prev, [fullKey]: value }))
   }
 
   const handleSave = async () => {
     try {
-      await configApi.set(
-        'google_calendar_ids',
-        JSON.stringify(selectedCalendars),
-      )
+      setError(null)
+
+      // Validate each integration's config via its Zod schema
+      for (const integration of integrations) {
+        if (integration.settingsComponent) continue
+        const prefix = integration.id + '.'
+        const scoped: Record<string, string> = {}
+        for (const [key, value] of Object.entries(localConfig)) {
+          if (key.startsWith(prefix)) {
+            scoped[key.slice(prefix.length)] = value
+          }
+        }
+        const result = integration.schema.safeParse(scoped)
+        if (!result.success) {
+          const firstError = result.error.issues[0]
+          setError(`${integration.name}: ${firstError.message}`)
+          return
+        }
+      }
+
+      // Save changed keys
+      for (const [key, value] of Object.entries(localConfig)) {
+        if (allConfig[key] !== value) {
+          await fetch(`/api/config/${encodeURIComponent(key)}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ value }),
+          })
+        }
+      }
+      setAllConfig({ ...localConfig })
       setStatus('Saved!')
       setTimeout(() => setStatus(null), 2000)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to save')
+    } catch {
+      setError('Failed to save settings')
     }
-  }
-
-  if (loading) {
-    return <div className="text-text-muted">Loading settings...</div>
   }
 
   return (
@@ -72,56 +72,95 @@ export function SettingsAdmin() {
       <h2 className="text-xl font-semibold text-text-primary mb-6">Settings</h2>
 
       {error && (
-        <div className="bg-error/10 text-error rounded-lg p-3 mb-4 text-sm">
-          {error}
-        </div>
+        <div className="bg-error/10 text-error rounded-lg p-3 mb-4 text-sm">{error}</div>
       )}
 
-      {/* Google Calendar Selection */}
-      <div className="bg-bg-card rounded-[var(--radius-card)] p-4 border border-border mb-6">
-        <h3 className="text-sm font-semibold text-text-secondary mb-1">
-          Google Calendars
-        </h3>
-        <p className="text-xs text-text-muted mb-4">
-          Select which calendars to show on the dashboard
-        </p>
+      {integrations.length === 0 && (
+        <p className="text-text-muted text-sm">No integrations configured yet.</p>
+      )}
 
-        {calendars.length === 0 ? (
-          <div className="text-sm text-text-muted">
-            No calendars found. Make sure Google Calendar is connected
-            (visit <code className="bg-bg-primary px-1 rounded">/api/google/auth</code> to authenticate).
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {calendars.map((cal) => (
-              <label
-                key={cal.id}
-                className="flex items-center gap-3 p-3 rounded-lg hover:bg-bg-card-hover cursor-pointer transition-colors"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedCalendars.includes(cal.id)}
-                  onChange={() => toggleCalendar(cal.id)}
-                  className="w-5 h-5 rounded accent-calendar"
-                />
-                <div>
-                  <div className="text-sm font-medium text-text-primary">
-                    {cal.summary}
+      {integrations.map((integration) => {
+        if (integration.settingsComponent) {
+          const CustomSettings = integration.settingsComponent
+          return (
+            <div key={integration.id} className="mb-8">
+              <h3 className="text-lg font-semibold text-text-primary mb-4">
+                {integration.name}
+              </h3>
+              <CustomSettings />
+            </div>
+          )
+        }
+
+        const fieldEntries = Object.entries(integration.fields) as [
+          string,
+          { label: string; type?: string; description?: string },
+        ][]
+
+        return (
+          <div
+            key={integration.id}
+            className="bg-bg-card rounded-[var(--radius-card)] p-4 border border-border mb-6"
+          >
+            <h3 className="text-sm font-semibold text-text-secondary mb-4">
+              {integration.name}
+            </h3>
+            <div className="space-y-3">
+              {fieldEntries.map(([key, meta]) => {
+                const fullKey = `${integration.id}.${key}`
+                const value = localConfig[fullKey] ?? ''
+
+                if (meta.type === 'boolean') {
+                  return (
+                    <label key={key} className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={value === 'true'}
+                        onChange={(e) =>
+                          handleChange(fullKey, String(e.target.checked))
+                        }
+                        className="w-5 h-5 rounded accent-calendar"
+                      />
+                      <div>
+                        <div className="text-sm font-medium text-text-primary">
+                          {meta.label}
+                        </div>
+                        {meta.description && (
+                          <div className="text-xs text-text-muted">
+                            {meta.description}
+                          </div>
+                        )}
+                      </div>
+                    </label>
+                  )
+                }
+
+                return (
+                  <div key={key}>
+                    <label className="text-xs text-text-muted block mb-1">
+                      {meta.label}
+                    </label>
+                    <input
+                      type={meta.type === 'secret' ? 'password' : 'text'}
+                      value={value}
+                      onChange={(e) => handleChange(fullKey, e.target.value)}
+                      placeholder={meta.description}
+                      className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
+                    />
                   </div>
-                  {cal.primary && (
-                    <span className="text-xs text-text-muted">Primary</span>
-                  )}
-                </div>
-              </label>
-            ))}
+                )
+              })}
+            </div>
           </div>
-        )}
-      </div>
+        )
+      })}
 
-      <div className="flex items-center gap-3">
-        <Button onClick={handleSave}>Save Settings</Button>
-        {status && <span className="text-sm text-success">{status}</span>}
-      </div>
+      {integrations.length > 0 && (
+        <div className="flex items-center gap-3">
+          <Button onClick={handleSave}>Save Settings</Button>
+          {status && <span className="text-sm text-success">{status}</span>}
+        </div>
+      )}
     </div>
   )
 }
