@@ -5,6 +5,7 @@ frontend/dist/
 # backend
 backend/target/
 backend/dashboard.db
+backend/.env
 
 # superpowers
 .superpowers/

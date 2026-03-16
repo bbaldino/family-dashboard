@@ -4,6 +4,9 @@ use tower_http::services::{ServeDir, ServeFile};
 
 #[tokio::main]
 async fn main() {
+    // Load .env file if present (won't error if missing)
+    dotenvy::dotenv().ok();
+
     tracing_subscriber::fmt::init();
 
     let pool = db::init_pool().await;
@@ -25,7 +28,11 @@ async fn main() {
         .nest("/api", api_routes)
         .fallback_service(spa_service);
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3042));
+    let port: u16 = std::env::var("PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(3042);
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
     tracing::info!("Listening on {}", addr);
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
