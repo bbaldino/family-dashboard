@@ -1,6 +1,6 @@
 use dashboard_backend::{db, routes};
 use std::net::SocketAddr;
-use tower_http::services::ServeDir;
+use tower_http::services::{ServeDir, ServeFile};
 
 #[tokio::main]
 async fn main() {
@@ -12,16 +12,20 @@ async fn main() {
         client_id: std::env::var("GOOGLE_CLIENT_ID").unwrap_or_default(),
         client_secret: std::env::var("GOOGLE_CLIENT_SECRET").unwrap_or_default(),
         redirect_uri: std::env::var("GOOGLE_REDIRECT_URI")
-            .unwrap_or_else(|_| "http://localhost:3000/api/google/callback".to_string()),
+            .unwrap_or_else(|_| "http://localhost:3042/api/google/callback".to_string()),
     };
 
     let api_routes = routes::router(pool.clone(), google_config);
 
+    // SPA fallback: serve static files, but fall back to index.html for client-side routes
+    let spa_service = ServeDir::new("static")
+        .not_found_service(ServeFile::new("static/index.html"));
+
     let app = axum::Router::new()
         .nest("/api", api_routes)
-        .fallback_service(ServeDir::new("static"));
+        .fallback_service(spa_service);
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 3042));
     tracing::info!("Listening on {}", addr);
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();
