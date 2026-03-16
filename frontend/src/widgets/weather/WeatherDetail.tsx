@@ -1,56 +1,49 @@
 import { useState, useEffect } from 'react'
-import type { WeatherData } from './WeatherWidget'
 
 interface ForecastDay {
-  datetime: string
+  date: string
+  temp_max: number
+  temp_min: number
+  humidity: number
+  pop: number
   condition: string
-  temperature: number
-  templow: number
-  wind_speed?: number
+  description: string
+  icon: string
+}
+
+interface HourlyEntry {
+  dt: number
+  temp: number
+  condition: string
+  description: string
+  icon: string
+  pop: number
+  humidity: number
+}
+
+interface ForecastData {
+  daily: ForecastDay[]
+  hourly: HourlyEntry[]
 }
 
 const conditionIcons: Record<string, string> = {
-  'clear-night': '\u{1F319}',
-  cloudy: '\u2601\uFE0F',
-  fog: '\u{1F32B}\uFE0F',
-  hail: '\u{1F327}\uFE0F',
-  lightning: '\u26A1',
-  'lightning-rainy': '\u26A1',
-  partlycloudy: '\u26C5',
-  pouring: '\u{1F327}\uFE0F',
-  rainy: '\u{1F326}\uFE0F',
-  snowy: '\u2744\uFE0F',
-  'snowy-rainy': '\u{1F328}\uFE0F',
-  sunny: '\u2600\uFE0F',
-  windy: '\u{1F4A8}',
-  'windy-variant': '\u{1F4A8}',
-  exceptional: '\u26A0\uFE0F',
+  Clear: '\u2600\uFE0F',
+  Clouds: '\u2601\uFE0F',
+  Rain: '\u{1F327}\uFE0F',
+  Drizzle: '\u{1F326}\uFE0F',
+  Thunderstorm: '\u26A1',
+  Snow: '\u2744\uFE0F',
+  Mist: '\u{1F32B}\uFE0F',
+  Fog: '\u{1F32B}\uFE0F',
+  Haze: '\u{1F32B}\uFE0F',
 }
 
-const conditionLabels: Record<string, string> = {
-  'clear-night': 'Clear',
-  cloudy: 'Cloudy',
-  fog: 'Foggy',
-  hail: 'Hail',
-  lightning: 'Storms',
-  'lightning-rainy': 'Storms',
-  partlycloudy: 'Partly Cloudy',
-  pouring: 'Heavy Rain',
-  rainy: 'Rainy',
-  snowy: 'Snowy',
-  'snowy-rainy': 'Sleet',
-  sunny: 'Sunny',
-  windy: 'Windy',
-  'windy-variant': 'Windy',
-  exceptional: 'Unusual',
-}
-
-export function WeatherDetail({ weather }: { weather: WeatherData }) {
-  const [forecast, setForecast] = useState<ForecastDay[]>([])
+export function WeatherDetail() {
+  const [forecast, setForecast] = useState<ForecastData | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/ha/weather-forecast')
+    fetch('/api/weather/forecast')
       .then((r) => {
         if (!r.ok) throw new Error(`${r.status}`)
         return r.json()
@@ -59,73 +52,95 @@ export function WeatherDetail({ weather }: { weather: WeatherData }) {
       .catch((e) => setError(e.message))
   }, [])
 
+  if (error) {
+    return <div className="text-[13px] text-error p-4">Failed to load forecast</div>
+  }
+
+  if (!forecast) {
+    return <div className="text-[13px] text-text-muted p-4">Loading forecast...</div>
+  }
+
   return (
     <div>
-      {/* Current conditions */}
-      <div className="flex items-center gap-4 mb-6">
-        <span className="text-[48px]">{weather.icon}</span>
-        <div>
-          <div className="text-[36px] font-light text-text-primary leading-none">
-            {weather.temperature}&deg;
-          </div>
-          <div className="text-[16px] text-text-secondary">{weather.condition}</div>
-          {weather.humidity != null && (
-            <div className="text-[13px] text-text-muted">
-              {weather.humidity}% humidity
+      {/* Hourly forecast (next 24 hours in 3-hour blocks) */}
+      <h3 className="text-[13px] font-bold text-text-secondary uppercase tracking-[0.5px] mb-3">
+        Next 24 Hours
+      </h3>
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+        {forecast.hourly.map((hour) => {
+          const time = new Date(hour.dt * 1000).toLocaleTimeString([], {
+            hour: 'numeric',
+          })
+          const icon = conditionIcons[hour.condition] ?? '\u2601\uFE0F'
+
+          return (
+            <div
+              key={hour.dt}
+              className="flex flex-col items-center gap-1 min-w-[64px] p-2 rounded-xl bg-bg-primary"
+            >
+              <span className="text-[11px] font-medium text-text-secondary">{time}</span>
+              <span className="text-[22px]">{icon}</span>
+              <span className="text-[14px] font-semibold text-text-primary">
+                {Math.round(hour.temp)}&deg;
+              </span>
+              {hour.pop > 0 && (
+                <span className="text-[10px] text-info font-medium">
+                  {Math.round(hour.pop)}%
+                </span>
+              )}
             </div>
-          )}
-        </div>
+          )
+        })}
       </div>
 
-      {/* 5-day forecast */}
+      {/* Daily forecast */}
       <h3 className="text-[13px] font-bold text-text-secondary uppercase tracking-[0.5px] mb-3">
         5-Day Forecast
       </h3>
+      <div className="flex flex-col gap-2">
+        {forecast.daily.map((day, i) => {
+          const date = new Date(day.date + 'T12:00:00')
+          const dayName = i === 0
+            ? 'Today'
+            : i === 1
+              ? 'Tomorrow'
+              : date.toLocaleDateString([], { weekday: 'long' })
+          const icon = conditionIcons[day.condition] ?? '\u2601\uFE0F'
 
-      {error ? (
-        <div className="text-[13px] text-error">Failed to load forecast</div>
-      ) : forecast.length === 0 ? (
-        <div className="text-[13px] text-text-muted">Loading forecast...</div>
-      ) : (
-        <div className="flex gap-3">
-          {forecast.slice(0, 5).map((day, i) => {
-            const date = new Date(day.datetime)
-            const dayName =
-              i === 0
-                ? 'Today'
-                : date.toLocaleDateString([], { weekday: 'short' })
-            const icon = conditionIcons[day.condition] ?? '\u2601\uFE0F'
-            const label = conditionLabels[day.condition] ?? day.condition
-
-            return (
-              <div
-                key={day.datetime}
-                className={`flex-1 flex flex-col items-center gap-2 p-3 rounded-xl ${
-                  i === 0
-                    ? 'bg-[color-mix(in_srgb,var(--color-info)_8%,transparent)]'
-                    : 'bg-bg-primary'
-                }`}
-              >
-                <span className="text-[12px] font-semibold text-text-secondary">
-                  {dayName}
-                </span>
-                <span className="text-[28px]">{icon}</span>
-                <div className="text-center">
-                  <div className="text-[16px] font-semibold text-text-primary">
-                    {Math.round(day.temperature)}&deg;
-                  </div>
-                  <div className="text-[13px] text-text-muted">
-                    {Math.round(day.templow)}&deg;
-                  </div>
-                </div>
-                <span className="text-[11px] text-text-muted text-center">
-                  {label}
+          return (
+            <div
+              key={day.date}
+              className={`flex items-center gap-4 p-3 rounded-xl ${
+                i === 0 ? 'bg-[color-mix(in_srgb,var(--color-info)_6%,transparent)]' : 'bg-bg-primary'
+              }`}
+            >
+              <span className="text-[14px] font-medium text-text-primary w-[100px]">
+                {dayName}
+              </span>
+              <span className="text-[24px]">{icon}</span>
+              <div className="flex-1">
+                <span className="text-[13px] text-text-secondary capitalize">
+                  {day.description}
                 </span>
               </div>
-            )
-          })}
-        </div>
-      )}
+              {day.pop > 0 && (
+                <div className="flex items-center gap-1">
+                  <span className="text-[12px]">💧</span>
+                  <span className="text-[12px] text-info font-medium">{Math.round(day.pop)}%</span>
+                </div>
+              )}
+              <div className="text-right w-[80px]">
+                <span className="text-[15px] font-semibold text-text-primary">
+                  {Math.round(day.temp_max)}&deg;
+                </span>
+                <span className="text-[13px] text-text-muted ml-1">
+                  {Math.round(day.temp_min)}&deg;
+                </span>
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

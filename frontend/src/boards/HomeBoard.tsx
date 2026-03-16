@@ -2,12 +2,11 @@ import { useState } from 'react'
 import { HeroStrip } from '../ui/HeroStrip'
 import { BottomSheet } from '../ui/BottomSheet'
 import { WidgetCard } from '../ui/WidgetCard'
-import { ErrorBoundary } from '../ui/ErrorBoundary'
 import { useGoogleCalendar } from '@/widgets/calendar'
 import { CalendarWidget } from '@/widgets/calendar'
 import { useChores, ChoresWidget } from '@/widgets/chores'
 import { LunchMenuWidget } from '@/widgets/lunch-menu'
-import { useWeatherData } from '@/widgets/weather'
+import { useHeroWeather } from '@/widgets/weather'
 import { WeatherDetail } from '@/widgets/weather/WeatherDetail'
 import type { CalendarDay } from '@/widgets/calendar/useGoogleCalendar'
 
@@ -45,9 +44,8 @@ function getHeroEvents(days: CalendarDay[] | null): { name: string; time: string
   })
 }
 
-// Separate component so useWeatherData can throw without crashing the whole board
 function WeatherHeroStrip({ heroEvents }: { heroEvents: { name: string; time: string; detail?: string }[] }) {
-  const weather = useWeatherData()
+  const weather = useHeroWeather()
   const [showForecast, setShowForecast] = useState(false)
 
   return (
@@ -59,17 +57,11 @@ function WeatherHeroStrip({ heroEvents }: { heroEvents: { name: string; time: st
         weatherIcon={weather?.icon}
         onWeatherClick={() => setShowForecast(true)}
       />
-      {weather && (
-        <BottomSheet isOpen={showForecast} onClose={() => setShowForecast(false)}>
-          <WeatherDetail weather={weather} />
-        </BottomSheet>
-      )}
+      <BottomSheet isOpen={showForecast} onClose={() => setShowForecast(false)}>
+        <WeatherDetail />
+      </BottomSheet>
     </>
   )
-}
-
-function HeroStripFallback({ heroEvents }: { heroEvents: { name: string; time: string; detail?: string }[] }) {
-  return <HeroStrip events={heroEvents} />
 }
 
 export function HomeBoard() {
@@ -88,9 +80,7 @@ export function HomeBoard() {
     >
       {/* Hero strip -- full width */}
       <div style={{ gridColumn: '1 / -1' }}>
-        <ErrorBoundary fallback={<HeroStripFallback heroEvents={heroEvents} />}>
-          <WeatherHeroStrip heroEvents={heroEvents} />
-        </ErrorBoundary>
+        <WeatherHeroStrip heroEvents={heroEvents} />
       </div>
 
       {/* Calendar -- col 1, spans 2 rows */}

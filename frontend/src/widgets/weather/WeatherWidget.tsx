@@ -1,95 +1,76 @@
-import { useHaEntity } from '@/hooks/useHaEntity'
 import { WidgetCard } from '@/ui/WidgetCard'
+import { usePolling } from '@/hooks/usePolling'
 import { WeatherDetail } from './WeatherDetail'
 
-const conditionLabels: Record<string, string> = {
-  'clear-night': 'Clear',
-  cloudy: 'Cloudy',
-  fog: 'Foggy',
-  hail: 'Hail',
-  lightning: 'Thunderstorm',
-  'lightning-rainy': 'Thunderstorm',
-  partlycloudy: 'Partly Cloudy',
-  pouring: 'Heavy Rain',
-  rainy: 'Rainy',
-  snowy: 'Snowy',
-  'snowy-rainy': 'Sleet',
-  sunny: 'Sunny',
-  windy: 'Windy',
-  'windy-variant': 'Windy',
-  exceptional: 'Unusual',
+export interface WeatherData {
+  temp: number
+  feels_like: number
+  temp_min: number
+  temp_max: number
+  humidity: number
+  condition: string
+  description: string
+  icon: string
+  wind_speed: number
 }
 
 const conditionIcons: Record<string, string> = {
-  'clear-night': '\u{1F319}',
-  cloudy: '\u2601\uFE0F',
-  fog: '\u{1F32B}\uFE0F',
-  hail: '\u{1F327}\uFE0F',
-  lightning: '\u26A1',
-  'lightning-rainy': '\u26A1',
-  partlycloudy: '\u26C5',
-  pouring: '\u{1F327}\uFE0F',
-  rainy: '\u{1F326}\uFE0F',
-  snowy: '\u2744\uFE0F',
-  'snowy-rainy': '\u{1F328}\uFE0F',
-  sunny: '\u2600\uFE0F',
-  windy: '\u{1F4A8}',
-  'windy-variant': '\u{1F4A8}',
-  exceptional: '\u26A0\uFE0F',
+  Clear: '\u2600\uFE0F',
+  Clouds: '\u2601\uFE0F',
+  Rain: '\u{1F327}\uFE0F',
+  Drizzle: '\u{1F326}\uFE0F',
+  Thunderstorm: '\u26A1',
+  Snow: '\u2744\uFE0F',
+  Mist: '\u{1F32B}\uFE0F',
+  Fog: '\u{1F32B}\uFE0F',
+  Haze: '\u{1F32B}\uFE0F',
 }
 
-export interface WeatherData {
-  temperature: string
-  condition: string
-  icon: string
-  humidity?: number
-  forecast?: Array<{
-    datetime: string
-    temperature: number
-    condition: string
-  }>
-}
-
-export function useWeatherData(): WeatherData | null {
-  const entity = useHaEntity('weather.home')
-
-  if (!entity) return null
-
-  const state = entity.state as string
-  const attrs = entity.attributes as Record<string, unknown>
-
-  return {
-    temperature: String(attrs.temperature ?? '--'),
-    condition: conditionLabels[state] ?? state,
-    icon: conditionIcons[state] ?? '\u2601\uFE0F',
-    humidity: attrs.humidity as number | undefined,
-    forecast: attrs.forecast as WeatherData['forecast'],
-  }
+export function useWeatherData() {
+  return usePolling<WeatherData>({
+    fetcher: async () => {
+      const r = await fetch('/api/weather/current')
+      if (!r.ok) throw new Error(`${r.status}`)
+      return r.json()
+    },
+    intervalMs: 15 * 60 * 1000, // 15 minutes
+  })
 }
 
 export function WeatherWidget() {
-  const weather = useWeatherData()
+  const { data: weather, isLoading, error } = useWeatherData()
 
-  if (!weather) return null
+  if (isLoading || error || !weather) return null
+
+  const icon = conditionIcons[weather.condition] ?? '\u2601\uFE0F'
 
   return (
     <WidgetCard
       title="Weather"
       category="info"
-      detail={<WeatherDetail weather={weather} />}
+      detail={<WeatherDetail />}
     >
       <div className="flex items-center gap-3">
-        <span className="text-[36px]">{weather.icon}</span>
+        <span className="text-[36px]">{icon}</span>
         <div>
           <div className="text-[28px] font-light leading-none text-text-primary">
-            {weather.temperature}&deg;
+            {Math.round(weather.temp)}&deg;
           </div>
-          <div className="text-[13px] text-text-secondary">{weather.condition}</div>
-          {weather.humidity != null && (
-            <div className="text-[11px] text-text-muted">{weather.humidity}% humidity</div>
-          )}
+          <div className="text-[13px] text-text-secondary capitalize">{weather.description}</div>
+          <div className="text-[11px] text-text-muted">{weather.humidity}% humidity</div>
         </div>
       </div>
     </WidgetCard>
   )
+}
+
+// For HeroStrip — returns simplified weather info
+export function useHeroWeather(): { temperature: string; condition: string; icon: string } | null {
+  const { data } = useWeatherData()
+  if (!data) return null
+  return {
+    temperature: String(Math.round(data.temp)),
+    condition: data.description,
+    icon: conditionIcons[data.condition] ?? '\u2601\uFE0F',
+  }
 }
