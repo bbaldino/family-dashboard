@@ -1,9 +1,6 @@
 import { usePolling, type UsePollingResult } from '@/hooks/usePolling'
-import {
-  googleCalendarApi,
-  configApi,
-  type CalendarEvent,
-} from '@/lib/dashboard-api'
+import { googleCalendarIntegration } from './config'
+import type { CalendarEvent } from './types'
 
 export interface CalendarDay {
   date: Date
@@ -26,8 +23,10 @@ function dayLabel(date: Date, today: Date): string {
 async function fetchCalendarEvents(): Promise<CalendarDay[]> {
   let calendarIds: string[] = []
   try {
-    const config = await configApi.getAll()
-    const saved = config['google_calendar_ids']
+    const allConfig: Record<string, string> = await fetch('/api/config').then(
+      (r) => r.json(),
+    )
+    const saved = allConfig['google-calendar.calendar_ids']
     if (saved) {
       calendarIds = JSON.parse(saved)
     }
@@ -49,7 +48,11 @@ async function fetchCalendarEvents(): Promise<CalendarDay[]> {
 
   const results = await Promise.all(
     calendarIds.map((id) =>
-      googleCalendarApi.listEvents(id, startStr, endStr).catch(() => []),
+      googleCalendarIntegration.api
+        .get<CalendarEvent[]>(
+          `/events?calendar=${encodeURIComponent(id)}&start=${encodeURIComponent(startStr)}&end=${encodeURIComponent(endStr)}`,
+        )
+        .catch(() => []),
     ),
   )
 

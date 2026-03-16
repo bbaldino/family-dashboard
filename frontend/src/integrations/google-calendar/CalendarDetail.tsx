@@ -1,4 +1,4 @@
-import type { CalendarEvent } from '@/lib/dashboard-api'
+import type { CalendarEvent } from './types'
 
 function formatEventTime(event: CalendarEvent): string {
   const start = event.start.dateTime ?? event.start.date

@@ -1,4 +1,4 @@
-import type { CalendarEvent } from '@/lib/dashboard-api'
+import type { CalendarEvent } from './types'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
 import { ErrorDisplay } from '@/ui/ErrorDisplay'
 import { WidgetCard } from '@/ui/WidgetCard'

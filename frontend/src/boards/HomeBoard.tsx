@@ -2,12 +2,11 @@ import { useState } from 'react'
 import { HeroStrip } from '../ui/HeroStrip'
 import { BottomSheet } from '../ui/BottomSheet'
 import { WidgetCard } from '../ui/WidgetCard'
-import { useGoogleCalendar } from '@/widgets/calendar'
-import { CalendarWidget } from '@/widgets/calendar'
+import { useGoogleCalendar, CalendarWidget } from '@/integrations/google-calendar'
+import type { CalendarDay } from '@/integrations/google-calendar'
 import { useChores, ChoresWidget } from '@/widgets/chores'
 import { LunchMenuWidget } from '@/integrations/nutrislice'
 import { useHeroWeather, WeatherDetail } from '@/integrations/weather'
-import type { CalendarDay } from '@/widgets/calendar/useGoogleCalendar'
 
 function getHeroEvents(days: CalendarDay[] | null): { name: string; time: string; detail?: string }[] {
   if (!days) return []

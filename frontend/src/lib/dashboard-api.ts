@@ -44,21 +44,6 @@ export interface ChoreAssignment {
   completed: boolean
 }
 
-export interface CalendarListEntry {
-  id: string
-  summary: string
-  primary?: boolean
-}
-
-export interface CalendarEvent {
-  id: string
-  summary?: string
-  start: { dateTime?: string; date?: string }
-  end: { dateTime?: string; date?: string }
-  description?: string
-  location?: string
-}
-
 // --- Typed API objects ---
 
 export const choresApi = {
@@ -87,14 +72,6 @@ export const choresApi = {
       method: 'POST',
       body: JSON.stringify({ date }),
     }),
-}
-
-export const googleCalendarApi = {
-  listCalendars: () => request<CalendarListEntry[]>('/google/calendars'),
-  listEvents: (calendar: string, start: string, end: string) =>
-    request<CalendarEvent[]>(
-      `/google/events?calendar=${encodeURIComponent(calendar)}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`,
-    ),
 }
 
 export const configApi = {
