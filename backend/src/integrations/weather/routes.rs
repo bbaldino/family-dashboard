@@ -1,23 +1,19 @@
-use axum::{routing::get, Json, Router};
+use axum::Json;
+use axum::extract::State;
+use sqlx::SqlitePool;
 
 use crate::error::AppError;
+use crate::integrations::IntegrationConfig;
 
-pub fn router() -> Router {
-    Router::new()
-        .route("/weather/current", get(get_current))
-        .route("/weather/forecast", get(get_forecast))
-}
+use super::INTEGRATION_ID;
 
-fn get_config() -> Result<(String, String, String), AppError> {
-    let api_key = std::env::var("OPENWEATHER_API_KEY")
-        .map_err(|_| AppError::Internal("OPENWEATHER_API_KEY not configured".to_string()))?;
-    let lat = std::env::var("WEATHER_LAT").unwrap_or_else(|_| "37.2504".to_string());
-    let lon = std::env::var("WEATHER_LON").unwrap_or_else(|_| "-121.9000".to_string());
-    Ok((api_key, lat, lon))
-}
-
-async fn get_current() -> Result<Json<serde_json::Value>, AppError> {
-    let (api_key, lat, lon) = get_config()?;
+pub async fn get_current(
+    State(pool): State<SqlitePool>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let config = IntegrationConfig::new(&pool, INTEGRATION_ID);
+    let api_key = config.get("api_key").await?;
+    let lat = config.get_or("lat", "37.2504").await?;
+    let lon = config.get_or("lon", "-121.9000").await?;
 
     let url = format!(
         "https://api.openweathermap.org/data/2.5/weather?lat={}&lon={}&appid={}&units=imperial",
@@ -60,8 +56,13 @@ async fn get_current() -> Result<Json<serde_json::Value>, AppError> {
     })))
 }
 
-async fn get_forecast() -> Result<Json<serde_json::Value>, AppError> {
-    let (api_key, lat, lon) = get_config()?;
+pub async fn get_forecast(
+    State(pool): State<SqlitePool>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let config = IntegrationConfig::new(&pool, INTEGRATION_ID);
+    let api_key = config.get("api_key").await?;
+    let lat = config.get_or("lat", "37.2504").await?;
+    let lon = config.get_or("lon", "-121.9000").await?;
 
     let url = format!(
         "https://api.openweathermap.org/data/2.5/forecast?lat={}&lon={}&appid={}&units=imperial",
