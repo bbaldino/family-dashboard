@@ -6,20 +6,19 @@ import { CalendarWidget } from '@/widgets/calendar'
 import { useChores, ChoresWidget } from '@/widgets/chores'
 import { LunchMenuWidget } from '@/widgets/lunch-menu'
 import { useWeatherData } from '@/widgets/weather'
-import type { CalendarEvent } from '@/lib/dashboard-api'
+import type { CalendarDay } from '@/widgets/calendar/useGoogleCalendar'
 
-function getHeroEvents(events: CalendarEvent[] | null): { name: string; time: string; detail?: string }[] {
-  if (!events || events.length === 0) return []
+function getHeroEvents(days: CalendarDay[] | null): { name: string; time: string; detail?: string }[] {
+  if (!days) return []
+
+  // Get today's events
+  const today = days.find((d) => d.isToday)
+  if (!today || today.events.length === 0) return []
 
   const now = new Date()
-  const sorted = [...events].sort((a, b) => {
-    const aTime = a.start.dateTime ?? a.start.date ?? ''
-    const bTime = b.start.dateTime ?? b.start.date ?? ''
-    return aTime.localeCompare(bTime)
-  })
 
   // Find current or next events
-  const relevant = sorted.filter((e) => {
+  const relevant = today.events.filter((e) => {
     const end = e.end.dateTime ?? e.end.date
     if (!end) return true
     return new Date(end) > now
@@ -84,7 +83,7 @@ export function HomeBoard() {
       {/* Calendar -- col 1, spans 2 rows */}
       <div style={{ gridRow: '2 / 4' }}>
         <CalendarWidget
-          events={calendar.data}
+          days={calendar.data}
           isLoading={calendar.isLoading}
           error={calendar.error}
           refetch={calendar.refetch}
