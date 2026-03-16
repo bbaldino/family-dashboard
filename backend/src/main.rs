@@ -8,7 +8,7 @@ async fn main() {
 
     let pool = db::init_pool().await;
 
-    let google_config = routes::GoogleOAuthConfig {
+    let google_config = dashboard_backend::models::google::GoogleOAuthConfig {
         client_id: std::env::var("GOOGLE_CLIENT_ID").unwrap_or_default(),
         client_secret: std::env::var("GOOGLE_CLIENT_SECRET").unwrap_or_default(),
         redirect_uri: std::env::var("GOOGLE_REDIRECT_URI")
