@@ -2,7 +2,6 @@ pub mod chores;
 pub mod config;
 pub mod google_auth;
 pub mod google_calendar;
-pub mod ha_proxy;
 pub mod nutrislice;
 pub mod weather;
 
@@ -16,7 +15,6 @@ pub fn router(pool: SqlitePool, google_config: GoogleOAuthConfig) -> Router {
         .merge(chores::router(pool.clone()))
         .merge(nutrislice::router())
         .merge(config::router(pool.clone()))
-        .merge(ha_proxy::router())
         .merge(weather::router())
         .merge(google_auth::router(pool.clone(), google_config.clone()))
         .merge(google_calendar::router(pool.clone(), google_config.clone()))
