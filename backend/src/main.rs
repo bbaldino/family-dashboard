@@ -1,4 +1,4 @@
-use dashboard_backend::{db, routes};
+use dashboard_backend::{db, integrations, routes};
 use std::net::SocketAddr;
 use tower_http::services::{ServeDir, ServeFile};
 
@@ -18,11 +18,12 @@ async fn main() {
             .unwrap_or_else(|_| "http://localhost:3042/api/google/callback".to_string()),
     };
 
-    let api_routes = routes::router(pool.clone(), google_config);
+    let api_routes =
+        routes::router(pool.clone(), google_config).merge(integrations::router(pool.clone()));
 
     // SPA fallback: serve static files, but fall back to index.html for client-side routes
-    let spa_service = ServeDir::new("static")
-        .not_found_service(ServeFile::new("static/index.html"));
+    let spa_service =
+        ServeDir::new("static").not_found_service(ServeFile::new("static/index.html"));
 
     let app = axum::Router::new()
         .nest("/api", api_routes)
