@@ -1,4 +1,4 @@
-use dashboard_backend::{db, integrations, routes};
+use dashboard_backend::{db, integrations};
 use std::net::SocketAddr;
 use tower_http::services::{ServeDir, ServeFile};
 
@@ -11,7 +11,7 @@ async fn main() {
 
     let pool = db::init_pool().await;
 
-    let api_routes = routes::router(pool.clone()).merge(integrations::router(pool.clone()));
+    let api_routes = integrations::router(pool.clone());
 
     // SPA fallback: serve static files, but fall back to index.html for client-side routes
     let spa_service =
