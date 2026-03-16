@@ -1,36 +1,23 @@
 use axum::{
-    Json, Router,
+    Json,
     extract::{Path, Query, State},
     http::StatusCode,
-    routing::{get, post, put},
 };
 use sqlx::SqlitePool;
 use std::collections::HashMap;
 
 use crate::error::AppError;
-use crate::models::chore::*;
 
-pub fn router(pool: SqlitePool) -> Router {
-    Router::new()
-        .route("/chores", get(list_chores).post(create_chore))
-        .route("/chores/{id}", put(update_chore).delete(delete_chore))
-        .route("/chores/{id}/assignments", put(set_assignments))
-        .route("/chores/assignments", get(get_assignments))
-        .route(
-            "/chores/assignments/{id}/complete",
-            post(complete_assignment),
-        )
-        .with_state(pool)
-}
+use super::models::*;
 
-async fn list_chores(State(pool): State<SqlitePool>) -> Result<Json<Vec<Chore>>, AppError> {
+pub async fn list_chores(State(pool): State<SqlitePool>) -> Result<Json<Vec<Chore>>, AppError> {
     let chores = sqlx::query_as::<_, Chore>("SELECT * FROM chores ORDER BY name")
         .fetch_all(&pool)
         .await?;
     Ok(Json(chores))
 }
 
-async fn create_chore(
+pub async fn create_chore(
     State(pool): State<SqlitePool>,
     Json(input): Json<CreateChore>,
 ) -> Result<(StatusCode, Json<Chore>), AppError> {
@@ -44,7 +31,7 @@ async fn create_chore(
     Ok((StatusCode::CREATED, Json(chore)))
 }
 
-async fn update_chore(
+pub async fn update_chore(
     State(pool): State<SqlitePool>,
     Path(id): Path<i64>,
     Json(input): Json<UpdateChore>,
@@ -71,7 +58,7 @@ async fn update_chore(
     Ok(Json(chore))
 }
 
-async fn delete_chore(
+pub async fn delete_chore(
     State(pool): State<SqlitePool>,
     Path(id): Path<i64>,
 ) -> Result<StatusCode, AppError> {
@@ -85,7 +72,7 @@ async fn delete_chore(
     Ok(StatusCode::NO_CONTENT)
 }
 
-async fn set_assignments(
+pub async fn set_assignments(
     State(pool): State<SqlitePool>,
     Path(chore_id): Path<i64>,
     Json(input): Json<SetAssignments>,
@@ -117,7 +104,7 @@ async fn set_assignments(
     Ok(Json(assignments))
 }
 
-async fn get_assignments(
+pub async fn get_assignments(
     State(pool): State<SqlitePool>,
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Json<Vec<AssignmentWithStatus>>, AppError> {
@@ -143,7 +130,7 @@ async fn get_assignments(
     Ok(Json(assignments))
 }
 
-async fn complete_assignment(
+pub async fn complete_assignment(
     State(pool): State<SqlitePool>,
     Path(id): Path<i64>,
     Json(input): Json<CompleteRequest>,

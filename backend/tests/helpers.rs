@@ -16,6 +16,7 @@ pub async fn test_pool() -> SqlitePool {
 
 pub async fn test_app() -> (Router, SqlitePool) {
     let pool = test_pool().await;
-    let app = dashboard_backend::routes::router(pool.clone());
+    let app = dashboard_backend::routes::router(pool.clone())
+        .merge(dashboard_backend::integrations::router(pool.clone()));
     (app, pool)
 }
