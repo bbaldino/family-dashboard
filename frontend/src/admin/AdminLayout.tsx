@@ -3,6 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 const adminTabs = [
   { to: '/admin/chores', label: 'Chores' },
   { to: '/admin/lunch-menu', label: 'Lunch Menu' },
+  { to: '/admin/settings', label: 'Settings' },
 ]
 
 export function AdminLayout() {

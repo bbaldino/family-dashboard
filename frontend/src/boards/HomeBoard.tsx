@@ -61,7 +61,7 @@ function HeroStripFallback({ heroEvents }: { heroEvents: { name: string; time: s
 }
 
 export function HomeBoard() {
-  const calendar = useGoogleCalendar('primary')
+  const calendar = useGoogleCalendar()
   const chores = useChores()
 
   const heroEvents = getHeroEvents(calendar.data)

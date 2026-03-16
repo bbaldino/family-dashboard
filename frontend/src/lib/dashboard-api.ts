@@ -115,3 +115,14 @@ export const googleCalendarApi = {
       `/google/events?calendar=${encodeURIComponent(calendar)}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`,
     ),
 }
+
+export const configApi = {
+  getAll: () => request<Record<string, string>>('/config'),
+  get: (key: string) =>
+    request<{ key: string; value: string }>(`/config/${encodeURIComponent(key)}`),
+  set: (key: string, value: string) =>
+    request<{ key: string; value: string }>(`/config/${encodeURIComponent(key)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ value }),
+    }),
+}

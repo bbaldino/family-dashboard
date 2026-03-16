@@ -6,6 +6,7 @@ import { CamerasBoard } from './boards/CamerasBoard'
 import { AdminLayout } from './admin/AdminLayout'
 import { ChoreAdmin } from './admin/ChoreAdmin'
 import { LunchMenuAdmin } from './admin/LunchMenuAdmin'
+import { SettingsAdmin } from './admin/SettingsAdmin'
 
 export function App() {
   return (
@@ -18,6 +19,7 @@ export function App() {
       <Route path="admin" element={<AdminLayout />}>
         <Route path="chores" element={<ChoreAdmin />} />
         <Route path="lunch-menu" element={<LunchMenuAdmin />} />
+        <Route path="settings" element={<SettingsAdmin />} />
       </Route>
     </Routes>
   )
