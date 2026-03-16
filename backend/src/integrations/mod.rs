@@ -1,11 +1,11 @@
 pub mod config_helpers;
+pub mod nutrislice;
 
 pub use config_helpers::IntegrationConfig;
 
 use axum::Router;
 use sqlx::SqlitePool;
 
-pub fn router(_pool: SqlitePool) -> Router {
-    Router::new()
-    // Integrations will be added here as they migrate
+pub fn router(pool: SqlitePool) -> Router {
+    Router::new().nest("/nutrislice", nutrislice::router(pool.clone()))
 }
