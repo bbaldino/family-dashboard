@@ -1,5 +1,6 @@
 import { HeroStrip } from '../ui/HeroStrip'
 import { WidgetCard } from '../ui/WidgetCard'
+import { ErrorBoundary } from '../ui/ErrorBoundary'
 import { useGoogleCalendar } from '@/widgets/calendar'
 import { CalendarWidget } from '@/widgets/calendar'
 import { useChores, ChoresWidget } from '@/widgets/chores'
@@ -42,10 +43,26 @@ function getHeroEvents(events: CalendarEvent[] | null): { name: string; time: st
   })
 }
 
+// Separate component so useWeatherData can throw without crashing the whole board
+function WeatherHeroStrip({ heroEvents }: { heroEvents: { name: string; time: string; detail?: string }[] }) {
+  const weather = useWeatherData()
+  return (
+    <HeroStrip
+      events={heroEvents}
+      weatherTemp={weather?.temperature}
+      weatherCondition={weather?.condition}
+      weatherIcon={weather?.icon}
+    />
+  )
+}
+
+function HeroStripFallback({ heroEvents }: { heroEvents: { name: string; time: string; detail?: string }[] }) {
+  return <HeroStrip events={heroEvents} />
+}
+
 export function HomeBoard() {
   const calendar = useGoogleCalendar('primary')
   const chores = useChores()
-  const weather = useWeatherData()
 
   const heroEvents = getHeroEvents(calendar.data)
 
@@ -59,12 +76,9 @@ export function HomeBoard() {
     >
       {/* Hero strip -- full width */}
       <div style={{ gridColumn: '1 / -1' }}>
-        <HeroStrip
-          events={heroEvents}
-          weatherTemp={weather?.temperature}
-          weatherCondition={weather?.condition}
-          weatherIcon={weather?.icon}
-        />
+        <ErrorBoundary fallback={<HeroStripFallback heroEvents={heroEvents} />}>
+          <WeatherHeroStrip heroEvents={heroEvents} />
+        </ErrorBoundary>
       </div>
 
       {/* Calendar -- col 1, spans 2 rows */}
