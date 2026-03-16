@@ -27,6 +27,7 @@ function groupByChild(assignments: ChoreAssignment[] | null): ChoresByChild {
 
 export function useChores(): ChoresData {
   const polling = usePolling<ChoreAssignment[]>({
+    queryKey: ['chores', 'assignments'],
     fetcher: () => {
       const today = new Date()
       const dateStr = today.toISOString().split('T')[0]

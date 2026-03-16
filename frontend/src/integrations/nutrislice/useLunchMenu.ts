@@ -146,6 +146,7 @@ export type LunchMenuResult = UsePollingResult<LunchMenuData>
 
 export function useLunchMenu(): LunchMenuResult {
   return usePolling<LunchMenuData>({
+    queryKey: ['nutrislice', 'menu'],
     fetcher: fetchMenu,
     intervalMs: 60 * 60 * 1000, // hourly
   })

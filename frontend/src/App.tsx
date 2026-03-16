@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HassConnect } from '@hakit/core'
 import { AppShell } from './app/AppShell'
 import { HomeBoard } from './boards/HomeBoard'
@@ -25,13 +26,30 @@ function AppRoutes() {
   )
 }
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60 * 1000, // Data is fresh for 1 minute
+      gcTime: 10 * 60 * 1000, // Keep unused data in cache for 10 minutes
+      refetchOnWindowFocus: false, // Tablet stays on one page
+      retry: 1,
+    },
+  },
+})
+
 export function App() {
+  const content = (
+    <QueryClientProvider client={queryClient}>
+      <AppRoutes />
+    </QueryClientProvider>
+  )
+
   if (HA_URL) {
     return (
       <HassConnect hassUrl={HA_URL} hassToken={HA_TOKEN}>
-        <AppRoutes />
+        {content}
       </HassConnect>
     )
   }
-  return <AppRoutes />
+  return content
 }

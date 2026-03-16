@@ -99,6 +99,7 @@ async function fetchCalendarEvents(): Promise<CalendarDay[]> {
 
 export function useGoogleCalendar(): CalendarData {
   return usePolling<CalendarDay[]>({
+    queryKey: ['google-calendar', 'events'],
     fetcher: fetchCalendarEvents,
     intervalMs: 5 * 60 * 1000,
   })

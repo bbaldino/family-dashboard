@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useRef } from 'react'
 
 interface UsePollingOptions<T> {
+  queryKey?: string[]
   fetcher: () => Promise<T>
   intervalMs: number
   enabled?: boolean
@@ -13,35 +15,36 @@ export interface UsePollingResult<T> {
   refetch: () => Promise<void>
 }
 
+let queryKeyCounter = 0
+
 export function usePolling<T>({
+  queryKey,
   fetcher,
   intervalMs,
   enabled = true,
 }: UsePollingOptions<T>): UsePollingResult<T> {
-  const [data, setData] = useState<T | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  // Stable ref for the fetcher to avoid query key changes
   const fetcherRef = useRef(fetcher)
   fetcherRef.current = fetcher
 
-  const refetch = useCallback(async () => {
-    try {
-      const result = await fetcherRef.current()
-      setData(result)
-      setError(null)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unknown error')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
+  // Auto-generate a stable query key if none provided
+  const autoKeyRef = useRef<string[]>()
+  if (!autoKeyRef.current) {
+    autoKeyRef.current = queryKey ?? [`polling-${++queryKeyCounter}`]
+  }
+  const key = queryKey ?? autoKeyRef.current
 
-  useEffect(() => {
-    if (!enabled) return
-    refetch()
-    const interval = setInterval(refetch, intervalMs)
-    return () => clearInterval(interval)
-  }, [enabled, intervalMs, refetch])
+  const query = useQuery({
+    queryKey: key,
+    queryFn: () => fetcherRef.current(),
+    refetchInterval: intervalMs,
+    enabled,
+  })
 
-  return { data, error, isLoading, refetch }
+  return {
+    data: query.data ?? null,
+    error: query.error ? (query.error instanceof Error ? query.error.message : 'Unknown error') : null,
+    isLoading: query.isLoading,
+    refetch: async () => { await query.refetch() },
+  }
 }

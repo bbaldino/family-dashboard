@@ -29,6 +29,7 @@ const conditionIcons: Record<string, string> = {
 
 export function useWeatherData() {
   return usePolling<WeatherData>({
+    queryKey: ['weather', 'current'],
     fetcher: () => weatherIntegration.api.get<WeatherData>('/current'),
     intervalMs: 15 * 60 * 1000, // 15 minutes
   })
