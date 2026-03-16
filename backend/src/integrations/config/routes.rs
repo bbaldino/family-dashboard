@@ -1,7 +1,7 @@
 use axum::{
-    extract::{Path, State},
-    routing::{get, put},
     Json, Router,
+    extract::{Path, State},
+    routing::get,
 };
 use sqlx::SqlitePool;
 use std::collections::HashMap;
@@ -10,8 +10,8 @@ use crate::error::AppError;
 
 pub fn router(pool: SqlitePool) -> Router {
     Router::new()
-        .route("/config", get(get_all_config))
-        .route("/config/{key}", get(get_config).put(set_config))
+        .route("/", get(get_all_config))
+        .route("/{key}", get(get_config).put(set_config))
         .with_state(pool)
 }
 
@@ -36,7 +36,10 @@ async fn get_config(
 
     match row {
         Some((value,)) => Ok(Json(serde_json::json!({ "key": key, "value": value }))),
-        None => Err(AppError::NotFound(format!("Config key '{}' not found", key))),
+        None => Err(AppError::NotFound(format!(
+            "Config key '{}' not found",
+            key
+        ))),
     }
 }
 
