@@ -3,6 +3,9 @@ import { Button } from '@/ui/Button'
 import { integrations } from '@/integrations/registry'
 
 export function SettingsAdmin() {
+  const [selectedId, setSelectedId] = useState<string | null>(
+    integrations.length > 0 ? integrations[0].id : null,
+  )
   const [allConfig, setAllConfig] = useState<Record<string, string>>({})
   const [localConfig, setLocalConfig] = useState<Record<string, string>>({})
   const [status, setStatus] = useState<string | null>(null)
@@ -27,31 +30,34 @@ export function SettingsAdmin() {
     setLocalConfig((prev) => ({ ...prev, [fullKey]: value }))
   }
 
+  const selectedIntegration = integrations.find((i) => i.id === selectedId)
+
   const handleSave = async () => {
+    if (!selectedIntegration) return
     try {
       setError(null)
 
-      // Validate each integration's config via its Zod schema
-      for (const integration of integrations) {
-        if (integration.settingsComponent) continue
-        const prefix = integration.id + '.'
+      // Validate this integration's config via its Zod schema
+      if (!selectedIntegration.settingsComponent) {
+        const prefix = selectedIntegration.id + '.'
         const scoped: Record<string, string> = {}
         for (const [key, value] of Object.entries(localConfig)) {
           if (key.startsWith(prefix)) {
             scoped[key.slice(prefix.length)] = value
           }
         }
-        const result = integration.schema.safeParse(scoped)
+        const result = selectedIntegration.schema.safeParse(scoped)
         if (!result.success) {
           const firstError = result.error.issues[0]
-          setError(`${integration.name}: ${firstError.message}`)
+          setError(`${firstError.message}`)
           return
         }
       }
 
-      // Save changed keys
+      // Save changed keys for this integration
+      const prefix = selectedIntegration.id + '.'
       for (const [key, value] of Object.entries(localConfig)) {
-        if (allConfig[key] !== value) {
+        if (key.startsWith(prefix) && allConfig[key] !== value) {
           await fetch(`/api/config/${encodeURIComponent(key)}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -68,99 +74,134 @@ export function SettingsAdmin() {
   }
 
   return (
-    <div>
-      <h2 className="text-xl font-semibold text-text-primary mb-6">Settings</h2>
-
-      {error && (
-        <div className="bg-error/10 text-error rounded-lg p-3 mb-4 text-sm">{error}</div>
-      )}
-
-      {integrations.length === 0 && (
-        <p className="text-text-muted text-sm">No integrations configured yet.</p>
-      )}
-
-      {integrations.map((integration) => {
-        if (integration.settingsComponent) {
-          const CustomSettings = integration.settingsComponent
-          return (
-            <div key={integration.id} className="mb-8">
-              <h3 className="text-lg font-semibold text-text-primary mb-4">
+    <div className="flex gap-6 h-full">
+      {/* Sidebar */}
+      <nav className="w-48 flex-shrink-0">
+        <ul className="space-y-1">
+          {integrations.map((integration) => (
+            <li key={integration.id}>
+              <button
+                onClick={() => {
+                  setSelectedId(integration.id)
+                  setError(null)
+                  setStatus(null)
+                }}
+                className={`w-full text-left px-3 py-2 rounded-[var(--radius-button)] text-sm transition-colors ${
+                  selectedId === integration.id
+                    ? 'bg-calendar text-white font-medium'
+                    : 'text-text-secondary hover:bg-bg-card-hover'
+                }`}
+              >
                 {integration.name}
-              </h3>
-              <CustomSettings />
-            </div>
-          )
-        }
+              </button>
+            </li>
+          ))}
+        </ul>
+      </nav>
 
-        const fieldEntries = Object.entries(integration.fields) as [
-          string,
-          { label: string; type?: string; description?: string },
-        ][]
-
-        return (
-          <div
-            key={integration.id}
-            className="bg-bg-card rounded-[var(--radius-card)] p-4 border border-border mb-6"
-          >
-            <h3 className="text-sm font-semibold text-text-secondary mb-4">
-              {integration.name}
-            </h3>
-            <div className="space-y-3">
-              {fieldEntries.map(([key, meta]) => {
-                const fullKey = `${integration.id}.${key}`
-                const value = localConfig[fullKey] ?? ''
-
-                if (meta.type === 'boolean') {
-                  return (
-                    <label key={key} className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={value === 'true'}
-                        onChange={(e) =>
-                          handleChange(fullKey, String(e.target.checked))
-                        }
-                        className="w-5 h-5 rounded accent-calendar"
-                      />
-                      <div>
-                        <div className="text-sm font-medium text-text-primary">
-                          {meta.label}
-                        </div>
-                        {meta.description && (
-                          <div className="text-xs text-text-muted">
-                            {meta.description}
-                          </div>
-                        )}
-                      </div>
-                    </label>
-                  )
-                }
-
-                return (
-                  <div key={key}>
-                    <label className="text-xs text-text-muted block mb-1">
-                      {meta.label}
-                    </label>
-                    <input
-                      type={meta.type === 'secret' ? 'password' : 'text'}
-                      value={value}
-                      onChange={(e) => handleChange(fullKey, e.target.value)}
-                      placeholder={meta.description}
-                      className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
-                    />
-                  </div>
-                )
-              })}
-            </div>
+      {/* Content */}
+      <div className="flex-1">
+        {error && (
+          <div className="bg-error/10 text-error rounded-lg p-3 mb-4 text-sm">
+            {error}
           </div>
-        )
-      })}
+        )}
 
-      {integrations.length > 0 && (
-        <div className="flex items-center gap-3">
-          <Button onClick={handleSave}>Save Settings</Button>
-          {status && <span className="text-sm text-success">{status}</span>}
-        </div>
-      )}
+        {!selectedIntegration && (
+          <p className="text-text-muted text-sm">
+            Select an integration to configure.
+          </p>
+        )}
+
+        {selectedIntegration && (
+          <div>
+            <h3 className="text-lg font-semibold text-text-primary mb-4">
+              {selectedIntegration.name}
+            </h3>
+
+            {selectedIntegration.settingsComponent ? (
+              <selectedIntegration.settingsComponent />
+            ) : (
+              <>
+                <div className="bg-bg-card rounded-[var(--radius-card)] p-4 border border-border mb-4">
+                  <div className="space-y-3">
+                    {(
+                      Object.entries(selectedIntegration.fields) as [
+                        string,
+                        {
+                          label: string
+                          type?: string
+                          description?: string
+                        },
+                      ][]
+                    ).map(([key, meta]) => {
+                      const fullKey = `${selectedIntegration.id}.${key}`
+                      const value = localConfig[fullKey] ?? ''
+
+                      if (meta.type === 'boolean') {
+                        return (
+                          <label
+                            key={key}
+                            className="flex items-center gap-3"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={value === 'true'}
+                              onChange={(e) =>
+                                handleChange(
+                                  fullKey,
+                                  String(e.target.checked),
+                                )
+                              }
+                              className="w-5 h-5 rounded accent-calendar"
+                            />
+                            <div>
+                              <div className="text-sm font-medium text-text-primary">
+                                {meta.label}
+                              </div>
+                              {meta.description && (
+                                <div className="text-xs text-text-muted">
+                                  {meta.description}
+                                </div>
+                              )}
+                            </div>
+                          </label>
+                        )
+                      }
+
+                      return (
+                        <div key={key}>
+                          <label className="text-xs text-text-muted block mb-1">
+                            {meta.label}
+                          </label>
+                          <input
+                            type={
+                              meta.type === 'secret' ? 'password' : 'text'
+                            }
+                            value={value}
+                            onChange={(e) =>
+                              handleChange(fullKey, e.target.value)
+                            }
+                            placeholder={meta.description}
+                            className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
+                          />
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <Button onClick={handleSave}>Save</Button>
+                  {status && (
+                    <span className="text-sm text-success">{status}</span>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
