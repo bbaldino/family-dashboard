@@ -68,7 +68,7 @@ export function WidgetCard({
             </span>
           )}
         </div>
-        <div className="flex-1">{children}</div>
+        <div className="flex-1 overflow-auto min-h-0">{children}</div>
       </div>
       {detail && (
         <BottomSheet isOpen={isExpanded} onClose={handleClose}>

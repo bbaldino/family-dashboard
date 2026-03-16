@@ -81,7 +81,7 @@ export function HomeBoard() {
       </div>
 
       {/* Calendar -- col 1, spans 2 rows */}
-      <div style={{ gridRow: '2 / 4' }}>
+      <div style={{ gridRow: '2 / 4', minHeight: 0 }} className="overflow-hidden">
         <CalendarWidget
           days={calendar.data}
           isLoading={calendar.isLoading}
@@ -91,7 +91,7 @@ export function HomeBoard() {
       </div>
 
       {/* Chores -- col 2, spans 2 rows */}
-      <div style={{ gridRow: '2 / 4' }}>
+      <div style={{ gridRow: '2 / 4', minHeight: 0 }} className="overflow-hidden">
         <ChoresWidget
           byChild={chores.byChild}
           completedCount={chores.completedCount}
