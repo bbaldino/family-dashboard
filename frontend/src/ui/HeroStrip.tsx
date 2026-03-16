@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Settings } from 'lucide-react'
 
 interface HeroEvent {
   name: string
@@ -12,9 +13,10 @@ interface HeroStripProps {
   weatherCondition?: string
   weatherIcon?: string
   onWeatherClick?: () => void
+  onSettingsClick?: () => void
 }
 
-export function HeroStrip({ events = [], weatherTemp, weatherCondition, weatherIcon = '\u2601', onWeatherClick }: HeroStripProps) {
+export function HeroStrip({ events = [], weatherTemp, weatherCondition, weatherIcon = '\u2601', onWeatherClick, onSettingsClick }: HeroStripProps) {
   const [now, setNow] = useState(new Date())
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000)
@@ -62,6 +64,17 @@ export function HeroStrip({ events = [], weatherTemp, weatherCondition, weatherI
           <div className="text-[12px] text-text-secondary">{weatherCondition || ''}</div>
         </div>
       </div>
+      {onSettingsClick && (
+        <>
+          <div className="w-px h-12 bg-separator flex-shrink-0" />
+          <button
+            onClick={onSettingsClick}
+            className="p-2 rounded-[var(--radius-button)] text-text-muted hover:text-text-secondary hover:bg-bg-card-hover transition-colors"
+          >
+            <Settings size={20} />
+          </button>
+        </>
+      )}
     </div>
   )
 }

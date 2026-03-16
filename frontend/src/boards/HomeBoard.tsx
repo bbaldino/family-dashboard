@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { HeroStrip } from '../ui/HeroStrip'
 import { BottomSheet } from '../ui/BottomSheet'
 import { WidgetCard } from '../ui/WidgetCard'
@@ -45,6 +46,7 @@ function getHeroEvents(days: CalendarDay[] | null): { name: string; time: string
 function HeroStripWithData({ heroEvents }: { heroEvents: { name: string; time: string; detail?: string }[] }) {
   const weather = useHeroWeather()
   const [showForecast, setShowForecast] = useState(false)
+  const navigate = useNavigate()
 
   return (
     <>
@@ -54,6 +56,7 @@ function HeroStripWithData({ heroEvents }: { heroEvents: { name: string; time: s
         weatherCondition={weather?.condition}
         weatherIcon={weather?.icon}
         onWeatherClick={() => setShowForecast(true)}
+        onSettingsClick={() => navigate('/admin/settings')}
       />
       <BottomSheet isOpen={showForecast} onClose={() => setShowForecast(false)}>
         <WeatherDetail />
