@@ -117,6 +117,24 @@ Widgets are React components with conventions, not a rigid interface:
 - **`<WidgetCard>`** — shared wrapper providing consistent card styling (background, radius, padding, shadow). All widgets render inside it.
 - **Expansion** — widgets that support a detail view export a companion component (e.g. `CalendarWidget` + `CalendarDetail`). `WidgetCard` handles the tap-to-expand gesture.
 - **Sizing** — widgets don't know their own size. The board layout controls sizing; widgets are responsive to their container.
+- **Conditional visibility** — widgets can choose not to render based on time, data, or other conditions (e.g. lunch menu hides on weekends, sports scores only show when a tracked team has an upcoming or active game). The board layout handles gaps gracefully when widgets are hidden — CSS Grid auto-fills the space or remaining widgets expand.
+
+### Event-Triggered Overlays
+
+External events can trigger overlay UI that appears above the current board. This is distinct from the tap-to-expand bottom sheet — overlays are pushed by events, not user interaction.
+
+**Architecture:**
+- A shared `EventOverlay` component renders above the board layer
+- An event bus (React context + hooks) allows any source to push overlay events
+- Overlay events have: source, content (React component), priority, and auto-dismiss duration
+- Sources include: Frigate motion/person detection (via HA entity state or MQTT), HA automations, timer alerts
+
+**Example:** Frigate detects a person at the doorbell → HA entity state changes → dashboard picks up the state change → EventOverlay renders the doorbell camera WebRTC feed as a fullscreen or partial overlay → auto-dismisses after 30 seconds or on tap.
+
+**Rules:**
+- Only one overlay at a time (highest priority wins, others queue)
+- Tap anywhere on the overlay to dismiss
+- Auto-dismiss timer configurable per event type
 
 ### Widget File Structure
 
