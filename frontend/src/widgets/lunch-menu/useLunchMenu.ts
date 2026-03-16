@@ -4,6 +4,7 @@ export interface NutriSliceDay {
   date: string
   menu_items: Array<{
     text: string
+    food?: { name?: string }
     food_category?: string
     is_holiday?: boolean
     is_section_title?: boolean
@@ -46,8 +47,9 @@ function parseDayMenu(day: NutriSliceDay | undefined): LunchMenuDay | null {
   if (!day) return null
 
   const items = day.menu_items
-    .filter((item) => !item.is_holiday && !item.is_section_title && item.text)
-    .map((item) => ({ name: item.text }))
+    .filter((item) => !item.is_holiday && !item.is_section_title)
+    .map((item) => ({ name: item.text || item.food?.name || '' }))
+    .filter((item) => item.name.length > 0)
 
   if (items.length === 0) return null
 
