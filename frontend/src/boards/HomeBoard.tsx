@@ -9,6 +9,7 @@ import { ChoresWidget } from '@/integrations/chores'
 import { CountdownsWidget } from '@/integrations/countdowns'
 import { LunchMenuWidget } from '@/integrations/nutrislice'
 import { useHeroWeather, WeatherDetail } from '@/integrations/weather'
+import { SportsWidget } from '@/integrations/sports'
 
 function getHeroEvents(days: CalendarDay[] | null): { name: string; time: string; detail?: string }[] {
   if (!days) return []
@@ -103,9 +104,7 @@ export function HomeBoard() {
       <CountdownsWidget />
 
       {/* Sports -- col 4, row 1 */}
-      <WidgetCard title="Sports" category="info">
-        <div className="text-text-muted text-sm">Sports placeholder</div>
-      </WidgetCard>
+      <SportsWidget />
 
       {/* Lunch Menu -- col 3, row 2 */}
       <LunchMenuWidget />
