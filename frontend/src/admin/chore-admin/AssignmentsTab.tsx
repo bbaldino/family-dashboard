@@ -354,7 +354,7 @@ export function AssignmentsTab() {
         <ChorePool chores={chores} />
       </div>
 
-      <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>
+      <DragOverlay dropAnimation={null}>
         {activeChore ? (
           <DragOverlayChip
             name={activeChore.name}
