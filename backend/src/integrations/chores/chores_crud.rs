@@ -19,17 +19,17 @@ pub fn router(pool: SqlitePool) -> Router {
         .with_state(pool)
 }
 
-async fn list_chores(State(pool): State<SqlitePool>) -> Result<Json<Vec<Chore>>, AppError> {
+async fn list_chores(State(pool): State<SqlitePool>) -> Result<Json<Vec<ChoreResponse>>, AppError> {
     let chores = sqlx::query_as::<_, Chore>("SELECT * FROM chores ORDER BY name")
         .fetch_all(&pool)
         .await?;
-    Ok(Json(chores))
+    Ok(Json(chores.into_iter().map(ChoreResponse::from).collect()))
 }
 
 async fn create_chore(
     State(pool): State<SqlitePool>,
     Json(input): Json<CreateChore>,
-) -> Result<(StatusCode, Json<Chore>), AppError> {
+) -> Result<(StatusCode, Json<ChoreResponse>), AppError> {
     let chore_type = input.chore_type.unwrap_or_else(|| "regular".to_string());
     let tags = serde_json::to_string(&input.tags.unwrap_or_default())
         .map_err(|e| AppError::Internal(format!("Failed to serialize tags: {e}")))?;
@@ -47,14 +47,14 @@ async fn create_chore(
     .fetch_one(&pool)
     .await?;
 
-    Ok((StatusCode::CREATED, Json(chore)))
+    Ok((StatusCode::CREATED, Json(ChoreResponse::from(chore))))
 }
 
 async fn update_chore(
     State(pool): State<SqlitePool>,
     Path(id): Path<i64>,
     Json(input): Json<UpdateChore>,
-) -> Result<Json<Chore>, AppError> {
+) -> Result<Json<ChoreResponse>, AppError> {
     let existing = sqlx::query_as::<_, Chore>("SELECT * FROM chores WHERE id = ?")
         .bind(id)
         .fetch_optional(&pool)
@@ -91,7 +91,7 @@ async fn update_chore(
     .fetch_one(&pool)
     .await?;
 
-    Ok(Json(chore))
+    Ok(Json(ChoreResponse::from(chore)))
 }
 
 async fn delete_chore(
@@ -116,14 +116,14 @@ struct TagsQuery {
 async fn chores_by_tags(
     State(pool): State<SqlitePool>,
     Query(params): Query<TagsQuery>,
-) -> Result<Json<Vec<Chore>>, AppError> {
+) -> Result<Json<Vec<ChoreResponse>>, AppError> {
     let requested_tags: Vec<&str> = params.tags.split(',').map(|s| s.trim()).collect();
 
     let all_chores = sqlx::query_as::<_, Chore>("SELECT * FROM chores ORDER BY name")
         .fetch_all(&pool)
         .await?;
 
-    let filtered: Vec<Chore> = all_chores
+    let filtered: Vec<ChoreResponse> = all_chores
         .into_iter()
         .filter(|chore| {
             let chore_tags: Vec<String> = serde_json::from_str(&chore.tags).unwrap_or_default();
@@ -131,6 +131,7 @@ async fn chores_by_tags(
                 .iter()
                 .any(|rt| chore_tags.iter().any(|ct| ct == rt))
         })
+        .map(ChoreResponse::from)
         .collect();
 
     Ok(Json(filtered))

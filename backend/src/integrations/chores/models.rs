@@ -51,6 +51,29 @@ pub struct Chore {
     pub pick_from_tags: String,
 }
 
+#[derive(Debug, Serialize)]
+pub struct ChoreResponse {
+    pub id: i64,
+    pub name: String,
+    pub description: Option<String>,
+    pub chore_type: String,
+    pub tags: Vec<String>,
+    pub pick_from_tags: Vec<String>,
+}
+
+impl From<Chore> for ChoreResponse {
+    fn from(c: Chore) -> Self {
+        Self {
+            id: c.id,
+            name: c.name,
+            description: c.description,
+            chore_type: c.chore_type,
+            tags: serde_json::from_str(&c.tags).unwrap_or_default(),
+            pick_from_tags: serde_json::from_str(&c.pick_from_tags).unwrap_or_default(),
+        }
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct CreateChore {
     pub name: String,
