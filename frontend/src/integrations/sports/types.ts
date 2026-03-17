@@ -55,4 +55,6 @@ export interface TeamsResponse {
 export interface TrackedTeam {
   league: string
   teamId: string
+  name?: string
+  logo?: string
 }

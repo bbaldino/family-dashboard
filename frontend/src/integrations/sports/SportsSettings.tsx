@@ -69,13 +69,17 @@ export function SportsSettings() {
   const isTracked = (league: string, teamId: string) =>
     trackedTeams.some((t) => t.league === league && t.teamId === teamId)
 
-  const toggleTeam = (league: string, teamId: string) => {
+  const toggleTeam = (team: TeamInfo) => {
     setTrackedTeams((prev) => {
-      if (isTracked(league, teamId)) {
-        return prev.filter((t) => !(t.league === league && t.teamId === teamId))
+      if (isTracked(team.league, team.id)) {
+        return prev.filter((t) => !(t.league === team.league && t.teamId === team.id))
       }
-      return [...prev, { league, teamId }]
+      return [...prev, { league: team.league, teamId: team.id, name: team.name, logo: team.logo }]
     })
+  }
+
+  const removeTeam = (league: string, teamId: string) => {
+    setTrackedTeams((prev) => prev.filter((t) => !(t.league === league && t.teamId === teamId)))
   }
 
   const handleSearch = async (query: string) => {
@@ -124,11 +128,6 @@ export function SportsSettings() {
     return <div className="text-text-muted text-sm">Loading...</div>
   }
 
-  const trackedWithInfo = trackedTeams.map((t) => {
-    const team = leagueTeams[t.league]?.find((lt) => lt.id === t.teamId)
-    return { ...t, info: team }
-  })
-
   return (
     <div className="space-y-6">
       {error && (
@@ -140,17 +139,18 @@ export function SportsSettings() {
         <div>
           <label className="text-xs text-text-muted block mb-2">Tracked Teams</label>
           <div className="flex flex-wrap gap-2">
-            {trackedWithInfo.map((t) => (
+            {trackedTeams.map((t) => (
               <span
                 key={`${t.league}-${t.teamId}`}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sports/10 text-sports text-sm font-medium"
               >
-                {t.info && (
-                  <img src={t.info.logo} alt="" className="w-4 h-4 object-contain" />
+                {t.logo && (
+                  <img src={t.logo} alt="" className="w-4 h-4 object-contain" />
                 )}
-                {t.info?.name ?? t.teamId}
+                {t.name ?? t.teamId}
+                <span className="text-sports/50 text-xs">{t.league.toUpperCase()}</span>
                 <button
-                  onClick={() => toggleTeam(t.league, t.teamId)}
+                  onClick={() => removeTeam(t.league, t.teamId)}
                   className="ml-1 text-sports/60 hover:text-sports"
                 >
                   x
@@ -182,7 +182,7 @@ export function SportsSettings() {
                 <input
                   type="checkbox"
                   checked={isTracked(team.league, team.id)}
-                  onChange={() => toggleTeam(team.league, team.id)}
+                  onChange={() => toggleTeam(team)}
                   className="w-4 h-4 accent-sports"
                 />
                 <img src={team.logo} alt="" className="w-6 h-6 object-contain" />
@@ -226,7 +226,7 @@ export function SportsSettings() {
                         <input
                           type="checkbox"
                           checked={isTracked(league.id, team.id)}
-                          onChange={() => toggleTeam(league.id, team.id)}
+                          onChange={() => toggleTeam(team)}
                           className="w-4 h-4 accent-sports"
                         />
                         <img src={team.logo} alt="" className="w-6 h-6 object-contain" />
