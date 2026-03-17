@@ -11,7 +11,7 @@ import { LunchMenuWidget } from '@/integrations/nutrislice'
 import { useHeroWeather, WeatherDetail } from '@/integrations/weather'
 import { SportsWidget } from '@/integrations/sports'
 
-function getHeroEvents(days: CalendarDay[] | null): { name: string; time: string; detail?: string }[] {
+function getHeroEvents(days: CalendarDay[] | null): { name: string; time: string; detail?: string; isNow?: boolean }[] {
   if (!days) return []
 
   // Get today's events
@@ -30,17 +30,22 @@ function getHeroEvents(days: CalendarDay[] | null): { name: string; time: string
   return relevant.slice(0, 2).map((event) => {
     const start = event.start.dateTime ?? event.start.date
     let time = ''
+    let isNow = false
     if (start) {
       if (event.start.date && !event.start.dateTime) {
         time = 'All day'
+        isNow = true // all-day events are always "now"
       } else {
-        time = new Date(start).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+        const startDate = new Date(start)
+        time = startDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+        isNow = startDate <= now
       }
     }
     return {
       name: event.summary ?? '(No title)',
       time,
       detail: event.location,
+      isNow,
     }
   })
 }

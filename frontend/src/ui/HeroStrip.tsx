@@ -5,6 +5,7 @@ interface HeroEvent {
   name: string
   time: string
   detail?: string
+  isNow?: boolean
 }
 
 interface HeroStripProps {
@@ -26,7 +27,7 @@ export function HeroStrip({ events = [], weatherTemp, weatherCondition, weatherI
   const time = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   const date = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })
   const hasEvents = events.length > 0
-  const label = hasEvents ? 'Right Now' : 'Next Up'
+  const label = hasEvents && events[0].isNow ? 'Right Now' : 'Next Up'
 
   return (
     <div className="bg-bg-card rounded-[var(--radius-card)] shadow-[var(--shadow-card)] flex items-center gap-5 px-7 py-3">
