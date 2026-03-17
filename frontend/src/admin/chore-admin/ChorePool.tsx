@@ -25,7 +25,7 @@ function DraggableChoreChip({ chore }: DraggableChoreChipProps) {
       style={style}
       {...listeners}
       {...attributes}
-      className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium cursor-grab active:cursor-grabbing select-none ${
+      className={`inline-flex items-center px-5 py-3 rounded-full text-base font-medium cursor-grab active:cursor-grabbing select-none ${
         isMeta
           ? 'border-2 border-dashed border-blue-400 text-blue-300 bg-blue-900/20'
           : 'bg-bg-card-hover text-text-primary border border-border'

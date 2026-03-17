@@ -54,7 +54,7 @@ function DroppableCell({ id, children }: DroppableCellProps) {
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[60px] p-1 rounded-lg border transition-colors ${
+      className={`min-h-[100px] p-2 rounded-lg border transition-colors ${
         isOver ? 'border-calendar bg-calendar/10' : 'border-border bg-bg-primary'
       }`}
     >
@@ -73,13 +73,13 @@ function AssignmentChip({ assignment, onRemove }: AssignmentChipProps) {
 
   return (
     <div
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium mb-1 mr-1 ${
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium mb-1.5 mr-1 ${
         isMeta
           ? 'border border-dashed border-blue-400 text-blue-300 bg-blue-900/20'
           : 'bg-bg-card-hover text-text-primary border border-border'
       }`}
     >
-      <span className="truncate max-w-[80px]">{assignment.chore.name}</span>
+      <span className="truncate max-w-[120px]">{assignment.chore.name}</span>
       <button
         type="button"
         onClick={onRemove}
