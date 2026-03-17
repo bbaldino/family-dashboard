@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useState } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -113,11 +113,12 @@ export function AssignmentsTab() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [activeChore, setActiveChore] = useState<Chore | null>(null)
+  const hasLoadedOnce = useRef(false)
 
   const weekStr = toIsoDate(weekOf)
 
   const fetchData = useCallback(async () => {
-    setLoading(true)
+    if (!hasLoadedOnce.current) setLoading(true)
     setError(null)
     try {
       const [assignData, peopleData, choresData] = await Promise.all([
@@ -132,6 +133,7 @@ export function AssignmentsTab() {
       setError(err instanceof Error ? err.message : 'Failed to load data')
     } finally {
       setLoading(false)
+      hasLoadedOnce.current = true
     }
   }, [weekStr])
 
@@ -140,6 +142,7 @@ export function AssignmentsTab() {
   }, [fetchData])
 
   function prevWeek() {
+    hasLoadedOnce.current = false
     setWeekOf((prev) => {
       const d = new Date(prev)
       d.setDate(d.getDate() - 7)
@@ -148,6 +151,7 @@ export function AssignmentsTab() {
   }
 
   function nextWeek() {
+    hasLoadedOnce.current = false
     setWeekOf((prev) => {
       const d = new Date(prev)
       d.setDate(d.getDate() + 7)
