@@ -1,7 +1,36 @@
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
 import { ErrorDisplay } from '@/ui/ErrorDisplay'
 import { WidgetCard } from '@/ui/WidgetCard'
-import { useLunchMenu, isWeekday, type LunchMenuDay } from './useLunchMenu'
+import { useLunchMenu, isWeekday, type LunchMenuDay, type MenuEntry } from './useLunchMenu'
+
+function EntryItem({ entry, compact = false }: { entry: MenuEntry; compact?: boolean }) {
+  return (
+    <div className={`${compact ? 'py-[1px]' : 'py-[2px]'} ${entry.isAlternative ? 'pl-[14px]' : ''}`}>
+      <div className="flex items-center gap-[6px]">
+        {entry.isAlternative ? (
+          <span className={`${compact ? 'text-[11px]' : 'text-[12px]'} text-food font-medium`}>or</span>
+        ) : (
+          <span className="w-[5px] h-[5px] rounded-full bg-food flex-shrink-0" />
+        )}
+        <span className={`${compact ? 'text-[13px]' : 'text-[14px]'} font-medium text-text-primary`}>
+          {entry.name}
+        </span>
+      </div>
+      {entry.withItems.length > 0 && (
+        <div className="pl-[16px]">
+          {entry.withItems.map((withItem, i) => (
+            <span
+              key={i}
+              className={`${compact ? 'text-[11px]' : 'text-[12px]'} text-text-secondary italic`}
+            >
+              w/ {withItem}{i < entry.withItems.length - 1 ? ', ' : ''}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function MenuDaySection({
   day,
@@ -18,34 +47,26 @@ function MenuDaySection({
         {label}
       </div>
 
-      {/* Entree choices in tinted box */}
-      {day.entrees.length > 0 && (
-        <div className="bg-food/5 rounded-[8px] p-[3px] mb-[4px] flex flex-col gap-[2px]">
-          {day.entrees.map((item, i) => (
-            <div
-              key={i}
-              className={`flex items-center gap-[6px] ${compact ? 'py-[2px]' : 'py-[3px]'} px-[6px] bg-white/70 rounded-md`}
-            >
-              <span className="w-[5px] h-[5px] rounded-full bg-food flex-shrink-0" />
-              <span
-                className={`${compact ? 'text-[13px]' : 'text-[14px]'} font-medium text-text-primary`}
-              >
-                {item.name}
-              </span>
+      {/* Main entries with "with" items */}
+      {day.entries.length > 0 && (
+        <div className="bg-food/5 rounded-[8px] p-[3px] mb-[4px]">
+          {day.entries.map((entry, i) => (
+            <div key={i} className="px-[6px] bg-white/70 rounded-md mb-[1px] last:mb-0">
+              <EntryItem entry={entry} compact={compact} />
             </div>
           ))}
         </div>
       )}
 
-      {/* Side pills */}
-      {day.sides.length > 0 && (
+      {/* Extras (milk, salad station) as pills */}
+      {day.extras.length > 0 && (
         <div className="flex flex-wrap gap-[3px]">
-          {day.sides.map((item, i) => (
+          {day.extras.map((extra, i) => (
             <span
               key={i}
               className="text-[11px] text-text-secondary bg-bg-primary px-[8px] py-[2px] rounded-md"
             >
-              {item.name}
+              {extra}
             </span>
           ))}
         </div>
