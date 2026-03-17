@@ -62,15 +62,34 @@ export function WeatherWidget() {
   )
 }
 
-// For HeroStrip — returns simplified weather info
+interface ForecastDay {
+  date: string
+  temp_max: number
+  temp_min: number
+}
+
+interface ForecastData {
+  daily: ForecastDay[]
+}
+
+// For HeroStrip — returns simplified weather info with daily high/low from forecast
 export function useHeroWeather(): { temperature: string; high: string; low: string; condition: string; icon: string } | null {
-  const { data } = useWeatherData()
-  if (!data) return null
+  const { data: current } = useWeatherData()
+  const { data: forecast } = usePolling<ForecastData>({
+    queryKey: ['weather', 'forecast'],
+    fetcher: () => weatherIntegration.api.get<ForecastData>('/forecast'),
+    intervalMs: 30 * 60 * 1000, // 30 minutes
+  })
+
+  if (!current) return null
+
+  const today = forecast?.daily?.[0]
+
   return {
-    temperature: String(Math.round(data.temp)),
-    high: String(Math.round(data.temp_max)),
-    low: String(Math.round(data.temp_min)),
-    condition: data.description,
-    icon: conditionIcons[data.condition] ?? '\u2601\uFE0F',
+    temperature: String(Math.round(current.temp)),
+    high: today ? String(Math.round(today.temp_max)) : String(Math.round(current.temp_max)),
+    low: today ? String(Math.round(today.temp_min)) : String(Math.round(current.temp_min)),
+    condition: current.description,
+    icon: conditionIcons[current.condition] ?? '\u2601\uFE0F',
   }
 }
