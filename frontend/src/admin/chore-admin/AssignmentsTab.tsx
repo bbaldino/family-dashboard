@@ -3,8 +3,7 @@ import {
   DndContext,
   DragOverlay,
   useDroppable,
-  TouchSensor,
-  MouseSensor,
+  PointerSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
@@ -236,13 +235,10 @@ export function AssignmentsTab() {
     )
   }
 
-  const touchSensor = useSensor(TouchSensor, {
-    activationConstraint: { delay: 0, tolerance: 0 },
+  const pointerSensor = useSensor(PointerSensor, {
+    activationConstraint: { distance: 5 },
   })
-  const mouseSensor = useSensor(MouseSensor, {
-    activationConstraint: { distance: 3 },
-  })
-  const sensors = useSensors(touchSensor, mouseSensor)
+  const sensors = useSensors(pointerSensor)
 
   const todayDayIndex = getTodayDayIndex()
   const isCurrentWeek = toIsoDate(getMonday(new Date())) === weekStr
