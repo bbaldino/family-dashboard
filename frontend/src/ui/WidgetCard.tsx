@@ -1,7 +1,7 @@
 import { type ReactNode, useState, useCallback } from 'react'
 import { BottomSheet } from './BottomSheet'
 
-type CardCategory = 'calendar' | 'chores' | 'info' | 'food' | 'grocery'
+type CardCategory = 'calendar' | 'chores' | 'info' | 'food' | 'grocery' | 'sports'
 
 const categoryColors: Record<CardCategory, string> = {
   calendar: 'var(--color-calendar)',
@@ -9,6 +9,7 @@ const categoryColors: Record<CardCategory, string> = {
   info: 'var(--color-info)',
   food: 'var(--color-food)',
   grocery: 'var(--color-grocery)',
+  sports: 'var(--color-sports)',
 }
 
 interface WidgetCardProps {
