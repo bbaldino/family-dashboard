@@ -11,9 +11,9 @@ function DraggableChoreChip({ chore }: DraggableChoreChipProps) {
     data: { chore },
   })
 
-  const style = {
+  const style: React.CSSProperties = {
     opacity: isDragging ? 0.3 : 1,
-    // Don't transform the original — DragOverlay handles the moving copy
+    touchAction: 'none', // Prevent browser scroll/zoom while dragging
   }
 
   const isMeta = chore.chore_type === 'meta'
