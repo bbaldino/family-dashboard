@@ -11,13 +11,15 @@ interface HeroEvent {
 interface HeroStripProps {
   events?: HeroEvent[]
   weatherTemp?: string
+  weatherHigh?: string
+  weatherLow?: string
   weatherCondition?: string
   weatherIcon?: string
   onWeatherClick?: () => void
   onSettingsClick?: () => void
 }
 
-export function HeroStrip({ events = [], weatherTemp, weatherCondition, weatherIcon = '\u2601', onWeatherClick, onSettingsClick }: HeroStripProps) {
+export function HeroStrip({ events = [], weatherTemp, weatherHigh, weatherLow, weatherCondition, weatherIcon = '\u2601', onWeatherClick, onSettingsClick }: HeroStripProps) {
   const [now, setNow] = useState(new Date())
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000)
@@ -62,7 +64,13 @@ export function HeroStrip({ events = [], weatherTemp, weatherCondition, weatherI
         <span className="text-[30px]">{weatherIcon}</span>
         <div>
           <div className="text-[30px] font-light leading-none text-text-primary">{weatherTemp || '--'}&deg;</div>
-          <div className="text-[12px] text-text-secondary">{weatherCondition || ''}</div>
+          <div className="text-[12px] text-text-secondary">
+            {weatherHigh && weatherLow ? (
+              <><span className="font-medium">{weatherHigh}&deg;</span> / <span className="text-text-muted">{weatherLow}&deg;</span></>
+            ) : (
+              weatherCondition || ''
+            )}
+          </div>
         </div>
       </div>
       {onSettingsClick && (

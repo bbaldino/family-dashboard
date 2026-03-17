@@ -63,11 +63,13 @@ export function WeatherWidget() {
 }
 
 // For HeroStrip — returns simplified weather info
-export function useHeroWeather(): { temperature: string; condition: string; icon: string } | null {
+export function useHeroWeather(): { temperature: string; high: string; low: string; condition: string; icon: string } | null {
   const { data } = useWeatherData()
   if (!data) return null
   return {
     temperature: String(Math.round(data.temp)),
+    high: String(Math.round(data.temp_max)),
+    low: String(Math.round(data.temp_min)),
     condition: data.description,
     icon: conditionIcons[data.condition] ?? '\u2601\uFE0F',
   }

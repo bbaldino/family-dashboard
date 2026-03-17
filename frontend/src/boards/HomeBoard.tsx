@@ -60,6 +60,8 @@ function HeroStripWithData({ heroEvents }: { heroEvents: { name: string; time: s
       <HeroStrip
         events={heroEvents}
         weatherTemp={weather?.temperature}
+        weatherHigh={weather?.high}
+        weatherLow={weather?.low}
         weatherCondition={weather?.condition}
         weatherIcon={weather?.icon}
         onWeatherClick={() => setShowForecast(true)}
