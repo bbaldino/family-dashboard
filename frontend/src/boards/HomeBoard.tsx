@@ -6,6 +6,7 @@ import { WidgetCard } from '../ui/WidgetCard'
 import { useGoogleCalendar, CalendarWidget } from '@/integrations/google-calendar'
 import type { CalendarDay } from '@/integrations/google-calendar'
 import { ChoresWidget } from '@/integrations/chores'
+import { CountdownsWidget } from '@/integrations/countdowns'
 import { LunchMenuWidget } from '@/integrations/nutrislice'
 import { useHeroWeather, WeatherDetail } from '@/integrations/weather'
 
@@ -99,9 +100,7 @@ export function HomeBoard() {
       </div>
 
       {/* Countdowns -- col 3, row 1 */}
-      <WidgetCard title="Coming Up" category="info">
-        <div className="text-text-muted text-sm">Countdowns placeholder</div>
-      </WidgetCard>
+      <CountdownsWidget />
 
       {/* Sports -- col 4, row 1 */}
       <WidgetCard title="Sports" category="info">
