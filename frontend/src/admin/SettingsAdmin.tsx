@@ -100,7 +100,7 @@ export function SettingsAdmin() {
       </nav>
 
       {/* Content */}
-      <div className="flex-1 max-w-2xl">
+      <div className="flex-1">
         {error && (
           <div className="bg-error/10 text-error rounded-lg p-3 mb-4 text-sm">
             {error}
@@ -122,7 +122,7 @@ export function SettingsAdmin() {
             {selectedIntegration.settingsComponent ? (
               <selectedIntegration.settingsComponent />
             ) : (
-              <>
+              <div className="max-w-2xl">
                 <div className="bg-bg-card rounded-[var(--radius-card)] p-4 border border-border mb-4">
                   <div className="space-y-3">
                     {(
@@ -197,7 +197,7 @@ export function SettingsAdmin() {
                     <span className="text-sm text-success">{status}</span>
                   )}
                 </div>
-              </>
+              </div>
             )}
           </div>
         )}
