@@ -1,90 +1,48 @@
-import { useCallback, useState, useEffect, useRef } from 'react'
-import { usePolling, type UsePollingResult } from '@/hooks/usePolling'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { choresIntegration } from './config'
-import type { ChoreAssignment } from './types'
+import type { TodayResponse } from './types'
 
-export interface ChoresByChild {
-  [childName: string]: ChoreAssignment[]
-}
+export function useChores() {
+  const queryClient = useQueryClient()
 
-export interface ChoresData {
-  assignments: UsePollingResult<ChoreAssignment[]>
-  byChild: ChoresByChild
-  completedCount: number
-  totalCount: number
-  completeChore: (assignmentId: number) => Promise<void>
-}
-
-function groupByChild(assignments: ChoreAssignment[] | null): ChoresByChild {
-  if (!assignments) return {}
-  const groups: ChoresByChild = {}
-  for (const a of assignments) {
-    if (!groups[a.child_name]) groups[a.child_name] = []
-    groups[a.child_name].push(a)
-  }
-  return groups
-}
-
-export function useChores(): ChoresData {
-  const polling = usePolling<ChoreAssignment[]>({
-    queryKey: ['chores', 'assignments'],
-    fetcher: () => {
-      const today = new Date()
-      const dateStr = today.toISOString().split('T')[0]
-      return choresIntegration.api.get<ChoreAssignment[]>(`/assignments?date=${dateStr}`)
-    },
-    intervalMs: 60 * 1000,
+  const query = useQuery({
+    queryKey: ['chores', 'today'],
+    queryFn: () => choresIntegration.api!.get<TodayResponse>('/today'),
+    refetchInterval: 60 * 1000, // 1 minute
   })
 
-  // Local state that tracks assignments for optimistic updates
-  const [localAssignments, setLocalAssignments] = useState<ChoreAssignment[] | null>(null)
-  const prevPollingData = useRef<ChoreAssignment[] | null>(null)
-
-  // Sync polling data into local state when it changes
-  useEffect(() => {
-    if (polling.data !== prevPollingData.current) {
-      prevPollingData.current = polling.data
-      setLocalAssignments(polling.data)
-    }
-  }, [polling.data])
-
-  const completeChore = useCallback(
-    async (assignmentId: number) => {
-      // Snapshot current state for rollback
-      const snapshot = localAssignments
-
-      // Optimistically mark as completed
-      setLocalAssignments((prev) =>
-        prev
-          ? prev.map((a) =>
-              a.id === assignmentId ? { ...a, completed: true } : a,
-            )
-          : prev,
-      )
-
-      try {
-        const today = new Date().toISOString().split('T')[0]
-        await choresIntegration.api.post(`/assignments/${assignmentId}/complete`, { date: today })
-        // Refetch to get canonical server state
-        await polling.refetch()
-      } catch (e) {
-        // Revert on failure
-        setLocalAssignments(snapshot)
-        throw e
-      }
-    },
-    [localAssignments, polling],
-  )
-
-  const byChild = groupByChild(localAssignments)
-  const totalCount = localAssignments?.length ?? 0
-  const completedCount = localAssignments?.filter((a) => a.completed).length ?? 0
-
-  // Expose a combined result that uses local assignments but preserves polling metadata
-  const assignments: UsePollingResult<ChoreAssignment[]> = {
-    ...polling,
-    data: localAssignments,
+  const refetch = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['chores', 'today'] })
   }
 
-  return { assignments, byChild, completedCount, totalCount, completeChore }
+  const completeAssignment = async (id: number) => {
+    await choresIntegration.api!.post(`/assignments/${id}/complete`, {})
+    await refetch()
+  }
+
+  const uncompleteAssignment = async (id: number) => {
+    await choresIntegration.api!.post(`/assignments/${id}/uncomplete`, {})
+    await refetch()
+  }
+
+  const pickChore = async (assignmentId: number, choreId: number) => {
+    await choresIntegration.api!.post(`/assignments/${assignmentId}/pick`, { chore_id: choreId })
+    await refetch()
+  }
+
+  const clearPick = async (assignmentId: number) => {
+    await choresIntegration.api!.post(`/assignments/${assignmentId}/clear-pick`, {})
+    await refetch()
+  }
+
+  return {
+    data: query.data ?? null,
+    isLoading: query.isLoading,
+    error: query.error?.message ?? null,
+    refetch,
+    completeAssignment,
+    uncompleteAssignment,
+    pickChore,
+    clearPick,
+  }
 }

@@ -5,7 +5,7 @@ import { BottomSheet } from '../ui/BottomSheet'
 import { WidgetCard } from '../ui/WidgetCard'
 import { useGoogleCalendar, CalendarWidget } from '@/integrations/google-calendar'
 import type { CalendarDay } from '@/integrations/google-calendar'
-import { useChores, ChoresWidget } from '@/integrations/chores'
+import { ChoresWidget } from '@/integrations/chores'
 import { LunchMenuWidget } from '@/integrations/nutrislice'
 import { useHeroWeather, WeatherDetail } from '@/integrations/weather'
 
@@ -67,7 +67,6 @@ function HeroStripWithData({ heroEvents }: { heroEvents: { name: string; time: s
 
 export function HomeBoard() {
   const calendar = useGoogleCalendar()
-  const chores = useChores()
 
   const heroEvents = getHeroEvents(calendar.data)
 
@@ -96,15 +95,7 @@ export function HomeBoard() {
 
       {/* Chores -- col 2, spans 2 rows */}
       <div style={{ gridRow: '2 / 4', minHeight: 0 }} className="overflow-hidden">
-        <ChoresWidget
-          byChild={chores.byChild}
-          completedCount={chores.completedCount}
-          totalCount={chores.totalCount}
-          isLoading={chores.assignments.isLoading}
-          error={chores.assignments.error}
-          refetch={chores.assignments.refetch}
-          completeChore={chores.completeChore}
-        />
+        <ChoresWidget />
       </div>
 
       {/* Countdowns -- col 3, row 1 */}

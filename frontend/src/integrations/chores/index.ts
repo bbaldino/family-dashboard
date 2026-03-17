@@ -1,6 +1,3 @@
 export { ChoresWidget } from './ChoresWidget'
-export { ChoresDetail } from './ChoresDetail'
 export { useChores } from './useChores'
-export type { ChoresData, ChoresByChild } from './useChores'
-export type { Chore, ChoreAssignment } from './types'
 export { choresIntegration } from './config'
