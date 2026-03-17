@@ -236,7 +236,7 @@ export function AssignmentsTab() {
   }
 
   const pointerSensor = useSensor(PointerSensor, {
-    activationConstraint: { distance: 8 },
+    activationConstraint: { distance: 0 },
   })
   const sensors = useSensors(pointerSensor)
 
@@ -249,7 +249,7 @@ export function AssignmentsTab() {
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="space-y-4">
+      <div className="space-y-4" style={{ touchAction: 'none' }}>
         {error && (
           <div className="bg-red-900/30 border border-red-700 text-red-300 rounded-lg px-4 py-3 text-sm">
             {error}
