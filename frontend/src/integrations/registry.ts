@@ -5,6 +5,7 @@ import { doorbellIntegration } from './doorbell/config'
 import { nutrisliceIntegration } from './nutrislice/config'
 import { weatherIntegration } from './weather/config'
 import { googleCalendarIntegration } from './google-calendar/config'
+import { sportsIntegration } from './sports/config'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const integrations: Integration<any>[] = [
@@ -14,4 +15,5 @@ export const integrations: Integration<any>[] = [
   nutrisliceIntegration,
   weatherIntegration,
   googleCalendarIntegration,
+  sportsIntegration,
 ]
