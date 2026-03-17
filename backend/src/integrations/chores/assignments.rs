@@ -27,7 +27,7 @@ pub fn router(pool: SqlitePool) -> Router {
 
 #[derive(Debug, Deserialize)]
 struct WeekQuery {
-    week_of: String,
+    week: String,
 }
 
 async fn list_assignments(
@@ -48,7 +48,7 @@ async fn list_assignments(
         WHERE a.week_of = ?1
         ORDER BY p.name, a.day_of_week"#,
     )
-    .bind(&params.week_of)
+    .bind(&params.week)
     .fetch_all(&pool)
     .await?;
 

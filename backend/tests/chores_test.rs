@@ -228,7 +228,7 @@ async fn test_get_assignments_for_week() {
     )
     .await;
 
-    let resp = server.get("/chores/assignments?week_of=2026-03-16").await;
+    let resp = server.get("/chores/assignments?week=2026-03-16").await;
     resp.assert_status_ok();
     let assignments: Vec<serde_json::Value> = resp.json();
     assert_eq!(assignments.len(), 1);
@@ -274,7 +274,7 @@ async fn test_complete_and_uncomplete_assignment() {
 
     // Verify via list
     let assignments: Vec<serde_json::Value> = server
-        .get("/chores/assignments?week_of=2026-03-16")
+        .get("/chores/assignments?week=2026-03-16")
         .await
         .json();
     assert_eq!(assignments[0]["completed"], true);
@@ -286,7 +286,7 @@ async fn test_complete_and_uncomplete_assignment() {
     resp.assert_status_ok();
 
     let assignments: Vec<serde_json::Value> = server
-        .get("/chores/assignments?week_of=2026-03-16")
+        .get("/chores/assignments?week=2026-03-16")
         .await
         .json();
     assert_eq!(assignments[0]["completed"], false);
@@ -341,7 +341,7 @@ async fn test_pick_and_clear_pick() {
 
     // Verify picked_chore is set
     let assignments: Vec<serde_json::Value> = server
-        .get("/chores/assignments?week_of=2026-03-16")
+        .get("/chores/assignments?week=2026-03-16")
         .await
         .json();
     assert_eq!(assignments[0]["picked_chore"]["id"], bonus_chore_id);
@@ -355,7 +355,7 @@ async fn test_pick_and_clear_pick() {
 
     // Verify picked_chore is null
     let assignments: Vec<serde_json::Value> = server
-        .get("/chores/assignments?week_of=2026-03-16")
+        .get("/chores/assignments?week=2026-03-16")
         .await
         .json();
     assert!(assignments[0]["picked_chore"].is_null());
@@ -416,7 +416,7 @@ async fn test_week_copy() {
             // Get the first assignment's id
             {
                 let assignments: Vec<serde_json::Value> = server
-                    .get("/chores/assignments?week_of=2026-03-16")
+                    .get("/chores/assignments?week=2026-03-16")
                     .await
                     .json();
                 assignments
@@ -446,7 +446,7 @@ async fn test_week_copy() {
 
     // Verify week B
     let week_b: Vec<serde_json::Value> = server
-        .get("/chores/assignments?week_of=2026-03-23")
+        .get("/chores/assignments?week=2026-03-23")
         .await
         .json();
     assert_eq!(week_b.len(), 2);
@@ -513,7 +513,7 @@ async fn test_week_rotate() {
 
     // After rotation: Alice->Bob, Bob->Alice
     let assignments: Vec<serde_json::Value> = server
-        .get("/chores/assignments?week_of=2026-03-16")
+        .get("/chores/assignments?week=2026-03-16")
         .await
         .json();
     assert_eq!(assignments.len(), 2);
