@@ -1,5 +1,14 @@
 import { Fragment, useCallback, useEffect, useState } from 'react'
-import { DndContext, DragOverlay, useDroppable, type DragEndEvent } from '@dnd-kit/core'
+import {
+  DndContext,
+  DragOverlay,
+  useDroppable,
+  MouseSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core'
 import { Button } from '@/ui/Button'
 import { choresIntegration } from '@/integrations/chores'
 import type { AssignmentResponse, Chore, Person } from '@/integrations/chores/types'
@@ -223,6 +232,14 @@ export function AssignmentsTab() {
     )
   }
 
+  const mouseSensor = useSensor(MouseSensor, {
+    activationConstraint: { distance: 5 },
+  })
+  const touchSensor = useSensor(TouchSensor, {
+    activationConstraint: { delay: 150, tolerance: 5 },
+  })
+  const sensors = useSensors(mouseSensor, touchSensor)
+
   const todayDayIndex = getTodayDayIndex()
   const isCurrentWeek = toIsoDate(getMonday(new Date())) === weekStr
 
@@ -231,7 +248,7 @@ export function AssignmentsTab() {
   }
 
   return (
-    <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="space-y-4">
         {error && (
           <div className="bg-red-900/30 border border-red-700 text-red-300 rounded-lg px-4 py-3 text-sm">
