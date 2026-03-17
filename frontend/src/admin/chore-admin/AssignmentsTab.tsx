@@ -240,7 +240,7 @@ export function AssignmentsTab() {
     activationConstraint: { distance: 5 },
   })
   const touchSensor = useSensor(TouchSensor, {
-    activationConstraint: { delay: 150, tolerance: 5 },
+    activationConstraint: { delay: 100, tolerance: 8 },
   })
   const sensors = useSensors(mouseSensor, touchSensor)
 
@@ -362,7 +362,7 @@ export function AssignmentsTab() {
         <ChorePool chores={chores} />
       </div>
 
-      <DragOverlay>
+      <DragOverlay dropAnimation={{ duration: 200, easing: 'ease' }}>
         {activeChore ? (
           <DragOverlayChip
             name={activeChore.name}

@@ -1,5 +1,4 @@
 import { useDraggable } from '@dnd-kit/core'
-import { CSS } from '@dnd-kit/utilities'
 import type { Chore } from '@/integrations/chores/types'
 
 interface DraggableChoreChipProps {
@@ -13,8 +12,8 @@ function DraggableChoreChip({ chore }: DraggableChoreChipProps) {
   })
 
   const style = {
-    transform: CSS.Translate.toString(transform),
-    opacity: isDragging ? 0.5 : 1,
+    opacity: isDragging ? 0.3 : 1,
+    // Don't transform the original — DragOverlay handles the moving copy
   }
 
   const isMeta = chore.chore_type === 'meta'
