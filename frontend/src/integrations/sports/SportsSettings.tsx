@@ -29,11 +29,41 @@ export function SportsSettings() {
     setError(null)
     try {
       const config = await fetch('/api/config').then((r) => r.json()) as Record<string, string>
-      const tracked = config['sports.tracked_teams']
-      setTrackedTeams(tracked ? JSON.parse(tracked) : [])
+      const tracked: TrackedTeam[] = config['sports.tracked_teams']
+        ? JSON.parse(config['sports.tracked_teams'])
+        : []
       setPollLive(config['sports.poll_interval_live'] ?? '30')
       setPollIdle(config['sports.poll_interval_idle'] ?? '900')
       setWindowHours(config['sports.window_hours'] ?? '24')
+
+      // Backfill display info for teams missing name/logo (legacy data)
+      const needsBackfill = tracked.some((t) => !t.name)
+      if (needsBackfill && tracked.length > 0) {
+        const leagueIds = [...new Set(tracked.map((t) => t.league))]
+        const teamsByLeague: Record<string, TeamInfo[]> = {}
+        await Promise.all(
+          leagueIds.map(async (leagueId) => {
+            try {
+              const data = await sportsIntegration.api.get<{ teams: TeamInfo[] }>(
+                `/teams?league=${leagueId}`,
+              )
+              teamsByLeague[leagueId] = data.teams
+            } catch {
+              // skip — pills will just show the ID
+            }
+          }),
+        )
+        setLeagueTeams((prev) => ({ ...prev, ...teamsByLeague }))
+        const enriched = tracked.map((t) => {
+          if (t.name) return t
+          const info = teamsByLeague[t.league]?.find((team) => team.id === t.teamId)
+          if (info) return { ...t, name: info.name, logo: info.logo }
+          return t
+        })
+        setTrackedTeams(enriched)
+      } else {
+        setTrackedTeams(tracked)
+      }
     } catch {
       setError('Failed to load settings')
     } finally {
