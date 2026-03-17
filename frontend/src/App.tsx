@@ -6,7 +6,6 @@ import { HomeBoard } from './boards/HomeBoard'
 import { MediaBoard } from './boards/MediaBoard'
 import { CamerasBoard } from './boards/CamerasBoard'
 import { AdminLayout } from './admin/AdminLayout'
-import { ChoreAdmin } from './admin/ChoreAdmin'
 import { SettingsAdmin } from './admin/SettingsAdmin'
 import { HA_URL, HA_TOKEN } from './lib/ha-client'
 
@@ -19,7 +18,7 @@ function AppRoutes() {
         <Route path="cameras" element={<CamerasBoard />} />
       </Route>
       <Route path="admin" element={<AdminLayout />}>
-        <Route path="chores" element={<ChoreAdmin />} />
+        <Route index element={<SettingsAdmin />} />
         <Route path="settings" element={<SettingsAdmin />} />
       </Route>
     </Routes>

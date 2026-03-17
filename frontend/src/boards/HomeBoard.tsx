@@ -57,7 +57,7 @@ function HeroStripWithData({ heroEvents }: { heroEvents: { name: string; time: s
         weatherCondition={weather?.condition}
         weatherIcon={weather?.icon}
         onWeatherClick={() => setShowForecast(true)}
-        onSettingsClick={() => navigate('/admin/settings')}
+        onSettingsClick={() => navigate('/admin')}
       />
       <BottomSheet isOpen={showForecast} onClose={() => setShowForecast(false)}>
         <WeatherDetail />
