@@ -1,5 +1,5 @@
 use axum::Json;
-use axum::extract::{Path, State};
+use axum::extract::{Path, RawQuery, State};
 use sqlx::SqlitePool;
 
 use crate::error::AppError;
@@ -42,8 +42,13 @@ async fn proxy_get(pool: &SqlitePool, path: &str) -> Result<Json<serde_json::Val
 
 pub async fn get_shipments(
     State(pool): State<SqlitePool>,
+    RawQuery(query): RawQuery,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    proxy_get(&pool, "/shipments").await
+    let path = match query {
+        Some(q) => format!("/shipments?{}", q),
+        None => "/shipments".to_string(),
+    };
+    proxy_get(&pool, &path).await
 }
 
 pub async fn get_shipment_events(
