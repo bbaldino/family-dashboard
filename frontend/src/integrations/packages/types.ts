@@ -5,6 +5,7 @@ export interface Shipment {
   trackingNumber: string
   status: ShipmentStatus
   expectedDelivery: string | null
+  expectedDeliveryDate: string | null
   trackingUrl: string | null
   orderUrl: string | null
   notes: string

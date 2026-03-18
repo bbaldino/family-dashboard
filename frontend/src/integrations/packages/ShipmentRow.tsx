@@ -1,20 +1,17 @@
 import type { Shipment } from './types'
 import { STATUS_ICONS, STATUS_LABELS } from './types'
 
-function formatEta(expectedDelivery: string | null): { text: string; color: string } {
-  if (!expectedDelivery) return { text: '', color: 'text-text-muted' }
+function etaColor(deliveryDate: string | null): string {
+  if (!deliveryDate) return 'text-text-muted'
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const delivery = new Date(expectedDelivery + 'T00:00:00')
-
+  const delivery = new Date(deliveryDate + 'T00:00:00')
   const diffDays = Math.round((delivery.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
 
-  if (diffDays <= 0) return { text: 'Today', color: 'text-success' }
-  if (diffDays === 1) return { text: 'Tomorrow', color: 'text-[#c06830]' }
-
-  const formatted = delivery.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
-  return { text: formatted, color: 'text-text-muted' }
+  if (diffDays <= 0) return 'text-success'
+  if (diffDays === 1) return 'text-[#c06830]'
+  return 'text-text-muted'
 }
 
 function formatDeliveredAgo(updatedAt: string): string {
@@ -38,7 +35,7 @@ interface ShipmentRowProps {
 export function ShipmentRow({ shipment, onClick }: ShipmentRowProps) {
   const isDelivered = shipment.status === 'delivered'
   const icon = STATUS_ICONS[shipment.status] ?? '\u2753'
-  const eta = formatEta(shipment.expectedDelivery)
+  const color = etaColor(shipment.expectedDeliveryDate)
 
   return (
     <div
@@ -60,9 +57,9 @@ export function ShipmentRow({ shipment, onClick }: ShipmentRowProps) {
           }
         </div>
       </div>
-      {!isDelivered && eta.text && (
+      {!isDelivered && shipment.expectedDelivery && (
         <div className="flex-shrink-0 text-right">
-          <div className={`text-[13px] font-semibold ${eta.color}`}>{eta.text}</div>
+          <div className={`text-[13px] font-semibold ${color}`}>{shipment.expectedDelivery}</div>
         </div>
       )}
     </div>

@@ -31,7 +31,12 @@ export function PackagesWidget() {
 
   const active = visible
     .filter((s) => s.status !== 'delivered')
-    .sort((a, b) => (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99))
+    .sort((a, b) => {
+      const statusDiff = (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99)
+      if (statusDiff !== 0) return statusDiff
+      // Within same status, sort by delivery date (soonest first)
+      return (a.expectedDeliveryDate ?? '9999').localeCompare(b.expectedDeliveryDate ?? '9999')
+    })
 
   const delivered = visible
     .filter((s) => s.status === 'delivered')
