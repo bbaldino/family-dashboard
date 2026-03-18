@@ -193,9 +193,10 @@ export function MonthGrid({ year, month, eventsByDate, selectedDate, onDayClick 
 
               {/* Spanning multi-day bars overlaid on top */}
               {spanBars.map((bar) => {
-                const left = `${(bar.startCol / 7) * 100}%`
-                const width = `${((bar.endCol - bar.startCol + 1) / 7) * 100}%`
-                // Position below the day number row
+                const marginL = bar.continuesFromPrev ? 0 : 4
+                const marginR = bar.continuesToNext ? 0 : 4
+                const leftPct = (bar.startCol / 7) * 100
+                const widthPct = ((bar.endCol - bar.startCol + 1) / 7) * 100
                 const top = 24 + bar.lane * (SPAN_BAR_HEIGHT + SPAN_BAR_GAP)
 
                 return (
@@ -203,22 +204,20 @@ export function MonthGrid({ year, month, eventsByDate, selectedDate, onDayClick 
                     key={`${bar.event.id}-${weekIdx}`}
                     className="absolute text-[10px] leading-tight truncate font-medium pointer-events-none"
                     style={{
-                      left,
-                      width,
+                      left: `calc(${leftPct}% + ${marginL}px)`,
+                      width: `calc(${widthPct}% - ${marginL + marginR}px)`,
                       top: `${top}px`,
                       height: `${SPAN_BAR_HEIGHT}px`,
                       paddingLeft: bar.continuesFromPrev ? '4px' : '8px',
                       paddingRight: bar.continuesToNext ? '4px' : '8px',
                       display: 'flex',
                       alignItems: 'center',
-                      background: 'color-mix(in srgb, var(--color-info) 20%, transparent)',
+                      background: 'color-mix(in srgb, var(--color-info) 25%, transparent)',
                       color: 'var(--color-info)',
                       borderRadius: `${bar.continuesFromPrev ? '0' : '4px'} ${bar.continuesToNext ? '0' : '4px'} ${bar.continuesToNext ? '0' : '4px'} ${bar.continuesFromPrev ? '0' : '4px'}`,
-                      marginLeft: bar.continuesFromPrev ? '0' : '4px',
-                      marginRight: bar.continuesToNext ? '0' : '4px',
                     }}
                   >
-                    {!bar.continuesFromPrev && (bar.event.summary ?? '(No title)')}
+                    {bar.event.summary ?? '(No title)'}
                   </div>
                 )
               })}

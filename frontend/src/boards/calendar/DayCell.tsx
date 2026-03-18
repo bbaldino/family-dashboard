@@ -49,14 +49,18 @@ export function DayCell({ date, events, isToday, isCurrentMonth, isSelected, onC
           {visible.map((event, i) => {
             const time = formatEventTimeCompact(event)
             const isAllDay = !event.start.dateTime
-            const pillColor = isAllDay ? '--color-info' : '--color-calendar'
+            // Timed events use a deeper teal, all-day single-day events use info blue
+            const pillBg = isAllDay
+              ? 'color-mix(in srgb, var(--color-info) 15%, transparent)'
+              : 'color-mix(in srgb, #2a7a5a 12%, transparent)'
+            const pillFg = isAllDay ? 'var(--color-info)' : '#2a7a5a'
             return (
               <div
                 key={event.id + '-' + i}
                 className="text-[10px] leading-tight truncate rounded px-1.5 py-[2px]"
                 style={{
-                  background: `color-mix(in srgb, var(${pillColor}) 15%, transparent)`,
-                  color: `var(${pillColor})`,
+                  background: pillBg,
+                  color: pillFg,
                 }}
               >
                 {time && <span className="font-medium">{time} </span>}
