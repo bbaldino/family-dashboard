@@ -57,12 +57,12 @@ export function ShipmentRow({ shipment, onClick }: ShipmentRowProps) {
             : ` · ${STATUS_LABELS[shipment.status]}`
           }
         </div>
+        {!isDelivered && shipment.expectedDelivery && (
+          <div className={`text-[11px] font-semibold mt-0.5 ${color}`}>
+            {shipment.expectedDelivery}
+          </div>
+        )}
       </div>
-      {!isDelivered && shipment.expectedDelivery && (
-        <div className="text-right shrink-0 max-w-[40%]">
-          <div className={`text-[12px] font-semibold leading-tight ${color}`}>{shipment.expectedDelivery}</div>
-        </div>
-      )}
     </div>
   )
 }
