@@ -124,14 +124,37 @@
     --color-text-primary: #2a2520;
     --color-text-secondary: #7a6a5a;
     --color-text-muted: #b0a89e;
-    --color-calendar: #c06830;
-    --color-chores: #4a8a4a;
-    --color-info: #4a7a9a;
-    --color-food: #9a7a30;
-    --color-grocery: #8a5a9a;
-    --color-sports: #c04040;
-    --color-success: #4caf50;
-    --color-error: #e53935;
+    /* Palette slots — assignable accent pool */
+    --color-palette-1: #c06830;
+    --color-palette-2: #4a8a4a;
+    --color-palette-3: #4a7a9a;
+    --color-palette-4: #9a7a30;
+    --color-palette-5: #8a5a9a;
+    --color-palette-6: #c04040;
+    --color-palette-7: #2a7a5a;
+    --color-palette-8: #aa6a7a;
+
+    /* Semantic roles */
+    --color-role-success: #4caf50;
+    --color-role-warning: #c06830;
+    --color-role-error: #e53935;
+    --color-role-info: #4a7a9a;
+
+    /* Text tiers */
+    --color-text-disabled: #c0b8ae;
+
+    /* Border tiers */
+    --color-border-subtle: #f0ece6;
+
+    /* Backward-compatible aliases (remove after migration) */
+    --color-calendar: var(--color-palette-1);
+    --color-chores: var(--color-palette-2);
+    --color-info: var(--color-role-info);
+    --color-food: var(--color-palette-4);
+    --color-grocery: var(--color-palette-5);
+    --color-sports: var(--color-palette-6);
+    --color-success: var(--color-role-success);
+    --color-error: var(--color-role-error);
     --color-separator: rgba(0, 0, 0, 0.08);
     --radius-card: 14px;
     --radius-button: 10px;
