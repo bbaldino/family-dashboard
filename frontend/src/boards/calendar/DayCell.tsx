@@ -52,8 +52,8 @@ export function DayCell({ date, events, isToday, isCurrentMonth, isSelected, onC
             // Timed events use a deeper teal, all-day single-day events use info blue
             const pillBg = isAllDay
               ? 'color-mix(in srgb, var(--color-info) 15%, transparent)'
-              : 'color-mix(in srgb, #2a7a5a 12%, transparent)'
-            const pillFg = isAllDay ? 'var(--color-info)' : '#2a7a5a'
+              : 'color-mix(in srgb, var(--color-palette-7) 12%, transparent)'
+            const pillFg = isAllDay ? 'var(--color-info)' : 'var(--color-palette-7)'
             return (
               <div
                 key={event.id + '-' + i}

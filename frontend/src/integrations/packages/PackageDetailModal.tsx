@@ -65,9 +65,9 @@ export function PackageDetailModal({ shipment, onClose }: PackageDetailModalProp
                   className="flex gap-3 py-2 border-b border-border last:border-b-0"
                 >
                   <div className="flex flex-col items-center flex-shrink-0 w-[6px] mt-1">
-                    <div className={`w-[6px] h-[6px] rounded-full ${i === 0 ? 'bg-grocery' : 'bg-[#d0ccc6]'}`} />
+                    <div className={`w-[6px] h-[6px] rounded-full ${i === 0 ? 'bg-grocery' : 'bg-text-disabled'}`} />
                     {i < events.length - 1 && (
-                      <div className="w-px flex-1 bg-[#e8e4de] mt-1" />
+                      <div className="w-px flex-1 bg-border-subtle mt-1" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">

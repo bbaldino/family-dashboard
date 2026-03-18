@@ -29,9 +29,9 @@ export function GameDetailModal({ game, onClose }: { game: Game | null; onClose:
           <div className="text-center min-w-[60px]">
             {hasScore && game.away.score != null && game.home.score != null ? (
               <div className="text-[28px] font-bold tracking-[2px]">
-                <span className={isFinal && game.away.winner === false ? 'text-[#c0b8ae]' : ''}>{game.away.score}</span>
-                <span className="text-[#d0c8c0] mx-1">-</span>
-                <span className={isFinal && game.home.winner === false ? 'text-[#c0b8ae]' : ''}>{game.home.score}</span>
+                <span className={isFinal && game.away.winner === false ? 'text-text-disabled' : ''}>{game.away.score}</span>
+                <span className="text-text-disabled mx-1">-</span>
+                <span className={isFinal && game.home.winner === false ? 'text-text-disabled' : ''}>{game.home.score}</span>
               </div>
             ) : (
               <div className="text-[13px] text-text-muted">vs</div>

@@ -38,7 +38,7 @@ export function GameCard({ game, onClick }: { game: Game; onClick?: () => void }
   return (
     <div
       className={`py-[10px] border-b border-border last:border-b-0 cursor-pointer hover:bg-bg-card-hover transition-colors rounded-lg ${
-        isLive ? 'bg-[rgba(229,57,53,0.03)] px-[10px] -mx-[10px]' : ''
+        isLive ? 'bg-role-error/[3%] px-[10px] -mx-[10px]' : ''
       }`}
       onClick={onClick}
     >
@@ -59,7 +59,7 @@ export function GameCard({ game, onClick }: { game: Game; onClick?: () => void }
           />
           <div>
             <div className={`text-[15px] font-semibold ${
-              isFinal && game.away.winner === false ? 'text-[#c0b8ae]' : 'text-text-primary'
+              isFinal && game.away.winner === false ? 'text-text-disabled' : 'text-text-primary'
             }`}>
               {game.away.name}
             </div>
@@ -73,11 +73,11 @@ export function GameCard({ game, onClick }: { game: Game; onClick?: () => void }
         <div className="text-center min-w-[70px]">
           {(isLive || isFinal) && game.away.score != null && game.home.score != null && (
             <div className="text-[24px] font-bold tracking-[2px]">
-              <span className={game.away.winner === false ? 'text-[#c0b8ae]' : 'text-text-primary'}>
+              <span className={game.away.winner === false ? 'text-text-disabled' : 'text-text-primary'}>
                 {game.away.score}
               </span>
-              <span className="text-[#d0c8c0] mx-[2px]">-</span>
-              <span className={game.home.winner === false ? 'text-[#c0b8ae]' : 'text-text-primary'}>
+              <span className="text-text-disabled mx-[2px]">-</span>
+              <span className={game.home.winner === false ? 'text-text-disabled' : 'text-text-primary'}>
                 {game.home.score}
               </span>
             </div>
@@ -121,7 +121,7 @@ export function GameCard({ game, onClick }: { game: Game; onClick?: () => void }
         <div className="flex items-center gap-2 flex-1 justify-end">
           <div className="text-right">
             <div className={`text-[15px] font-semibold ${
-              isFinal && game.home.winner === false ? 'text-[#c0b8ae]' : 'text-text-primary'
+              isFinal && game.home.winner === false ? 'text-text-disabled' : 'text-text-primary'
             }`}>
               {game.home.name}
             </div>
@@ -139,7 +139,7 @@ export function GameCard({ game, onClick }: { game: Game; onClick?: () => void }
 
       {/* Stats / situation */}
       {(isLive || isFinal) && game.leaders.length > 0 && (
-        <div className="mt-[6px] pt-[6px] border-t border-[#f5f2ed]">
+        <div className="mt-[6px] pt-[6px] border-t border-border-subtle">
           {game.leaders.map((leader, i) => (
             <div key={i} className="text-[11px] text-text-muted flex items-center gap-1">
               <span className="font-medium text-text-secondary">{leader.name}:</span>

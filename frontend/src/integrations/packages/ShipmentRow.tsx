@@ -10,7 +10,7 @@ function etaColor(deliveryDate: string | null): string {
   const diffDays = Math.round((delivery.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
 
   if (diffDays <= 0) return 'text-success'
-  if (diffDays === 1) return 'text-[#c06830]'
+  if (diffDays === 1) return 'text-role-warning'
   return 'text-text-muted'
 }
 
