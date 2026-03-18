@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useMonthCalendar } from './useMonthCalendar'
+import { MonthGrid } from './MonthGrid'
+import { DayDetailModal } from './DayDetailModal'
 
 export function CalendarBoard() {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth())
+  const [selectedDate, setSelectedDate] = useState<{ date: Date; key: string } | null>(null)
 
-  const { data, isLoading, error } = useMonthCalendar(year, month)
+  const { data, error } = useMonthCalendar(year, month)
 
   const goToPrev = () => {
     if (month === 0) {
@@ -36,10 +39,16 @@ export function CalendarBoard() {
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth()
   const monthName = new Date(year, month).toLocaleDateString([], { month: 'long', year: 'numeric' })
 
+  const handleDayClick = (date: Date, dateKey: string) => {
+    setSelectedDate({ date, key: dateKey })
+  }
+
+  const eventsByDate = data?.byDate ?? {}
+
   return (
     <div className="h-full flex flex-col p-4 gap-3">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-shrink-0">
         <h1 className="text-[22px] font-semibold text-text-primary">{monthName}</h1>
         <div className="flex items-center gap-2">
           {!isCurrentMonth && (
@@ -65,18 +74,29 @@ export function CalendarBoard() {
         </div>
       </div>
 
-      {/* Calendar grid area */}
+      {/* Calendar grid */}
       <div className="flex-1 min-h-0 bg-bg-card rounded-[var(--radius-card)] shadow-[var(--shadow-card)] overflow-hidden flex flex-col">
         {error ? (
           <div className="flex-1 flex items-center justify-center text-[13px] text-text-muted">
             Connect Google Calendar in Settings
           </div>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-[13px] text-text-muted">
-            {isLoading ? 'Loading...' : `Month grid placeholder — ${Object.keys(data?.byDate ?? {}).length} days with events`}
-          </div>
+          <MonthGrid
+            year={year}
+            month={month}
+            eventsByDate={eventsByDate}
+            selectedDate={selectedDate?.key ?? null}
+            onDayClick={handleDayClick}
+          />
         )}
       </div>
+
+      {/* Day detail modal */}
+      <DayDetailModal
+        date={selectedDate?.date ?? null}
+        events={selectedDate ? (eventsByDate[selectedDate.key] ?? []) : []}
+        onClose={() => setSelectedDate(null)}
+      />
     </div>
   )
 }
