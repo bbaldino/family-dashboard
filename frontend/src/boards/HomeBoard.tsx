@@ -10,6 +10,7 @@ import { CountdownsWidget } from '@/integrations/countdowns'
 import { LunchMenuWidget } from '@/integrations/nutrislice'
 import { useHeroWeather, WeatherDetail } from '@/integrations/weather'
 import { SportsWidget } from '@/integrations/sports'
+import { PackagesWidget } from '@/integrations/packages'
 
 function getHeroEvents(days: CalendarDay[] | null): { name: string; time: string; detail?: string; isNow?: boolean }[] {
   if (!days) return []
@@ -102,8 +103,11 @@ export function HomeBoard() {
         />
       </div>
 
-      {/* Chores -- col 2, spans 2 rows */}
-      <div style={{ gridRow: '2 / 4', minHeight: 0 }} className="overflow-hidden">
+      {/* Packages -- col 2, row 2 */}
+      <PackagesWidget />
+
+      {/* Chores -- col 2, row 3 */}
+      <div style={{ minHeight: 0 }} className="overflow-hidden">
         <ChoresWidget />
       </div>
 
