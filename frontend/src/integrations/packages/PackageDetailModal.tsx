@@ -42,11 +42,7 @@ export function PackageDetailModal({ shipment, onClose }: PackageDetailModalProp
             <div className="ml-auto text-right">
               <div className="text-[11px] text-text-muted">Expected</div>
               <div className="text-[13px] font-semibold text-text-primary">
-                {new Date(shipment.expectedDelivery + 'T00:00:00').toLocaleDateString([], {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
-                })}
+                {shipment.expectedDelivery}
               </div>
             </div>
           )}
