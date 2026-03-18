@@ -1,30 +1,32 @@
 import type { CalendarEvent } from '@/integrations/google-calendar/types'
 import { formatEventTimeCompact } from './formatEventTime'
 
-const MAX_PILLS = 3
+const MAX_PILLS = 4
 
 interface DayCellProps {
   date: Date
-  events: CalendarEvent[]
+  events: CalendarEvent[] // single-day events only (multi-day rendered by MonthGrid)
   isToday: boolean
   isCurrentMonth: boolean
   isSelected: boolean
   onClick: () => void
+  spanSlotHeight: number // px reserved at top for multi-day spanning bars
 }
 
-export function DayCell({ date, events, isToday, isCurrentMonth, isSelected, onClick }: DayCellProps) {
+export function DayCell({ date, events, isToday, isCurrentMonth, isSelected, onClick, spanSlotHeight }: DayCellProps) {
   const dayNum = date.getDate()
   const visible = events.slice(0, MAX_PILLS)
   const remaining = events.length - visible.length
 
   return (
     <div
-      className={`flex flex-col p-1 border-b border-r border-border overflow-hidden cursor-pointer transition-colors ${
+      className={`flex flex-col border-r border-border overflow-hidden cursor-pointer transition-colors ${
         isSelected ? 'bg-calendar/5' : 'hover:bg-bg-card-hover'
       } ${!isCurrentMonth ? 'opacity-40' : ''}`}
       onClick={onClick}
     >
-      <div className="flex-shrink-0 mb-0.5">
+      {/* Day number */}
+      <div className="flex-shrink-0 px-1 pt-1 mb-0.5">
         <span
           className={`inline-flex items-center justify-center text-[12px] font-medium ${
             isToday
@@ -36,8 +38,14 @@ export function DayCell({ date, events, isToday, isCurrentMonth, isSelected, onC
         </span>
       </div>
 
+      {/* Space reserved for multi-day spanning bars (rendered by MonthGrid) */}
+      {spanSlotHeight > 0 && (
+        <div className="flex-shrink-0" style={{ height: `${spanSlotHeight}px` }} />
+      )}
+
+      {/* Single-day event pills */}
       {isCurrentMonth && (
-        <div className="flex-1 min-h-0 flex flex-col gap-[3px] overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col gap-[3px] overflow-hidden px-1 pb-1">
           {visible.map((event, i) => {
             const time = formatEventTimeCompact(event)
             const isAllDay = !event.start.dateTime
