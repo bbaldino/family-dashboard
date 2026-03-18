@@ -30,16 +30,17 @@ function formatUpcomingTime(startTime: string): string {
   return `${start.toLocaleDateString([], { weekday: 'short' })} ${timeStr}`
 }
 
-export function GameCard({ game }: { game: Game }) {
+export function GameCard({ game, onClick }: { game: Game; onClick?: () => void }) {
   const isLive = game.state === 'live'
   const isFinal = game.state === 'final'
   const isPostponed = game.state === 'postponed'
 
   return (
     <div
-      className={`py-[10px] border-b border-[#f0ece6] last:border-b-0 ${
-        isLive ? 'bg-[rgba(229,57,53,0.03)] rounded-[10px] px-[10px] -mx-[10px]' : ''
+      className={`py-[10px] border-b border-border last:border-b-0 cursor-pointer hover:bg-bg-card-hover transition-colors rounded-lg ${
+        isLive ? 'bg-[rgba(229,57,53,0.03)] px-[10px] -mx-[10px]' : ''
       }`}
+      onClick={onClick}
     >
       {/* League label */}
       <div className="text-[10px] font-semibold text-text-muted uppercase tracking-[0.3px] mb-[6px]">

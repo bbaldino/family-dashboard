@@ -20,6 +20,24 @@ pub struct Leader {
     pub stats: String,
 }
 
+/// A linescore entry (one period/inning)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LinescoreEntry {
+    pub period: i32,
+    pub home_score: String,
+    pub away_score: String,
+}
+
+/// A probable pitcher or featured athlete
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GameAthlete {
+    pub name: String,
+    pub stats: Option<String>,
+    pub role: String,
+}
+
 /// Game state
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -48,7 +66,11 @@ pub struct Game {
     pub period: Option<i32>,
     pub period_label: Option<String>,
     pub leaders: Vec<Leader>,
+    pub all_leaders: Vec<Leader>,
     pub situation: Option<String>,
+    pub linescores: Vec<LinescoreEntry>,
+    pub athletes: Vec<GameAthlete>,
+    pub espn_url: Option<String>,
 }
 
 /// Response for GET /api/sports/games

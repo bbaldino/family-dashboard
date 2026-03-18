@@ -31,7 +31,23 @@ export interface Game {
   period: number | null
   periodLabel: string | null
   leaders: Leader[]
+  allLeaders: Leader[]
   situation: string | null
+  linescores: LinescoreEntry[]
+  athletes: GameAthlete[]
+  espnUrl: string | null
+}
+
+export interface LinescoreEntry {
+  period: number
+  homeScore: string
+  awayScore: string
+}
+
+export interface GameAthlete {
+  name: string
+  stats: string | null
+  role: string
 }
 
 export interface GamesResponse {

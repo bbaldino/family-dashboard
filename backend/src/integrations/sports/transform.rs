@@ -100,13 +100,34 @@ fn parse_game(
         }
     }
 
-    let leaders = parse_leaders(competition, league_id);
+    let leaders = parse_leaders(competition, league_id, 2);
+    let all_leaders = parse_leaders(competition, league_id, 20);
 
     let situation = if league_id == "mlb" && state == GameState::Live {
         parse_mlb_situation(&competition["situation"])
     } else {
         None
     };
+
+    let linescores = parse_linescores(competition);
+    let athletes = parse_athletes(competition);
+
+    // ESPN game URL from links
+    let espn_url = competition["links"]
+        .as_array()
+        .and_then(|links| {
+            links
+                .iter()
+                .find(|l| l["text"].as_str() == Some("Gamecast"))
+        })
+        .and_then(|l| l["href"].as_str())
+        .or_else(|| {
+            event["links"]
+                .as_array()
+                .and_then(|links| links.first())
+                .and_then(|l| l["href"].as_str())
+        })
+        .map(|s| s.to_string());
 
     Some(Game {
         id,
@@ -123,7 +144,11 @@ fn parse_game(
         period,
         period_label,
         leaders,
+        all_leaders,
         situation,
+        linescores,
+        athletes,
+        espn_url,
     })
 }
 
@@ -153,9 +178,18 @@ fn parse_team(competitor: &serde_json::Value) -> GameTeam {
     }
 }
 
-fn parse_leaders(competition: &serde_json::Value, _league_id: &str) -> Vec<Leader> {
+fn parse_leaders(competition: &serde_json::Value, _league_id: &str, max: usize) -> Vec<Leader> {
     let empty = vec![];
     let leaders_arr = competition["leaders"].as_array().unwrap_or(&empty);
+
+    let home_id = competition["competitors"]
+        .as_array()
+        .and_then(|c| {
+            c.iter()
+                .find(|comp| comp["homeAway"].as_str() == Some("home"))
+        })
+        .and_then(|c| c["team"]["id"].as_str())
+        .unwrap_or("");
 
     let mut result = Vec::new();
     for category in leaders_arr {
@@ -175,14 +209,6 @@ fn parse_leaders(competition: &serde_json::Value, _league_id: &str) -> Vec<Leade
                 .to_string();
 
             let team_id = athlete["team"]["id"].as_str().unwrap_or("");
-            let home_id = competition["competitors"]
-                .as_array()
-                .and_then(|c| {
-                    c.iter()
-                        .find(|comp| comp["homeAway"].as_str() == Some("home"))
-                })
-                .and_then(|c| c["team"]["id"].as_str())
-                .unwrap_or("");
             let team = if team_id == home_id { "home" } else { "away" };
 
             result.push(Leader {
@@ -191,10 +217,113 @@ fn parse_leaders(competition: &serde_json::Value, _league_id: &str) -> Vec<Leade
                 stats: format!("{} {}", stat_value, stat_name),
             });
         }
-        if result.len() >= 2 {
+        if result.len() >= max {
             break;
         }
     }
+    result
+}
+
+fn parse_linescores(competition: &serde_json::Value) -> Vec<LinescoreEntry> {
+    let competitors = match competition["competitors"].as_array() {
+        Some(c) => c,
+        None => return vec![],
+    };
+
+    let home = competitors
+        .iter()
+        .find(|c| c["homeAway"].as_str() == Some("home"));
+    let away = competitors
+        .iter()
+        .find(|c| c["homeAway"].as_str() == Some("away"));
+
+    let (Some(home), Some(away)) = (home, away) else {
+        return vec![];
+    };
+
+    let home_scores = home["linescores"].as_array();
+    let away_scores = away["linescores"].as_array();
+
+    let (Some(home_scores), Some(away_scores)) = (home_scores, away_scores) else {
+        return vec![];
+    };
+
+    let len = home_scores.len().max(away_scores.len());
+    (0..len)
+        .map(|i| LinescoreEntry {
+            period: (i + 1) as i32,
+            home_score: home_scores
+                .get(i)
+                .and_then(|s| s["displayValue"].as_str())
+                .unwrap_or("-")
+                .to_string(),
+            away_score: away_scores
+                .get(i)
+                .and_then(|s| s["displayValue"].as_str())
+                .unwrap_or("-")
+                .to_string(),
+        })
+        .collect()
+}
+
+fn parse_athletes(competition: &serde_json::Value) -> Vec<GameAthlete> {
+    let mut result = Vec::new();
+
+    // Probable pitchers (MLB upcoming games)
+    let empty = vec![];
+    let competitors = competition["competitors"].as_array().unwrap_or(&empty);
+    for comp in competitors {
+        if let Some(probables) = comp["probables"].as_array() {
+            for prob in probables {
+                let name = prob["athlete"]["displayName"]
+                    .as_str()
+                    .unwrap_or("")
+                    .to_string();
+                if name.is_empty() {
+                    continue;
+                }
+                let stats = prob["statistics"]
+                    .as_array()
+                    .map(|stats| {
+                        stats
+                            .iter()
+                            .filter_map(|s| {
+                                let abbr = s["abbreviation"].as_str()?;
+                                let val = s["displayValue"].as_str()?;
+                                Some(format!("{} {}", val, abbr))
+                            })
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    })
+                    .filter(|s| !s.is_empty());
+                result.push(GameAthlete {
+                    name,
+                    stats,
+                    role: "probable".to_string(),
+                });
+            }
+        }
+    }
+
+    // Featured athletes (winning/losing pitcher for finals)
+    if let Some(featured) = competition["status"]["featuredAthletes"].as_array() {
+        for athlete in featured {
+            let name = athlete["athlete"]["displayName"]
+                .as_str()
+                .unwrap_or("")
+                .to_string();
+            if name.is_empty() {
+                continue;
+            }
+            let role = athlete["displayName"].as_str().unwrap_or("").to_string();
+            result.push(GameAthlete {
+                name,
+                stats: None,
+                role,
+            });
+        }
+    }
+
     result
 }
 

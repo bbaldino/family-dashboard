@@ -1,10 +1,14 @@
+import { useState } from 'react'
 import { WidgetCard } from '@/ui/WidgetCard'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
 import { useSportsGames } from './useSportsGames'
 import { GameCard } from './GameCard'
+import { GameDetailModal } from './GameDetailModal'
+import type { Game } from './types'
 
 export function SportsWidget() {
   const { data, isLoading, error, refetch } = useSportsGames()
+  const [selectedGame, setSelectedGame] = useState<Game | null>(null)
 
   const games = data?.games ?? []
   const liveCount = games.filter((g) => g.state === 'live').length
@@ -34,22 +38,25 @@ export function SportsWidget() {
   }
 
   return (
-    <WidgetCard
-      title="Sports"
-      category="sports"
-      badge={liveCount > 0 ? `${liveCount} Live` : undefined}
-    >
-      {games.length === 0 ? (
-        <div className="text-[13px] text-text-muted py-1">
-          {data ? 'No games today' : 'Select teams in Settings to get started'}
-        </div>
-      ) : (
-        <div className="flex flex-col">
-          {games.map((game) => (
-            <GameCard key={game.id} game={game} />
-          ))}
-        </div>
-      )}
-    </WidgetCard>
+    <>
+      <WidgetCard
+        title="Sports"
+        category="sports"
+        badge={liveCount > 0 ? `${liveCount} Live` : undefined}
+      >
+        {games.length === 0 ? (
+          <div className="text-[13px] text-text-muted py-1">
+            {data ? 'No games today' : 'Select teams in Settings to get started'}
+          </div>
+        ) : (
+          <div className="flex flex-col">
+            {games.map((game) => (
+              <GameCard key={game.id} game={game} onClick={() => setSelectedGame(game)} />
+            ))}
+          </div>
+        )}
+      </WidgetCard>
+      <GameDetailModal game={selectedGame} onClose={() => setSelectedGame(null)} />
+    </>
   )
 }
