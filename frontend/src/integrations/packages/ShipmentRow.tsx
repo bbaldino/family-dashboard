@@ -17,12 +17,13 @@ function etaColor(deliveryDate: string | null): string {
 function formatDeliveredAgo(updatedAt: string): string {
   const updated = new Date(updatedAt)
   const now = new Date()
-  const diffHours = (now.getTime() - updated.getTime()) / (1000 * 60 * 60)
+  const diffMins = (now.getTime() - updated.getTime()) / (1000 * 60)
 
-  if (diffHours < 1) return 'Just now'
-  if (diffHours < 24) return `${Math.round(diffHours)}h ago`
+  if (diffMins < 5) return 'Just now'
+  if (diffMins < 60) return `${Math.round(diffMins)} mins ago`
+  if (diffMins < 24 * 60) return `${Math.round(diffMins / 60)}h ago`
 
-  const diffDays = Math.round(diffHours / 24)
+  const diffDays = Math.round(diffMins / (24 * 60))
   if (diffDays === 1) return 'Yesterday'
   return `${diffDays} days ago`
 }
