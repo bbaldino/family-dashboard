@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HassConnect } from '@hakit/core'
 import { AppShell } from './app/AppShell'
 import { HomeBoard } from './boards/HomeBoard'
+import { CalendarBoard } from './boards/calendar/CalendarBoard'
 import { MediaBoard } from './boards/MediaBoard'
 import { CamerasBoard } from './boards/CamerasBoard'
 import { AdminLayout } from './admin/AdminLayout'
@@ -14,6 +15,7 @@ function AppRoutes() {
     <Routes>
       <Route element={<AppShell />}>
         <Route index element={<HomeBoard />} />
+        <Route path="calendar" element={<CalendarBoard />} />
         <Route path="media" element={<MediaBoard />} />
         <Route path="cameras" element={<CamerasBoard />} />
       </Route>

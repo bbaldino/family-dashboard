@@ -1,8 +1,9 @@
 import { NavLink } from 'react-router-dom'
-import { Home, Music, Camera, type LucideIcon } from 'lucide-react'
+import { Home, CalendarDays, Music, Camera, type LucideIcon } from 'lucide-react'
 
 const tabs: { to: string; label: string; icon: LucideIcon }[] = [
   { to: '/', label: 'Home', icon: Home },
+  { to: '/calendar', label: 'Calendar', icon: CalendarDays },
   { to: '/media', label: 'Media', icon: Music },
   { to: '/cameras', label: 'Cameras', icon: Camera },
 ]
@@ -10,7 +11,7 @@ const tabs: { to: string; label: string; icon: LucideIcon }[] = [
 export function TabBar() {
   return (
     <nav
-      className="flex items-center justify-center gap-[60px] bg-bg-card border-t border-border"
+      className="flex items-center justify-center gap-[40px] bg-bg-card border-t border-border"
       style={{ height: 'var(--height-tab-bar)' }}
     >
       {tabs.map((tab) => {
