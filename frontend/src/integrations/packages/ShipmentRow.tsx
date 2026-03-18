@@ -59,8 +59,8 @@ export function ShipmentRow({ shipment, onClick }: ShipmentRowProps) {
         </div>
       </div>
       {!isDelivered && shipment.expectedDelivery && (
-        <div className="flex-shrink-0 text-right">
-          <div className={`text-[13px] font-semibold ${color}`}>{shipment.expectedDelivery}</div>
+        <div className="text-right max-w-[120px] flex-shrink-0">
+          <div className={`text-[12px] font-semibold leading-tight ${color}`}>{shipment.expectedDelivery}</div>
         </div>
       )}
     </div>
