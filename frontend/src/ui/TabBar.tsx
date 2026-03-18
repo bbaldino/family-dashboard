@@ -20,7 +20,7 @@ export function TabBar() {
           <NavLink key={tab.to} to={tab.to} end={tab.to === '/'}
             className={({ isActive }) =>
               `flex flex-col items-center gap-[2px] px-[14px] py-1 rounded-[var(--radius-button)] transition-colors ${
-                isActive ? 'text-calendar bg-calendar/10' : 'text-text-muted'
+                isActive ? 'text-palette-1 bg-palette-1/10' : 'text-text-muted'
               }`
             }
           >

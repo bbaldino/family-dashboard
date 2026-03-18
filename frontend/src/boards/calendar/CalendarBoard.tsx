@@ -54,7 +54,7 @@ export function CalendarBoard() {
           {!isCurrentMonth && (
             <button
               onClick={goToToday}
-              className="px-3 py-1.5 text-[12px] font-medium text-calendar bg-calendar/10 rounded-[var(--radius-button)] hover:bg-calendar/20 transition-colors"
+              className="px-3 py-1.5 text-[12px] font-medium text-palette-1 bg-palette-1/10 rounded-[var(--radius-button)] hover:bg-palette-1/20 transition-colors"
             >
               Today
             </button>

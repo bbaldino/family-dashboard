@@ -88,7 +88,7 @@ export function SettingsAdmin() {
                 }}
                 className={`w-full text-left px-3 py-2 rounded-[var(--radius-button)] text-sm transition-colors ${
                   selectedId === integration.id
-                    ? 'bg-calendar text-white font-medium'
+                    ? 'bg-palette-1 text-white font-medium'
                     : 'text-text-secondary hover:bg-bg-card-hover'
                 }`}
               >
@@ -153,7 +153,7 @@ export function SettingsAdmin() {
                                   String(e.target.checked),
                                 )
                               }
-                              className="w-5 h-5 rounded accent-calendar"
+                              className="w-5 h-5 rounded accent-palette-1"
                             />
                             <div>
                               <div className="text-sm font-medium text-text-primary">

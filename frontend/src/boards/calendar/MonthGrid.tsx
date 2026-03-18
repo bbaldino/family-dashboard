@@ -212,8 +212,8 @@ export function MonthGrid({ year, month, eventsByDate, selectedDate, onDayClick 
                       paddingRight: bar.continuesToNext ? '4px' : '8px',
                       display: 'flex',
                       alignItems: 'center',
-                      background: 'color-mix(in srgb, var(--color-info) 25%, transparent)',
-                      color: 'var(--color-info)',
+                      background: 'color-mix(in srgb, var(--color-role-info) 25%, transparent)',
+                      color: 'var(--color-role-info)',
                       borderRadius: `${bar.continuesFromPrev ? '0' : '4px'} ${bar.continuesToNext ? '0' : '4px'} ${bar.continuesToNext ? '0' : '4px'} ${bar.continuesFromPrev ? '0' : '4px'}`,
                     }}
                   >

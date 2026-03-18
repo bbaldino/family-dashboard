@@ -21,7 +21,7 @@ export function DayCell({ date, events, isToday, isCurrentMonth, isSelected, onC
   return (
     <div
       className={`flex flex-col border-r border-border overflow-hidden cursor-pointer transition-colors ${
-        isSelected ? 'bg-calendar/5' : 'hover:bg-bg-card-hover'
+        isSelected ? 'bg-palette-1/5' : 'hover:bg-bg-card-hover'
       } ${!isCurrentMonth ? 'opacity-40' : ''}`}
       onClick={onClick}
     >
@@ -30,7 +30,7 @@ export function DayCell({ date, events, isToday, isCurrentMonth, isSelected, onC
         <span
           className={`inline-flex items-center justify-center text-[12px] font-medium ${
             isToday
-              ? 'w-6 h-6 rounded-full bg-calendar text-white'
+              ? 'w-6 h-6 rounded-full bg-palette-1 text-white'
               : 'text-text-primary'
           }`}
         >
@@ -51,9 +51,9 @@ export function DayCell({ date, events, isToday, isCurrentMonth, isSelected, onC
             const isAllDay = !event.start.dateTime
             // Timed events use a deeper teal, all-day single-day events use info blue
             const pillBg = isAllDay
-              ? 'color-mix(in srgb, var(--color-info) 15%, transparent)'
+              ? 'color-mix(in srgb, var(--color-role-info) 15%, transparent)'
               : 'color-mix(in srgb, var(--color-palette-7) 12%, transparent)'
-            const pillFg = isAllDay ? 'var(--color-info)' : 'var(--color-palette-7)'
+            const pillFg = isAllDay ? 'var(--color-role-info)' : 'var(--color-palette-7)'
             return (
               <div
                 key={event.id + '-' + i}

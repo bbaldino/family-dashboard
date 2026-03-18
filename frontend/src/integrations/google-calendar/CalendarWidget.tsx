@@ -70,7 +70,7 @@ export function CalendarWidget({
             <div key={day.label}>
               <div
                 className={`text-[11px] font-bold uppercase tracking-[0.5px] mb-[3px] ${
-                  day.isToday ? 'text-calendar' : 'text-text-secondary'
+                  day.isToday ? 'text-palette-1' : 'text-text-secondary'
                 }`}
               >
                 {day.label}
@@ -88,11 +88,11 @@ export function CalendarWidget({
                         key={event.id}
                         className={`flex items-start gap-2 py-[4px] px-[6px] rounded ${
                           current
-                            ? 'bg-[color-mix(in_srgb,var(--color-calendar)_8%,transparent)]'
+                            ? 'bg-[color-mix(in_srgb,var(--color-palette-1)_8%,transparent)]'
                             : ''
                         }`}
                       >
-                        <span className="text-[12px] font-semibold text-calendar whitespace-nowrap min-w-[56px]">
+                        <span className="text-[12px] font-semibold text-palette-1 whitespace-nowrap min-w-[56px]">
                           {formatEventTime(event)}
                         </span>
                         <div className="flex-1 min-w-0">

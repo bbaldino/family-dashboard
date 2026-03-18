@@ -172,16 +172,16 @@ export function SportsSettings() {
             {trackedTeams.map((t) => (
               <span
                 key={`${t.league}-${t.teamId}`}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-sports/10 text-sports text-sm font-medium"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-palette-6/10 text-palette-6 text-sm font-medium"
               >
                 {t.logo && (
                   <img src={t.logo} alt="" className="w-4 h-4 object-contain" />
                 )}
                 {t.name ?? t.teamId}
-                <span className="text-sports/50 text-xs">{t.league.toUpperCase()}</span>
+                <span className="text-palette-6/50 text-xs">{t.league.toUpperCase()}</span>
                 <button
                   onClick={() => removeTeam(t.league, t.teamId)}
-                  className="ml-1 text-sports/60 hover:text-sports"
+                  className="ml-1 text-palette-6/60 hover:text-palette-6"
                 >
                   x
                 </button>
@@ -213,7 +213,7 @@ export function SportsSettings() {
                   type="checkbox"
                   checked={isTracked(team.league, team.id)}
                   onChange={() => toggleTeam(team)}
-                  className="w-4 h-4 accent-sports"
+                  className="w-4 h-4 accent-palette-6"
                 />
                 <img src={team.logo} alt="" className="w-6 h-6 object-contain" />
                 <div className="flex-1">
@@ -257,7 +257,7 @@ export function SportsSettings() {
                           type="checkbox"
                           checked={isTracked(league.id, team.id)}
                           onChange={() => toggleTeam(team)}
-                          className="w-4 h-4 accent-sports"
+                          className="w-4 h-4 accent-palette-6"
                         />
                         <img src={team.logo} alt="" className="w-6 h-6 object-contain" />
                         <span className="text-sm text-text-primary">{team.displayName}</span>

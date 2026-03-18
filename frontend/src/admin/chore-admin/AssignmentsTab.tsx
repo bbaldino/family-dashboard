@@ -54,7 +54,7 @@ function DroppableCell({ id, children }: DroppableCellProps) {
     <div
       ref={setNodeRef}
       className={`min-h-[130px] p-2 rounded-lg border transition-colors ${
-        isOver ? 'border-calendar bg-calendar/10' : 'border-border bg-bg-primary'
+        isOver ? 'border-palette-1 bg-palette-1/10' : 'border-border bg-bg-primary'
       }`}
     >
       {children}
@@ -296,7 +296,7 @@ export function AssignmentsTab() {
                   key={day}
                   className={`bg-bg-card p-2 text-center text-xs font-semibold ${
                     isCurrentWeek && idx === todayDayIndex
-                      ? 'text-calendar'
+                      ? 'text-palette-1'
                       : 'text-text-secondary'
                   }`}
                 >

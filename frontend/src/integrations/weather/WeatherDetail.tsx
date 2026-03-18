@@ -109,7 +109,7 @@ export function WeatherDetail() {
             <div
               key={day.date}
               className={`flex items-center gap-4 p-3 rounded-xl ${
-                i === 0 ? 'bg-[color-mix(in_srgb,var(--color-info)_6%,transparent)]' : 'bg-bg-primary'
+                i === 0 ? 'bg-[color-mix(in_srgb,var(--color-role-info)_6%,transparent)]' : 'bg-bg-primary'
               }`}
             >
               <span className="text-[14px] font-medium text-text-primary w-[100px]">

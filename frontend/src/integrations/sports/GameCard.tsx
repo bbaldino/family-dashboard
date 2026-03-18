@@ -103,7 +103,7 @@ export function GameCard({ game, onClick }: { game: Game; onClick?: () => void }
 
           {game.state === 'upcoming' && (
             <>
-              <div className="text-[13px] font-semibold text-calendar">
+              <div className="text-[13px] font-semibold text-palette-1">
                 {formatUpcomingTime(game.startTime)}
               </div>
               {game.broadcast && (

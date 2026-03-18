@@ -178,7 +178,7 @@ export function ChoresTab() {
             value={formName}
             onChange={(e) => setFormName(e.target.value)}
             placeholder="Chore name"
-            className="w-full max-w-xs bg-bg-primary border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-calendar"
+            className="w-full max-w-xs bg-bg-primary border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-palette-1"
           />
         </div>
 
@@ -189,7 +189,7 @@ export function ChoresTab() {
             value={formDescription}
             onChange={(e) => setFormDescription(e.target.value)}
             placeholder="Optional description"
-            className="w-full max-w-md bg-bg-primary border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-calendar"
+            className="w-full max-w-md bg-bg-primary border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-palette-1"
           />
         </div>
 
@@ -202,7 +202,7 @@ export function ChoresTab() {
             onKeyDown={handleTagInputKeyDown}
             onBlur={handleTagInputBlur}
             placeholder="Type tags, press Enter or comma to add"
-            className="w-full max-w-md bg-bg-primary border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-calendar"
+            className="w-full max-w-md bg-bg-primary border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-palette-1"
           />
           {formTags.length > 0 &&
             renderTagPills(formTags, (tag) => setFormTags((prev) => prev.filter((t) => t !== tag)))}
@@ -216,7 +216,7 @@ export function ChoresTab() {
               onClick={() => setFormChoreType('regular')}
               className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
                 formChoreType === 'regular'
-                  ? 'bg-calendar text-white'
+                  ? 'bg-palette-1 text-white'
                   : 'bg-bg-primary border border-border text-text-secondary hover:bg-bg-card-hover'
               }`}
             >
@@ -227,7 +227,7 @@ export function ChoresTab() {
               onClick={() => setFormChoreType('meta')}
               className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
                 formChoreType === 'meta'
-                  ? 'bg-calendar text-white'
+                  ? 'bg-palette-1 text-white'
                   : 'bg-bg-primary border border-border text-text-secondary hover:bg-bg-card-hover'
               }`}
             >
@@ -248,7 +248,7 @@ export function ChoresTab() {
               onKeyDown={handlePickFromTagsKeyDown}
               onBlur={handlePickFromTagsBlur}
               placeholder="Tags to pick from"
-              className="w-full max-w-md bg-bg-primary border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-calendar"
+              className="w-full max-w-md bg-bg-primary border border-border rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-palette-1"
             />
             {formPickFromTags.length > 0 &&
               renderTagPills(formPickFromTags, (tag) =>

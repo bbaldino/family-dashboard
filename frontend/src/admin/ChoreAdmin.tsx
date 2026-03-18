@@ -17,7 +17,7 @@ export function ChoreAdmin() {
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
               activeTab === tab
-                ? 'bg-calendar text-white'
+                ? 'bg-palette-1 text-white'
                 : 'text-text-secondary hover:bg-bg-card-hover'
             }`}
           >

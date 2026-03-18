@@ -137,7 +137,7 @@ function AssignmentRow({
     return (
       <div className="flex items-center gap-2 py-[2px]">
         <button
-          className="text-[13px] text-chores font-medium underline"
+          className="text-[13px] text-palette-2 font-medium underline"
           onClick={() =>
             onOpenPicker(assignment.id, assignment.chore.tags, null)
           }
@@ -165,7 +165,7 @@ function AssignmentRow({
               onComplete(assignment.id)
             }
           }}
-          className="w-[20px] h-[20px] accent-chores rounded cursor-pointer"
+          className="w-[20px] h-[20px] accent-palette-2 rounded cursor-pointer"
         />
         <span
           className={`text-[14px] ${

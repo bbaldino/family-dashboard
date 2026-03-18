@@ -28,7 +28,7 @@ export function DayDetailModal({ date, events, onClose }: DayDetailModalProps) {
             >
               <div
                 className="w-1 rounded-full flex-shrink-0 mt-1"
-                style={{ background: 'var(--color-calendar)', minHeight: '14px' }}
+                style={{ background: 'var(--color-palette-1)', minHeight: '14px' }}
               />
               <div className="flex-1 min-w-0">
                 <div className="text-[11px] text-text-muted">

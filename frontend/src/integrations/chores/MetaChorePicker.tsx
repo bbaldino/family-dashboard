@@ -70,7 +70,7 @@ export function MetaChorePicker({
               key={chore.id}
               className={`w-full text-left px-3 py-3 rounded-lg text-[15px] transition-colors ${
                 chore.id === currentPickId
-                  ? 'bg-chores/10 text-chores font-semibold'
+                  ? 'bg-palette-2/10 text-palette-2 font-semibold'
                   : 'text-text-primary hover:bg-bg-card-hover'
               }`}
               onClick={async () => {

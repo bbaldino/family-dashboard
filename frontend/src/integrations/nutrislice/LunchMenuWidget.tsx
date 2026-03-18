@@ -8,9 +8,9 @@ function EntryItem({ entry, compact = false }: { entry: MenuEntry; compact?: boo
     <div className={`${compact ? 'py-[1px]' : 'py-[2px]'} ${entry.isAlternative ? 'pl-[14px]' : ''}`}>
       <div className="flex items-center gap-[6px]">
         {entry.isAlternative ? (
-          <span className={`${compact ? 'text-[11px]' : 'text-[12px]'} text-food font-medium`}>or</span>
+          <span className={`${compact ? 'text-[11px]' : 'text-[12px]'} text-palette-4 font-medium`}>or</span>
         ) : (
-          <span className="w-[5px] h-[5px] rounded-full bg-food flex-shrink-0" />
+          <span className="w-[5px] h-[5px] rounded-full bg-palette-4 flex-shrink-0" />
         )}
         <span className={`${compact ? 'text-[13px]' : 'text-[14px]'} font-medium text-text-primary`}>
           {entry.name}
@@ -43,13 +43,13 @@ function MenuDaySection({
 }) {
   return (
     <div>
-      <div className="text-[11px] font-bold text-food uppercase tracking-[0.5px] mb-[4px]">
+      <div className="text-[11px] font-bold text-palette-4 uppercase tracking-[0.5px] mb-[4px]">
         {label}
       </div>
 
       {/* Main entries with "with" items */}
       {day.entries.length > 0 && (
-        <div className="bg-food/5 rounded-[8px] p-[3px] mb-[4px]">
+        <div className="bg-palette-4/5 rounded-[8px] p-[3px] mb-[4px]">
           {day.entries.map((entry, i) => (
             <div key={i} className="px-[6px] bg-white/70 rounded-md mb-[1px] last:mb-0">
               <EntryItem entry={entry} compact={compact} />

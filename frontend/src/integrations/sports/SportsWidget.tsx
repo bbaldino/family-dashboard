@@ -28,7 +28,7 @@ export function SportsWidget() {
           Unable to load scores
           <button
             onClick={() => refetch()}
-            className="ml-2 text-sports underline"
+            className="ml-2 text-palette-6 underline"
           >
             Retry
           </button>

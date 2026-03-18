@@ -39,7 +39,7 @@ export function HeroStrip({ events = [], weatherTemp, weatherHigh, weatherLow, w
       </div>
       <div className="w-px h-12 bg-separator flex-shrink-0" />
       <div className="flex-1">
-        <div className="text-[10px] font-bold uppercase tracking-[0.5px] text-calendar mb-1">{label}</div>
+        <div className="text-[10px] font-bold uppercase tracking-[0.5px] text-palette-1 mb-1">{label}</div>
         {events.length === 0 ? (
           <div className="text-[14px] text-text-muted">No upcoming events</div>
         ) : (
@@ -50,7 +50,7 @@ export function HeroStrip({ events = [], weatherTemp, weatherHigh, weatherLow, w
                   <div className="text-[16px] font-medium text-text-primary">{event.name}</div>
                   {event.detail && <div className="text-[11px] text-text-muted">{event.detail}</div>}
                 </div>
-                <div className="text-[13px] font-semibold text-calendar whitespace-nowrap">{event.time}</div>
+                <div className="text-[13px] font-semibold text-palette-1 whitespace-nowrap">{event.time}</div>
               </div>
             ))}
           </div>
