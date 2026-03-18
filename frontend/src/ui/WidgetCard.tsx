@@ -4,12 +4,12 @@ import { BottomSheet } from './BottomSheet'
 type CardCategory = 'calendar' | 'chores' | 'info' | 'food' | 'grocery' | 'sports'
 
 const categoryColors: Record<CardCategory, string> = {
-  calendar: 'var(--color-calendar)',
-  chores: 'var(--color-chores)',
-  info: 'var(--color-info)',
-  food: 'var(--color-food)',
-  grocery: 'var(--color-grocery)',
-  sports: 'var(--color-sports)',
+  calendar: 'var(--color-palette-1)',
+  chores: 'var(--color-palette-2)',
+  info: 'var(--color-palette-3)',
+  food: 'var(--color-palette-4)',
+  grocery: 'var(--color-palette-5)',
+  sports: 'var(--color-palette-6)',
 }
 
 interface WidgetCardProps {

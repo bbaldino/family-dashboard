@@ -146,13 +146,8 @@
     /* Border tiers */
     --color-border-subtle: #f0ece6;
 
-    /* Backward-compatible aliases (remove after migration) */
-    --color-calendar: var(--color-palette-1);
-    --color-chores: var(--color-palette-2);
+    /* Semantic aliases (kept — widely used via Tailwind utilities) */
     --color-info: var(--color-role-info);
-    --color-food: var(--color-palette-4);
-    --color-grocery: var(--color-palette-5);
-    --color-sports: var(--color-palette-6);
     --color-success: var(--color-role-success);
     --color-error: var(--color-role-error);
     --color-separator: rgba(0, 0, 0, 0.08);
