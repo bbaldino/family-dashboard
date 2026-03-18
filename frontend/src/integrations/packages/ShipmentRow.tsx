@@ -40,10 +40,10 @@ export function ShipmentRow({ shipment, onClick }: ShipmentRowProps) {
 
   return (
     <div
-      className="flex items-center gap-[10px] py-[8px] border-b border-border last:border-b-0 cursor-pointer hover:bg-bg-card-hover rounded-lg px-1 -mx-1 transition-colors"
+      className="flex items-start gap-2 py-2 border-b border-border last:border-b-0 cursor-pointer hover:bg-bg-card-hover rounded-lg px-1 -mx-1 transition-colors overflow-hidden"
       onClick={onClick}
     >
-      <div className={`text-[20px] flex-shrink-0 ${isDelivered ? 'opacity-40' : ''}`}>
+      <div className={`text-[20px] flex-shrink-0 mt-0.5 ${isDelivered ? 'opacity-40' : ''}`}>
         {icon}
       </div>
       <div className="flex-1 min-w-0">
@@ -59,7 +59,7 @@ export function ShipmentRow({ shipment, onClick }: ShipmentRowProps) {
         </div>
       </div>
       {!isDelivered && shipment.expectedDelivery && (
-        <div className="text-right max-w-[120px] flex-shrink-0">
+        <div className="text-right shrink-0 max-w-[40%]">
           <div className={`text-[12px] font-semibold leading-tight ${color}`}>{shipment.expectedDelivery}</div>
         </div>
       )}
