@@ -40,7 +40,7 @@ export function PackagesWidget() {
 
   const delivered = visible
     .filter((s) => s.status === 'delivered')
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .sort((a, b) => (b.expectedDeliveryDate ?? '').localeCompare(a.expectedDeliveryDate ?? ''))
 
   const shipments = [...active, ...delivered]
   const activeCount = active.length
