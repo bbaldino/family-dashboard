@@ -1,7 +1,7 @@
 import type { CalendarEvent } from '@/integrations/google-calendar/types'
 import { formatEventTimeCompact } from './formatEventTime'
 
-const MAX_PILLS = 2
+const MAX_PILLS = 3
 
 interface DayCellProps {
   date: Date
@@ -37,16 +37,18 @@ export function DayCell({ date, events, isToday, isCurrentMonth, isSelected, onC
       </div>
 
       {isCurrentMonth && (
-        <div className="flex-1 min-h-0 flex flex-col gap-[2px] overflow-hidden">
+        <div className="flex-1 min-h-0 flex flex-col gap-[3px] overflow-hidden">
           {visible.map((event, i) => {
             const time = formatEventTimeCompact(event)
+            const isAllDay = !event.start.dateTime
+            const pillColor = isAllDay ? '--color-info' : '--color-calendar'
             return (
               <div
                 key={event.id + '-' + i}
-                className="text-[9px] leading-tight truncate rounded px-1 py-[1px]"
+                className="text-[10px] leading-tight truncate rounded px-1.5 py-[2px]"
                 style={{
-                  background: 'color-mix(in srgb, var(--color-calendar) 15%, transparent)',
-                  color: 'var(--color-calendar)',
+                  background: `color-mix(in srgb, var(${pillColor}) 15%, transparent)`,
+                  color: `var(${pillColor})`,
                 }}
               >
                 {time && <span className="font-medium">{time} </span>}
@@ -55,7 +57,7 @@ export function DayCell({ date, events, isToday, isCurrentMonth, isSelected, onC
             )
           })}
           {remaining > 0 && (
-            <div className="text-[8px] text-text-muted pl-1">+{remaining} more</div>
+            <div className="text-[9px] text-text-muted pl-1">+{remaining} more</div>
           )}
         </div>
       )}
