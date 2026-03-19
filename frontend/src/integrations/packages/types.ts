@@ -24,6 +24,7 @@ export type ShipmentStatus =
   | 'exception'
   | 'returned'
   | 'cancelled'
+  | 'ordered'
 
 export interface TrackingEvent {
   id: string
@@ -54,6 +55,7 @@ export const STATUS_ICONS: Record<ShipmentStatus, string> = {
   returned: '\u21A9\uFE0F',
   cancelled: '\u274C',
   unknown: '\uD83D\uDCE6',
+  ordered: '\uD83D\uDED2',
 }
 
 export const STATUS_LABELS: Record<ShipmentStatus, string> = {
@@ -66,4 +68,5 @@ export const STATUS_LABELS: Record<ShipmentStatus, string> = {
   returned: 'Returned',
   cancelled: 'Cancelled',
   unknown: 'Pending',
+  ordered: 'Ordered',
 }
