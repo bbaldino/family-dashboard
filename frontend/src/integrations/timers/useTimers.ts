@@ -18,7 +18,7 @@ export function useTimers(serviceUrl: string | undefined) {
   useEffect(() => {
     if (!serviceUrl) return
 
-    const url = `${serviceUrl.replace(/\/$/, '')}/timers/events`
+    const url = `${serviceUrl.replace(/\/$/, '')}/events`
     const es = new EventSource(url)
     eventSourceRef.current = es
 
@@ -101,7 +101,7 @@ export function useTimers(serviceUrl: string | undefined) {
   const pause = useCallback(
     async (id: string) => {
       if (!baseUrl) return
-      await fetch(`${baseUrl}/timers/${id}/pause`, { method: 'POST' }).catch(() => {})
+      await fetch(`${baseUrl}/${id}/pause`, { method: 'POST' }).catch(() => {})
     },
     [baseUrl],
   )
@@ -109,7 +109,7 @@ export function useTimers(serviceUrl: string | undefined) {
   const resume = useCallback(
     async (id: string) => {
       if (!baseUrl) return
-      await fetch(`${baseUrl}/timers/${id}/resume`, { method: 'POST' }).catch(() => {})
+      await fetch(`${baseUrl}/${id}/resume`, { method: 'POST' }).catch(() => {})
     },
     [baseUrl],
   )
@@ -117,7 +117,7 @@ export function useTimers(serviceUrl: string | undefined) {
   const cancel = useCallback(
     async (id: string) => {
       if (!baseUrl) return
-      await fetch(`${baseUrl}/timers/${id}`, { method: 'DELETE' }).catch(() => {})
+      await fetch(`${baseUrl}/${id}`, { method: 'DELETE' }).catch(() => {})
     },
     [baseUrl],
   )

@@ -11,7 +11,7 @@ export const timersIntegration = defineIntegration({
   fields: {
     service_url: {
       label: 'Timer Service URL',
-      description: 'e.g. http://192.168.1.21:3380',
+      description: 'e.g. http://192.168.1.21:3380/timers',
     },
   },
 })
