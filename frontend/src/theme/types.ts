@@ -56,7 +56,59 @@ export const OCEAN: Theme = {
   },
 }
 
-export const BUILTIN_THEMES: Theme[] = [EARTH_TONES, OCEAN]
+export const SUNSET: Theme = {
+  id: 'sunset',
+  name: 'Sunset',
+  builtin: true,
+  colors: {
+    palette: ['#d4574a', '#e8965a', '#f0c040', '#6a9a6a', '#5a7aaa', '#9a5a7a', '#c08a50', '#7a6a5a'],
+    roles: { success: '#5a9a5a', warning: '#e8965a', error: '#d4574a', info: '#5a7aaa' },
+    surfaces: { background: '#faf5f0', card: '#ffffff', cardHover: '#f8f2ec' },
+    text: { primary: '#3a2520', secondary: '#7a5a4a', muted: '#b09a8a', disabled: '#c8b8a8' },
+    border: { default: '#e8dcd0', subtle: '#f2ece4' },
+  },
+}
+
+export const FOREST: Theme = {
+  id: 'forest',
+  name: 'Forest',
+  builtin: true,
+  colors: {
+    palette: ['#4a7a4a', '#6a5a3a', '#3a6a6a', '#8a7a3a', '#6a4a6a', '#9a5a4a', '#3a7a5a', '#7a6a5a'],
+    roles: { success: '#4a8a4a', warning: '#b08a30', error: '#b05040', info: '#3a7a8a' },
+    surfaces: { background: '#f0f2ee', card: '#fafbf8', cardHover: '#eaede6' },
+    text: { primary: '#2a3a2a', secondary: '#5a6a5a', muted: '#8a9a8a', disabled: '#a8b4a8' },
+    border: { default: '#d0d8cc', subtle: '#e4e8e0' },
+  },
+}
+
+export const MIDNIGHT: Theme = {
+  id: 'midnight',
+  name: 'Midnight',
+  builtin: true,
+  colors: {
+    palette: ['#6a8aca', '#5aaa8a', '#ca8a5a', '#aa7aba', '#5a9aaa', '#ca6a6a', '#6aaa7a', '#aa8a7a'],
+    roles: { success: '#5aaa7a', warning: '#caa050', error: '#ca6060', info: '#6a9aca' },
+    surfaces: { background: '#1a1e2a', card: '#242a38', cardHover: '#2a3040' },
+    text: { primary: '#e0e4ea', secondary: '#a0a8b4', muted: '#6a7080', disabled: '#4a5060' },
+    border: { default: '#3a4050', subtle: '#2e3444' },
+  },
+}
+
+export const ROSE: Theme = {
+  id: 'rose',
+  name: 'Rose',
+  builtin: true,
+  colors: {
+    palette: ['#c06080', '#7a8aaa', '#8aaa7a', '#aa8a6a', '#9a7aaa', '#aa6a6a', '#5a9a8a', '#aa8090'],
+    roles: { success: '#6aaa6a', warning: '#caa050', error: '#ca5a5a', info: '#7a8aaa' },
+    surfaces: { background: '#f8f2f4', card: '#ffffff', cardHover: '#f4eef0' },
+    text: { primary: '#3a2a30', secondary: '#7a5a6a', muted: '#aa9098', disabled: '#c0b0b8' },
+    border: { default: '#e4d8dc', subtle: '#f0e8ec' },
+  },
+}
+
+export const BUILTIN_THEMES: Theme[] = [EARTH_TONES, OCEAN, SUNSET, FOREST, MIDNIGHT, ROSE]
 
 /** Map a ThemeColors object to CSS variable name → value pairs */
 export function themeToVariables(colors: ThemeColors): Record<string, string> {

@@ -161,17 +161,17 @@ export function ThemeSettings() {
         {/* Color editor sections */}
         {COLOR_SECTIONS.map((section) => (
           <div key={section.label}>
-            <div className="text-[10px] font-semibold text-text-muted uppercase tracking-wide mt-4 mb-2">
+            <div className="text-[10px] font-semibold text-text-muted uppercase tracking-wide mt-3 mb-1">
               {section.label}
             </div>
-            <div className="grid grid-cols-2 gap-x-4">
+            <div className={`grid gap-x-3 gap-y-0 ${section.label === 'Palette' ? 'grid-cols-4' : 'grid-cols-2'}`}>
               {section.items.map((item) => {
                 const value = item.get(editedColors)
                 return (
-                  <div key={item.key} className="flex items-center gap-2 py-1.5 border-b border-border-subtle">
-                    <label className="relative cursor-pointer">
+                  <div key={item.key} className="flex items-center gap-1.5 py-1 border-b border-border-subtle">
+                    <label className="relative cursor-pointer flex-shrink-0">
                       <div
-                        className="w-7 h-7 rounded-lg border border-border cursor-pointer hover:scale-110 transition-transform"
+                        className="w-5 h-5 rounded border border-border cursor-pointer hover:scale-110 transition-transform"
                         style={{ background: value }}
                       />
                       <input
@@ -181,8 +181,7 @@ export function ThemeSettings() {
                         className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                       />
                     </label>
-                    <span className="text-[12px] font-medium text-text-primary flex-1">{item.label}</span>
-                    <span className="text-[10px] font-mono text-text-muted">{value}</span>
+                    <span className="text-[11px] text-text-primary truncate">{item.label}</span>
                   </div>
                 )
               })}
@@ -217,7 +216,7 @@ export function ThemeSettings() {
       </div>
 
       {/* Right: Preview */}
-      <div className="w-[350px] flex-shrink-0">
+      <div className="flex-1 min-w-[400px]">
         <div className="text-[10px] font-semibold text-text-muted uppercase tracking-wide mb-2">
           Live Preview
         </div>
