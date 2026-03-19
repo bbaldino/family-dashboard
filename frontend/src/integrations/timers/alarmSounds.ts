@@ -61,13 +61,13 @@ export const ALARM_SOUNDS: AlarmSound[] = [
       }
     },
   ),
-  makeAlarm('kitchen-bell', 'Kitchen Bell', 'Quick triple ding at a bright pitch', 1.5,
+  makeAlarm('kitchen-bell', 'Kitchen Bell', 'Quick triple ding at a bright pitch', 2.5,
     (ctx, t) => {
       for (let i = 0; i < 3; i++) {
-        tone(ctx, 1047, t + i * 0.25, 0.2, 0.25, 'triangle')
+        tone(ctx, 1047, t + i * 0.35, 0.2, 0.25, 'triangle')
       }
       for (let i = 0; i < 3; i++) {
-        tone(ctx, 1047, t + 1.0 + i * 0.25, 0.2, 0.25, 'triangle')
+        tone(ctx, 1047, t + 1.4 + i * 0.35, 0.2, 0.25, 'triangle')
       }
     },
   ),
