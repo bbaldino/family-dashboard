@@ -1,6 +1,30 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Timer, TimerEvent } from './types'
 
+/** Play an alarm tone using Web Audio API — 3 beeps */
+function playAlarmTone() {
+  try {
+    const ctx = new AudioContext()
+    const beep = (startTime: number) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.frequency.value = 880
+      osc.type = 'sine'
+      gain.gain.setValueAtTime(0.3, startTime)
+      gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3)
+      osc.start(startTime)
+      osc.stop(startTime + 0.3)
+    }
+    beep(ctx.currentTime)
+    beep(ctx.currentTime + 0.4)
+    beep(ctx.currentTime + 0.8)
+  } catch {
+    // Audio not available
+  }
+}
+
 /** Normalize a timer from the API: ensure remainingMs is always set */
 function normalizeTimer(t: Timer): Timer {
   let remaining = t.remainingMs
@@ -54,6 +78,7 @@ export function useTimers(serviceUrl: string | undefined) {
             if (data.timer) {
               setTimers((prev) => prev.filter((p) => p.id !== data.timer!.id))
               setFiredTimers((prev) => [...prev, normalizeTimer(data.timer!)])
+              playAlarmTone()
             }
             break
           case 'cancelled':
