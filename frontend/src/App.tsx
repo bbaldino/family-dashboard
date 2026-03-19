@@ -1,6 +1,8 @@
 import { Routes, Route } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HassConnect } from '@hakit/core'
+import { Component, type ReactNode } from 'react'
 import { AppShell } from './app/AppShell'
 import { HomeBoard } from './boards/HomeBoard'
 import { CalendarBoard } from './boards/calendar/CalendarBoard'
@@ -14,6 +16,42 @@ import { useTheme } from './theme/useTheme'
 function ThemeApplicator() {
   useTheme()
   return null
+}
+
+/** Wraps HassConnect so a connection failure doesn't block the entire app */
+class HassErrorBoundary extends Component<{ children: ReactNode; fallback: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false }
+  static getDerivedStateFromError() { return { hasError: true } }
+  componentDidCatch(error: Error) {
+    console.warn('HA connection failed, continuing without HA:', error.message)
+  }
+  render() {
+    if (this.state.hasError) return this.props.fallback
+    return this.props.children
+  }
+}
+
+/** Try HassConnect, but if it takes too long (blocks rendering), skip it */
+function HassConnectWithTimeout({ content }: { content: ReactNode }) {
+  const [timedOut, setTimedOut] = useState(false)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      console.warn('HA connection timed out after 5s, continuing without HA')
+      setTimedOut(true)
+    }, 5000)
+    return () => clearTimeout(timer)
+  }, [])
+
+  if (timedOut) return <>{content}</>
+
+  return (
+    <HassErrorBoundary fallback={content}>
+      <HassConnect hassUrl={HA_URL!} hassToken={HA_TOKEN}>
+        {content}
+      </HassConnect>
+    </HassErrorBoundary>
+  )
 }
 
 function AppRoutes() {
@@ -53,11 +91,7 @@ export function App() {
   )
 
   if (HA_URL) {
-    return (
-      <HassConnect hassUrl={HA_URL} hassToken={HA_TOKEN}>
-        {content}
-      </HassConnect>
-    )
+    return <HassConnectWithTimeout content={content} />
   }
   return content
 }
