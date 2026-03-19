@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { HexColorPicker } from 'react-colorful'
 import { Button } from '@/ui/Button'
 import { ThemePreview } from './ThemePreview'
 import { useTheme } from './useTheme'
@@ -87,26 +88,12 @@ function ColorSwatch({ value, label, onChange }: { value: string; label: string;
                 />
               ))}
             </div>
-            <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border-subtle">
-              {/* Show current color if not in the grid */}
-              {!PICKER_COLORS.includes(value) && (
-                <div className="flex items-center gap-1.5">
-                  <div className="w-9 h-9 rounded-lg ring-2 ring-offset-2 ring-text-primary" style={{ background: value }} />
-                  <span className="text-[10px] text-text-muted font-mono">{value}</span>
-                </div>
-              )}
-              <label className="ml-auto flex items-center gap-1.5 cursor-pointer px-3 py-1.5 rounded-lg bg-bg-card-hover text-[11px] font-medium text-text-secondary hover:text-text-primary">
-                Custom...
-                <input
-                  type="color"
-                  value={value}
-                  onChange={(e) => {
-                    onChange(e.target.value)
-                    setEditing(false)
-                  }}
-                  className="w-0 h-0 opacity-0 absolute"
-                />
-              </label>
+            <div className="flex items-center gap-3 mt-3 pt-3 border-t border-border-subtle">
+              <HexColorPicker
+                color={value}
+                onChange={onChange}
+                style={{ width: '100%', height: '120px' }}
+              />
             </div>
           </div>
         </>
