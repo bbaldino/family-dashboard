@@ -3,10 +3,22 @@ import type { Timer, TimerEvent } from './types'
 
 /** Normalize a timer from the API: ensure remainingMs is always set */
 function normalizeTimer(t: Timer): Timer {
+  let remaining = t.remainingMs
+
   if (t.status === 'paused' && t.pausedRemainingMs != null) {
-    return { ...t, remainingMs: t.pausedRemainingMs }
+    remaining = t.pausedRemainingMs
   }
-  return t
+
+  // If remainingMs is missing, compute from endsAt
+  if (remaining == null || isNaN(remaining)) {
+    if (t.endsAt) {
+      remaining = Math.max(0, new Date(t.endsAt).getTime() - Date.now())
+    } else {
+      remaining = 0
+    }
+  }
+
+  return { ...t, remainingMs: remaining }
 }
 
 export function useTimers(serviceUrl: string | undefined) {
