@@ -51,10 +51,12 @@ export function ShipmentRow({ shipment, onClick }: ShipmentRowProps) {
           {shipment.name}
         </div>
         <div className="text-[11px] text-text-muted">
-          <span className="font-medium text-text-secondary">{shipment.carrier}</span>
+          {shipment.carrier ? (
+            <span className="font-medium text-text-secondary">{shipment.carrier}</span>
+          ) : null}
           {isDelivered
-            ? ` · ${formatDeliveredAgo(shipment.updatedAt)}`
-            : ` · ${STATUS_LABELS[shipment.status]}`
+            ? `${shipment.carrier ? ' · ' : ''}${formatDeliveredAgo(shipment.updatedAt)}`
+            : `${shipment.carrier ? ' · ' : ''}${STATUS_LABELS[shipment.status]}`
           }
         </div>
         {!isDelivered && shipment.expectedDelivery && (

@@ -53,7 +53,7 @@ export const STATUS_ICONS: Record<ShipmentStatus, string> = {
   exception: '\u26A0\uFE0F',
   returned: '\u21A9\uFE0F',
   cancelled: '\u274C',
-  unknown: '\u2753',
+  unknown: '\uD83D\uDCE6',
 }
 
 export const STATUS_LABELS: Record<ShipmentStatus, string> = {
@@ -65,5 +65,5 @@ export const STATUS_LABELS: Record<ShipmentStatus, string> = {
   exception: 'Exception',
   returned: 'Returned',
   cancelled: 'Cancelled',
-  unknown: 'Unknown',
+  unknown: 'Pending',
 }
