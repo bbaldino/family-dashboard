@@ -44,6 +44,17 @@ export function useTimers(serviceUrl: string | undefined, alarmSoundId?: string)
           case 'snapshot':
             if (data.timers) {
               setTimers(data.timers.filter((t) => t.status === 'running' || t.status === 'paused').map(normalizeTimer))
+              // Clear any fired timers that are no longer in the snapshot
+              // (they've been dismissed/cancelled on the server side)
+              const activeIds = new Set(data.timers.map((t) => t.id))
+              setFiredTimers((prev) => {
+                const remaining = prev.filter((t) => activeIds.has(t.id))
+                if (remaining.length === 0 && prev.length > 0 && stopAlarmRef.current) {
+                  stopAlarmRef.current()
+                  stopAlarmRef.current = null
+                }
+                return remaining
+              })
             }
             break
           case 'created':
@@ -69,7 +80,8 @@ export function useTimers(serviceUrl: string | undefined, alarmSoundId?: string)
               setTimers((prev) => prev.filter((p) => p.id !== cancelledId))
               setFiredTimers((prev) => {
                 const remaining = prev.filter((t) => t.id !== cancelledId)
-                if (remaining.length < prev.length && remaining.length === 0 && stopAlarmRef.current) {
+                // Stop alarm if we removed a fired timer and none remain
+                if (remaining.length < prev.length && stopAlarmRef.current) {
                   stopAlarmRef.current()
                   stopAlarmRef.current = null
                 }
