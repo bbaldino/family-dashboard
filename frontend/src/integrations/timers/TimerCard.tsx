@@ -20,22 +20,13 @@ interface TimerCardProps {
 }
 
 export function TimerCard({ timer, onPause, onResume, onCancel }: TimerCardProps) {
-  const isUrgent = timer.status === 'running' && timer.remainingMs < 2 * 60 * 1000
   const isPaused = timer.status === 'paused'
 
   return (
-    <div
-      className={`flex items-center gap-3 px-3 py-2 rounded-lg ${
-        isUrgent
-          ? 'bg-[rgba(229,57,53,0.3)] animate-pulse'
-          : 'bg-[rgba(255,255,255,0.12)]'
-      }`}
-    >
+    <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-[rgba(255,255,255,0.12)]">
       <span className="text-[18px]">⏲️</span>
       <div>
-        <div
-          className={`text-[22px] font-bold tabular-nums leading-none ${
-            isUrgent ? 'text-[#ffcdd2]' : 'text-white'
+        <div className="text-[22px] font-bold tabular-nums leading-none text-white">
           }`}
         >
           {formatCountdown(timer.remainingMs)}
