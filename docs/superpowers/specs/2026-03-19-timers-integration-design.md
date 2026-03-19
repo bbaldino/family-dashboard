@@ -9,11 +9,12 @@ Add a live timer display to the dashboard that shows active kitchen timers as a 
 External timer service (configurable URL, default port 3380).
 
 **Endpoints used:**
-- `GET /timers/events` — SSE stream. Sends `snapshot` on connect, then `created`, `fired`, `cancelled`, `paused`, `resumed` events.
-- `GET /timers/` — REST fallback to list all timers (used if SSE reconnects)
+- `GET /timers/events` — SSE stream. Sends `snapshot` on connect (with all active timers), then `created`, `fired`, `cancelled`, `paused`, `resumed` events.
 - `POST /timers/:id/pause` — pause a running timer
 - `POST /timers/:id/resume` — resume a paused timer
 - `DELETE /timers/:id` — cancel a timer
+
+Note: `GET /timers/` (REST list) is not needed — the SSE snapshot provides initial state on every connect/reconnect. `POST /timers/` (create) is deferred.
 
 No authentication required (local network service).
 
@@ -29,13 +30,17 @@ This is a `hasBackend: false` integration. The frontend connects directly to the
 
 **`useTimers` hook:**
 - Reads `service_url` from config
+- If not configured, returns empty state (no connection attempted)
 - Opens an `EventSource` to `{service_url}/timers/events`
-- On `snapshot` event: replaces all timer state
+- On `snapshot` event: replaces all timer state with the active timers array
 - On individual events (`created`, `fired`, `cancelled`, `paused`, `resumed`): updates the specific timer
-- Uses `setInterval` at 1-second ticks to decrement `remainingMs` locally for smooth countdown display
-- Handles SSE reconnection (EventSource auto-reconnects on disconnect)
+- Uses `setInterval` at 1-second ticks to decrement `remainingMs` locally for smooth countdown display. Clamps at 0 — never goes negative. If local countdown reaches 0 before the `fired` event arrives, the UI shows "0:00" and waits for the server event.
+- On SSE reconnect: the server sends a fresh `snapshot`, which resyncs all timers and corrects any drift from the local countdown
+- On SSE error (service unreachable): silently hides the banner. No error indicator — the timer service being down is not an error the kitchen user needs to see.
 - Returns: `{ timers: Timer[], firedTimers: Timer[], pause(id), resume(id), cancel(id), dismiss(id) }`
-- `firedTimers` tracks recently fired timers until dismissed by the user
+- `firedTimers` tracks recently fired timers until dismissed by the user. Multiple fired timers can accumulate — all are shown.
+
+**Remaining time normalization:** The timer service uses `remainingMs` for running timers and `pausedRemainingMs` for paused timers. The hook normalizes this: when a timer is paused, it copies `pausedRemainingMs` into `remainingMs` so the UI can always read `remainingMs` regardless of status.
 
 **`TimerBanner` component:**
 - Rendered in `HomeBoard` above the hero strip
@@ -44,11 +49,11 @@ This is a `hasBackend: false` integration. The frontend connects directly to the
 
 **Timer card states:**
 - **Running:** orange-tinted card, countdown ticking, ⏸ pause and ✕ cancel buttons
-- **Paused:** shows frozen time, ▶ resume and ✕ cancel buttons
+- **Paused:** shows frozen time with "PAUSED" label, ▶ resume and ✕ cancel buttons
 - **Urgent (< 2 min remaining):** red-tinted card with pulse animation
 - **Fired:** red banner with 🔔 bell, "[Name] timer is done!", Dismiss button
 
-**Actions:** Pause, resume, cancel send requests directly to the timer service URL (not through the dashboard backend). Dismiss is local-only (removes the fired alert from the UI).
+**Actions:** Pause, resume, cancel send `fetch()` requests directly to the timer service URL (not through the dashboard backend). Errors on these actions are silently ignored (the SSE stream will reflect the actual state). Dismiss is local-only (removes the fired alert from the UI).
 
 ### Timer state types
 
@@ -60,15 +65,15 @@ interface Timer {
   startedAt: string
   endsAt: string
   status: 'running' | 'paused' | 'fired' | 'cancelled'
-  remainingMs: number
-  pausedRemainingMs?: number
+  remainingMs: number       // normalized: always present, even for paused timers
+  pausedRemainingMs?: number // raw field from API (paused timers only)
   createdAt: string
 }
 
 interface TimerEvent {
   type: 'snapshot' | 'created' | 'fired' | 'cancelled' | 'paused' | 'resumed'
-  timer?: Timer
-  timers?: Timer[]
+  timer?: Timer    // present for individual events
+  timers?: Timer[] // present for snapshot
 }
 ```
 
@@ -106,7 +111,6 @@ No default URL — user configures it in settings. If not configured, the banner
 
 ## Deferred
 
-- Creating timers from the dashboard UI (timers are created via voice or other clients)
+- Creating timers from the dashboard UI (timers are created via voice or other clients — `POST /timers/`)
 - Sound/audio alert when timer fires (would need browser audio API)
 - Timer history view
-- Multiple simultaneous fired timer alerts (v1 shows one at a time)
