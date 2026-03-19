@@ -8,10 +8,18 @@ function formatEventTime(event: CalendarEvent): string {
   const start = event.start.dateTime ?? event.start.date
   if (!start) return ''
   if (event.start.date && !event.start.dateTime) return 'All day'
-  return new Date(start).toLocaleTimeString([], {
+  const startStr = new Date(start).toLocaleTimeString([], {
     hour: 'numeric',
     minute: '2-digit',
   })
+  if (event.end.dateTime) {
+    const endStr = new Date(event.end.dateTime).toLocaleTimeString([], {
+      hour: 'numeric',
+      minute: '2-digit',
+    })
+    return `${startStr} – ${endStr}`
+  }
+  return startStr
 }
 
 function isCurrentEvent(event: CalendarEvent): boolean {
@@ -92,7 +100,7 @@ export function CalendarWidget({
                             : ''
                         }`}
                       >
-                        <span className="text-[12px] font-semibold text-palette-1 whitespace-nowrap min-w-[56px]">
+                        <span className="text-[12px] font-semibold text-palette-1 whitespace-nowrap">
                           {formatEventTime(event)}
                         </span>
                         <div className="flex-1 min-w-0">
