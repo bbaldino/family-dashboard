@@ -46,15 +46,16 @@ function ColorSwatch({ value, label, onChange }: { value: string; label: string;
         <>
           <div className="fixed inset-0 z-40" onClick={() => setEditing(false)} />
           <div
-            className="absolute top-12 left-1/2 -translate-x-1/2 z-50 bg-bg-card rounded-xl shadow-lg border border-border p-3"
+            className="fixed z-50 bg-bg-card rounded-xl shadow-lg border border-border p-4"
+            style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="grid grid-cols-10 gap-1.5">
+            <div className="grid grid-cols-10 gap-2">
               {PICKER_COLORS.map((c) => (
                 <div
                   key={c}
-                  className={`w-7 h-7 rounded-md cursor-pointer hover:scale-125 transition-transform ${
-                    c === value ? 'ring-2 ring-offset-1 ring-text-primary' : ''
+                  className={`w-9 h-9 rounded-lg cursor-pointer hover:scale-110 transition-transform ${
+                    c === value ? 'ring-2 ring-offset-2 ring-text-primary' : ''
                   }`}
                   style={{ background: c, border: c === '#ffffff' ? '1px solid #e0e0e0' : undefined }}
                   onClick={() => {
