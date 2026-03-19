@@ -56,10 +56,11 @@ export function useTimers(serviceUrl: string | undefined, alarmSoundId?: string)
             if (data.timer) {
               setTimers((prev) => prev.filter((p) => p.id !== data.timer!.id))
               setFiredTimers((prev) => [...prev, normalizeTimer(data.timer!)])
-              // Start repeating alarm (pre-scheduled on a single AudioContext)
-              if (!stopAlarmRef.current) {
-                stopAlarmRef.current = startRepeatingAlarm(alarmSoundId ?? 'gentle-chime')
+              // Stop any existing alarm, start a new one
+              if (stopAlarmRef.current) {
+                stopAlarmRef.current()
               }
+              stopAlarmRef.current = startRepeatingAlarm(alarmSoundId ?? 'gentle-chime')
             }
             break
           case 'cancelled':

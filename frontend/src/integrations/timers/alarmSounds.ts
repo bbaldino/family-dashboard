@@ -138,7 +138,16 @@ export function startRepeatingAlarm(soundId: string): () => void {
       alarm.schedule(ctx, t + i * interval)
     }
 
-    return () => { ctx.close().catch(() => {}) }
+    // Auto-close after all repeats finish
+    const totalDuration = REPEAT_COUNT * interval
+    const autoCloseTimer = setTimeout(() => {
+      ctx.close().catch(() => {})
+    }, totalDuration * 1000 + 1000) // +1s buffer
+
+    return () => {
+      clearTimeout(autoCloseTimer)
+      ctx.close().catch(() => {})
+    }
   } catch {
     return () => {}
   }
