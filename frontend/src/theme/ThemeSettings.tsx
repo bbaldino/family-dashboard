@@ -163,7 +163,7 @@ export function ThemeSettings() {
             <div className="text-[10px] font-semibold text-text-muted uppercase tracking-wide mb-1">
               {section.label}
             </div>
-            <div className={`grid gap-x-3 gap-y-0 ${section.label === 'Palette' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            <div className="grid grid-cols-1 gap-y-0">
               {section.items.map((item) => {
                 const value = item.get(editedColors)
                 return (
