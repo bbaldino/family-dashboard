@@ -7,6 +7,7 @@ import { weatherIntegration } from './weather/config'
 import { googleCalendarIntegration } from './google-calendar/config'
 import { sportsIntegration } from './sports/config'
 import { packagesIntegration } from './packages/config'
+import { timersIntegration } from './timers/config'
 import { themeIntegration } from '@/theme/config'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -19,5 +20,6 @@ export const integrations: Integration<any>[] = [
   googleCalendarIntegration,
   sportsIntegration,
   packagesIntegration,
+  timersIntegration,
   themeIntegration,
 ]
