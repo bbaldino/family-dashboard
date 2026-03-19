@@ -127,9 +127,9 @@ export function ThemeSettings() {
   if (!editedColors) return null
 
   return (
-    <div className="space-y-4">
-      {/* Theme selector */}
-      <div className="flex flex-wrap gap-2">
+    <div className="h-full flex flex-col gap-3">
+      {/* Theme selector — top */}
+      <div className="flex flex-wrap gap-2 flex-shrink-0">
         {allThemes.map((theme) => (
           <button
             key={theme.id}
@@ -156,70 +156,76 @@ export function ThemeSettings() {
         </button>
       </div>
 
-      {/* Color editor — horizontal rows per section */}
-      <div className="space-y-3">
-        {COLOR_SECTIONS.map((section) => (
-          <div key={section.label} className="flex items-start gap-3">
-            <div className="text-[10px] font-semibold text-text-muted uppercase tracking-wide w-20 flex-shrink-0 pt-1.5">
-              {section.label}
+      {/* Main area — editor left, preview right */}
+      <div className="flex gap-4 flex-1 min-h-0">
+        {/* Color editor — compact vertical list */}
+        <div className="flex flex-col gap-2 flex-shrink-0 w-[280px] overflow-y-auto">
+          {COLOR_SECTIONS.map((section) => (
+            <div key={section.label}>
+              <div className="text-[10px] font-semibold text-text-muted uppercase tracking-wide mb-1">
+                {section.label}
+              </div>
+              <div className="grid grid-cols-1 gap-y-0">
+                {section.items.map((item) => {
+                  const value = item.get(editedColors)
+                  return (
+                    <div key={item.key} className="flex items-center gap-1.5 py-0.5">
+                      <label className="relative cursor-pointer flex-shrink-0">
+                        <div
+                          className="w-5 h-5 rounded border border-border cursor-pointer hover:scale-110 transition-transform"
+                          style={{ background: value }}
+                        />
+                        <input
+                          type="color"
+                          value={value}
+                          onChange={(e) => handleColorChange(item.key, e.target.value)}
+                          className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                        />
+                      </label>
+                      <span className="text-[11px] text-text-primary flex-1">{item.label}</span>
+                      <span className="text-[9px] font-mono text-text-muted">{value}</span>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {section.items.map((item) => {
-                const value = item.get(editedColors)
-                return (
-                  <label key={item.key} className="relative cursor-pointer flex flex-col items-center gap-0.5">
-                    <div
-                      className="w-8 h-8 rounded-lg border border-border cursor-pointer hover:scale-110 transition-transform"
-                      style={{ background: value }}
-                    />
-                    <input
-                      type="color"
-                      value={value}
-                      onChange={(e) => handleColorChange(item.key, e.target.value)}
-                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                    />
-                    <span className="text-[8px] text-text-muted text-center leading-tight w-12 truncate">
-                      {item.label.replace('Palette ', 'P').replace('Text ', '').replace('Border ', 'Bdr ')}
-                    </span>
-                  </label>
-                )
-              })}
-            </div>
+          ))}
+
+          {/* Actions */}
+          <div className="flex items-center gap-2 pt-2 border-t border-border-subtle mt-auto">
+            {!editingTheme?.builtin && (
+              <Button onClick={handleSave}>Save</Button>
+            )}
+            <button
+              onClick={handleReset}
+              className="px-3 py-1.5 rounded-[var(--radius-button)] text-[12px] font-medium bg-bg-card-hover text-text-secondary"
+            >
+              Reset
+            </button>
+            {!editingTheme?.builtin && (
+              <button
+                onClick={handleDelete}
+                className="px-3 py-1.5 rounded-[var(--radius-button)] text-[12px] font-medium bg-bg-card-hover text-error"
+              >
+                Delete
+              </button>
+            )}
           </div>
-        ))}
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center gap-2 pt-2 border-t-2 border-border-subtle">
-        {!editingTheme?.builtin && (
-          <Button onClick={handleSave}>Save Theme</Button>
-        )}
-        <button
-          onClick={handleReset}
-          className="px-4 py-2 rounded-[var(--radius-button)] text-[13px] font-medium bg-bg-card-hover text-text-secondary"
-        >
-          Reset
-        </button>
-        {!editingTheme?.builtin && (
-          <button
-            onClick={handleDelete}
-            className="px-4 py-2 rounded-[var(--radius-button)] text-[13px] font-medium bg-bg-card-hover text-error"
-          >
-            Delete
-          </button>
-        )}
-        {editingTheme?.builtin && (
-          <span className="text-[11px] text-text-muted">Built-in theme — create a copy to customize</span>
-        )}
-        {status && <span className="text-[12px] text-success ml-auto">{status}</span>}
-      </div>
-
-      {/* Preview — full width below */}
-      <div>
-        <div className="text-[10px] font-semibold text-text-muted uppercase tracking-wide mb-2">
-          Live Preview
+          {editingTheme?.builtin && (
+            <span className="text-[10px] text-text-muted">Built-in — copy to customize</span>
+          )}
+          {status && <span className="text-[11px] text-success">{status}</span>}
         </div>
-        <ThemePreview colors={editedColors} />
+
+        {/* Preview — fills remaining space */}
+        <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+          <div className="text-[10px] font-semibold text-text-muted uppercase tracking-wide mb-1 flex-shrink-0">
+            Live Preview
+          </div>
+          <div className="flex-1 min-h-0">
+            <ThemePreview colors={editedColors} />
+          </div>
+        </div>
       </div>
     </div>
   )

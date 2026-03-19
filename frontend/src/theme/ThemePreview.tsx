@@ -12,19 +12,22 @@ export function ThemePreview({ colors }: ThemePreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(0.5)
 
-  // Render the dashboard at 2x the container width (for crisp downscale)
-  // and use a 16:10 aspect ratio for the viewport
-  const [innerWidth, setInnerWidth] = useState(1200)
-  const innerHeight = Math.round(innerWidth * 10 / 16)
+  // The dashboard renders at 1920x1080 internally.
+  // We scale it to fit whatever container we're given.
+  const innerWidth = 1920
+  const innerHeight = 1080
 
   useEffect(() => {
     const updateScale = () => {
       if (containerRef.current) {
         const containerWidth = containerRef.current.offsetWidth
-        // Render at 2x container width for detail, then scale to fit
-        const renderWidth = containerWidth * 2
-        setInnerWidth(renderWidth)
-        setScale(containerWidth / renderWidth)
+        const containerHeight = containerRef.current.offsetHeight
+        if (containerWidth === 0 || containerHeight === 0) return
+
+        // Scale to fit both dimensions
+        const scaleX = containerWidth / innerWidth
+        const scaleY = containerHeight / innerHeight
+        setScale(Math.min(scaleX, scaleY))
       }
     }
     updateScale()
@@ -33,12 +36,10 @@ export function ThemePreview({ colors }: ThemePreviewProps) {
     return () => observer.disconnect()
   }, [])
 
-  const scaledHeight = innerHeight * scale
-
   return (
-    <div ref={containerRef} className="w-full" style={{ height: `${scaledHeight}px` }}>
+    <div ref={containerRef} className="w-full h-full relative">
       <div
-        className="origin-top-left overflow-hidden rounded-xl border border-border-subtle"
+        className="absolute top-0 left-0 origin-top-left overflow-hidden rounded-xl border border-border-subtle"
         style={{
           width: `${innerWidth}px`,
           height: `${innerHeight}px`,
