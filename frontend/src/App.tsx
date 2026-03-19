@@ -9,6 +9,12 @@ import { CamerasBoard } from './boards/CamerasBoard'
 import { AdminLayout } from './admin/AdminLayout'
 import { SettingsAdmin } from './admin/SettingsAdmin'
 import { HA_URL, HA_TOKEN } from './lib/ha-client'
+import { useTheme } from './theme/useTheme'
+
+function ThemeApplicator() {
+  useTheme()
+  return null
+}
 
 function AppRoutes() {
   return (
@@ -41,6 +47,7 @@ const queryClient = new QueryClient({
 export function App() {
   const content = (
     <QueryClientProvider client={queryClient}>
+      <ThemeApplicator />
       <AppRoutes />
     </QueryClientProvider>
   )
