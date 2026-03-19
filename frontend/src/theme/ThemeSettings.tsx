@@ -1,8 +1,82 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/ui/Button'
 import { ThemePreview } from './ThemePreview'
 import { useTheme } from './useTheme'
 import type { Theme, ThemeColors } from './types'
+
+function ColorSwatch({ value, label, onChange }: { value: string; label: string; onChange: (v: string) => void }) {
+  const [editing, setEditing] = useState(false)
+  const [hexInput, setHexInput] = useState(value)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => { setHexInput(value) }, [value])
+
+  const handleSubmit = () => {
+    if (/^#[0-9a-fA-F]{6}$/.test(hexInput)) {
+      onChange(hexInput.toLowerCase())
+    }
+    setEditing(false)
+  }
+
+  return (
+    <div className="relative flex flex-col items-center gap-0.5">
+      <div
+        className="w-10 h-10 rounded-lg border border-border cursor-pointer hover:scale-110 transition-transform"
+        style={{ background: value }}
+        onClick={() => {
+          setEditing(true)
+          setHexInput(value)
+          setTimeout(() => inputRef.current?.focus(), 50)
+        }}
+      />
+      <span className="text-[8px] text-text-muted text-center leading-tight w-12 truncate">
+        {label}
+      </span>
+      {editing && (
+        <div
+          className="absolute top-12 left-1/2 -translate-x-1/2 z-50 bg-bg-card rounded-lg shadow-lg border border-border p-2 flex flex-col gap-2 min-w-[140px]"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded border border-border flex-shrink-0" style={{ background: hexInput }} />
+            <input
+              ref={inputRef}
+              type="text"
+              value={hexInput}
+              onChange={(e) => setHexInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit() }}
+              className="w-full px-2 py-1 text-[12px] font-mono border border-border rounded bg-bg-primary text-text-primary"
+              placeholder="#000000"
+            />
+          </div>
+          <input
+            type="color"
+            value={hexInput}
+            onChange={(e) => {
+              setHexInput(e.target.value)
+              onChange(e.target.value)
+            }}
+            className="w-full h-8 cursor-pointer rounded"
+          />
+          <div className="flex gap-1">
+            <button
+              onClick={handleSubmit}
+              className="flex-1 px-2 py-1 text-[11px] font-medium bg-palette-1 text-white rounded"
+            >
+              Apply
+            </button>
+            <button
+              onClick={() => setEditing(false)}
+              className="flex-1 px-2 py-1 text-[11px] font-medium bg-bg-card-hover text-text-secondary rounded"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 function generateId(): string {
   return 'custom-' + Date.now().toString(36)
@@ -167,21 +241,12 @@ export function ThemeSettings() {
               {section.items.map((item) => {
                 const value = item.get(editedColors)
                 return (
-                  <label key={item.key} className="relative cursor-pointer flex flex-col items-center gap-0.5">
-                    <div
-                      className="w-10 h-10 rounded-lg border border-border cursor-pointer hover:scale-110 transition-transform"
-                      style={{ background: value }}
-                    />
-                    <input
-                      type="color"
-                      value={value}
-                      onChange={(e) => handleColorChange(item.key, e.target.value)}
-                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                    />
-                    <span className="text-[8px] text-text-muted text-center leading-tight w-12 truncate">
-                      {item.label.replace('Palette ', 'P').replace('Text ', '').replace('Border ', 'Bdr ')}
-                    </span>
-                  </label>
+                  <ColorSwatch
+                    key={item.key}
+                    value={value}
+                    label={item.label.replace('Palette ', 'P').replace('Text ', '').replace('Border ', 'Bdr ')}
+                    onChange={(v) => handleColorChange(item.key, v)}
+                  />
                 )
               })}
             </div>
