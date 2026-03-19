@@ -17,16 +17,16 @@ export function ThemePreview({ colors }: ThemePreviewProps) {
       >
         {/* Mini hero */}
         <div
-          className="flex items-center gap-2 px-3 py-2"
+          className="flex items-center gap-3 px-4 py-3"
           style={{ background: 'var(--color-bg-card)' }}
         >
-          <span className="text-[16px] font-extralight" style={{ color: 'var(--color-text-primary)' }}>
+          <span className="text-[20px] font-extralight" style={{ color: 'var(--color-text-primary)' }}>
             4:40 PM
           </span>
-          <div className="w-px h-5" style={{ background: 'var(--color-border-subtle)' }} />
+          <div className="w-px h-6" style={{ background: 'var(--color-border-subtle)' }} />
           <div>
             <div
-              className="text-[7px] font-bold uppercase"
+              className="text-[9px] font-bold uppercase"
               style={{ color: 'var(--color-palette-1)' }}
             >
               Next Up
@@ -36,7 +36,7 @@ export function ThemePreview({ colors }: ThemePreviewProps) {
                 AA Practice
               </span>
               <span
-                className="text-[8px] font-semibold"
+                className="text-[10px] font-semibold"
                 style={{ color: 'var(--color-palette-1)' }}
               >
                 5:00 PM
@@ -52,7 +52,7 @@ export function ThemePreview({ colors }: ThemePreviewProps) {
         </div>
 
         {/* Mini widget grid */}
-        <div className="grid grid-cols-4 gap-1 p-1.5">
+        <div className="grid grid-cols-4 gap-1.5 p-2">
           {/* Schedule */}
           <MiniWidget title="Schedule" color="var(--color-palette-1)" badge="14" rowSpan>
             <div className="space-y-0.5">
@@ -65,8 +65,8 @@ export function ThemePreview({ colors }: ThemePreviewProps) {
           {/* Packages */}
           <MiniWidget title="Packages" color="var(--color-palette-5)" badge="1">
             <div className="flex items-center gap-1">
-              <span className="text-[8px]">📦</span>
-              <span className="text-[7px] truncate" style={{ color: 'var(--color-text-primary)' }}>
+              <span className="text-[10px]">📦</span>
+              <span className="text-[9px] truncate" style={{ color: 'var(--color-text-primary)' }}>
                 Toothpaste
               </span>
             </div>
@@ -81,7 +81,7 @@ export function ThemePreview({ colors }: ThemePreviewProps) {
           {/* Sports */}
           <MiniWidget title="Sports" color="var(--color-palette-6)" badge="1 Live">
             <div className="text-center">
-              <div className="text-[6px] uppercase font-semibold" style={{ color: 'var(--color-text-muted)' }}>
+              <div className="text-[8px] uppercase font-semibold" style={{ color: 'var(--color-text-muted)' }}>
                 NBA
               </div>
               <div className="text-[10px] font-bold" style={{ color: 'var(--color-text-primary)' }}>
@@ -89,7 +89,7 @@ export function ThemePreview({ colors }: ThemePreviewProps) {
               </div>
               <div>
                 <span
-                  className="text-[6px] font-bold uppercase"
+                  className="text-[8px] font-bold uppercase"
                   style={{ color: 'var(--color-role-error)' }}
                 >
                   ● Live
@@ -100,27 +100,27 @@ export function ThemePreview({ colors }: ThemePreviewProps) {
 
           {/* Chores */}
           <MiniWidget title="Chores" color="var(--color-palette-2)" badge="2/4">
-            <div className="text-[7px]" style={{ color: 'var(--color-text-primary)' }}>
+            <div className="text-[9px]" style={{ color: 'var(--color-text-primary)' }}>
               ✓ Make bed
             </div>
-            <div className="text-[7px]" style={{ color: 'var(--color-text-primary)' }}>
+            <div className="text-[9px]" style={{ color: 'var(--color-text-primary)' }}>
               ○ Clean room
             </div>
           </MiniWidget>
 
           {/* Lunch */}
           <MiniWidget title="Lunch" color="var(--color-palette-4)">
-            <div className="text-[7px]" style={{ color: 'var(--color-text-primary)' }}>
+            <div className="text-[9px]" style={{ color: 'var(--color-text-primary)' }}>
               • Hot Dog
             </div>
-            <div className="text-[7px]" style={{ color: 'var(--color-text-primary)' }}>
+            <div className="text-[9px]" style={{ color: 'var(--color-text-primary)' }}>
               • Corn Dog
             </div>
           </MiniWidget>
 
           {/* Grocery */}
           <MiniWidget title="Grocery" color="var(--color-palette-5)">
-            <div className="text-[7px]" style={{ color: 'var(--color-text-muted)' }}>
+            <div className="text-[9px]" style={{ color: 'var(--color-text-muted)' }}>
               No items
             </div>
           </MiniWidget>
@@ -128,7 +128,7 @@ export function ThemePreview({ colors }: ThemePreviewProps) {
 
         {/* Mini tab bar */}
         <div
-          className="flex justify-center gap-5 py-1.5"
+          className="flex justify-center gap-6 py-2"
           style={{ background: 'var(--color-bg-card)', borderTop: '1px solid var(--color-border-subtle)' }}
         >
           <MiniTab label="Home" active color="var(--color-palette-1)" textColor="var(--color-text-muted)" />
@@ -147,19 +147,19 @@ function MiniWidget({
 }) {
   return (
     <div
-      className={`rounded-md p-1.5 ${rowSpan ? 'row-span-2' : ''}`}
+      className={`rounded-md p-2 ${rowSpan ? 'row-span-2' : ''}`}
       style={{ background: 'var(--color-bg-card)' }}
     >
       <div
-        className="flex justify-between items-center pb-0.5 mb-1"
+        className="flex justify-between items-center pb-1 mb-1.5"
         style={{ borderBottom: '1px solid var(--color-border-subtle)' }}
       >
-        <span className="text-[7px] font-bold uppercase tracking-wide" style={{ color }}>
+        <span className="text-[9px] font-bold uppercase tracking-wide" style={{ color }}>
           {title}
         </span>
         {badge && (
           <span
-            className="text-[6px] font-semibold px-1 rounded"
+            className="text-[9px] font-semibold px-1.5 rounded"
             style={{ background: `color-mix(in srgb, ${color} 10%, transparent)`, color }}
           >
             {badge}
@@ -174,8 +174,8 @@ function MiniWidget({
 function MiniEventRow({ time, name, color }: { time: string; name: string; color: string }) {
   return (
     <div className="flex gap-1 items-baseline">
-      <span className="text-[7px] font-semibold min-w-[20px]" style={{ color }}>{time}</span>
-      <span className="text-[7px] truncate" style={{ color: 'var(--color-text-primary)' }}>{name}</span>
+      <span className="text-[9px] font-semibold min-w-[24px]" style={{ color }}>{time}</span>
+      <span className="text-[9px] truncate" style={{ color: 'var(--color-text-primary)' }}>{name}</span>
     </div>
   )
 }
@@ -183,8 +183,8 @@ function MiniEventRow({ time, name, color }: { time: string; name: string; color
 function MiniCountdown({ name, days, color }: { name: string; days: string; color: string }) {
   return (
     <div className="flex justify-between">
-      <span className="text-[7px]" style={{ color: 'var(--color-text-primary)' }}>{name}</span>
-      <span className="text-[7px] font-semibold" style={{ color }}>{days}</span>
+      <span className="text-[9px]" style={{ color: 'var(--color-text-primary)' }}>{name}</span>
+      <span className="text-[9px] font-semibold" style={{ color }}>{days}</span>
     </div>
   )
 }
@@ -192,7 +192,7 @@ function MiniCountdown({ name, days, color }: { name: string; days: string; colo
 function MiniTab({ label, active, color, textColor }: { label: string; active?: boolean; color: string; textColor: string }) {
   return (
     <div
-      className="text-center text-[7px]"
+      className="text-center text-[9px]"
       style={{ color: active ? color : textColor, fontWeight: active ? 600 : 400 }}
     >
       {label}
