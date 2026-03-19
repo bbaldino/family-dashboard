@@ -11,6 +11,7 @@ import { LunchMenuWidget } from '@/integrations/nutrislice'
 import { useHeroWeather, WeatherDetail } from '@/integrations/weather'
 import { SportsWidget } from '@/integrations/sports'
 import { PackagesWidget } from '@/integrations/packages'
+import { TimerBanner } from '@/integrations/timers'
 
 function getHeroEvents(days: CalendarDay[] | null): { name: string; time: string; detail?: string; isNow?: boolean }[] {
   if (!days) return []
@@ -85,16 +86,21 @@ export function HomeBoard() {
       className="grid gap-[var(--spacing-grid-gap)] h-full"
       style={{
         gridTemplateColumns: '1fr 1fr 1fr 1fr',
-        gridTemplateRows: 'auto 1fr 1fr',
+        gridTemplateRows: 'auto auto 1fr 1fr',
       }}
     >
+      {/* Timer banner -- full width, only shows when timers active */}
+      <div style={{ gridColumn: '1 / -1' }}>
+        <TimerBanner />
+      </div>
+
       {/* Hero strip -- full width */}
       <div style={{ gridColumn: '1 / -1' }}>
         <HeroStripWithData heroEvents={heroEvents} />
       </div>
 
       {/* Calendar -- col 1, spans 2 rows */}
-      <div style={{ gridRow: '2 / 4', minHeight: 0 }} className="overflow-hidden">
+      <div style={{ gridRow: '3 / 5', minHeight: 0 }} className="overflow-hidden">
         <CalendarWidget
           days={calendar.data}
           isLoading={calendar.isLoading}
