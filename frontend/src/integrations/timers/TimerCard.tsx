@@ -27,8 +27,6 @@ export function TimerCard({ timer, onPause, onResume, onCancel }: TimerCardProps
       <span className="text-[18px]">⏲️</span>
       <div>
         <div className="text-[22px] font-bold tabular-nums leading-none text-white">
-          }`}
-        >
           {formatCountdown(timer.remainingMs)}
         </div>
         <div className="text-[10px] text-white/75">
