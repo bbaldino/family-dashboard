@@ -1,29 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Timer, TimerEvent } from './types'
-
-/** Play an alarm tone using Web Audio API — 3 beeps */
-function playAlarmTone() {
-  try {
-    const ctx = new AudioContext()
-    const beep = (startTime: number) => {
-      const osc = ctx.createOscillator()
-      const gain = ctx.createGain()
-      osc.connect(gain)
-      gain.connect(ctx.destination)
-      osc.frequency.value = 880
-      osc.type = 'sine'
-      gain.gain.setValueAtTime(0.3, startTime)
-      gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3)
-      osc.start(startTime)
-      osc.stop(startTime + 0.3)
-    }
-    beep(ctx.currentTime)
-    beep(ctx.currentTime + 0.4)
-    beep(ctx.currentTime + 0.8)
-  } catch {
-    // Audio not available
-  }
-}
+import { getAlarmById, DEFAULT_ALARM_ID } from './alarmSounds'
 
 /** Normalize a timer from the API: ensure remainingMs is always set */
 function normalizeTimer(t: Timer): Timer {
@@ -45,10 +22,11 @@ function normalizeTimer(t: Timer): Timer {
   return { ...t, remainingMs: remaining }
 }
 
-export function useTimers(serviceUrl: string | undefined) {
+export function useTimers(serviceUrl: string | undefined, alarmSoundId?: string) {
   const [timers, setTimers] = useState<Timer[]>([])
   const [firedTimers, setFiredTimers] = useState<Timer[]>([])
   const eventSourceRef = useRef<EventSource | null>(null)
+  const alarmIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // SSE connection
   useEffect(() => {
@@ -78,7 +56,14 @@ export function useTimers(serviceUrl: string | undefined) {
             if (data.timer) {
               setTimers((prev) => prev.filter((p) => p.id !== data.timer!.id))
               setFiredTimers((prev) => [...prev, normalizeTimer(data.timer!)])
-              playAlarmTone()
+              // Play alarm and start repeating every 5 seconds
+              const alarm = getAlarmById(alarmSoundId ?? DEFAULT_ALARM_ID)
+              try { alarm.play() } catch { /* audio unavailable */ }
+              if (!alarmIntervalRef.current) {
+                alarmIntervalRef.current = setInterval(() => {
+                  try { alarm.play() } catch { /* audio unavailable */ }
+                }, 5000)
+              }
             }
             break
           case 'cancelled':
@@ -160,7 +145,15 @@ export function useTimers(serviceUrl: string | undefined) {
   )
 
   const dismiss = useCallback((id: string) => {
-    setFiredTimers((prev) => prev.filter((t) => t.id !== id))
+    setFiredTimers((prev) => {
+      const remaining = prev.filter((t) => t.id !== id)
+      // Stop repeating alarm if no more fired timers
+      if (remaining.length === 0 && alarmIntervalRef.current) {
+        clearInterval(alarmIntervalRef.current)
+        alarmIntervalRef.current = null
+      }
+      return remaining
+    })
   }, [])
 
   return { timers, firedTimers, pause, resume, cancel, dismiss }

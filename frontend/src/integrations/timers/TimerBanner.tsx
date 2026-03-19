@@ -4,19 +4,21 @@ import { TimerCard } from './TimerCard'
 
 export function TimerBanner() {
   const [serviceUrl, setServiceUrl] = useState<string | undefined>(undefined)
+  const [alarmSoundId, setAlarmSoundId] = useState<string | undefined>(undefined)
 
-  // Load service URL from config
+  // Load config
   useEffect(() => {
     fetch('/api/config')
       .then((r) => r.json())
       .then((config: Record<string, string>) => {
         const url = config['timers.service_url']
         if (url) setServiceUrl(url)
+        setAlarmSoundId(config['timers.alarm_sound'])
       })
       .catch(() => {})
   }, [])
 
-  const { timers, firedTimers, pause, resume, cancel, dismiss } = useTimers(serviceUrl)
+  const { timers, firedTimers, pause, resume, cancel, dismiss } = useTimers(serviceUrl, alarmSoundId)
 
   const hasContent = timers.length > 0 || firedTimers.length > 0
   if (!hasContent) return null
