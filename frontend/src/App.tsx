@@ -2,7 +2,6 @@ import { Routes, Route } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HassConnect } from '@hakit/core'
-import { Component, type ReactNode } from 'react'
 import { AppShell } from './app/AppShell'
 import { HomeBoard } from './boards/HomeBoard'
 import { CalendarBoard } from './boards/calendar/CalendarBoard'
@@ -18,40 +17,26 @@ function ThemeApplicator() {
   return null
 }
 
-/** Wraps HassConnect so a connection failure doesn't block the entire app */
-class HassErrorBoundary extends Component<{ children: ReactNode; fallback: ReactNode }, { hasError: boolean }> {
-  state = { hasError: false }
-  static getDerivedStateFromError() { return { hasError: true } }
-  componentDidCatch(error: Error) {
-    console.warn('HA connection failed, continuing without HA:', error.message)
-  }
-  render() {
-    if (this.state.hasError) return this.props.fallback
-    return this.props.children
-  }
-}
-
-/** Try HassConnect, but if it takes too long (blocks rendering), skip it */
-function HassConnectWithTimeout({ content }: { content: ReactNode }) {
-  const [timedOut, setTimedOut] = useState(false)
+/** Check if HA is reachable before mounting HassConnect */
+function useHaReachable(url: string | undefined): boolean {
+  const [reachable, setReachable] = useState(false)
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      console.warn('HA connection timed out after 5s, continuing without HA')
-      setTimedOut(true)
-    }, 5000)
-    return () => clearTimeout(timer)
-  }, [])
+    if (!url) return
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 3000)
 
-  if (timedOut) return <>{content}</>
+    fetch(`${url}/api/`, { signal: controller.signal })
+      .then((r) => {
+        if (r.ok || r.status === 401) setReachable(true) // 401 = HA is there, just needs auth
+      })
+      .catch(() => {
+        console.warn('HA not reachable, continuing without it')
+      })
+      .finally(() => clearTimeout(timer))
+  }, [url])
 
-  return (
-    <HassErrorBoundary fallback={content}>
-      <HassConnect hassUrl={HA_URL!} hassToken={HA_TOKEN}>
-        {content}
-      </HassConnect>
-    </HassErrorBoundary>
-  )
+  return reachable
 }
 
 function AppRoutes() {
@@ -90,8 +75,14 @@ export function App() {
     </QueryClientProvider>
   )
 
-  if (HA_URL) {
-    return <HassConnectWithTimeout content={content} />
+  const haReachable = useHaReachable(HA_URL)
+
+  if (HA_URL && haReachable) {
+    return (
+      <HassConnect hassUrl={HA_URL} hassToken={HA_TOKEN}>
+        {content}
+      </HassConnect>
+    )
   }
   return content
 }
