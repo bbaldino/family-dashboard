@@ -4,14 +4,14 @@ export interface Timer {
   durationMs: number
   startedAt: string
   endsAt: string
-  status: 'running' | 'paused' | 'fired' | 'cancelled'
+  status: 'running' | 'paused' | 'fired' | 'cancelled' | 'dismissed'
   remainingMs: number
   pausedRemainingMs?: number
   createdAt: string
 }
 
 export interface TimerEvent {
-  type: 'snapshot' | 'created' | 'fired' | 'cancelled' | 'paused' | 'resumed'
+  type: 'snapshot' | 'created' | 'fired' | 'cancelled' | 'paused' | 'resumed' | 'dismissed'
   timer?: Timer
   timers?: Timer[]
 }

@@ -92,6 +92,21 @@ export function useTimers(serviceUrl: string | undefined, alarmSoundId?: string)
               })
             }
             break
+          case 'dismissed':
+            if (data.timer) {
+              const dismissedId = data.timer.id
+              console.log('[timers] dismissed event for:', dismissedId)
+              setFiredTimers((prev) => {
+                const remaining = prev.filter((t) => t.id !== dismissedId)
+                if (remaining.length < prev.length && stopAlarmRef.current) {
+                  console.log('[timers] stopping alarm via dismissed!')
+                  stopAlarmRef.current()
+                  stopAlarmRef.current = null
+                }
+                return remaining
+              })
+            }
+            break
           case 'paused':
             if (data.timer) {
               const t = normalizeTimer(data.timer)
