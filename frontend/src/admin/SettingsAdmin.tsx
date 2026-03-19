@@ -2,6 +2,24 @@ import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/ui/Button'
 import { integrations } from '@/integrations/registry'
 
+/** Get default values from all integrations' Zod schemas, prefixed with integration ID */
+function getSchemaDefaults(): Record<string, string> {
+  const defaults: Record<string, string> = {}
+  for (const integration of integrations) {
+    try {
+      const parsed = integration.schema.parse({})
+      for (const [key, val] of Object.entries(parsed as Record<string, string>)) {
+        if (val !== undefined && val !== '') {
+          defaults[`${integration.id}.${key}`] = String(val)
+        }
+      }
+    } catch {
+      // Schema parse failed, skip defaults
+    }
+  }
+  return defaults
+}
+
 export function SettingsAdmin() {
   const [selectedId, setSelectedId] = useState<string | null>(
     integrations.length > 0 ? integrations[0].id : null,
@@ -15,8 +33,11 @@ export function SettingsAdmin() {
     try {
       const resp = await fetch('/api/config')
       const data = await resp.json()
-      setAllConfig(data)
-      setLocalConfig(data)
+      // Merge schema defaults under saved values so unsaved fields show their defaults
+      const defaults = getSchemaDefaults()
+      const merged = { ...defaults, ...data }
+      setAllConfig(merged)
+      setLocalConfig(merged)
     } catch {
       setError('Failed to load settings')
     }
