@@ -31,13 +31,35 @@ const PICKER_COLORS = [
 
 function ColorSwatch({ value, label, onChange }: { value: string; label: string; onChange: (v: string) => void }) {
   const [editing, setEditing] = useState(false)
+  const swatchRef = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState({ top: 0, left: 0 })
+
+  const openPicker = () => {
+    if (swatchRef.current) {
+      const rect = swatchRef.current.getBoundingClientRect()
+      // Position below the swatch, but clamp to viewport
+      const pickerWidth = 10 * 36 + 9 * 8 + 32 // cols * size + gaps + padding
+      const pickerHeight = 5 * 36 + 4 * 8 + 32
+      let top = rect.bottom + 8
+      let left = rect.left + rect.width / 2 - pickerWidth / 2
+
+      // Clamp to viewport edges
+      if (left < 8) left = 8
+      if (left + pickerWidth > window.innerWidth - 8) left = window.innerWidth - pickerWidth - 8
+      if (top + pickerHeight > window.innerHeight - 8) top = rect.top - pickerHeight - 8
+
+      setPos({ top, left })
+    }
+    setEditing(!editing)
+  }
 
   return (
     <div className="relative flex flex-col items-center gap-0.5">
       <div
+        ref={swatchRef}
         className="w-10 h-10 rounded-lg border border-border cursor-pointer hover:scale-110 transition-transform"
         style={{ background: value }}
-        onClick={() => setEditing(!editing)}
+        onClick={openPicker}
       />
       <span className="text-[8px] text-text-muted text-center leading-tight w-12 truncate">
         {label}
@@ -47,7 +69,7 @@ function ColorSwatch({ value, label, onChange }: { value: string; label: string;
           <div className="fixed inset-0 z-40" onClick={() => setEditing(false)} />
           <div
             className="fixed z-50 bg-bg-card rounded-xl shadow-lg border border-border p-4"
-            style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }}
+            style={{ top: `${pos.top}px`, left: `${pos.left}px` }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="grid grid-cols-10 gap-2">
