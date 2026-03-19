@@ -65,7 +65,16 @@ export function useTimers(serviceUrl: string | undefined, alarmSoundId?: string)
             break
           case 'cancelled':
             if (data.timer) {
-              setTimers((prev) => prev.filter((p) => p.id !== data.timer!.id))
+              const cancelledId = data.timer.id
+              setTimers((prev) => prev.filter((p) => p.id !== cancelledId))
+              setFiredTimers((prev) => {
+                const remaining = prev.filter((t) => t.id !== cancelledId)
+                if (remaining.length < prev.length && remaining.length === 0 && stopAlarmRef.current) {
+                  stopAlarmRef.current()
+                  stopAlarmRef.current = null
+                }
+                return remaining
+              })
             }
             break
           case 'paused':
