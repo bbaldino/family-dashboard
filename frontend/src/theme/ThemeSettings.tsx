@@ -156,33 +156,32 @@ export function ThemeSettings() {
         </button>
       </div>
 
-      {/* Color editor — 3 sections side by side */}
-      <div className="grid grid-cols-3 gap-x-6">
+      {/* Color editor — horizontal rows per section */}
+      <div className="space-y-3">
         {COLOR_SECTIONS.map((section) => (
-          <div key={section.label}>
-            <div className="text-[10px] font-semibold text-text-muted uppercase tracking-wide mb-1">
+          <div key={section.label} className="flex items-start gap-3">
+            <div className="text-[10px] font-semibold text-text-muted uppercase tracking-wide w-20 flex-shrink-0 pt-1.5">
               {section.label}
             </div>
-            <div className="grid grid-cols-1 gap-y-0">
+            <div className="flex flex-wrap gap-2">
               {section.items.map((item) => {
                 const value = item.get(editedColors)
                 return (
-                  <div key={item.key} className="flex items-center gap-1.5 py-1 border-b border-border-subtle">
-                    <label className="relative cursor-pointer flex-shrink-0">
-                      <div
-                        className="w-5 h-5 rounded border border-border cursor-pointer hover:scale-110 transition-transform"
-                        style={{ background: value }}
-                      />
-                      <input
-                        type="color"
-                        value={value}
-                        onChange={(e) => handleColorChange(item.key, e.target.value)}
-                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                      />
-                    </label>
-                    <span className="text-[11px] text-text-primary flex-1">{item.label}</span>
-                    <span className="text-[9px] font-mono text-text-muted">{value}</span>
-                  </div>
+                  <label key={item.key} className="relative cursor-pointer flex flex-col items-center gap-0.5">
+                    <div
+                      className="w-8 h-8 rounded-lg border border-border cursor-pointer hover:scale-110 transition-transform"
+                      style={{ background: value }}
+                    />
+                    <input
+                      type="color"
+                      value={value}
+                      onChange={(e) => handleColorChange(item.key, e.target.value)}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    />
+                    <span className="text-[8px] text-text-muted text-center leading-tight w-12 truncate">
+                      {item.label.replace('Palette ', 'P').replace('Text ', '').replace('Border ', 'Bdr ')}
+                    </span>
+                  </label>
                 )
               })}
             </div>
