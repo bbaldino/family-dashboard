@@ -39,6 +39,7 @@ export function useTimers(serviceUrl: string | undefined, alarmSoundId?: string)
     es.onmessage = (event) => {
       try {
         const data: TimerEvent = JSON.parse(event.data)
+        console.log('[timers] SSE event:', data.type, data.timer?.id, data.timer?.status)
 
         switch (data.type) {
           case 'snapshot':
@@ -77,11 +78,13 @@ export function useTimers(serviceUrl: string | undefined, alarmSoundId?: string)
           case 'cancelled':
             if (data.timer) {
               const cancelledId = data.timer.id
+              console.log('[timers] cancelled event for:', cancelledId)
               setTimers((prev) => prev.filter((p) => p.id !== cancelledId))
               setFiredTimers((prev) => {
                 const remaining = prev.filter((t) => t.id !== cancelledId)
-                // Stop alarm if we removed a fired timer and none remain
+                console.log('[timers] firedTimers before:', prev.length, 'after:', remaining.length, 'stopAlarmRef:', !!stopAlarmRef.current)
                 if (remaining.length < prev.length && stopAlarmRef.current) {
+                  console.log('[timers] stopping alarm!')
                   stopAlarmRef.current()
                   stopAlarmRef.current = null
                 }
