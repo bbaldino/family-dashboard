@@ -4,75 +4,68 @@ import { ThemePreview } from './ThemePreview'
 import { useTheme } from './useTheme'
 import type { Theme, ThemeColors } from './types'
 
+// A curated set of colors for the tap-to-pick grid
+const PICKER_COLORS = [
+  // Reds / warm
+  '#e53935', '#d4574a', '#c04040', '#b71c1c', '#ff5252',
+  // Oranges
+  '#c06830', '#e8965a', '#f57c00', '#ff9800', '#ffb74d',
+  // Yellows / Gold
+  '#f0c040', '#9a7a30', '#fbc02d', '#ffeb3b', '#c0a030',
+  // Greens
+  '#4a8a4a', '#2a7a5a', '#388e3c', '#4caf50', '#81c784',
+  // Teals / Cyans
+  '#3a9a8a', '#009688', '#26a69a', '#00838f', '#4dd0e1',
+  // Blues
+  '#4a7a9a', '#5a8aba', '#1976d2', '#2196f3', '#64b5f6',
+  // Purples
+  '#8a5a9a', '#7a6a9a', '#7b1fa2', '#9c27b0', '#ba68c8',
+  // Pinks / Rose
+  '#c06080', '#aa6a7a', '#c2185b', '#e91e63', '#f48fb1',
+  // Browns
+  '#7a6a5a', '#8d6e63', '#5d4037', '#795548', '#a1887f',
+  // Neutrals
+  '#2a2520', '#4a4a4a', '#757575', '#9e9e9e', '#bdbdbd',
+  '#d0d0d0', '#e0e0e0', '#f0f0f0', '#f5f5f5', '#ffffff',
+]
+
 function ColorSwatch({ value, label, onChange }: { value: string; label: string; onChange: (v: string) => void }) {
   const [editing, setEditing] = useState(false)
-  const [hexInput, setHexInput] = useState(value)
-  const inputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => { setHexInput(value) }, [value])
-
-  const handleSubmit = () => {
-    if (/^#[0-9a-fA-F]{6}$/.test(hexInput)) {
-      onChange(hexInput.toLowerCase())
-    }
-    setEditing(false)
-  }
 
   return (
     <div className="relative flex flex-col items-center gap-0.5">
       <div
         className="w-10 h-10 rounded-lg border border-border cursor-pointer hover:scale-110 transition-transform"
         style={{ background: value }}
-        onClick={() => {
-          setEditing(true)
-          setHexInput(value)
-          setTimeout(() => inputRef.current?.focus(), 50)
-        }}
+        onClick={() => setEditing(!editing)}
       />
       <span className="text-[8px] text-text-muted text-center leading-tight w-12 truncate">
         {label}
       </span>
       {editing && (
-        <div
-          className="absolute top-12 left-1/2 -translate-x-1/2 z-50 bg-bg-card rounded-lg shadow-lg border border-border p-2 flex flex-col gap-2 min-w-[140px]"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded border border-border flex-shrink-0" style={{ background: hexInput }} />
-            <input
-              ref={inputRef}
-              type="text"
-              value={hexInput}
-              onChange={(e) => setHexInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit() }}
-              className="w-full px-2 py-1 text-[12px] font-mono border border-border rounded bg-bg-primary text-text-primary"
-              placeholder="#000000"
-            />
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setEditing(false)} />
+          <div
+            className="absolute top-12 left-1/2 -translate-x-1/2 z-50 bg-bg-card rounded-xl shadow-lg border border-border p-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="grid grid-cols-10 gap-1.5">
+              {PICKER_COLORS.map((c) => (
+                <div
+                  key={c}
+                  className={`w-7 h-7 rounded-md cursor-pointer hover:scale-125 transition-transform ${
+                    c === value ? 'ring-2 ring-offset-1 ring-text-primary' : ''
+                  }`}
+                  style={{ background: c, border: c === '#ffffff' ? '1px solid #e0e0e0' : undefined }}
+                  onClick={() => {
+                    onChange(c)
+                    setEditing(false)
+                  }}
+                />
+              ))}
+            </div>
           </div>
-          <input
-            type="color"
-            value={hexInput}
-            onChange={(e) => {
-              setHexInput(e.target.value)
-              onChange(e.target.value)
-            }}
-            className="w-full h-8 cursor-pointer rounded"
-          />
-          <div className="flex gap-1">
-            <button
-              onClick={handleSubmit}
-              className="flex-1 px-2 py-1 text-[11px] font-medium bg-palette-1 text-white rounded"
-            >
-              Apply
-            </button>
-            <button
-              onClick={() => setEditing(false)}
-              className="flex-1 px-2 py-1 text-[11px] font-medium bg-bg-card-hover text-text-secondary rounded"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
+        </>
       )}
     </div>
   )
