@@ -127,44 +127,43 @@ export function ThemeSettings() {
   if (!editedColors) return null
 
   return (
-    <div className="flex gap-5">
-      {/* Left: Editor */}
-      <div className="flex-1 min-w-0">
-        {/* Theme selector */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          {allThemes.map((theme) => (
-            <button
-              key={theme.id}
-              onClick={() => handleSelectTheme(theme)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border-2 transition-colors ${
-                activeTheme.id === theme.id
-                  ? 'border-palette-1 bg-palette-1/10 text-palette-1'
-                  : 'border-border text-text-secondary hover:border-text-muted'
-              }`}
-            >
-              <div className="flex gap-1">
-                {theme.colors.palette.slice(0, 3).map((c, i) => (
-                  <div key={i} className="w-2 h-2 rounded-full" style={{ background: c }} />
-                ))}
-              </div>
-              {theme.name}
-            </button>
-          ))}
+    <div className="space-y-4">
+      {/* Theme selector */}
+      <div className="flex flex-wrap gap-2">
+        {allThemes.map((theme) => (
           <button
-            onClick={handleNewTheme}
-            className="px-3 py-1.5 rounded-full text-[12px] font-medium border-2 border-dashed border-border text-text-muted hover:border-text-secondary"
+            key={theme.id}
+            onClick={() => handleSelectTheme(theme)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border-2 transition-colors ${
+              activeTheme.id === theme.id
+                ? 'border-palette-1 bg-palette-1/10 text-palette-1'
+                : 'border-border text-text-secondary hover:border-text-muted'
+            }`}
           >
-            + New Theme
+            <div className="flex gap-1">
+              {theme.colors.palette.slice(0, 3).map((c, i) => (
+                <div key={i} className="w-2 h-2 rounded-full" style={{ background: c }} />
+              ))}
+            </div>
+            {theme.name}
           </button>
-        </div>
+        ))}
+        <button
+          onClick={handleNewTheme}
+          className="px-3 py-1.5 rounded-full text-[12px] font-medium border-2 border-dashed border-border text-text-muted hover:border-text-secondary"
+        >
+          + New Theme
+        </button>
+      </div>
 
-        {/* Color editor sections */}
+      {/* Color editor — 3 sections side by side */}
+      <div className="grid grid-cols-3 gap-x-6">
         {COLOR_SECTIONS.map((section) => (
           <div key={section.label}>
-            <div className="text-[10px] font-semibold text-text-muted uppercase tracking-wide mt-3 mb-1">
+            <div className="text-[10px] font-semibold text-text-muted uppercase tracking-wide mb-1">
               {section.label}
             </div>
-            <div className={`grid gap-x-3 gap-y-0 ${section.label === 'Palette' ? 'grid-cols-4' : 'grid-cols-2'}`}>
+            <div className={`grid gap-x-3 gap-y-0 ${section.label === 'Palette' ? 'grid-cols-2' : 'grid-cols-1'}`}>
               {section.items.map((item) => {
                 const value = item.get(editedColors)
                 return (
@@ -181,42 +180,43 @@ export function ThemeSettings() {
                         className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                       />
                     </label>
-                    <span className="text-[11px] text-text-primary truncate">{item.label}</span>
+                    <span className="text-[11px] text-text-primary flex-1">{item.label}</span>
+                    <span className="text-[9px] font-mono text-text-muted">{value}</span>
                   </div>
                 )
               })}
             </div>
           </div>
         ))}
-
-        {/* Actions */}
-        <div className="flex items-center gap-2 mt-4 pt-3 border-t-2 border-border-subtle">
-          {!editingTheme?.builtin && (
-            <Button onClick={handleSave}>Save Theme</Button>
-          )}
-          <button
-            onClick={handleReset}
-            className="px-4 py-2 rounded-[var(--radius-button)] text-[13px] font-medium bg-bg-card-hover text-text-secondary"
-          >
-            Reset
-          </button>
-          {!editingTheme?.builtin && (
-            <button
-              onClick={handleDelete}
-              className="px-4 py-2 rounded-[var(--radius-button)] text-[13px] font-medium bg-bg-card-hover text-error"
-            >
-              Delete
-            </button>
-          )}
-          {editingTheme?.builtin && (
-            <span className="text-[11px] text-text-muted">Built-in theme — create a copy to customize</span>
-          )}
-          {status && <span className="text-[12px] text-success ml-auto">{status}</span>}
-        </div>
       </div>
 
-      {/* Right: Preview */}
-      <div className="flex-1 min-w-[400px]">
+      {/* Actions */}
+      <div className="flex items-center gap-2 pt-2 border-t-2 border-border-subtle">
+        {!editingTheme?.builtin && (
+          <Button onClick={handleSave}>Save Theme</Button>
+        )}
+        <button
+          onClick={handleReset}
+          className="px-4 py-2 rounded-[var(--radius-button)] text-[13px] font-medium bg-bg-card-hover text-text-secondary"
+        >
+          Reset
+        </button>
+        {!editingTheme?.builtin && (
+          <button
+            onClick={handleDelete}
+            className="px-4 py-2 rounded-[var(--radius-button)] text-[13px] font-medium bg-bg-card-hover text-error"
+          >
+            Delete
+          </button>
+        )}
+        {editingTheme?.builtin && (
+          <span className="text-[11px] text-text-muted">Built-in theme — create a copy to customize</span>
+        )}
+        {status && <span className="text-[12px] text-success ml-auto">{status}</span>}
+      </div>
+
+      {/* Preview — full width below */}
+      <div>
         <div className="text-[10px] font-semibold text-text-muted uppercase tracking-wide mb-2">
           Live Preview
         </div>
