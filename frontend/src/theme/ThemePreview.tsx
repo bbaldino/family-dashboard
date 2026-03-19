@@ -9,16 +9,19 @@ export function ThemePreview({ colors }: ThemePreviewProps) {
   const vars = themeToVariables(colors)
   const style: Record<string, string> = { ...vars }
 
+  const scale = 1.35
+
   return (
-    <div style={style} className="overflow-hidden">
+    <div style={{ ...style, height: 'fit-content' }}>
       <div
         className="rounded-lg border origin-top-left"
         style={{
           background: 'var(--color-bg-primary)',
           borderColor: 'var(--color-border-subtle)',
-          transform: 'scale(1.35)',
+          transform: `scale(${scale})`,
           transformOrigin: 'top left',
-          width: `${100 / 1.35}%`,
+          width: `${100 / scale}%`,
+          marginBottom: `calc((${scale} - 1) * 100%)`,
         }}
       >
         {/* Mini hero */}
