@@ -169,7 +169,7 @@ export function ThemeSettings() {
                 return (
                   <label key={item.key} className="relative cursor-pointer flex flex-col items-center gap-0.5">
                     <div
-                      className="w-8 h-8 rounded-lg border border-border cursor-pointer hover:scale-110 transition-transform"
+                      className="w-10 h-10 rounded-lg border border-border cursor-pointer hover:scale-110 transition-transform"
                       style={{ background: value }}
                     />
                     <input

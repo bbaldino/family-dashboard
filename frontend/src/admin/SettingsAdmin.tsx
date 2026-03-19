@@ -100,7 +100,7 @@ export function SettingsAdmin() {
       </nav>
 
       {/* Content */}
-      <div className="flex-1">
+      <div className="flex-1 min-h-0 flex flex-col">
         {error && (
           <div className="bg-error/10 text-error rounded-lg p-3 mb-4 text-sm">
             {error}
@@ -114,13 +114,15 @@ export function SettingsAdmin() {
         )}
 
         {selectedIntegration && (
-          <div>
-            <h3 className="text-lg font-semibold text-text-primary mb-4">
+          <div className="flex-1 min-h-0 flex flex-col">
+            <h3 className="text-lg font-semibold text-text-primary mb-4 flex-shrink-0">
               {selectedIntegration.name}
             </h3>
 
             {selectedIntegration.settingsComponent ? (
-              <selectedIntegration.settingsComponent />
+              <div className="flex-1 min-h-0">
+                <selectedIntegration.settingsComponent />
+              </div>
             ) : (
               <div className="max-w-2xl">
                 <div className="bg-bg-card rounded-[var(--radius-card)] p-4 border border-border mb-4">
