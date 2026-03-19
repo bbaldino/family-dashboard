@@ -12,9 +12,10 @@ export function ThemePreview({ colors }: ThemePreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(0.5)
 
-  // Render the real dashboard at a fixed large size, then scale to fit container
-  const innerWidth = 1600
-  const innerHeight = 900
+  // Render the real dashboard at a fixed large size, then scale to fit container.
+  // Use 16:9 aspect ratio clipped to show the top portion.
+  const innerWidth = 1920
+  const innerHeight = 500
 
   useEffect(() => {
     const updateScale = () => {
