@@ -10,10 +10,16 @@ export function ThemePreview({ colors }: ThemePreviewProps) {
   const style: Record<string, string> = { ...vars }
 
   return (
-    <div style={style}>
+    <div style={style} className="overflow-hidden">
       <div
-        className="rounded-lg border overflow-hidden"
-        style={{ background: 'var(--color-bg-primary)', borderColor: 'var(--color-border-subtle)' }}
+        className="rounded-lg border origin-top-left"
+        style={{
+          background: 'var(--color-bg-primary)',
+          borderColor: 'var(--color-border-subtle)',
+          transform: 'scale(1.35)',
+          transformOrigin: 'top left',
+          width: `${100 / 1.35}%`,
+        }}
       >
         {/* Mini hero */}
         <div
