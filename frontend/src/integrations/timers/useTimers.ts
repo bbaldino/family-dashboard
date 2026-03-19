@@ -39,7 +39,6 @@ export function useTimers(serviceUrl: string | undefined, alarmSoundId?: string)
     es.onmessage = (event) => {
       try {
         const data: TimerEvent = JSON.parse(event.data)
-        console.log('[timers] SSE event:', data.type, data.timer?.id, data.timer?.status)
 
         switch (data.type) {
           case 'snapshot':
@@ -78,31 +77,20 @@ export function useTimers(serviceUrl: string | undefined, alarmSoundId?: string)
           case 'cancelled':
             if (data.timer) {
               const cancelledId = data.timer.id
-              console.log('[timers] cancelled event for:', cancelledId)
               setTimers((prev) => prev.filter((p) => p.id !== cancelledId))
-              setFiredTimers((prev) => {
-                const remaining = prev.filter((t) => t.id !== cancelledId)
-                console.log('[timers] firedTimers before:', prev.length, 'after:', remaining.length, 'stopAlarmRef:', !!stopAlarmRef.current)
-                if (remaining.length < prev.length && stopAlarmRef.current) {
-                  console.log('[timers] stopping alarm!')
-                  stopAlarmRef.current()
-                  stopAlarmRef.current = null
-                }
-                return remaining
-              })
+              if (stopAlarmRef.current) {
+                stopAlarmRef.current()
+                stopAlarmRef.current = null
+              }
+              setFiredTimers((prev) => prev.filter((t) => t.id !== cancelledId))
             }
             break
           case 'dismissed':
             if (data.timer) {
               const dismissedId = data.timer.id
-              console.log('[timers] dismissed event for:', dismissedId, 'stopAlarmRef:', !!stopAlarmRef.current)
-              // Stop alarm immediately regardless of firedTimers state
               if (stopAlarmRef.current) {
-                console.log('[timers] stopping alarm via dismissed!')
                 stopAlarmRef.current()
                 stopAlarmRef.current = null
-              } else {
-                console.log('[timers] WARNING: stopAlarmRef was null, cannot stop alarm')
               }
               setFiredTimers((prev) => prev.filter((t) => t.id !== dismissedId))
             }
