@@ -11,8 +11,6 @@ use std::collections::HashMap;
 use crate::error::AppError;
 use crate::integrations::IntegrationConfig;
 
-use super::INTEGRATION_ID;
-
 pub fn router(pool: SqlitePool) -> Router {
     Router::new()
         .route("/auth", get(google_auth))
@@ -21,7 +19,7 @@ pub fn router(pool: SqlitePool) -> Router {
 }
 
 async fn google_auth(State(pool): State<SqlitePool>) -> Result<Redirect, AppError> {
-    let config = IntegrationConfig::new(&pool, INTEGRATION_ID);
+    let config = IntegrationConfig::new(&pool, "google-cloud");
     let client_id_raw = config.get("client_id").await?;
     let redirect_uri_raw = config.get("redirect_uri").await?;
 
@@ -68,7 +66,7 @@ async fn google_callback(
         .code
         .ok_or_else(|| AppError::BadRequest("Missing authorization code".to_string()))?;
 
-    let config = IntegrationConfig::new(&pool, INTEGRATION_ID);
+    let config = IntegrationConfig::new(&pool, "google-cloud");
     let client_id = config.get("client_id").await?;
     let client_secret = config.get("client_secret").await?;
     let redirect_uri = config.get("redirect_uri").await?;

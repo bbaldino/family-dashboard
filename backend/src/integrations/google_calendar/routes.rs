@@ -9,7 +9,6 @@ use std::collections::HashMap;
 use crate::error::AppError;
 use crate::integrations::IntegrationConfig;
 
-use super::INTEGRATION_ID;
 use super::models::*;
 
 pub fn router(pool: SqlitePool) -> Router {
@@ -36,7 +35,7 @@ async fn get_valid_token(pool: &SqlitePool) -> Result<String, AppError> {
     }
 
     // Token expired or about to expire, refresh it
-    let config = IntegrationConfig::new(pool, INTEGRATION_ID);
+    let config = IntegrationConfig::new(pool, "google-cloud");
     let client_id = config.get("client_id").await?;
     let client_secret = config.get("client_secret").await?;
 
