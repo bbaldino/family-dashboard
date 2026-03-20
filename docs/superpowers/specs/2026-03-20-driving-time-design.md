@@ -17,11 +17,13 @@ A `hasBackend: false` integration that holds all Google Cloud project credential
 
 Custom settings component with labeled fields for each.
 
+**Dependency note:** Google Calendar and Driving Time both depend on Google Cloud being configured. If credentials are missing, those features show appropriate "Configure Google Cloud in Settings" messages.
+
 ### Google Calendar simplification
 
 Remove OAuth fields from Google Calendar integration. Keep only `calendar_ids` (which calendars to display).
 
-The Google Calendar backend auth routes (`/api/google-calendar/auth`, `/api/google-calendar/callback`) read credentials from `google-cloud.*` config keys instead of `google-calendar.*`.
+The Google Calendar backend auth routes (`/api/google-calendar/auth`, `/api/google-calendar/callback`) read credentials from `google-cloud.*` config keys using `IntegrationConfig::new(&pool, "google-cloud")`.
 
 ### Migration
 
@@ -33,12 +35,13 @@ No backward compatibility needed. Just rename the config key prefix. User re-ent
 
 **Integration ID:** `driving-time`
 
-**Route:** `GET /api/driving-time?destination={address}`
+**Route:** `GET /api/driving-time?destination={address}&event_start={iso_timestamp}`
 
-- Reads `google-cloud.api_key` from config for the Routes API key
+- Reads `google-cloud.api_key` from config (via `IntegrationConfig::new(&pool, "google-cloud")`)
 - Reads `driving-time.home_address` from config for the origin
+- Reads `driving-time.buffer_minutes` from config (default: 5)
 - Calls Google Routes API: `POST https://routes.googleapis.com/directions/v2:computeRoutes`
-- Returns `{ durationSeconds: number, durationText: string }` (e.g. `{ durationSeconds: 1080, durationText: "18 mins" }`)
+- Returns `{ durationSeconds: number, durationText: string, bufferMinutes: number }` or `{ durationSeconds: null }` on failure
 
 **Google Routes API request:**
 ```json
@@ -54,7 +57,9 @@ Header: `X-Goog-Api-Key: {api_key}`, `X-Goog-FieldMask: routes.duration`
 
 **Response parsing:** `routes[0].duration` is a string like `"1080s"` — parse to seconds.
 
-**Caching:** In-memory cache keyed by destination address (normalized to lowercase, trimmed). TTL varies by time until event:
+**Caching:** In-memory cache keyed by destination address (normalized to lowercase, trimmed).
+
+The backend computes the cache TTL based on `event_start` (passed as a query param):
 
 | Time before event | Cache TTL |
 |-------------------|-----------|
@@ -63,22 +68,26 @@ Header: `X-Goog-Api-Key: {api_key}`, `X-Goog-FieldMask: routes.duration`
 | 30 min – 1 hour | 10 minutes |
 | < 30 min | 5 minutes |
 
-The cache TTL is determined by the frontend when making the request — it passes a `ttl` query param: `GET /api/driving-time?destination=...&ttl=300`. The backend uses this to decide if the cached value is still fresh.
+When multiple events share the same destination with different start times, the cache uses the **shortest** TTL (earliest event determines freshness).
 
-**Error handling:** If the Routes API fails or the destination can't be resolved, return `null` duration. The frontend hides the drive tag for that event.
+**Null result caching:** If the Routes API returns an error (non-geocodable address like "Zoom", "TBD", etc.), the null result is cached for 1 hour to avoid re-hitting the API repeatedly for the same bad address.
+
+**Error handling:** If the Routes API fails, the API key is missing, or the home address isn't configured, return `{ durationSeconds: null }`. The frontend hides the drive tag for that event.
 
 ### Frontend
 
 **`useDrivingTime` hook:**
 - Takes a list of events (from the calendar data)
 - Filters to events within the next 24 hours that have a `location` field
-- Fetches driving time for each unique destination from `/api/driving-time`
-- Computes appropriate cache TTL based on time until event
+- Deduplicates by destination address — only one API call per unique destination
+- Fetches driving time for each unique destination from `/api/driving-time`, passing the earliest `event_start` for that destination
+- Requests are serialized (one at a time) to avoid hitting Routes API rate limits on initial page load
 - Returns a map of `eventId → { durationSeconds, leaveByTime, urgency }`
 - Recalculates urgency every minute (since "leave in X min" counts down)
+- Refetches driving times at intervals matching the cache TTL (polls more frequently as events approach)
 
 **Urgency calculation:**
-- `leaveByTime = eventStartTime - durationSeconds - bufferMinutes` (buffer: 5 min by default)
+- `leaveByTime = eventStartTime - durationSeconds - bufferMinutes`
 - `minutesUntilLeave = leaveByTime - now`
 - Green (`ok`): > 30 min until leave-by
 - Orange (`soon`): 5–30 min until leave-by
@@ -111,3 +120,4 @@ API key comes from `google-cloud.api_key` — no duplication.
 - Transit/walking mode options
 - Driving time on the monthly calendar tab
 - Route preview / map display
+- API key validation / "Test Connection" button in Google Cloud settings
