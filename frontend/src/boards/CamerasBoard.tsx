@@ -1,15 +1,19 @@
 import { useState, useEffect } from 'react'
+import { doorbellIntegration } from '@/integrations/doorbell/config'
 
 export function CamerasBoard() {
   const [cameraUrl, setCameraUrl] = useState<string | null>(null)
 
   useEffect(() => {
+    const defaults = doorbellIntegration.schema.parse({})
     fetch('/api/config')
       .then((r) => r.json())
       .then((config: Record<string, string>) => {
-        setCameraUrl(config['doorbell.camera_url'] || null)
+        setCameraUrl(config['doorbell.camera_url'] || defaults.camera_url || null)
       })
-      .catch(() => {})
+      .catch(() => {
+        setCameraUrl(defaults.camera_url || null)
+      })
   }, [])
 
   if (!cameraUrl) {

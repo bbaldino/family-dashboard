@@ -7,7 +7,7 @@ export const doorbellIntegration = defineIntegration({
   name: 'Doorbell Camera',
   hasBackend: false,
   schema: z.object({
-    camera_url: z.string().optional(),
+    camera_url: z.string().optional().default('https://cast.baldino.me/webrtc-doorbell.html'),
   }),
   fields: {
     camera_url: {

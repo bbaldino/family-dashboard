@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/ui/Button'
+import { doorbellIntegration } from './config'
 
 export function DoorbellSettings() {
   const [cameraUrl, setCameraUrl] = useState('')
@@ -11,7 +12,8 @@ export function DoorbellSettings() {
     setLoading(true)
     try {
       const config = (await fetch('/api/config').then((r) => r.json())) as Record<string, string>
-      setCameraUrl(config['doorbell.camera_url'] ?? '')
+      const defaults = doorbellIntegration.schema.parse({})
+      setCameraUrl(config['doorbell.camera_url'] ?? defaults.camera_url ?? '')
     } catch {
       // ignore
     } finally {
