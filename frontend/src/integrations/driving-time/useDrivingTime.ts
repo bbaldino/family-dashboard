@@ -55,7 +55,7 @@ export function useDrivingTime(events: CalendarEvent[]) {
           if (startTime) params.set('event_start', new Date(startTime).toISOString())
 
           const result = await drivingTimeIntegration.api.get<DrivingTimeResult>(
-            `/?${params.toString()}`,
+            `?${params.toString()}`,
           )
 
           if (result.durationSeconds != null && result.durationText != null) {

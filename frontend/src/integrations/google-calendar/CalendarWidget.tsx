@@ -112,16 +112,16 @@ export function CalendarWidget({
                             {event.summary ?? '(No title)'}
                           </div>
                           {event.location && (
-                            <div className="text-[11px] text-text-muted truncate">
-                              {event.location}
-                            </div>
-                          )}
-                          {driveInfo[event.id] && (
-                            <div className="mt-0.5">
-                              <DriveTag
-                                displayText={driveInfo[event.id].displayText}
-                                urgency={driveInfo[event.id].urgency}
-                              />
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="text-[11px] text-text-muted truncate">
+                                {event.location}
+                              </span>
+                              {driveInfo[event.id] && (
+                                <DriveTag
+                                  displayText={driveInfo[event.id].displayText}
+                                  urgency={driveInfo[event.id].urgency}
+                                />
+                              )}
                             </div>
                           )}
                         </div>

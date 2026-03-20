@@ -47,17 +47,16 @@ export function HeroStrip({ events = [], weatherTemp, weatherHigh, weatherLow, w
         ) : (
           <div className="flex gap-3">
             {events.slice(0, 2).map((event, i) => (
-              <div key={i} className={`flex items-center gap-2 ${i > 0 ? 'pl-3 border-l border-separator' : ''}`}>
-                <div>
+              <div key={i} className={`${i > 0 ? 'pl-3 border-l border-separator' : ''}`}>
+                <div className="flex items-center gap-2">
                   <div className="text-[16px] font-medium text-text-primary">{event.name}</div>
-                  {event.detail && <div className="text-[11px] text-text-muted">{event.detail}</div>}
-                  {event.driveTag && (
-                    <div className="mt-1">
-                      <DriveTag displayText={event.driveTag.displayText} urgency={event.driveTag.urgency} />
-                    </div>
-                  )}
+                  <div className="text-[13px] font-semibold text-palette-1 whitespace-nowrap flex-shrink-0">{event.time}</div>
                 </div>
-                <div className="text-[13px] font-semibold text-palette-1 whitespace-nowrap">{event.time}</div>
+                {event.driveTag && (
+                  <div className="mt-0.5">
+                    <DriveTag displayText={event.driveTag.displayText} urgency={event.driveTag.urgency} />
+                  </div>
+                )}
               </div>
             ))}
           </div>
