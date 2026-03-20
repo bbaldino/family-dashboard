@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { drivingTimeIntegration } from './config'
 import type { CalendarEvent } from '@/integrations/google-calendar/types'
 import type { DrivingTimeResult, EventDriveInfo, DriveUrgency } from './types'
@@ -15,9 +15,27 @@ function computeDisplayText(urgency: DriveUrgency, durationText: string, minutes
   return `Leave in ${Math.max(0, Math.round(minutesUntilLeave))} min`
 }
 
+/** Compute refresh interval (ms) based on time until nearest event */
+function computeRefreshInterval(events: CalendarEvent[]): number {
+  const now = Date.now()
+  let nearestMinutes = Infinity
+
+  for (const e of events) {
+    const start = e.start.dateTime ?? e.start.date
+    if (!start) continue
+    const mins = (new Date(start).getTime() - now) / 60000
+    if (mins > 0 && mins < nearestMinutes) nearestMinutes = mins
+  }
+
+  if (nearestMinutes > 120) return 30 * 60000
+  if (nearestMinutes > 60) return 15 * 60000
+  if (nearestMinutes > 30) return 10 * 60000
+  return 5 * 60000
+}
+
 export function useDrivingTime(events: CalendarEvent[]) {
   const [driveInfo, setDriveInfo] = useState<Record<string, EventDriveInfo>>({})
-  const fetchedRef = useRef<Set<string>>(new Set())
+  const [fetchTick, setFetchTick] = useState(0)
 
   // Filter to events within 24 hours with a location
   const now = new Date()
@@ -30,75 +48,95 @@ export function useDrivingTime(events: CalendarEvent[]) {
     return startDate > now && startDate < tomorrow
   })
 
+  const relevantKey = relevantEvents.map((e) => e.id).join(',')
+
+  const updateDriveInfo = useCallback(
+    (destination: string, durationSecs: number, durationText: string, bufferMinutes: number) => {
+      const bufferMs = bufferMinutes * 60 * 1000
+      const durationMs = durationSecs * 1000
+
+      setDriveInfo((prev) => {
+        const next = { ...prev }
+        for (const event of relevantEvents) {
+          if (event.location !== destination) continue
+          const start = event.start.dateTime ?? event.start.date
+          if (!start) continue
+          const startDate = new Date(start)
+          const leaveByTime = new Date(startDate.getTime() - durationMs - bufferMs)
+          const minutesUntilLeave = (leaveByTime.getTime() - Date.now()) / 60000
+          const urgency = computeUrgency(minutesUntilLeave)
+          next[event.id] = {
+            durationSeconds: durationSecs,
+            durationText,
+            leaveByTime,
+            minutesUntilLeave,
+            urgency,
+            displayText: computeDisplayText(urgency, durationText, minutesUntilLeave),
+          }
+        }
+        return next
+      })
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [relevantKey],
+  )
+
   // Fetch driving times for unique destinations (serialized)
   useEffect(() => {
     let cancelled = false
 
     async function fetchAll() {
-      const destinations = new Map<string, { event: CalendarEvent; startTime: string }>()
+      const destinations = new Map<string, string>()
 
       for (const event of relevantEvents) {
         const dest = event.location!
         const start = event.start.dateTime ?? event.start.date ?? ''
         // Keep the earliest event start for each destination
-        if (!destinations.has(dest) || start < destinations.get(dest)!.startTime) {
-          destinations.set(dest, { event, startTime: start })
+        if (!destinations.has(dest) || start < destinations.get(dest)!) {
+          destinations.set(dest, start)
         }
       }
 
-      for (const [destination, { startTime }] of destinations) {
+      for (const [destination] of destinations) {
         if (cancelled) break
-        if (fetchedRef.current.has(destination)) continue
 
         try {
           const params = new URLSearchParams({ destination })
-          if (startTime) params.set('event_start', new Date(startTime).toISOString())
 
           const result = await drivingTimeIntegration.api.get<DrivingTimeResult>(
             `?${params.toString()}`,
           )
 
           if (result.durationSeconds != null && result.durationText != null) {
-            const durationSecs = result.durationSeconds
-            const bufferMs = result.bufferMinutes * 60 * 1000
-            const durationMs = durationSecs * 1000
-
-            // Update drive info for all events with this destination
-            setDriveInfo((prev) => {
-              const next = { ...prev }
-              for (const event of relevantEvents) {
-                if (event.location !== destination) continue
-                const start = event.start.dateTime ?? event.start.date
-                if (!start) continue
-                const startDate = new Date(start)
-                const leaveByTime = new Date(startDate.getTime() - durationMs - bufferMs)
-                const minutesUntilLeave = (leaveByTime.getTime() - Date.now()) / 60000
-                const urgency = computeUrgency(minutesUntilLeave)
-                next[event.id] = {
-                  durationSeconds: durationSecs,
-                  durationText: result.durationText!,
-                  leaveByTime,
-                  minutesUntilLeave,
-                  urgency,
-                  displayText: computeDisplayText(urgency, result.durationText!, minutesUntilLeave),
-                }
-              }
-              return next
-            })
+            updateDriveInfo(destination, result.durationSeconds, result.durationText, result.bufferMinutes)
           }
-
-          fetchedRef.current.add(destination)
         } catch {
-          fetchedRef.current.add(destination) // Don't retry failures
+          // Don't block other destinations on failure
         }
       }
     }
 
-    fetchAll()
+    if (relevantEvents.length > 0) {
+      fetchAll()
+    }
     return () => { cancelled = true }
-  }, [relevantEvents.map((e) => e.id).join(',')])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [relevantKey, fetchTick, updateDriveInfo])
 
-  // Recalculate urgency every minute
+  // Adaptive polling: refresh driving times based on proximity to nearest event
+  useEffect(() => {
+    if (relevantEvents.length === 0) return
+
+    const intervalMs = computeRefreshInterval(relevantEvents)
+    const timer = setInterval(() => {
+      setFetchTick((t) => t + 1)
+    }, intervalMs)
+
+    return () => clearInterval(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [relevantKey])
+
+  // Recalculate urgency every minute (countdown text updates without refetching)
   useEffect(() => {
     const interval = setInterval(() => {
       setDriveInfo((prev) => {

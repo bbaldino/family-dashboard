@@ -1,4 +1,3 @@
-pub mod cache;
 pub mod routes;
 
 use axum::Router;
@@ -9,7 +8,6 @@ pub const INTEGRATION_ID: &str = "driving-time";
 pub fn router(pool: SqlitePool) -> Router {
     let state = routes::DrivingTimeState {
         pool,
-        cache: cache::DrivingTimeCache::new(),
         client: reqwest::Client::new(),
     };
 

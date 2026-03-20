@@ -7,40 +7,16 @@ use crate::error::AppError;
 use crate::integrations::IntegrationConfig;
 
 use super::INTEGRATION_ID;
-use super::cache::DrivingTimeCache;
 
 #[derive(Clone)]
 pub struct DrivingTimeState {
     pub pool: SqlitePool,
-    pub cache: DrivingTimeCache,
     pub client: reqwest::Client,
 }
 
 #[derive(Deserialize)]
 pub struct DrivingTimeQuery {
     destination: String,
-    event_start: Option<String>,
-}
-
-fn compute_cache_ttl(event_start: Option<&str>) -> u64 {
-    let Some(start_str) = event_start else {
-        return 1800; // 30 min default
-    };
-    let Ok(start) = chrono::DateTime::parse_from_rfc3339(start_str) else {
-        return 1800;
-    };
-    let now = chrono::Utc::now();
-    let minutes_until = (start.with_timezone(&chrono::Utc) - now).num_minutes();
-
-    if minutes_until > 120 {
-        1800 // 30 min
-    } else if minutes_until > 60 {
-        900 // 15 min
-    } else if minutes_until > 30 {
-        600 // 10 min
-    } else {
-        300 // 5 min
-    }
 }
 
 pub async fn get_driving_time(
@@ -58,18 +34,6 @@ pub async fn get_driving_time(
         .parse()
         .unwrap_or(5);
 
-    let ttl = compute_cache_ttl(query.event_start.as_deref());
-
-    // Check cache
-    if let Some((duration_secs, duration_text)) = state.cache.get(&query.destination, ttl).await {
-        return Ok(Json(serde_json::json!({
-            "durationSeconds": duration_secs,
-            "durationText": duration_text,
-            "bufferMinutes": buffer_minutes,
-        })));
-    }
-
-    // Call Google Routes API
     let body = serde_json::json!({
         "origin": { "address": home_address },
         "destination": { "address": query.destination },
@@ -110,30 +74,16 @@ pub async fn get_driving_time(
                 format!("{} min", (duration_secs + 59) / 60)
             };
 
-            state
-                .cache
-                .set(
-                    &query.destination,
-                    Some(duration_secs),
-                    Some(duration_text.clone()),
-                )
-                .await;
-
             Ok(Json(serde_json::json!({
                 "durationSeconds": duration_secs,
                 "durationText": duration_text,
                 "bufferMinutes": buffer_minutes,
             })))
         }
-        _ => {
-            // Cache the failure for 1 hour to avoid re-hitting for bad addresses
-            state.cache.set(&query.destination, None, None).await;
-
-            Ok(Json(serde_json::json!({
-                "durationSeconds": null,
-                "durationText": null,
-                "bufferMinutes": buffer_minutes,
-            })))
-        }
+        _ => Ok(Json(serde_json::json!({
+            "durationSeconds": null,
+            "durationText": null,
+            "bufferMinutes": buffer_minutes,
+        }))),
     }
 }
