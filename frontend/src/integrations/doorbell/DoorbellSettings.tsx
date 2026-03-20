@@ -1,10 +1,23 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/ui/Button'
 
 export function DoorbellSettings() {
+  const [cameraUrl, setCameraUrl] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [status, setStatus] = useState<string | null>(null)
   const [micStatus, setMicStatus] = useState<'unknown' | 'granted' | 'denied' | 'prompt'>('unknown')
 
-  useEffect(() => {
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      const config = (await fetch('/api/config').then((r) => r.json())) as Record<string, string>
+      setCameraUrl(config['doorbell.camera_url'] ?? '')
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false)
+    }
+
     navigator.permissions.query({ name: 'microphone' as PermissionName })
       .then((result) => {
         setMicStatus(result.state)
@@ -12,6 +25,18 @@ export function DoorbellSettings() {
       })
       .catch(() => {})
   }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const handleSave = async () => {
+    await fetch('/api/config/doorbell.camera_url', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: cameraUrl }),
+    })
+    setStatus('Saved!')
+    setTimeout(() => setStatus(null), 2000)
+  }
 
   const requestMicrophone = async () => {
     try {
@@ -23,8 +48,21 @@ export function DoorbellSettings() {
     }
   }
 
+  if (loading) return <div className="text-text-muted text-sm">Loading...</div>
+
   return (
-    <div className="max-w-md">
+    <div className="space-y-6 max-w-md">
+      <div>
+        <label className="text-xs text-text-muted block mb-1">Camera Page URL</label>
+        <input
+          type="text"
+          value={cameraUrl}
+          onChange={(e) => setCameraUrl(e.target.value)}
+          placeholder="e.g. https://cast.baldino.me/webrtc-doorbell.html"
+          className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
+        />
+      </div>
+
       <div className="bg-bg-card rounded-[var(--radius-card)] p-4 border border-border">
         <div className="text-sm font-medium text-text-primary mb-2">Microphone Permission</div>
         <div className="text-xs text-text-muted mb-3">
@@ -39,6 +77,11 @@ export function DoorbellSettings() {
             <Button onClick={requestMicrophone}>Request Microphone Access</Button>
           )}
         </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Button onClick={handleSave}>Save</Button>
+        {status && <span className="text-sm text-success">{status}</span>}
       </div>
     </div>
   )
