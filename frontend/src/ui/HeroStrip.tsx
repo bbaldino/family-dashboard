@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Settings } from 'lucide-react'
+import { DriveTag } from '@/integrations/driving-time'
 
-interface HeroEvent {
+export interface HeroEvent {
   name: string
   time: string
   detail?: string
   isNow?: boolean
+  driveTag?: { displayText: string; urgency: 'ok' | 'soon' | 'urgent' }
 }
 
 interface HeroStripProps {
@@ -49,6 +51,11 @@ export function HeroStrip({ events = [], weatherTemp, weatherHigh, weatherLow, w
                 <div>
                   <div className="text-[16px] font-medium text-text-primary">{event.name}</div>
                   {event.detail && <div className="text-[11px] text-text-muted">{event.detail}</div>}
+                  {event.driveTag && (
+                    <div className="mt-1">
+                      <DriveTag displayText={event.driveTag.displayText} urgency={event.driveTag.urgency} />
+                    </div>
+                  )}
                 </div>
                 <div className="text-[13px] font-semibold text-palette-1 whitespace-nowrap">{event.time}</div>
               </div>

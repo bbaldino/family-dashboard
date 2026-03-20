@@ -3,6 +3,7 @@ import { LoadingSpinner } from '@/ui/LoadingSpinner'
 import { ErrorDisplay } from '@/ui/ErrorDisplay'
 import { WidgetCard } from '@/ui/WidgetCard'
 import type { CalendarDay } from './useGoogleCalendar'
+import { useDrivingTime, DriveTag } from '@/integrations/driving-time'
 
 function formatEventTime(event: CalendarEvent): string {
   const start = event.start.dateTime ?? event.start.date
@@ -43,6 +44,9 @@ export function CalendarWidget({
   error,
   refetch,
 }: CalendarWidgetProps) {
+  const allEvents = (days ?? []).flatMap((d) => d.events)
+  const driveInfo = useDrivingTime(allEvents)
+
   if (isLoading) {
     return (
       <WidgetCard title="Schedule" category="calendar" className="h-full">
@@ -110,6 +114,14 @@ export function CalendarWidget({
                           {event.location && (
                             <div className="text-[11px] text-text-muted truncate">
                               {event.location}
+                            </div>
+                          )}
+                          {driveInfo[event.id] && (
+                            <div className="mt-0.5">
+                              <DriveTag
+                                displayText={driveInfo[event.id].displayText}
+                                urgency={driveInfo[event.id].urgency}
+                              />
                             </div>
                           )}
                         </div>

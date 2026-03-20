@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { HeroStrip } from '../ui/HeroStrip'
+import type { HeroEvent } from '../ui/HeroStrip'
 import { BottomSheet } from '../ui/BottomSheet'
 import { WidgetCard } from '../ui/WidgetCard'
 import { useGoogleCalendar, CalendarWidget } from '@/integrations/google-calendar'
@@ -12,8 +13,13 @@ import { useHeroWeather, WeatherDetail } from '@/integrations/weather'
 import { SportsWidget } from '@/integrations/sports'
 import { PackagesWidget } from '@/integrations/packages'
 import { TimerBanner } from '@/integrations/timers'
+import { useDrivingTime } from '@/integrations/driving-time'
+import type { EventDriveInfo } from '@/integrations/driving-time/types'
 
-function getHeroEvents(days: CalendarDay[] | null): { name: string; time: string; detail?: string; isNow?: boolean }[] {
+function getHeroEvents(
+  days: CalendarDay[] | null,
+  driveInfo: Record<string, EventDriveInfo>,
+): HeroEvent[] {
   if (!days) return []
 
   // Get today's events
@@ -43,16 +49,18 @@ function getHeroEvents(days: CalendarDay[] | null): { name: string; time: string
         isNow = startDate <= now
       }
     }
+    const drive = driveInfo[event.id]
     return {
       name: event.summary ?? '(No title)',
       time,
       detail: event.location,
       isNow,
+      driveTag: drive ? { displayText: drive.displayText, urgency: drive.urgency } : undefined,
     }
   })
 }
 
-function HeroStripWithData({ heroEvents }: { heroEvents: { name: string; time: string; detail?: string }[] }) {
+function HeroStripWithData({ heroEvents }: { heroEvents: HeroEvent[] }) {
   const weather = useHeroWeather()
   const [showForecast, setShowForecast] = useState(false)
   const navigate = useNavigate()
@@ -79,7 +87,9 @@ function HeroStripWithData({ heroEvents }: { heroEvents: { name: string; time: s
 export function HomeBoard() {
   const calendar = useGoogleCalendar()
 
-  const heroEvents = getHeroEvents(calendar.data)
+  const allEvents = (calendar.data ?? []).flatMap((d) => d.events)
+  const driveInfo = useDrivingTime(allEvents)
+  const heroEvents = getHeroEvents(calendar.data, driveInfo)
 
   return (
     <div
