@@ -1,13 +1,14 @@
 import { z } from 'zod'
 import { defineIntegration } from '../define-integration'
+import { DoorbellSettings } from './DoorbellSettings'
 
 export const doorbellIntegration = defineIntegration({
   id: 'doorbell',
   name: 'Doorbell Camera',
   hasBackend: false,
   schema: z.object({
-    go2rtc_url: z.string().min(1, 'go2rtc URL is required'),
-    stream_name: z.string().min(1, 'Stream name is required'),
+    go2rtc_url: z.string().optional(),
+    stream_name: z.string().optional(),
   }),
   fields: {
     go2rtc_url: {
@@ -19,4 +20,5 @@ export const doorbellIntegration = defineIntegration({
       description: 'e.g. doorbell',
     },
   },
+  settingsComponent: DoorbellSettings,
 })
