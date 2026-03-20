@@ -4,6 +4,7 @@ import { countdownsIntegration } from './countdowns/config'
 import { doorbellIntegration } from './doorbell/config'
 import { nutrisliceIntegration } from './nutrislice/config'
 import { weatherIntegration } from './weather/config'
+import { googleCloudIntegration } from './google-cloud/config'
 import { googleCalendarIntegration } from './google-calendar/config'
 import { sportsIntegration } from './sports/config'
 import { packagesIntegration } from './packages/config'
@@ -17,6 +18,7 @@ export const integrations: Integration<any>[] = [
   doorbellIntegration,
   nutrisliceIntegration,
   weatherIntegration,
+  googleCloudIntegration,
   googleCalendarIntegration,
   sportsIntegration,
   packagesIntegration,
