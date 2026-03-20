@@ -8,9 +8,6 @@ interface CalendarListEntry {
 }
 
 export function GoogleCalendarSettings() {
-  const [clientId, setClientId] = useState('')
-  const [clientSecret, setClientSecret] = useState('')
-  const [redirectUri, setRedirectUri] = useState('')
   const [calendarIds, setCalendarIds] = useState<string[]>([])
   const [calendars, setCalendars] = useState<CalendarListEntry[]>([])
   const [calendarsLoading, setCalendarsLoading] = useState(false)
@@ -18,16 +15,11 @@ export function GoogleCalendarSettings() {
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
 
-  // Load existing config
   useEffect(() => {
     fetch('/api/config')
       .then((r) => r.json())
       .then((allConfig: Record<string, string>) => {
-        const prefix = 'google-calendar.'
-        setClientId(allConfig[prefix + 'client_id'] ?? '')
-        setClientSecret(allConfig[prefix + 'client_secret'] ?? '')
-        setRedirectUri(allConfig[prefix + 'redirect_uri'] ?? '')
-        const ids = allConfig[prefix + 'calendar_ids']
+        const ids = allConfig['google-calendar.calendar_ids']
         if (ids) {
           try {
             setCalendarIds(JSON.parse(ids))
@@ -62,19 +54,11 @@ export function GoogleCalendarSettings() {
     setSaving(true)
     setStatus(null)
     try {
-      const entries: Record<string, string> = {
-        'google-calendar.client_id': clientId,
-        'google-calendar.client_secret': clientSecret,
-        'google-calendar.redirect_uri': redirectUri,
-        'google-calendar.calendar_ids': JSON.stringify(calendarIds),
-      }
-      for (const [key, value] of Object.entries(entries)) {
-        await fetch(`/api/config/${encodeURIComponent(key)}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ value }),
-        })
-      }
+      await fetch(`/api/config/${encodeURIComponent('google-calendar.calendar_ids')}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: JSON.stringify(calendarIds) }),
+      })
       setStatus('Saved!')
     } catch {
       setStatus('Failed to save')
@@ -85,43 +69,12 @@ export function GoogleCalendarSettings() {
 
   return (
     <div className="space-y-4">
-      {/* OAuth Credentials */}
-      <div>
-        <label className="block text-sm font-medium text-text-secondary mb-1">
-          Google Client ID
-        </label>
-        <input
-          type="password"
-          className="w-full px-3 py-2 bg-surface border border-border rounded text-text-primary text-sm"
-          value={clientId}
-          onChange={(e) => setClientId(e.target.value)}
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-text-secondary mb-1">
-          Google Client Secret
-        </label>
-        <input
-          type="password"
-          className="w-full px-3 py-2 bg-surface border border-border rounded text-text-primary text-sm"
-          value={clientSecret}
-          onChange={(e) => setClientSecret(e.target.value)}
-        />
-      </div>
-      <div>
-        <label className="block text-sm font-medium text-text-secondary mb-1">
-          Redirect URI
-        </label>
-        <input
-          type="text"
-          className="w-full px-3 py-2 bg-surface border border-border rounded text-text-primary text-sm"
-          value={redirectUri}
-          onChange={(e) => setRedirectUri(e.target.value)}
-        />
+      <div className="text-xs text-text-muted">
+        OAuth credentials are configured in Settings → Google Cloud.
       </div>
 
       {/* Calendar Picker */}
-      <div className="border-t border-border pt-4">
+      <div>
         <div className="flex items-center gap-2 mb-2">
           <span className="text-sm font-medium text-text-secondary">Calendar Selection</span>
           <button
