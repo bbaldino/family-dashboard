@@ -10,6 +10,7 @@ import { sportsIntegration } from './sports/config'
 import { packagesIntegration } from './packages/config'
 import { timersIntegration } from './timers/config'
 import { themeIntegration } from '@/theme/config'
+import { drivingTimeIntegration } from './driving-time/config'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const integrations: Integration<any>[] = [
@@ -24,4 +25,5 @@ export const integrations: Integration<any>[] = [
   packagesIntegration,
   timersIntegration,
   themeIntegration,
+  drivingTimeIntegration,
 ]
