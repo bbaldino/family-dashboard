@@ -31,6 +31,12 @@ function isCurrentEvent(event: CalendarEvent): boolean {
   )
 }
 
+function isPastEvent(event: CalendarEvent): boolean {
+  // All-day events are never "past" during their day
+  if (!event.end.dateTime) return false
+  return new Date(event.end.dateTime) <= new Date()
+}
+
 interface CalendarWidgetProps {
   days: CalendarDay[] | null
   isLoading: boolean
@@ -64,11 +70,15 @@ export function CalendarWidget({
   }
 
   const allDays = days ?? []
-  const totalEvents = allDays.reduce((sum, d) => sum + d.events.length, 0)
+  const filteredDays = allDays.map((d) => ({
+    ...d,
+    events: d.isToday ? d.events.filter((e) => !isPastEvent(e)) : d.events,
+  }))
+  const totalEvents = filteredDays.reduce((sum, d) => sum + d.events.length, 0)
   const badge = `${totalEvents} event${totalEvents !== 1 ? 's' : ''}`
 
   // Show days that have events, plus always show today
-  const visibleDays = allDays.filter((d) => d.isToday || d.events.length > 0)
+  const visibleDays = filteredDays.filter((d) => d.isToday || d.events.length > 0)
 
   return (
     <WidgetCard title="Schedule" category="calendar" badge={badge} className="h-full">
