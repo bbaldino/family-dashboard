@@ -38,11 +38,6 @@ export interface LunchMenuData {
   tomorrow: LunchMenuDay | null
 }
 
-export function isWeekday(): boolean {
-  const day = new Date().getDay()
-  return day >= 1 && day <= 5
-}
-
 function formatDate(date: Date): string {
   return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`
 }

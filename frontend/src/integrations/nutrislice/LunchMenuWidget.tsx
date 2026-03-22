@@ -1,7 +1,7 @@
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
 import { ErrorDisplay } from '@/ui/ErrorDisplay'
 import { WidgetCard } from '@/ui/WidgetCard'
-import { useLunchMenu, isWeekday, type LunchMenuDay, type MenuEntry } from './useLunchMenu'
+import { useLunchMenu, type LunchMenuDay, type MenuEntry } from './useLunchMenu'
 
 function EntryItem({ entry, compact = false }: { entry: MenuEntry; compact?: boolean }) {
   return (
@@ -78,9 +78,13 @@ function MenuDaySection({
 export function LunchMenuWidget() {
   const { data, isLoading, error, refetch } = useLunchMenu()
 
+  const hasToday = data?.today != null
+  const hasTomorrow = data?.tomorrow != null
+  const hasMenu = hasToday || hasTomorrow
+
   if (isLoading) {
     return (
-      <WidgetCard title="Lunch Menu" category="food" visible={isWeekday()}>
+      <WidgetCard title="Lunch Menu" category="food">
         <LoadingSpinner />
       </WidgetCard>
     )
@@ -88,17 +92,14 @@ export function LunchMenuWidget() {
 
   if (error) {
     return (
-      <WidgetCard title="Lunch Menu" category="food" visible={isWeekday()}>
+      <WidgetCard title="Lunch Menu" category="food">
         <ErrorDisplay message={error} onRetry={refetch} />
       </WidgetCard>
     )
   }
 
-  const hasToday = data?.today != null
-  const hasTomorrow = data?.tomorrow != null
-
   return (
-    <WidgetCard title="Lunch Menu" category="food" visible={isWeekday()}>
+    <WidgetCard title="Lunch Menu" category="food" visible={hasMenu}>
       {hasToday ? (
         <div className="flex flex-col gap-[6px]">
           <MenuDaySection day={data!.today!} label="Today" />
