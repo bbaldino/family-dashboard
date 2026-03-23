@@ -1,6 +1,7 @@
 import { usePolling, type UsePollingResult } from '@/hooks/usePolling'
 import { googleCalendarIntegration } from './config'
 import type { CalendarEvent } from './types'
+import { toLocalDateStr } from '@/utils/date'
 
 export interface CalendarDay {
   date: Date
@@ -64,7 +65,7 @@ async function fetchCalendarEvents(): Promise<CalendarDay[]> {
   for (let i = 0; i < 7; i++) {
     const d = new Date(today)
     d.setDate(d.getDate() + i)
-    dayMap.set(d.toISOString().split('T')[0], [])
+    dayMap.set(toLocalDateStr(d), [])
   }
 
   for (const event of allEvents) {
@@ -77,7 +78,7 @@ async function fetchCalendarEvents(): Promise<CalendarDay[]> {
   }
 
   const days: CalendarDay[] = []
-  const todayStr = today.toISOString().split('T')[0]
+  const todayStr = toLocalDateStr(today)
 
   for (const [dateStr, events] of dayMap) {
     const date = new Date(dateStr + 'T12:00:00')

@@ -1,6 +1,7 @@
 import { usePolling } from '@/hooks/usePolling'
 import { googleCalendarIntegration } from '@/integrations/google-calendar/config'
 import type { CalendarEvent } from '@/integrations/google-calendar/types'
+import { toLocalDateStr } from '@/utils/date'
 
 export interface MonthEvents {
   /** Map of "YYYY-MM-DD" → sorted events for that day */
@@ -65,7 +66,7 @@ async function fetchMonthEvents(year: number, month: number): Promise<MonthEvent
       const cursor = new Date(dateKey + 'T12:00:00')
       const end = new Date(endKey + 'T12:00:00')
       while (cursor < end) {
-        const key = cursor.toISOString().substring(0, 10)
+        const key = toLocalDateStr(cursor)
         if (!byDate[key]) byDate[key] = []
         byDate[key].push(event)
         cursor.setDate(cursor.getDate() + 1)

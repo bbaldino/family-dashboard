@@ -1,5 +1,6 @@
 import { usePolling, type UsePollingResult } from '@/hooks/usePolling'
 import { nutrisliceIntegration } from './config'
+import { toLocalDateStr } from '@/utils/date'
 
 interface NutriSliceItem {
   text: string
@@ -135,10 +136,10 @@ async function fetchMenu(): Promise<LunchMenuData> {
     `/menu?date=${encodeURIComponent(dateStr)}`,
   )
 
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  const todayStr = toLocalDateStr(now)
   const tomorrow = new Date(now)
   tomorrow.setDate(tomorrow.getDate() + 1)
-  const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`
+  const tomorrowStr = toLocalDateStr(tomorrow)
 
   const todayData = data.days?.find((d) => d.date === todayStr)
   const tomorrowData = data.days?.find((d) => d.date === tomorrowStr)
