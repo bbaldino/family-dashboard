@@ -22,7 +22,7 @@ A standalone self-hosted service for planning trips, events, and projects. Provi
 
 ### Deployment
 
-Single Rust binary serves the API. Frontend is a React SPA (served by the binary in production as static files, or by Vite dev server in development). One repo, one binary.
+Single Rust binary serves the API. Frontend is a React SPA (Vite dev server in development; built to `backend/static/` and served by Axum's `ServeDir` in production, same as the dashboard). One repo, one binary.
 
 ### Consumers
 
@@ -47,8 +47,8 @@ CREATE TABLE plans (
   type TEXT NOT NULL CHECK (type IN ('trip', 'event', 'project')),
   status TEXT NOT NULL DEFAULT 'planning' CHECK (status IN ('planning', 'active', 'completed', 'archived')),
   description TEXT,
-  start_date TEXT,  -- ISO date, nullable (projects may be open-ended)
-  end_date TEXT,    -- ISO date, nullable
+  start_date TEXT,  -- ISO date (YYYY-MM-DD), date-only precision intentional (plan-level dates are calendar dates, not precise moments; item-level timestamps handle precise times with timezone)
+  end_date TEXT,    -- ISO date (YYYY-MM-DD), nullable (projects may be open-ended)
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -73,11 +73,23 @@ CREATE TABLE items (
   start_tz TEXT,   -- IANA timezone, e.g. "America/Los_Angeles"
   end_at TEXT,     -- ISO datetime (UTC)
   end_tz TEXT,     -- IANA timezone
-  data TEXT,       -- JSON blob with type-specific fields
+  data TEXT NOT NULL DEFAULT '{}',  -- JSON blob with type-specific fields; always present, empty object for generic items
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- updated_at triggers for all tables with updated_at columns
+CREATE TRIGGER items_updated_at AFTER UPDATE ON items
+  BEGIN UPDATE items SET updated_at = datetime('now') WHERE id = NEW.id; END;
+CREATE TRIGGER plans_updated_at AFTER UPDATE ON plans
+  BEGIN UPDATE plans SET updated_at = datetime('now') WHERE id = NEW.id; END;
+CREATE TRIGGER notes_updated_at AFTER UPDATE ON notes
+  BEGIN UPDATE notes SET updated_at = datetime('now') WHERE id = NEW.id; END;
+CREATE TRIGGER checklists_updated_at AFTER UPDATE ON checklists
+  BEGIN UPDATE checklists SET updated_at = datetime('now') WHERE id = NEW.id; END;
+CREATE TRIGGER guests_updated_at AFTER UPDATE ON guests
+  BEGIN UPDATE guests SET updated_at = datetime('now') WHERE id = NEW.id; END;
 ```
 
 **Category values:** `flight`, `hotel`, `restaurant`, `activity`, `transport`, `venue`, `catering`, `entertainment`, `decoration`, `rental`, `task`, `reference`, `generic`
@@ -139,7 +151,8 @@ CREATE TABLE checklists (
   plan_id TEXT NOT NULL REFERENCES plans(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   sort_order INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE checklist_items (
@@ -163,7 +176,8 @@ CREATE TABLE guests (
   rsvp_status TEXT NOT NULL DEFAULT 'pending' CHECK (rsvp_status IN ('pending', 'accepted', 'declined', 'maybe')),
   plus_ones INTEGER NOT NULL DEFAULT 0,
   notes TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 ```
 
@@ -194,22 +208,26 @@ Single API consumed by all three consumers (web UI, dashboard widget, agent).
 ```
 GET    /api/plans                    -- list plans (?type=trip&status=planning)
 POST   /api/plans                   -- create plan
+GET    /api/plans/upcoming?days=30  -- plans starting within N days (dashboard convenience)
 GET    /api/plans/:id               -- get plan with summary counts
 PUT    /api/plans/:id               -- update plan
 DELETE /api/plans/:id               -- archive/delete plan
-GET    /api/plans/upcoming?days=30  -- plans starting within N days (dashboard convenience)
 ```
+
+**Route ordering note:** `/api/plans/upcoming` must be registered before `/api/plans/:id` in Axum to avoid `upcoming` matching as an `:id` parameter.
 
 ### Items
 
 ```
-GET    /api/plans/:id/items          -- list items (?status=idea&category=restaurant)
-POST   /api/plans/:id/items          -- create item (category + optional data in body)
-GET    /api/plans/:id/items/:itemId  -- get item with full details
-PUT    /api/plans/:id/items/:itemId  -- update item
-DELETE /api/plans/:id/items/:itemId  -- delete item
-PATCH  /api/plans/:id/items/reorder  -- batch reorder (array of {id, sort_order})
+GET    /api/plans/:id/items              -- list items (?status=idea&category=restaurant)
+POST   /api/plans/:id/items              -- create item (category + optional data in body)
+PATCH  /api/plans/:id/items/reorder      -- batch reorder (array of {id, sort_order})
+GET    /api/plans/:id/items/:itemId      -- get item with full details
+PUT    /api/plans/:id/items/:itemId      -- update item
+DELETE /api/plans/:id/items/:itemId      -- delete item
 ```
+
+**Route ordering note:** `/items/reorder` must be registered before `/items/:itemId`.
 
 ### Itinerary (read-only view)
 
@@ -227,8 +245,9 @@ POST   /api/plans/:id/checklists              -- create checklist
 PUT    /api/plans/:id/checklists/:clId        -- rename/reorder
 DELETE /api/plans/:id/checklists/:clId        -- delete checklist
 POST   /api/plans/:id/checklists/:clId/items  -- add item
-PUT    /api/plans/:id/checklists/:clId/items/:i -- toggle/edit item
-DELETE /api/plans/:id/checklists/:clId/items/:i -- delete item
+PATCH  /api/plans/:id/checklists/:clId/items/reorder -- batch reorder
+PUT    /api/plans/:id/checklists/:clId/items/:i     -- toggle/edit item
+DELETE /api/plans/:id/checklists/:clId/items/:i     -- delete item
 ```
 
 ### Guests (events only)
@@ -288,7 +307,35 @@ A dashboard integration (`hasBackend: false`) that calls the PLAN service direct
 - Checklist progress for the nearest plan (e.g., "Packing: 3/12")
 - Next itinerary item for active trips
 
-**Calls:** `GET /api/plans/upcoming?days=30` and renders results.
+**Calls:** `GET /api/plans/upcoming?days=30` — returns plans with embedded summary data:
+
+```json
+{
+  "plans": [
+    {
+      "id": "...",
+      "name": "Hawaii 2026",
+      "type": "trip",
+      "status": "planning",
+      "startDate": "2026-06-15",
+      "endDate": "2026-06-22",
+      "checklistProgress": { "total": 12, "completed": 3 },
+      "nextItineraryItem": {
+        "name": "SFO → HNL",
+        "category": "flight",
+        "startAt": "2026-06-15T21:00:00Z",
+        "startTz": "America/Los_Angeles"
+      },
+      "itemCounts": { "confirmed": 4, "ideas": 5 }
+    }
+  ]
+}
+
+// nextItineraryItem is null when no items have a future start_at
+// checklistProgress is null when the plan has no checklists
+```
+
+The `/upcoming` endpoint returns enriched plan summaries so the dashboard widget needs only a single API call.
 
 **Independent from countdowns widget** — countdowns pulls from Google Calendar for general events; the PLAN widget shows plan-specific info.
 
