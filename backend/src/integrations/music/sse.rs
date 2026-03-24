@@ -138,7 +138,7 @@ fn find_player_volume(players: &serde_json::Value, queue_id: &str) -> Option<i32
         let active_source = player["active_source"].as_str().unwrap_or("");
         let player_id = player["player_id"].as_str().unwrap_or("");
         if active_source == queue_id || player_id == queue_id {
-            return player["volume_level"].as_f64().map(|v| (v * 100.0) as i32);
+            return player["volume_level"].as_f64().map(|v| v as i32);
         }
     }
     None
