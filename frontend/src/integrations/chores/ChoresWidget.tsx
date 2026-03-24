@@ -38,12 +38,9 @@ export function ChoresWidget() {
 
   return (
     <>
-      <WidgetCard title="Chores" category="chores" badge={badge} className="h-full">
+      <WidgetCard title="Chores" category="chores" badge={badge} className="h-full" visible={persons.length > 0}>
         <div className="flex flex-col gap-3">
-          {persons.length === 0 ? (
-            <div className="text-[14px] text-text-muted py-2">No chores assigned today</div>
-          ) : (
-            persons.map((pa) => (
+          {persons.map((pa) => (
               <PersonSection
                 key={pa.person.id}
                 personAssignments={pa}
@@ -54,7 +51,6 @@ export function ChoresWidget() {
                 }
               />
             ))
-          )}
         </div>
       </WidgetCard>
 

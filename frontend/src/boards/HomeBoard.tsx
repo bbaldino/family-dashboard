@@ -14,7 +14,6 @@ import { SportsWidget } from '@/integrations/sports'
 import { PackagesWidget } from '@/integrations/packages'
 import { TimerBanner } from '@/integrations/timers'
 import { useDrivingTime } from '@/integrations/driving-time'
-import { PlanWidget } from '@/integrations/plan'
 import type { EventDriveInfo } from '@/integrations/driving-time/types'
 
 function getHeroEvents(
@@ -142,10 +141,6 @@ export function HomeBoard() {
         <div className="text-text-muted text-sm">Grocery list placeholder</div>
       </WidgetCard>
 
-      {/* Plans -- col 3-4, row 3 (spans 2 columns) */}
-      <div style={{ gridColumn: '3 / 5' }}>
-        <PlanWidget />
-      </div>
     </div>
   )
 }

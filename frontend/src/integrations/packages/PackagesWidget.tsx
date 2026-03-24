@@ -67,11 +67,9 @@ export function PackagesWidget() {
         title="Packages"
         category="grocery"
         badge={activeCount > 0 ? `${activeCount} active` : undefined}
+        visible={shipments.length > 0}
       >
-        {shipments.length === 0 ? (
-          <div className="text-[13px] text-text-muted py-1">No packages</div>
-        ) : (
-          <div className="flex flex-col">
+        <div className="flex flex-col">
             {active.map((shipment) => (
               <ShipmentRow
                 key={shipment.id}
@@ -94,7 +92,6 @@ export function PackagesWidget() {
               </>
             )}
           </div>
-        )}
       </WidgetCard>
       <PackageDetailModal
         shipment={selectedShipment}
