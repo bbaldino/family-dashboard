@@ -54,6 +54,7 @@ pub struct TrackInfo {
     pub image_url: Option<String>,
     pub duration: Option<i64>,
     pub elapsed: Option<i64>,
+    pub uri: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]

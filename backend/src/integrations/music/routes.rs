@@ -9,6 +9,47 @@ use crate::integrations::IntegrationConfig;
 use super::proxy::MaClient;
 use super::types::{ImageProxyQuery, PlayRequest, QueueCommand, SearchQuery, VolumeRequest};
 
+#[derive(serde::Deserialize)]
+pub struct TopTracksQuery {
+    pub limit: Option<i64>,
+}
+
+pub async fn top_tracks(
+    State(pool): State<SqlitePool>,
+    Query(params): Query<TopTracksQuery>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let limit = params.limit.unwrap_or(20);
+    let rows = sqlx::query_as::<_, (String, String, String, Option<String>, Option<String>, i64, i64)>(
+        "SELECT uri, name, artist, album, image_url, COUNT(*) as play_count, MAX(played_at) as last_played \
+         FROM music_play_log \
+         GROUP BY uri \
+         ORDER BY play_count DESC, last_played DESC \
+         LIMIT ?"
+    )
+    .bind(limit)
+    .fetch_all(&pool)
+    .await?;
+
+    let items: Vec<serde_json::Value> = rows
+        .into_iter()
+        .map(
+            |(uri, name, artist, album, image_url, play_count, last_played)| {
+                serde_json::json!({
+                    "uri": uri,
+                    "name": name,
+                    "artist": artist,
+                    "album": album,
+                    "image_url": image_url,
+                    "play_count": play_count,
+                    "last_played": last_played,
+                })
+            },
+        )
+        .collect();
+
+    Ok(Json(serde_json::json!(items)))
+}
+
 /// Recursively rewrite image URLs in JSON to go through our backend proxy.
 /// Looks for keys like "image", "image_url", "imageUrl" that contain URL strings.
 fn rewrite_image_urls(value: &mut serde_json::Value) {

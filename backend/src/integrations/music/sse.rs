@@ -113,6 +113,7 @@ fn build_queue_states(players: &serde_json::Value, queues: &serde_json::Value) -
                         .as_f64()
                         .or_else(|| q["elapsed_time"].as_f64())
                         .map(|d| d as i64),
+                    uri: media_item["uri"].as_str().map(String::from),
                 })
             });
 
@@ -255,10 +256,47 @@ pub async fn events(
     ))
 }
 
+/// Log a track play to the database if it's a new track (different from last seen).
+async fn maybe_log_play(pool: &SqlitePool, state: &SseEvent, last_track_uri: &mut Option<String>) {
+    let queues = match state {
+        SseEvent::State { queues } => queues,
+        _ => return,
+    };
+
+    // Find the currently playing queue
+    let playing = queues.iter().find(|q| q.state == "playing");
+    let current_uri = playing
+        .and_then(|q| q.current_item.as_ref())
+        .and_then(|item| item.uri.clone());
+
+    if current_uri.is_none() || current_uri == *last_track_uri {
+        return;
+    }
+    *last_track_uri = current_uri.clone();
+
+    if let Some(q) = playing {
+        if let Some(ref item) = q.current_item {
+            if let Some(ref uri) = item.uri {
+                let _ = sqlx::query(
+                    "INSERT INTO music_play_log (uri, name, artist, album, image_url) VALUES (?, ?, ?, ?, ?)",
+                )
+                .bind(uri)
+                .bind(&item.name)
+                .bind(&item.artist)
+                .bind(&item.album)
+                .bind(&item.image_url)
+                .execute(pool)
+                .await;
+            }
+        }
+    }
+}
+
 /// Background loop: maintain a WebSocket connection to MA and relay events.
 async fn ws_relay_loop(pool: SqlitePool, ws_url: String, token: String, tx: mpsc::Sender<Event>) {
     let mut backoff = Duration::from_secs(1);
     let max_backoff = Duration::from_secs(30);
+    let mut last_track_uri: Option<String> = None;
 
     loop {
         match connect_and_auth(&ws_url, &token).await {
@@ -277,6 +315,8 @@ async fn ws_relay_loop(pool: SqlitePool, ws_url: String, token: String, tx: mpsc
                                 if RELEVANT_EVENTS.contains(&event_type) {
                                     match fetch_full_state(&pool).await {
                                         Ok(state) => {
+                                            maybe_log_play(&pool, &state, &mut last_track_uri)
+                                                .await;
                                             let json = serde_json::to_string(&state)
                                                 .unwrap_or_else(|_| "{}".to_string());
                                             let event = Event::default().event("state").data(json);

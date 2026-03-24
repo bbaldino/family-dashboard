@@ -5,6 +5,17 @@ export interface TrackInfo {
   imageUrl: string | null
   duration: number | null // seconds
   elapsed: number | null // seconds
+  uri: string | null
+}
+
+export interface TopTrack {
+  uri: string
+  name: string
+  artist: string
+  album: string | null
+  image_url: string | null
+  play_count: number
+  last_played: number
 }
 
 export interface QueueState {
