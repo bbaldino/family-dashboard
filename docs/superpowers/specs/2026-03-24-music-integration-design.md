@@ -46,7 +46,7 @@ Browser ──REST→ Dashboard Backend ──POST /api→ Music Assistant
 GET /api/music/events
 ```
 
-Streams real-time state as JSON events. The backend maintains a single WebSocket to MA and fans out to all SSE clients.
+Streams real-time state as JSON events. For v1 (single-tablet dashboard), each SSE client gets its own WebSocket connection to MA. A shared connection with fan-out can be added later if needed.
 
 **Event types:**
 
