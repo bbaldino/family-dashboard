@@ -13,7 +13,12 @@ export default defineConfig({
   server: {
     allowedHosts: ['dashboard.baldino.me'],
     proxy: {
-      '/api': 'http://127.0.0.1:3042',
+      '/api': {
+        target: 'http://127.0.0.1:3042',
+        // Increase timeouts for SSE (music/events) — default is too short
+        proxyTimeout: 0,
+        timeout: 0,
+      },
     },
   },
 })
