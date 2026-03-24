@@ -1,14 +1,30 @@
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Music, Play, Pause, SkipBack, SkipForward, Volume2, X } from 'lucide-react'
 import { useMusic } from './useMusic'
 
 export function MiniPlayer() {
-  const { state, isPlaying, pause, resume, stop, next, previous, setVolume } = useMusic()
+  const { state, isPlaying, pause, resume, next, previous, setVolume } = useMusic()
   const navigate = useNavigate()
+  const [dismissed, setDismissed] = useState(false)
 
   const { activeQueue } = state
 
-  if (!activeQueue) return null
+  // Auto-show when playback starts
+  useEffect(() => {
+    if (activeQueue?.state === 'playing') {
+      setDismissed(false)
+    }
+  }, [activeQueue?.state])
+
+  // Auto-dismiss after 5 minutes of not playing
+  useEffect(() => {
+    if (!activeQueue || activeQueue.state === 'playing') return
+    const timer = setTimeout(() => setDismissed(true), 5 * 60 * 1000)
+    return () => clearTimeout(timer)
+  }, [activeQueue, activeQueue?.state])
+
+  if (!activeQueue || dismissed) return null
 
   const { currentItem, displayName, volumeLevel, queueId } = activeQueue
 
@@ -91,9 +107,9 @@ export function MiniPlayer() {
         {displayName}
       </span>
 
-      {/* Stop / dismiss */}
+      {/* Dismiss */}
       <button
-        onClick={() => stop()}
+        onClick={() => setDismissed(true)}
         className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-text-muted hover:text-text-primary"
       >
         <X size={14} />

@@ -170,10 +170,6 @@ export function MusicProvider({ children }: MusicProviderProps) {
   }, [])
 
   const stop = useCallback(async () => {
-    // Optimistically clear all queues to idle so the mini player hides immediately
-    setQueues((prev) =>
-      prev.map((q) => ({ ...q, state: 'idle' as const, currentItem: null })),
-    )
     await musicIntegration.api.post('/stop', {})
   }, [])
 
