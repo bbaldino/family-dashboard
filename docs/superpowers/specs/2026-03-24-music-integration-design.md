@@ -74,7 +74,7 @@ Streams real-time state as JSON events. The backend maintains a single WebSocket
 }
 ```
 
-- `queue_updated` — Single queue changed (track change, play/pause, volume). Same shape as one entry in the `state` event, sent as a delta.
+- `queue_updated` — Single queue changed (track change, play/pause, volume, elapsed time). Same shape as one entry in the `state` event, sent as a delta. MA's `queue_time_updated` events (which fire frequently during playback with updated elapsed time) are mapped to this event type.
 
 ```json
 {
@@ -87,7 +87,7 @@ Streams real-time state as JSON events. The backend maintains a single WebSocket
 
 **Playback commands:**
 ```
-POST /api/music/play          { uri: string, queueId?: string }
+POST /api/music/play          { uri: string, queueId?: string, radio?: boolean }
 POST /api/music/pause         { queueId?: string }
 POST /api/music/resume        { queueId?: string }
 POST /api/music/stop          { queueId?: string }
@@ -138,8 +138,10 @@ A single hook provides music state and commands to all components (mini player, 
 
 - Connects to `GET /api/music/events` via EventSource for real-time state
 - Provides current state: active queue, current track, play state, volume, player info
-- Provides command functions: `play(uri)`, `pause()`, `resume()`, `next()`, `previous()`, `setVolume(level)`, `switchPlayer(id)`
+- Provides command functions: `play(uri, radio?)`, `pause()`, `resume()`, `next()`, `previous()`, `setVolume(level)`, `switchPlayer(id)`
+- Client-side elapsed time ticking: between SSE updates, a local `setInterval` increments elapsed time every second for smooth progress bar movement (same pattern as timers integration)
 - State is shared across components via React context (provider in AppShell)
+- The context provider gates on config presence — if `music.service_url` is not configured, no SSE connection is established and no mini player renders
 
 ### Mini Player Bar
 
