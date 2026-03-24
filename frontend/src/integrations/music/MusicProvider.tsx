@@ -79,7 +79,19 @@ export function MusicProvider({ children }: MusicProviderProps) {
         | { type: 'queueUpdated'; queue: QueueState }
 
       const preserveVolume = Date.now() < volumeLockUntilRef.current
-      setOptimisticPlaying(null) // Clear optimistic override when real state arrives
+
+      // Only clear the optimistic play/pause override when the server reports
+      // a definitive playing or paused state. Sonos often reports 'idle' during
+      // transitions, so clearing on idle would snap the button back prematurely.
+      const incomingQueues = data.type === 'state' ? data.queues : null
+      if (incomingQueues) {
+        const hasDefinitiveState = incomingQueues.some(
+          (q) => q.state === 'playing' || q.state === 'paused',
+        )
+        if (hasDefinitiveState) {
+          setOptimisticPlaying(null)
+        }
+      }
 
       if (data.type === 'state') {
         if (preserveVolume) {
