@@ -61,7 +61,9 @@ async function apiRequest<R>(
     throw new Error(err.error || `${resp.status}`)
   }
   if (resp.status === 204) return undefined as R
-  return resp.json()
+  const text = await resp.text()
+  if (!text) return undefined as R
+  return JSON.parse(text)
 }
 
 // Overloads for type-safe return
