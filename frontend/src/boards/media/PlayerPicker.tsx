@@ -36,7 +36,7 @@ function StateDot({ state }: { state: string }) {
   const isIdle = state === 'idle' || state === 'off'
 
   const colorClass = isPlaying
-    ? 'bg-accent'
+    ? 'bg-palette-1'
     : isIdle
       ? 'bg-text-secondary'
       : 'bg-yellow-400'
@@ -59,7 +59,7 @@ function PlayerRow({
     <div
       className={`flex flex-col gap-2 px-3 py-3 rounded-lg mb-2 border transition-colors ${
         isActive
-          ? 'border-accent bg-accent/10'
+          ? 'border-palette-1 bg-palette-1/10'
           : 'border-transparent hover:bg-bg-card-hover'
       }`}
     >
@@ -70,7 +70,7 @@ function PlayerRow({
         <StateDot state={player.state} />
         <span
           className={`flex-1 text-sm font-medium truncate ${
-            isActive ? 'text-accent' : 'text-text-primary'
+            isActive ? 'text-palette-1' : 'text-text-primary'
           }`}
         >
           {player.displayName}

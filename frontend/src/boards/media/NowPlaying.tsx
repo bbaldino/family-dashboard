@@ -68,7 +68,7 @@ export function NowPlaying({ onOpenFullscreen, onOpenPlayerPicker }: NowPlayingP
       <div className="w-full">
         <div className="w-full h-1.5 bg-border rounded-full overflow-hidden">
           <div
-            className="h-full bg-accent rounded-full transition-all duration-500"
+            className="h-full bg-palette-1 rounded-full transition-all duration-500"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
@@ -88,7 +88,7 @@ export function NowPlaying({ onOpenFullscreen, onOpenPlayerPicker }: NowPlayingP
         </button>
         <button
           onClick={() => (isPlaying ? pause() : resume())}
-          className="w-[52px] h-[52px] rounded-full bg-accent flex items-center justify-center text-white"
+          className="w-[52px] h-[52px] rounded-full bg-palette-1 flex items-center justify-center text-white"
         >
           {isPlaying ? <Pause size={24} /> : <Play size={24} />}
         </button>
