@@ -38,6 +38,7 @@ function deriveActiveQueue(queues: QueueState[]): QueueState | null {
   return (
     queues.find((q) => q.state === 'playing') ??
     queues.find((q) => q.state === 'paused') ??
+    queues.find((q) => q.state === 'idle' && q.currentItem != null) ??
     null
   )
 }
