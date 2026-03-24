@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { defineIntegration } from '../define-integration'
+import { MusicSettings } from './MusicSettings'
 
 export const musicIntegration = defineIntegration({
   id: 'music',
@@ -14,4 +15,5 @@ export const musicIntegration = defineIntegration({
     api_token: { label: 'API Token', type: 'secret' },
     default_player: { label: 'Default Player ID', description: 'Player ID for default playback target' },
   },
+  settingsComponent: MusicSettings,
 })
