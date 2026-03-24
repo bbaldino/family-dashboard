@@ -10,3 +10,6 @@ frontend/.env
 
 # superpowers
 .superpowers/
+
+# worktrees
+.worktrees/
