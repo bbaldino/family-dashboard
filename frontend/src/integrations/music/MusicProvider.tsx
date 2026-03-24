@@ -34,13 +34,21 @@ const defaultContextValue: MusicContextValue = {
 
 export const MusicContext = createContext<MusicContextValue | null>(null)
 
-function deriveActiveQueue(queues: QueueState[]): QueueState | null {
-  return (
+function deriveActiveQueue(queues: QueueState[], defaultPlayerId?: string): QueueState | null {
+  // Playing or paused — unambiguous
+  const active =
     queues.find((q) => q.state === 'playing') ??
-    queues.find((q) => q.state === 'paused') ??
-    queues.find((q) => q.state === 'idle' && q.currentItem != null) ??
-    null
-  )
+    queues.find((q) => q.state === 'paused')
+  if (active) return active
+
+  // Idle with a current item — prefer the default player to avoid showing
+  // a stale track from a different speaker
+  const idleWithItem = queues.filter((q) => q.state === 'idle' && q.currentItem != null)
+  if (defaultPlayerId) {
+    const defaultQueue = idleWithItem.find((q) => q.queueId === defaultPlayerId)
+    if (defaultQueue) return defaultQueue
+  }
+  return idleWithItem[0] ?? null
 }
 
 interface MusicProviderProps {
@@ -172,7 +180,7 @@ export function MusicProvider({ children }: MusicProviderProps) {
     )
   }
 
-  const activeQueue = deriveActiveQueue(queues)
+  const activeQueue = deriveActiveQueue(queues, config?.default_player)
   const state: MusicState = { queues, activeQueue }
 
   const contextValue: MusicContextValue = {
