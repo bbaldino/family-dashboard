@@ -229,9 +229,10 @@ pub async fn proxy_image(
 ) -> Result<impl IntoResponse, AppError> {
     let config = IntegrationConfig::new(&pool, "music");
     let service_url = config.get("service_url").await?;
+    let service_url = service_url.trim_end_matches('/');
 
     // Only allow proxying URLs that point to the configured MA instance
-    if !params.url.starts_with(&service_url) {
+    if !params.url.starts_with(service_url) {
         return Err(AppError::BadRequest(
             "URL does not match configured service".to_string(),
         ));

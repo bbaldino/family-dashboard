@@ -17,7 +17,7 @@ impl MaClient {
         let base_url = config.get("service_url").await?;
         let token = config.get("api_token").await?;
         Ok(Self {
-            base_url,
+            base_url: base_url.trim_end_matches('/').to_string(),
             token,
             client: reqwest::Client::new(),
         })
