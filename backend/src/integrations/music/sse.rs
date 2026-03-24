@@ -27,12 +27,15 @@ fn proxy_image_url(url: &str) -> String {
     format!("/api/music/image?url={}", urlencoding::encode(url))
 }
 
-/// Rewrite all image URLs in queue states to use the backend proxy.
+/// Rewrite HTTP image URLs in queue states to use the backend proxy.
+/// HTTPS URLs are left as-is since they don't cause mixed content issues.
 fn rewrite_image_urls(queues: &mut [QueueState]) {
     for q in queues.iter_mut() {
         if let Some(ref mut item) = q.current_item {
             if let Some(ref url) = item.image_url {
-                item.image_url = Some(proxy_image_url(url));
+                if url.starts_with("http://") {
+                    item.image_url = Some(proxy_image_url(url));
+                }
             }
         }
     }

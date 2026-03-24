@@ -17,7 +17,8 @@ fn rewrite_image_urls(value: &mut serde_json::Value) {
             for (key, val) in map.iter_mut() {
                 if (key == "image" || key == "image_url" || key == "imageUrl") && val.is_string() {
                     if let Some(url) = val.as_str() {
-                        if url.starts_with("http://") || url.starts_with("https://") {
+                        // Only proxy HTTP URLs (mixed content). HTTPS URLs are fine as-is.
+                        if url.starts_with("http://") {
                             *val = serde_json::Value::String(format!(
                                 "/api/music/image?url={}",
                                 urlencoding::encode(url)
