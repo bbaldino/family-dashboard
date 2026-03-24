@@ -62,7 +62,7 @@ export function MiniPlayer() {
         </button>
         <button
           onClick={() => (isPlaying ? pause() : resume())}
-          className="w-10 h-10 rounded-full flex items-center justify-center text-accent"
+          className="w-10 h-10 rounded-full flex items-center justify-center text-palette-1"
         >
           {isPlaying ? <Pause size={20} /> : <Play size={20} />}
         </button>
