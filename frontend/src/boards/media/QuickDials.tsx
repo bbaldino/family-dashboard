@@ -3,8 +3,9 @@ import { Music } from 'lucide-react'
 import { musicIntegration } from '@/integrations/music/config'
 import { useMusic } from '@/integrations/music/useMusic'
 import type { RecentItem } from '@/integrations/music/types'
+import { getImageUrl } from '@/integrations/music/utils'
 
-function typeLabel(mediaType: string): string {
+function typeLabel(mediaType: string | undefined): string {
   switch (mediaType) {
     case 'playlist':
       return 'Playlist'
@@ -15,7 +16,7 @@ function typeLabel(mediaType: string): string {
     case 'track':
       return 'Track'
     default:
-      return mediaType.charAt(0).toUpperCase() + mediaType.slice(1)
+      return mediaType ? mediaType.charAt(0).toUpperCase() + mediaType.slice(1) : ''
   }
 }
 
@@ -30,15 +31,16 @@ function DialSkeleton() {
 }
 
 function DialItem({ item, onTap }: { item: RecentItem; onTap: () => void }) {
+  const imgUrl = getImageUrl(item.image)
   return (
     <button
       onClick={onTap}
       className="flex flex-col items-center gap-2 p-3 rounded-lg bg-bg-card hover:bg-bg-primary active:scale-95 transition-transform text-center"
     >
       <div className="w-12 h-12 rounded overflow-hidden flex-shrink-0 bg-bg-primary flex items-center justify-center">
-        {item.imageUrl ? (
+        {imgUrl ? (
           <img
-            src={item.imageUrl}
+            src={imgUrl}
             alt={item.name}
             className="w-full h-full object-cover"
           />
@@ -49,7 +51,7 @@ function DialItem({ item, onTap }: { item: RecentItem; onTap: () => void }) {
       <span className="text-text-primary text-xs font-medium leading-tight line-clamp-2 w-full">
         {item.name}
       </span>
-      <span className="text-text-secondary text-xs">{typeLabel(item.mediaType)}</span>
+      <span className="text-text-secondary text-xs">{typeLabel(item.media_type)}</span>
     </button>
   )
 }
@@ -87,7 +89,7 @@ export function QuickDials() {
         <DialItem
           key={item.uri}
           item={item}
-          onTap={() => play(item.uri, item.mediaType === 'track' ? true : undefined)}
+          onTap={() => play(item.uri, item.media_type === 'track' ? true : undefined)}
         />
       ))}
     </div>

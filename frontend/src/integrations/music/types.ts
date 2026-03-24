@@ -38,15 +38,15 @@ export interface SearchResults {
 export interface SearchItem {
   name: string
   uri: string
-  imageUrl: string | null
+  image?: { path: string } | string | null
   artist?: string // for tracks/albums
-  mediaType: string
+  media_type: string
 }
 
 export interface RecentItem {
   name: string
   uri: string
-  imageUrl: string | null
-  mediaType: string // "playlist", "track", "album", "artist"
+  image?: { path: string } | string | null
+  media_type: string // "playlist", "track", "album", "artist"
   artist?: string
 }
