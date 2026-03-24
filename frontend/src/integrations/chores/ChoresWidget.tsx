@@ -50,7 +50,7 @@ export function ChoresWidget() {
                   setPicker({ assignmentId, pickFromTags, currentPickId })
                 }
               />
-            ))
+            ))}
         </div>
       </WidgetCard>
 
