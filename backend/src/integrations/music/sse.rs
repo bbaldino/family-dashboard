@@ -135,9 +135,9 @@ fn find_player_volume(players: &serde_json::Value, queue_id: &str) -> Option<i32
     None
 }
 
-/// Connect to MA WebSocket, authenticate, and subscribe to events.
-/// Returns the WebSocket stream on success.
-async fn connect_and_subscribe(
+/// Connect to MA WebSocket and authenticate.
+/// MA pushes events automatically after auth — no subscribe command needed.
+async fn connect_and_auth(
     ws_url: &str,
     token: &str,
 ) -> Result<
@@ -150,22 +150,38 @@ async fn connect_and_subscribe(
 
     let (mut write, mut read) = ws_stream.split();
 
-    // Authenticate
+    // Read server info message (sent immediately on connect, before auth).
+    let server_info = read
+        .next()
+        .await
+        .ok_or_else(|| "No server info received".to_string())?
+        .map_err(|e| format!("Server info error: {}", e))?;
+
+    let schema_version = if let Message::Text(ref text) = server_info {
+        let info: serde_json::Value = serde_json::from_str(text).unwrap_or_default();
+        info["schema_version"].as_u64().unwrap_or(28)
+    } else {
+        28
+    };
+
+    // Authenticate with schema_version so the server keeps the connection open.
     let auth_msg = serde_json::json!({
         "command": "auth",
-        "args": { "token": token }
+        "args": { "token": token },
+        "message_id": "auth",
+        "schema_version": schema_version,
     });
     write
         .send(Message::Text(auth_msg.to_string().into()))
         .await
         .map_err(|e| format!("Failed to send auth: {}", e))?;
 
-    // Wait for auth response
+    // Wait for auth response.
     if let Some(msg) = read.next().await {
         match msg {
             Ok(Message::Text(text)) => {
                 let resp: serde_json::Value = serde_json::from_str(&text).unwrap_or_default();
-                if resp.get("error").is_some() {
+                if resp.get("error_code").is_some() {
                     return Err(format!("Auth failed: {}", text));
                 }
             }
@@ -174,16 +190,7 @@ async fn connect_and_subscribe(
         }
     }
 
-    // Subscribe to events
-    let sub_msg = serde_json::json!({
-        "command": "subscribe_events"
-    });
-    write
-        .send(Message::Text(sub_msg.to_string().into()))
-        .await
-        .map_err(|e| format!("Failed to subscribe: {}", e))?;
-
-    // Reunite the split stream
+    // Reunite the split stream — events will arrive automatically.
     let ws_stream = read.reunite(write).expect("reunite should succeed");
     Ok(ws_stream)
 }
@@ -244,7 +251,7 @@ async fn ws_relay_loop(pool: SqlitePool, ws_url: String, token: String, tx: mpsc
     let max_backoff = Duration::from_secs(30);
 
     loop {
-        match connect_and_subscribe(&ws_url, &token).await {
+        match connect_and_auth(&ws_url, &token).await {
             Ok(ws_stream) => {
                 tracing::info!("Connected to MA WebSocket at {}", ws_url);
                 backoff = Duration::from_secs(1); // Reset backoff on successful connect.
