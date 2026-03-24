@@ -1,0 +1,1 @@
+export { musicIntegration } from './config'

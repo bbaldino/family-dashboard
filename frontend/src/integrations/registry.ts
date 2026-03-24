@@ -12,6 +12,7 @@ import { timersIntegration } from './timers/config'
 import { themeIntegration } from '@/theme/config'
 import { drivingTimeIntegration } from './driving-time/config'
 import { planIntegration } from './plan/config'
+import { musicIntegration } from './music/config'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const integrations: Integration<any>[] = [
@@ -28,4 +29,5 @@ export const integrations: Integration<any>[] = [
   themeIntegration,
   drivingTimeIntegration,
   planIntegration,
+  musicIntegration,
 ]
