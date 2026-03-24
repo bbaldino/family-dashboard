@@ -1,9 +1,9 @@
 import { useNavigate } from 'react-router-dom'
-import { Music, Play, Pause, SkipBack, SkipForward, Volume2 } from 'lucide-react'
+import { Music, Play, Pause, SkipBack, SkipForward, Volume2, X } from 'lucide-react'
 import { useMusic } from './useMusic'
 
 export function MiniPlayer() {
-  const { state, isPlaying, pause, resume, next, previous, setVolume } = useMusic()
+  const { state, isPlaying, pause, resume, stop, next, previous, setVolume } = useMusic()
   const navigate = useNavigate()
 
   const { activeQueue } = state
@@ -90,6 +90,14 @@ export function MiniPlayer() {
       <span className="flex-shrink-0 text-xs text-text-secondary bg-bg-primary px-2 py-0.5 rounded-full">
         {displayName}
       </span>
+
+      {/* Stop / dismiss */}
+      <button
+        onClick={() => stop()}
+        className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-text-muted hover:text-text-primary"
+      >
+        <X size={14} />
+      </button>
     </div>
   )
 }
