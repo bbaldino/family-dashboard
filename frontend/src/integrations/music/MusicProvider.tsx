@@ -53,6 +53,7 @@ export function MusicProvider({ children }: MusicProviderProps) {
   const [queues, setQueues] = useState<QueueState[]>([])
   const [isConnected, setIsConnected] = useState(false)
   const esRef = useRef<EventSource | null>(null)
+  const volumeLockUntilRef = useRef<number>(0)
 
   useEffect(() => {
     if (!isConfigured) return
@@ -65,15 +66,31 @@ export function MusicProvider({ children }: MusicProviderProps) {
         | { type: 'state'; queues: QueueState[] }
         | { type: 'queueUpdated'; queue: QueueState }
 
+      const preserveVolume = Date.now() < volumeLockUntilRef.current
+
       if (data.type === 'state') {
-        setQueues(data.queues)
+        if (preserveVolume) {
+          // Keep optimistic volume levels during the lock window
+          setQueues((prev) => {
+            const volumeMap = new Map(prev.map((q) => [q.queueId, q.volumeLevel]))
+            return data.queues.map((q) => ({
+              ...q,
+              volumeLevel: volumeMap.get(q.queueId) ?? q.volumeLevel,
+            }))
+          })
+        } else {
+          setQueues(data.queues)
+        }
         setIsConnected(true)
       } else if (data.type === 'queueUpdated') {
         setQueues((prev) => {
           const idx = prev.findIndex((q) => q.queueId === data.queue.queueId)
-          if (idx === -1) return [...prev, data.queue]
+          const queue = preserveVolume && idx !== -1
+            ? { ...data.queue, volumeLevel: prev[idx].volumeLevel }
+            : data.queue
+          if (idx === -1) return [...prev, queue]
           const next = [...prev]
-          next[idx] = data.queue
+          next[idx] = queue
           return next
         })
       }
@@ -138,7 +155,8 @@ export function MusicProvider({ children }: MusicProviderProps) {
   }, [])
 
   const setVolume = useCallback(async (playerId: string, level: number) => {
-    // Optimistic update: reflect the new volume immediately in the UI
+    // Optimistic update + lock: prevent SSE from overwriting for 2 seconds
+    volumeLockUntilRef.current = Date.now() + 2000
     setQueues((prev) =>
       prev.map((q) => (q.queueId === playerId ? { ...q, volumeLevel: level } : q)),
     )

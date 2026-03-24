@@ -205,7 +205,8 @@ async fn connect_and_auth(
 }
 
 /// Events that trigger a state refresh.
-const RELEVANT_EVENTS: &[&str] = &["player_updated", "queue_updated", "queue_time_updated"];
+/// Note: queue_time_updated is excluded — elapsed time is ticked locally on the frontend.
+const RELEVANT_EVENTS: &[&str] = &["player_updated", "queue_updated"];
 
 /// SSE handler: connects to MA WebSocket and streams state updates to the client.
 pub async fn events(
