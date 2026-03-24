@@ -90,10 +90,16 @@ fn build_queue_states(players: &serde_json::Value, queues: &serde_json::Value) -
                         .and_then(|n| n.as_str())
                         .or_else(|| media_item["album"].as_str())
                         .map(String::from),
-                    image_url: media_item["image"]
-                        .as_object()
-                        .and_then(|img| img.get("url"))
-                        .and_then(|u| u.as_str())
+                    image_url: media_item["metadata"]["images"]
+                        .as_array()
+                        .and_then(|imgs| imgs.first())
+                        .and_then(|img| img["path"].as_str())
+                        .or_else(|| {
+                            media_item["image"]
+                                .as_object()
+                                .and_then(|img| img.get("path").or_else(|| img.get("url")))
+                                .and_then(|u| u.as_str())
+                        })
                         .or_else(|| media_item["image"].as_str())
                         .map(String::from),
                     duration: item["duration"]
