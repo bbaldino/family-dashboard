@@ -23,6 +23,22 @@ fn ws_url_from_service_url(service_url: &str) -> String {
     format!("{}/ws", ws.trim_end_matches('/'))
 }
 
+/// Rewrite a direct MA image URL to go through our backend proxy.
+fn proxy_image_url(url: &str) -> String {
+    format!("/api/music/image?url={}", urlencoding::encode(url))
+}
+
+/// Rewrite all image URLs in queue states to use the backend proxy.
+fn rewrite_image_urls(queues: &mut [QueueState]) {
+    for q in queues.iter_mut() {
+        if let Some(ref mut item) = q.current_item {
+            if let Some(ref url) = item.image_url {
+                item.image_url = Some(proxy_image_url(url));
+            }
+        }
+    }
+}
+
 /// Fetch current queue state from MA via the HTTP API and build an SseEvent::State.
 async fn fetch_full_state(pool: &SqlitePool) -> Result<SseEvent, AppError> {
     let client = MaClient::from_config(pool).await?;
@@ -34,7 +50,8 @@ async fn fetch_full_state(pool: &SqlitePool) -> Result<SseEvent, AppError> {
         .command("player_queues/all", serde_json::Value::Null)
         .await?;
 
-    let queues = build_queue_states(&players, &queues_raw);
+    let mut queues = build_queue_states(&players, &queues_raw);
+    rewrite_image_urls(&mut queues);
     Ok(SseEvent::State { queues })
 }
 

@@ -30,6 +30,11 @@ pub struct SearchQuery {
     pub q: String,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct ImageProxyQuery {
+    pub url: String,
+}
+
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct QueueState {
