@@ -1,5 +1,6 @@
 pub mod proxy;
 pub mod routes;
+pub mod sse;
 pub mod types;
 
 use axum::Router;
@@ -20,5 +21,6 @@ pub fn router(pool: SqlitePool) -> Router {
         .route("/search", axum::routing::get(routes::search))
         .route("/recent", axum::routing::get(routes::get_recent))
         .route("/queue/{queue_id}", axum::routing::get(routes::get_queue))
+        .route("/events", axum::routing::get(sse::events))
         .with_state(pool)
 }
