@@ -138,6 +138,10 @@ export function MusicProvider({ children }: MusicProviderProps) {
   }, [])
 
   const setVolume = useCallback(async (playerId: string, level: number) => {
+    // Optimistic update: reflect the new volume immediately in the UI
+    setQueues((prev) =>
+      prev.map((q) => (q.queueId === playerId ? { ...q, volumeLevel: level } : q)),
+    )
     await musicIntegration.api.post('/volume', { player_id: playerId, level })
   }, [])
 
