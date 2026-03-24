@@ -6,6 +6,7 @@ import type { MusicState, QueueState } from './types'
 
 interface MusicContextValue {
   state: MusicState
+  isPlaying: boolean
   isConnected: boolean
   play: (uri: string, radio?: boolean) => Promise<void>
   pause: () => Promise<void>
@@ -22,6 +23,7 @@ const noOp = async () => {}
 
 const defaultContextValue: MusicContextValue = {
   state: emptyState,
+  isPlaying: false,
   isConnected: false,
   play: noOp,
   pause: noOp,
@@ -61,6 +63,7 @@ export function MusicProvider({ children }: MusicProviderProps) {
 
   const [queues, setQueues] = useState<QueueState[]>([])
   const [isConnected, setIsConnected] = useState(false)
+  const [optimisticPlaying, setOptimisticPlaying] = useState<boolean | null>(null)
   const esRef = useRef<EventSource | null>(null)
   const volumeLockUntilRef = useRef<number>(0)
 
@@ -76,6 +79,7 @@ export function MusicProvider({ children }: MusicProviderProps) {
         | { type: 'queueUpdated'; queue: QueueState }
 
       const preserveVolume = Date.now() < volumeLockUntilRef.current
+      setOptimisticPlaying(null) // Clear optimistic override when real state arrives
 
       if (data.type === 'state') {
         if (preserveVolume) {
@@ -144,24 +148,14 @@ export function MusicProvider({ children }: MusicProviderProps) {
   }, [])
 
   const pause = useCallback(async () => {
-    setQueues((prev) =>
-      prev.map((q) => (q.state === 'playing' ? { ...q, state: 'paused' } : q)),
-    )
+    setOptimisticPlaying(false)
     await musicIntegration.api.post('/pause', {})
   }, [])
 
   const resume = useCallback(async () => {
-    setQueues((prev) => {
-      const defaultId = config?.default_player
-      return prev.map((q) => {
-        if (q.state === 'paused') return { ...q, state: 'playing' }
-        // Sonos reports idle instead of paused
-        if (q.state === 'idle' && q.currentItem && q.queueId === defaultId) return { ...q, state: 'playing' }
-        return q
-      })
-    })
+    setOptimisticPlaying(true)
     await musicIntegration.api.post('/resume', {})
-  }, [config?.default_player])
+  }, [])
 
   const stop = useCallback(async () => {
     await musicIntegration.api.post('/stop', {})
@@ -194,9 +188,11 @@ export function MusicProvider({ children }: MusicProviderProps) {
 
   const activeQueue = deriveActiveQueue(queues, config?.default_player)
   const state: MusicState = { queues, activeQueue }
+  const isPlaying = optimisticPlaying ?? activeQueue?.state === 'playing'
 
   const contextValue: MusicContextValue = {
     state,
+    isPlaying,
     isConnected,
     play,
     pause,

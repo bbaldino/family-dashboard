@@ -8,7 +8,7 @@ interface FullscreenNowPlayingProps {
 }
 
 export function FullscreenNowPlaying({ isOpen, onClose }: FullscreenNowPlayingProps) {
-  const { state, pause, resume, next, previous } = useMusic()
+  const { state, isPlaying, pause, resume, next, previous } = useMusic()
   const { activeQueue } = state
 
   useEffect(() => {
@@ -23,7 +23,7 @@ export function FullscreenNowPlaying({ isOpen, onClose }: FullscreenNowPlayingPr
   if (!isOpen) return null
 
   const currentItem = activeQueue?.currentItem ?? null
-  const isPlaying = activeQueue?.state === 'playing'
+  // isPlaying comes from context (optimistic)
 
   return (
     <div

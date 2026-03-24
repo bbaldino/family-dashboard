@@ -13,7 +13,7 @@ function formatTime(seconds: number): string {
 }
 
 export function NowPlaying({ onOpenFullscreen, onOpenPlayerPicker }: NowPlayingProps) {
-  const { state, pause, resume, next, previous, setVolume } = useMusic()
+  const { state, isPlaying, pause, resume, next, previous, setVolume } = useMusic()
   const { activeQueue } = state
 
   if (!activeQueue || !activeQueue.currentItem) {
@@ -27,7 +27,6 @@ export function NowPlaying({ onOpenFullscreen, onOpenPlayerPicker }: NowPlayingP
   }
 
   const { currentItem, displayName, volumeLevel, queueId } = activeQueue
-  const isPlaying = activeQueue.state === 'playing'
 
   const elapsed = currentItem.elapsed ?? 0
   const duration = currentItem.duration ?? 0

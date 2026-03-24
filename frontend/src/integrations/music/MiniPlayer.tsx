@@ -3,7 +3,7 @@ import { Music, Play, Pause, SkipBack, SkipForward, Volume2 } from 'lucide-react
 import { useMusic } from './useMusic'
 
 export function MiniPlayer() {
-  const { state, pause, resume, next, previous, setVolume } = useMusic()
+  const { state, isPlaying, pause, resume, next, previous, setVolume } = useMusic()
   const navigate = useNavigate()
 
   const { activeQueue } = state
@@ -11,7 +11,6 @@ export function MiniPlayer() {
   if (!activeQueue) return null
 
   const { currentItem, displayName, volumeLevel, queueId } = activeQueue
-  const isPlaying = activeQueue.state === 'playing'
 
   const handleCoverOrTitleClick = () => {
     navigate('/media')
