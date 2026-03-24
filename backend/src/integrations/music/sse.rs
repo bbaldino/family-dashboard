@@ -3,7 +3,6 @@ use std::time::Duration;
 
 use axum::extract::State;
 use axum::response::sse::{Event, Sse};
-use futures::stream::Stream;
 use futures::{SinkExt, StreamExt};
 use sqlx::SqlitePool;
 use tokio::sync::mpsc;
@@ -195,7 +194,7 @@ const RELEVANT_EVENTS: &[&str] = &["player_updated", "queue_updated", "queue_tim
 /// SSE handler: connects to MA WebSocket and streams state updates to the client.
 pub async fn events(
     State(pool): State<SqlitePool>,
-) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, AppError> {
+) -> Result<impl axum::response::IntoResponse, AppError> {
     // Read config up front to fail fast if misconfigured.
     let config = IntegrationConfig::new(&pool, "music");
     let service_url = config.get("service_url").await?;
@@ -220,10 +219,22 @@ pub async fn events(
     let stream =
         tokio_stream::wrappers::ReceiverStream::new(rx).map(|event| Ok::<_, Infallible>(event));
 
-    Ok(Sse::new(stream).keep_alive(
+    let sse = Sse::new(stream).keep_alive(
         axum::response::sse::KeepAlive::new()
             .interval(Duration::from_secs(15))
             .text("keepalive"),
+    );
+
+    // Headers to prevent nginx/reverse proxies from buffering the SSE stream
+    Ok((
+        [
+            (axum::http::header::CACHE_CONTROL, "no-cache"),
+            (
+                axum::http::header::HeaderName::from_static("x-accel-buffering"),
+                "no",
+            ),
+        ],
+        sse,
     ))
 }
 
