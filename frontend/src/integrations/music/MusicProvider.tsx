@@ -144,12 +144,24 @@ export function MusicProvider({ children }: MusicProviderProps) {
   }, [])
 
   const pause = useCallback(async () => {
+    setQueues((prev) =>
+      prev.map((q) => (q.state === 'playing' ? { ...q, state: 'paused' } : q)),
+    )
     await musicIntegration.api.post('/pause', {})
   }, [])
 
   const resume = useCallback(async () => {
+    setQueues((prev) => {
+      const defaultId = config?.default_player
+      return prev.map((q) => {
+        if (q.state === 'paused') return { ...q, state: 'playing' }
+        // Sonos reports idle instead of paused
+        if (q.state === 'idle' && q.currentItem && q.queueId === defaultId) return { ...q, state: 'playing' }
+        return q
+      })
+    })
     await musicIntegration.api.post('/resume', {})
-  }, [])
+  }, [config?.default_player])
 
   const stop = useCallback(async () => {
     await musicIntegration.api.post('/stop', {})
