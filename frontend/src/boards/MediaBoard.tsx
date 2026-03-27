@@ -50,7 +50,7 @@ export function MediaBoard() {
                 onClick={() => setLeftTab('quick-dials')}
                 className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
                   leftTab === 'quick-dials'
-                    ? 'bg-accent text-white'
+                    ? 'bg-palette-1 text-white'
                     : 'text-text-secondary hover:text-text-primary hover:bg-bg-card'
                 }`}
               >
@@ -60,7 +60,7 @@ export function MediaBoard() {
                 onClick={() => setLeftTab('for-you')}
                 className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
                   leftTab === 'for-you'
-                    ? 'bg-accent text-white'
+                    ? 'bg-palette-1 text-white'
                     : 'text-text-secondary hover:text-text-primary hover:bg-bg-card'
                 }`}
               >
