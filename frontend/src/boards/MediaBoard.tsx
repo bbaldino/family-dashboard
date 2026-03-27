@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react'
 import { Search } from 'lucide-react'
-import { useMusic } from '@/integrations/music'
 import { QuickDials } from './media/QuickDials'
+import { ForYou } from './media/ForYou'
 import { NowPlaying } from './media/NowPlaying'
 import { SearchResults } from './media/SearchResults'
 import { PlayerPicker } from './media/PlayerPicker'
 import { FullscreenNowPlaying } from './media/FullscreenNowPlaying'
+
+type LeftTab = 'quick-dials' | 'for-you'
 
 export function MediaBoard() {
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [pickerOpen, setPickerOpen] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
+  const [leftTab, setLeftTab] = useState<LeftTab>('quick-dials')
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -25,7 +28,7 @@ export function MediaBoard() {
   return (
     <div className="h-full flex gap-6">
       {/* Left column */}
-      <div className="flex-1 flex flex-col gap-4">
+      <div className="flex-1 flex flex-col gap-4 min-h-0">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-secondary pointer-events-none" />
           <input
@@ -40,7 +43,36 @@ export function MediaBoard() {
         {isSearching ? (
           <SearchResults query={debouncedQuery} />
         ) : (
-          <QuickDials />
+          <>
+            {/* Tabs */}
+            <div className="flex gap-1 px-1">
+              <button
+                onClick={() => setLeftTab('quick-dials')}
+                className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  leftTab === 'quick-dials'
+                    ? 'bg-accent text-white'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-card'
+                }`}
+              >
+                Quick Dials
+              </button>
+              <button
+                onClick={() => setLeftTab('for-you')}
+                className={`px-4 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  leftTab === 'for-you'
+                    ? 'bg-accent text-white'
+                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-card'
+                }`}
+              >
+                For You
+              </button>
+            </div>
+
+            {/* Tab content */}
+            <div className="flex-1 overflow-auto">
+              {leftTab === 'quick-dials' ? <QuickDials /> : <ForYou />}
+            </div>
+          </>
         )}
       </div>
 
@@ -54,7 +86,10 @@ export function MediaBoard() {
 
       {/* Overlays */}
       <PlayerPicker isOpen={pickerOpen} onClose={() => setPickerOpen(false)} />
-      <FullscreenNowPlaying isOpen={fullscreen} onClose={() => setFullscreen(false)} />
+      <FullscreenNowPlaying
+        isOpen={fullscreen}
+        onClose={() => setFullscreen(false)}
+      />
     </div>
   )
 }
