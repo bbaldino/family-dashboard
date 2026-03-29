@@ -92,55 +92,39 @@ export function HomeBoard() {
   const heroEvents = getHeroEvents(calendar.data, driveInfo)
 
   return (
-    <div
-      className="grid gap-[var(--spacing-grid-gap)] h-full"
-      style={{
-        gridTemplateColumns: '1fr 1fr 1fr 1fr',
-        gridTemplateRows: 'auto auto 1fr 1fr',
-      }}
-    >
+    <div className="flex flex-col gap-[var(--spacing-grid-gap)] h-full">
       {/* Timer banner -- full width, only shows when timers active */}
-      <div style={{ gridColumn: '1 / -1' }}>
-        <TimerBanner />
-      </div>
+      <TimerBanner />
 
       {/* Hero strip -- full width */}
-      <div style={{ gridColumn: '1 / -1' }}>
-        <HeroStripWithData heroEvents={heroEvents} />
+      <HeroStripWithData heroEvents={heroEvents} />
+
+      {/* Main content: calendar left, widgets right */}
+      <div className="flex gap-[var(--spacing-grid-gap)] flex-1 min-h-0">
+        {/* Calendar -- fixed left column */}
+        <div className="w-1/4 min-h-0 overflow-hidden">
+          <CalendarWidget
+            days={calendar.data}
+            isLoading={calendar.isLoading}
+            error={calendar.error}
+            refetch={calendar.refetch}
+          />
+        </div>
+
+        {/* Widgets -- flow layout, fills remaining space */}
+        <div className="flex-1 grid grid-cols-3 auto-rows-fr gap-[var(--spacing-grid-gap)] min-h-0" style={{ gridAutoFlow: 'dense' }}>
+          <PackagesWidget />
+          <CountdownsWidget />
+          <SportsWidget />
+          <div className="overflow-hidden min-h-0">
+            <ChoresWidget />
+          </div>
+          <LunchMenuWidget />
+          <WidgetCard title="Grocery List" category="grocery" badge="0 items">
+            <div className="text-text-muted text-sm">Grocery list placeholder</div>
+          </WidgetCard>
+        </div>
       </div>
-
-      {/* Calendar -- col 1, spans 2 rows */}
-      <div style={{ gridRow: '3 / 5', minHeight: 0 }} className="overflow-hidden">
-        <CalendarWidget
-          days={calendar.data}
-          isLoading={calendar.isLoading}
-          error={calendar.error}
-          refetch={calendar.refetch}
-        />
-      </div>
-
-      {/* Packages -- col 2, row 2 */}
-      <PackagesWidget />
-
-      {/* Chores -- col 2, row 3 */}
-      <div style={{ minHeight: 0 }} className="overflow-hidden">
-        <ChoresWidget />
-      </div>
-
-      {/* Countdowns -- col 3, row 1 */}
-      <CountdownsWidget />
-
-      {/* Sports -- col 4, row 1 */}
-      <SportsWidget />
-
-      {/* Lunch Menu -- col 3, row 2 */}
-      <LunchMenuWidget />
-
-      {/* Grocery List -- col 4, row 2 */}
-      <WidgetCard title="Grocery List" category="grocery" badge="0 items">
-        <div className="text-text-muted text-sm">Grocery list placeholder</div>
-      </WidgetCard>
-
     </div>
   )
 }
