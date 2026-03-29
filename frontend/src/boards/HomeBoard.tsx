@@ -112,14 +112,12 @@ export function HomeBoard() {
           />
         </div>
 
-        {/* Widgets -- flow layout, fills remaining space */}
-        <div className="flex-1 grid grid-cols-3 auto-rows-fr gap-[var(--spacing-grid-gap)] min-h-0" style={{ gridAutoFlow: 'dense' }}>
+        {/* Widgets -- 3-col grid, 2 rows, dense fill */}
+        <div className="flex-1 grid grid-cols-3 grid-rows-2 gap-[var(--spacing-grid-gap)] min-h-0" style={{ gridAutoFlow: 'dense' }}>
           <PackagesWidget />
           <CountdownsWidget />
           <SportsWidget />
-          <div className="overflow-hidden min-h-0">
-            <ChoresWidget />
-          </div>
+          <ChoresWidget />
           <LunchMenuWidget />
           <OnThisDayWidget />
           <WidgetCard title="Grocery List" category="grocery" badge="0 items">
