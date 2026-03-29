@@ -15,6 +15,7 @@ import { PackagesWidget } from '@/integrations/packages'
 import { TimerBanner } from '@/integrations/timers'
 import { useDrivingTime } from '@/integrations/driving-time'
 import type { EventDriveInfo } from '@/integrations/driving-time/types'
+import { OnThisDayWidget } from '@/integrations/on-this-day/OnThisDayWidget'
 
 function getHeroEvents(
   days: CalendarDay[] | null,
@@ -120,6 +121,7 @@ export function HomeBoard() {
             <ChoresWidget />
           </div>
           <LunchMenuWidget />
+          <OnThisDayWidget />
           <WidgetCard title="Grocery List" category="grocery" badge="0 items">
             <div className="text-text-muted text-sm">Grocery list placeholder</div>
           </WidgetCard>
