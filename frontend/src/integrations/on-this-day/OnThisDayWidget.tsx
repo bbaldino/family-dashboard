@@ -54,8 +54,11 @@ export function OnThisDayWidget() {
   const event = events[index % events.length]
 
   return (
-    <WidgetCard title="On This Day" category="info" badge={`${event.year}`}>
+    <WidgetCard title="On This Day" category="info">
       <div className="flex flex-col gap-2 h-full">
+        <div className="text-4xl font-extrabold text-palette-3 leading-none tracking-tight">
+          {event.year}
+        </div>
         <p className="text-text-primary text-sm leading-relaxed flex-1">
           {event.text}
         </p>
