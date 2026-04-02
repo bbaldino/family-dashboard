@@ -11,11 +11,12 @@ const STATUS_ORDER: Record<ShipmentStatus, number> = {
   in_transit: 1,
   shipped: 2,
   label_created: 3,
-  exception: 4,
-  unknown: 5,
-  delivered: 6,
-  returned: 7,
-  cancelled: 8,
+  ordered: 4,
+  exception: 5,
+  unknown: 6,
+  delivered: 7,
+  returned: 8,
+  cancelled: 9,
 }
 
 const HIDDEN_STATUSES: ShipmentStatus[] = ['cancelled', 'returned']

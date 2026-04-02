@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { drivingTimeIntegration } from './config'
 import type { CalendarEvent } from '@/integrations/google-calendar/types'
 import type { DrivingTimeResult, EventDriveInfo, DriveUrgency } from './types'

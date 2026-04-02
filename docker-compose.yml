@@ -1,0 +1,20 @@
+services:
+  dashboard:
+    build:
+      context: .
+      args:
+        VITE_HA_URL: ${VITE_HA_URL}
+        VITE_HA_TOKEN: ${VITE_HA_TOKEN}
+    ports:
+      - "3042:3042"
+    volumes:
+      - dashboard-data:/data
+    environment:
+      - PORT=3042
+      - DATABASE_URL=sqlite:/data/dashboard.db?mode=rwc
+      - HA_URL=${HA_URL}
+      - HA_TOKEN=${HA_TOKEN}
+    restart: unless-stopped
+
+volumes:
+  dashboard-data:

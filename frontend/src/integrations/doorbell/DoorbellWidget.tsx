@@ -1,15 +1,12 @@
 import { useState, useCallback } from 'react'
 import { WidgetCard } from '../../ui/WidgetCard'
 import { useWebRtcStream } from './useWebRtcStream'
-import { useIntegrationConfig } from '../use-integration-config'
-import { doorbellIntegration } from './config'
 
 export function DoorbellWidget() {
-  const { config, isLoading } = useIntegrationConfig(doorbellIntegration)
   const [isLive, setIsLive] = useState(false)
 
-  const go2rtcUrl = config?.go2rtc_url ?? 'http://frigate:1984'
-  const streamName = config?.stream_name ?? 'doorbell'
+  const go2rtcUrl = 'http://frigate:1984'
+  const streamName = 'doorbell'
 
   const { videoRef, isConnected, error, reconnect } = useWebRtcStream({
     go2rtcUrl,
@@ -19,8 +16,6 @@ export function DoorbellWidget() {
 
   const handleExpand = useCallback(() => setIsLive(true), [])
   const handleCollapse = useCallback(() => setIsLive(false), [])
-
-  if (isLoading) return null
 
   const liveView = (
     <div className="relative">

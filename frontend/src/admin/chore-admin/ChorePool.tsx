@@ -6,7 +6,7 @@ interface DraggableChoreChipProps {
 }
 
 function DraggableChoreChip({ chore }: DraggableChoreChipProps) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `chore-${chore.id}`,
     data: { chore },
   })

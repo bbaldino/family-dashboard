@@ -28,7 +28,7 @@ export function usePolling<T>({
   fetcherRef.current = fetcher
 
   // Auto-generate a stable query key if none provided
-  const autoKeyRef = useRef<string[]>()
+  const autoKeyRef = useRef<string[] | undefined>(undefined)
   if (!autoKeyRef.current) {
     autoKeyRef.current = queryKey ?? [`polling-${++queryKeyCounter}`]
   }
