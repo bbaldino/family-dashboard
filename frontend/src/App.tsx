@@ -9,12 +9,31 @@ import { MediaBoard } from './boards/MediaBoard'
 import { CamerasBoard } from './boards/CamerasBoard'
 import { AdminLayout } from './admin/AdminLayout'
 import { SettingsAdmin } from './admin/SettingsAdmin'
-import { HA_URL, HA_TOKEN } from './lib/ha-client'
+import { getRuntimeConfig } from './lib/ha-client'
 import { useTheme } from './theme/useTheme'
 
 function ThemeApplicator() {
   useTheme()
   return null
+}
+
+/** Fetch HA config from the backend at startup */
+function useHaConfig(): { haUrl?: string; haToken?: string; loading: boolean } {
+  const [config, setConfig] = useState<{ haUrl?: string; haToken?: string; loading: boolean }>({
+    loading: true,
+  })
+
+  useEffect(() => {
+    getRuntimeConfig().then((rc) => {
+      setConfig({
+        haUrl: rc.ha_url ?? undefined,
+        haToken: rc.ha_token ?? undefined,
+        loading: false,
+      })
+    })
+  }, [])
+
+  return config
 }
 
 /** Check if HA is reachable before mounting HassConnect */
@@ -68,6 +87,11 @@ const queryClient = new QueryClient({
 })
 
 export function App() {
+  const { haUrl, haToken, loading } = useHaConfig()
+  const haReachable = useHaReachable(haUrl)
+
+  if (loading) return null
+
   const content = (
     <QueryClientProvider client={queryClient}>
       <ThemeApplicator />
@@ -75,11 +99,9 @@ export function App() {
     </QueryClientProvider>
   )
 
-  const haReachable = useHaReachable(HA_URL)
-
-  if (HA_URL && haReachable) {
+  if (haUrl && haReachable) {
     return (
-      <HassConnect hassUrl={HA_URL} hassToken={HA_TOKEN}>
+      <HassConnect hassUrl={haUrl} hassToken={haToken}>
         {content}
       </HassConnect>
     )

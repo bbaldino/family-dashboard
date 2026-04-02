@@ -54,8 +54,21 @@ async fn main() {
     let spa_service =
         ServeDir::new("static").not_found_service(ServeFile::new("static/index.html"));
 
+    // Runtime config endpoint — serves env vars to the frontend so they don't
+    // need to be baked in at build time.
+    let runtime_config = axum::Router::new().route(
+        "/runtime-config",
+        axum::routing::get(|| async {
+            axum::Json(serde_json::json!({
+                "ha_url": std::env::var("HA_URL").ok(),
+                "ha_token": std::env::var("HA_TOKEN").ok(),
+            }))
+        }),
+    );
+
     let app = axum::Router::new()
         .nest("/api", api_routes)
+        .nest("/api", runtime_config)
         .fallback_service(spa_service);
 
     let port: u16 = std::env::var("PORT")

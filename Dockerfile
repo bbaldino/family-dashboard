@@ -4,8 +4,6 @@ WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm install --legacy-peer-deps
 COPY frontend/ ./
-ARG VITE_HA_URL
-ARG VITE_HA_TOKEN
 RUN npm run build
 
 # Stage 2: Build backend

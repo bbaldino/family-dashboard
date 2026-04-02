@@ -1,4 +1,17 @@
-// Only set if VITE_HA_URL is explicitly configured — don't default to a URL
-// that will block the app trying to connect
-export const HA_URL: string | undefined = import.meta.env.VITE_HA_URL || undefined
-export const HA_TOKEN: string | undefined = import.meta.env.VITE_HA_TOKEN || undefined
+interface RuntimeConfig {
+  ha_url: string | null
+  ha_token: string | null
+}
+
+let cached: RuntimeConfig | null = null
+
+export async function getRuntimeConfig(): Promise<RuntimeConfig> {
+  if (cached) return cached
+  try {
+    const resp = await fetch('/api/runtime-config')
+    cached = await resp.json()
+    return cached!
+  } catch {
+    return { ha_url: null, ha_token: null }
+  }
+}
