@@ -30,8 +30,7 @@ async fn google_auth(State(pool): State<SqlitePool>) -> Result<Redirect, AppErro
     let url = format!(
         "https://accounts.google.com/o/oauth2/v2/auth?\
          client_id={}&redirect_uri={}&response_type=code&scope={}&\
-         access_type=offline&prompt=consent&\
-         device_id=kitchen-dashboard&device_name=Kitchen+Dashboard",
+         access_type=offline&prompt=consent",
         client_id, redirect_uri, scope
     );
 
