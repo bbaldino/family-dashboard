@@ -5,6 +5,8 @@ import { usePackages } from './usePackages'
 import { ShipmentRow } from './ShipmentRow'
 import { PackageDetailModal } from './PackageDetailModal'
 import type { Shipment, ShipmentStatus } from './types'
+import { STATUS_LABELS } from './types'
+import type { WidgetSize } from '@/lib/widget-types'
 
 const STATUS_ORDER: Record<ShipmentStatus, number> = {
   out_for_delivery: 0,
@@ -21,7 +23,11 @@ const STATUS_ORDER: Record<ShipmentStatus, number> = {
 
 const HIDDEN_STATUSES: ShipmentStatus[] = ['cancelled', 'returned']
 
-export function PackagesWidget() {
+interface PackagesWidgetProps {
+  size?: WidgetSize
+}
+
+export function PackagesWidget({ size = 'standard' }: PackagesWidgetProps) {
   const { data, isLoading, error } = usePackages()
   const [selectedShipment, setSelectedShipment] = useState<Shipment | null>(null)
 
@@ -45,6 +51,48 @@ export function PackagesWidget() {
 
   const shipments = [...active, ...delivered]
   const activeCount = active.length
+
+  if (size === 'compact') {
+    const compactShipments = active.slice(0, 3)
+    return (
+      <WidgetCard
+        title="Packages"
+        category="grocery"
+        badge={activeCount > 0 ? `${activeCount} active` : undefined}
+        detail={
+          <div className="flex flex-col">
+            {active.map((shipment) => (
+              <ShipmentRow key={shipment.id} shipment={shipment} />
+            ))}
+            {delivered.length > 0 && (
+              <>
+                <div className="text-[10px] font-semibold text-text-muted uppercase tracking-[0.3px] pt-[6px] mt-[4px]">
+                  Recently delivered
+                </div>
+                {delivered.map((shipment) => (
+                  <ShipmentRow key={shipment.id} shipment={shipment} />
+                ))}
+              </>
+            )}
+          </div>
+        }
+      >
+        <div className="flex flex-col">
+          {compactShipments.map((shipment) => (
+            <div
+              key={shipment.id}
+              className="flex items-center justify-between py-1 border-b border-border last:border-b-0 text-xs"
+            >
+              <span className="text-text-primary truncate mr-2">{shipment.name}</span>
+              <span className="text-text-secondary whitespace-nowrap">
+                {STATUS_LABELS[shipment.status]}
+              </span>
+            </div>
+          ))}
+        </div>
+      </WidgetCard>
+    )
+  }
 
   if (isLoading && shipments.length === 0) {
     return (
