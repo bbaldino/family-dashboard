@@ -5,6 +5,10 @@ export function useSportsWidgetMeta(): WidgetMeta {
   const { data } = useSportsGames()
   const games = data?.games ?? []
 
+  if (games.length === 0) {
+    return { visible: false }
+  }
+
   const hasLive = games.some((g) => g.state === 'live')
   const hasUpcomingToday = games.some((g) => {
     if (g.state !== 'upcoming') return false
@@ -15,26 +19,18 @@ export function useSportsWidgetMeta(): WidgetMeta {
   const hasFinal = games.some((g) => g.state === 'final')
   const hasUpcoming = games.some((g) => g.state === 'upcoming')
 
-  let preferredSize: WidgetMeta['preferredSize'] = 'standard'
-  let priority = 1
-
   if (hasLive) {
-    preferredSize = 'expanded'
-    priority = 10
-  } else if (hasUpcomingToday) {
-    preferredSize = 'expanded'
-    priority = 5
-  } else if (hasFinal) {
-    preferredSize = 'standard'
-    priority = 2
-  } else if (hasUpcoming) {
-    preferredSize = 'standard'
-    priority = 3
+    return { visible: true, preferredSize: 'expanded', priority: 10 }
+  }
+  if (hasUpcomingToday) {
+    return { visible: true, preferredSize: 'expanded', priority: 5 }
+  }
+  if (hasUpcoming) {
+    return { visible: true, preferredSize: 'standard', priority: 3 }
+  }
+  if (hasFinal) {
+    return { visible: true, preferredSize: 'standard', priority: 2 }
   }
 
-  return {
-    supportedSizes: ['compact', 'standard', 'expanded'],
-    preferredSize,
-    priority,
-  }
+  return { visible: true, preferredSize: 'standard', priority: 1 }
 }
