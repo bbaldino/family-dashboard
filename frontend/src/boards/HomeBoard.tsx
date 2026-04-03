@@ -16,6 +16,7 @@ import { useDrivingTime } from '@/integrations/driving-time'
 import type { EventDriveInfo } from '@/integrations/driving-time/types'
 import { OnThisDayWidget } from '@/integrations/on-this-day/OnThisDayWidget'
 import { DEFAULT_WIDGET_META } from '@/lib/widget-types'
+import type { WidgetSize } from '@/lib/widget-types'
 import { useSportsWidgetMeta } from '@/integrations/sports/useWidgetMeta'
 import { GridLayout } from './layouts/GridLayout'
 import { MagazineLayout } from './layouts/MagazineLayout'
@@ -109,16 +110,39 @@ function HeroStripWithData({ heroEvents }: { heroEvents: HeroEvent[] }) {
   )
 }
 
+function useWidgetMaxSizes(): Record<string, WidgetSize | undefined> {
+  const [maxSizes, setMaxSizes] = useState<Record<string, WidgetSize | undefined>>({})
+
+  useEffect(() => {
+    fetch('/api/config')
+      .then((r) => r.json())
+      .then((config: Record<string, string>) => {
+        const sizes: Record<string, WidgetSize | undefined> = {}
+        for (const [key, value] of Object.entries(config)) {
+          const match = key.match(/^dashboard\.widget\.(.+)\.maxSize$/)
+          if (match && (value === 'compact' || value === 'standard' || value === 'expanded')) {
+            sizes[match[1]] = value as WidgetSize
+          }
+        }
+        setMaxSizes(sizes)
+      })
+      .catch(() => {})
+  }, [])
+
+  return maxSizes
+}
+
 function Widgets({ layout }: { layout: LayoutMode }) {
   const sportsMeta = useSportsWidgetMeta()
+  const maxSizes = useWidgetMaxSizes()
 
   const widgets: MagazineWidget[] = [
-    { key: 'sports', element: <SportsWidget />, meta: sportsMeta },
-    { key: 'packages', element: <PackagesWidget />, meta: DEFAULT_WIDGET_META },
-    { key: 'countdowns', element: <CountdownsWidget />, meta: DEFAULT_WIDGET_META },
-    { key: 'chores', element: <ChoresWidget />, meta: DEFAULT_WIDGET_META },
-    { key: 'lunch', element: <LunchMenuWidget />, meta: DEFAULT_WIDGET_META },
-    { key: 'on-this-day', element: <OnThisDayWidget />, meta: DEFAULT_WIDGET_META },
+    { key: 'sports', element: <SportsWidget />, meta: sportsMeta, maxSize: maxSizes['sports'] },
+    { key: 'packages', element: <PackagesWidget />, meta: DEFAULT_WIDGET_META, maxSize: maxSizes['packages'] },
+    { key: 'countdowns', element: <CountdownsWidget />, meta: DEFAULT_WIDGET_META, maxSize: maxSizes['countdowns'] },
+    { key: 'chores', element: <ChoresWidget />, meta: DEFAULT_WIDGET_META, maxSize: maxSizes['chores'] },
+    { key: 'lunch', element: <LunchMenuWidget />, meta: DEFAULT_WIDGET_META, maxSize: maxSizes['lunch'] },
+    { key: 'on-this-day', element: <OnThisDayWidget />, meta: DEFAULT_WIDGET_META, maxSize: maxSizes['on-this-day'] },
   ]
 
   const Layout = layout === 'magazine' ? MagazineLayout : GridLayout
