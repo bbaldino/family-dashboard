@@ -1,6 +1,7 @@
 import { WidgetCard } from '@/ui/WidgetCard'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
 import { useCountdowns } from './useCountdowns'
+import type { WidgetSize } from '@/lib/widget-types'
 
 function formatDays(days: number): string {
   if (days === 0) return 'Today!'
@@ -8,7 +9,11 @@ function formatDays(days: number): string {
   return `${days} days`
 }
 
-export function CountdownsWidget() {
+interface CountdownsWidgetProps {
+  size?: WidgetSize
+}
+
+export function CountdownsWidget({ size = 'standard' }: CountdownsWidgetProps) {
   const { data, isLoading, error } = useCountdowns()
 
   if (isLoading) {
@@ -28,6 +33,46 @@ export function CountdownsWidget() {
   }
 
   const items = data ?? []
+
+  if (size === 'compact') {
+    return (
+      <WidgetCard
+        title="Coming Up"
+        category="info"
+        detail={
+          items.length > 0 ? (
+            <div className="flex flex-col">
+              {items.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between py-[5px] border-b border-border last:border-b-0"
+                >
+                  <span className="text-[14px] text-text-primary truncate mr-2">{item.name}</span>
+                  <span className={`text-[16px] font-semibold whitespace-nowrap ${item.daysUntil === 0 ? 'text-success' : 'text-info'}`}>
+                    {formatDays(item.daysUntil)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : undefined
+        }
+      >
+        <div className="flex flex-col">
+          {items.slice(0, 3).map((item) => (
+            <div
+              key={item.id}
+              className="flex items-center justify-between py-1 text-xs"
+            >
+              <span className="text-text-primary truncate mr-2">{item.name}</span>
+              <span className={`font-semibold whitespace-nowrap ${item.daysUntil === 0 ? 'text-success' : 'text-info'}`}>
+                {formatDays(item.daysUntil)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </WidgetCard>
+    )
+  }
 
   return (
     <WidgetCard title="Coming Up" category="info">
