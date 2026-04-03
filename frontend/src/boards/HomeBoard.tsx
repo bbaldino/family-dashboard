@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { HeroStrip } from '../ui/HeroStrip'
 import type { HeroEvent } from '../ui/HeroStrip'
 import { BottomSheet } from '../ui/BottomSheet'
-import { WidgetCard } from '../ui/WidgetCard'
 import { useGoogleCalendar, CalendarWidget } from '@/integrations/google-calendar'
 import type { CalendarDay } from '@/integrations/google-calendar'
 import { ChoresWidget } from '@/integrations/chores'
@@ -16,8 +15,11 @@ import { TimerBanner } from '@/integrations/timers'
 import { useDrivingTime } from '@/integrations/driving-time'
 import type { EventDriveInfo } from '@/integrations/driving-time/types'
 import { OnThisDayWidget } from '@/integrations/on-this-day/OnThisDayWidget'
+import { DEFAULT_WIDGET_META } from '@/lib/widget-types'
+import { useSportsWidgetMeta } from '@/integrations/sports/useWidgetMeta'
 import { GridLayout } from './layouts/GridLayout'
 import { MagazineLayout } from './layouts/MagazineLayout'
+import type { MagazineWidget } from './layouts/MagazineLayout'
 
 type LayoutMode = 'grid' | 'magazine'
 
@@ -108,18 +110,20 @@ function HeroStripWithData({ heroEvents }: { heroEvents: HeroEvent[] }) {
 }
 
 function Widgets({ layout }: { layout: LayoutMode }) {
+  const sportsMeta = useSportsWidgetMeta()
+
+  const widgets: MagazineWidget[] = [
+    { key: 'sports', element: <SportsWidget />, meta: sportsMeta },
+    { key: 'packages', element: <PackagesWidget />, meta: DEFAULT_WIDGET_META },
+    { key: 'countdowns', element: <CountdownsWidget />, meta: DEFAULT_WIDGET_META },
+    { key: 'chores', element: <ChoresWidget />, meta: DEFAULT_WIDGET_META },
+    { key: 'lunch', element: <LunchMenuWidget />, meta: DEFAULT_WIDGET_META },
+    { key: 'on-this-day', element: <OnThisDayWidget />, meta: DEFAULT_WIDGET_META },
+  ]
+
   const Layout = layout === 'magazine' ? MagazineLayout : GridLayout
 
-  return (
-    <Layout>
-      <SportsWidget />
-      <PackagesWidget />
-      <CountdownsWidget />
-      <ChoresWidget />
-      <LunchMenuWidget />
-      <OnThisDayWidget />
-    </Layout>
-  )
+  return <Layout widgets={widgets} />
 }
 
 export function HomeBoard() {
