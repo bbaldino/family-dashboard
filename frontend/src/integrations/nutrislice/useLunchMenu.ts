@@ -37,6 +37,7 @@ export interface LunchMenuDay {
 export interface LunchMenuData {
   today: LunchMenuDay | null
   tomorrow: LunchMenuDay | null
+  week: LunchMenuDay[]
 }
 
 function formatDate(date: Date): string {
@@ -144,9 +145,22 @@ async function fetchMenu(): Promise<LunchMenuData> {
   const todayData = data.days?.find((d) => d.date === todayStr)
   const tomorrowData = data.days?.find((d) => d.date === tomorrowStr)
 
+  const week: LunchMenuDay[] = (data.days ?? [])
+    .map((d: NutriSliceDay) => parseDayMenu(d))
+    .filter((d: LunchMenuDay | null): d is LunchMenuDay => d != null)
+    .filter((d: LunchMenuDay) => {
+      const dayDate = new Date(d.date + 'T12:00:00')
+      dayDate.setHours(0, 0, 0, 0)
+      const todayDate = new Date()
+      todayDate.setHours(0, 0, 0, 0)
+      return dayDate >= todayDate
+    })
+    .slice(0, 5)
+
   return {
     today: parseDayMenu(todayData),
     tomorrow: parseDayMenu(tomorrowData),
+    week,
   }
 }
 
