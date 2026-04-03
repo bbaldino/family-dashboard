@@ -34,8 +34,11 @@ function capSize(preferred: WidgetSize, max: WidgetSize | undefined): WidgetSize
 }
 
 function resolveLayout(widgets: MagazineWidget[]): LayoutConfig {
+  // Filter to visible widgets only
+  const visible = widgets.filter((w): w is MagazineWidget & { meta: { visible: true } } => w.meta.visible)
+
   // Sort by priority descending
-  const sorted = [...widgets].sort((a, b) => b.meta.priority - a.meta.priority)
+  const sorted = [...visible].sort((a, b) => b.meta.priority - a.meta.priority)
 
   // Cap preferred sizes at user maxSize
   const capped = sorted.map((w) => ({
@@ -45,7 +48,7 @@ function resolveLayout(widgets: MagazineWidget[]): LayoutConfig {
 
   // Check if any widget wants expanded
   const expandedCandidate = capped.find(
-    (w) => w.effectivePreferred === 'expanded' && w.meta.supportedSizes.includes('expanded'),
+    (w) => w.effectivePreferred === 'expanded',
   )
 
   if (expandedCandidate) {
@@ -56,7 +59,6 @@ function resolveLayout(widgets: MagazineWidget[]): LayoutConfig {
       size: 'expanded',
     }
 
-    // Assign rest to sidebar (compact) and shelf (standard)
     const sidebar: ResolvedWidget[] = []
     const shelf: ResolvedWidget[] = []
 
@@ -92,8 +94,14 @@ export function MagazineLayout({ widgets }: MagazineLayoutProps) {
   const layout = resolveLayout(widgets)
 
   if (layout.type === 'equal-rows') {
+    const count = layout.widgets.length
+    const cols = count <= 2 ? count : 3
+    const rows = Math.ceil(count / cols)
     return (
-      <div className="flex-1 grid grid-cols-3 grid-rows-2 gap-[var(--spacing-grid-gap)] min-h-0" style={{ gridAutoFlow: 'dense' }}>
+      <div
+        className="flex-1 grid gap-[var(--spacing-grid-gap)] min-h-0"
+        style={{ gridTemplateColumns: `repeat(${cols}, 1fr)`, gridTemplateRows: `repeat(${rows}, 1fr)`, gridAutoFlow: 'dense' }}
+      >
         {layout.widgets.map(renderWithSize)}
       </div>
     )
