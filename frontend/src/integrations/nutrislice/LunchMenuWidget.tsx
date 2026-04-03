@@ -103,6 +103,26 @@ export function LunchMenuWidget({ size = 'standard' }: LunchMenuWidgetProps) {
     )
   }
 
+  if (size === 'expanded') {
+    const days = data?.week ?? []
+    return (
+      <WidgetCard title="Lunch Menu" category="food" visible={hasMenu}>
+        {days.length === 0 ? (
+          <div className="text-[13px] text-text-muted py-1">No menu available</div>
+        ) : (
+          <div className="flex flex-col gap-[6px]">
+            {days.map((day, i) => (
+              <div key={day.date}>
+                {i > 0 && <div className="border-t border-border mb-[6px]" />}
+                <MenuDaySection day={day} label={day.dayName} compact={i > 0} />
+              </div>
+            ))}
+          </div>
+        )}
+      </WidgetCard>
+    )
+  }
+
   if (size === 'compact') {
     const compactDay = data?.today ?? data?.tomorrow
     const compactLabel = data?.today ? 'Today' : 'Tomorrow'
