@@ -59,16 +59,14 @@ function resolveLayout(widgets: MagazineWidget[]): LayoutConfig {
       size: 'expanded',
     }
 
-    // Put lowest-priority widgets in sidebar (compact) so higher-priority ones
-    // get standard size in the shelf where they have more room
-    const shelf: ResolvedWidget[] = []
+    // All non-expanded widgets get standard — our smallest grid cell
+    // is large enough to hold the standard view
     const sidebar: ResolvedWidget[] = []
-    const sidebarCount = Math.min(2, rest.length)
+    const shelf: ResolvedWidget[] = []
 
-    for (let i = 0; i < rest.length; i++) {
-      const w = rest[i]
-      if (i >= rest.length - sidebarCount) {
-        sidebar.push({ key: w.key, element: w.element, size: 'compact' })
+    for (const w of rest) {
+      if (sidebar.length < 2) {
+        sidebar.push({ key: w.key, element: w.element, size: 'standard' })
       } else {
         shelf.push({ key: w.key, element: w.element, size: 'standard' })
       }
