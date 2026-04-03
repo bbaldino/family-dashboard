@@ -1,4 +1,5 @@
 import type { Game, Leader, GameAthlete } from './types'
+import { AiPreview } from './AiPreview'
 
 interface GameCardExpandedProps {
   game: Game
@@ -166,7 +167,7 @@ export function GameCardExpanded({ game, allGames, onClick }: GameCardExpandedPr
       {/* Upcoming schedule (when this game is upcoming or there's room) */}
       {isUpcoming && <UpcomingSchedule games={allGames} currentGameId={game.id} />}
 
-      {/* AI Preview placeholder — wired in Task 10 */}
+      {isUpcoming && <AiPreview gameId={game.id} />}
     </div>
   )
 }
