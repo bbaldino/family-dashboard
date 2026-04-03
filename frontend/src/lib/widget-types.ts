@@ -1,15 +1,12 @@
 export type WidgetSize = 'compact' | 'standard' | 'expanded'
 
-export interface WidgetMeta {
-  supportedSizes: WidgetSize[]
-  preferredSize: WidgetSize
-  priority: number
-  anchor?: 'left'
-}
+export type WidgetMeta =
+  | { visible: false }
+  | { visible: true; preferredSize: WidgetSize; priority: number }
 
-/** Default metadata for widgets that don't support adaptive sizing */
+/** Default metadata for widgets that don't have a useWidgetMeta hook yet */
 export const DEFAULT_WIDGET_META: WidgetMeta = {
-  supportedSizes: ['standard'],
+  visible: true,
   preferredSize: 'standard',
   priority: 0,
 }
