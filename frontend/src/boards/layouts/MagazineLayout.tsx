@@ -16,27 +16,26 @@ interface MagazineLayoutProps {
  * - If only one bottom card remains, it takes the full width
  */
 export function MagazineLayout({ children }: MagazineLayoutProps) {
-  // Filter to only visible (non-null) children
-  const visible = Children.toArray(children).filter(
-    (child): child is ReactElement => isValidElement(child) && child.type !== null,
+  const all = Children.toArray(children).filter(
+    (child): child is ReactElement => isValidElement(child),
   )
 
-  if (visible.length === 0) return null
+  if (all.length === 0) return null
 
   // First child = hero (big card), next 2 = sidebar stack, rest = bottom row
-  const hero = visible[0]
-  const sidebar = visible.slice(1, 3)
-  const bottom = visible.slice(3)
+  const hero = all[0]
+  const sidebar = all.slice(1, 3)
+  const bottom = all.slice(3)
 
   return (
     <div className="flex-1 flex flex-col gap-[var(--spacing-grid-gap)] min-h-0">
-      {/* Top row: hero card (2/3) + stacked sidebar (1/3) */}
-      <div className="flex gap-[var(--spacing-grid-gap)] flex-1 min-h-0">
-        <div className="flex-[2] min-h-0">{hero}</div>
+      {/* Top row: hero card (2/3) + stacked sidebar (1/3) — takes 60% */}
+      <div className="flex gap-[var(--spacing-grid-gap)] min-h-0" style={{ flex: '3 1 0%' }}>
+        <div className="flex-[2] min-h-0 overflow-hidden">{hero}</div>
         {sidebar.length > 0 && (
           <div className="flex-1 flex flex-col gap-[var(--spacing-grid-gap)] min-h-0">
             {sidebar.map((child, i) => (
-              <div key={i} className="flex-1 min-h-0">
+              <div key={i} className="flex-1 min-h-0 overflow-hidden">
                 {child}
               </div>
             ))}
@@ -44,11 +43,11 @@ export function MagazineLayout({ children }: MagazineLayoutProps) {
         )}
       </div>
 
-      {/* Bottom row: remaining widgets, flex to fill */}
+      {/* Bottom row: remaining widgets — takes 40% */}
       {bottom.length > 0 && (
-        <div className="flex gap-[var(--spacing-grid-gap)] flex-1 min-h-0">
+        <div className="flex gap-[var(--spacing-grid-gap)] min-h-0" style={{ flex: '2 1 0%' }}>
           {bottom.map((child, i) => (
-            <div key={i} className="flex-1 min-h-0">
+            <div key={i} className="flex-1 min-h-0 overflow-hidden">
               {child}
             </div>
           ))}
