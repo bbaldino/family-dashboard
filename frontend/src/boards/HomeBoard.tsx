@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { HeroStrip } from '../ui/HeroStrip'
 import type { HeroEvent } from '../ui/HeroStrip'
@@ -16,6 +16,28 @@ import { TimerBanner } from '@/integrations/timers'
 import { useDrivingTime } from '@/integrations/driving-time'
 import type { EventDriveInfo } from '@/integrations/driving-time/types'
 import { OnThisDayWidget } from '@/integrations/on-this-day/OnThisDayWidget'
+import { GridLayout } from './layouts/GridLayout'
+import { MagazineLayout } from './layouts/MagazineLayout'
+
+type LayoutMode = 'grid' | 'magazine'
+
+function useLayoutMode(): LayoutMode {
+  const [mode, setMode] = useState<LayoutMode>('grid')
+
+  useEffect(() => {
+    fetch('/api/config')
+      .then((r) => r.json())
+      .then((config: Record<string, string>) => {
+        const layout = config['dashboard.layout']
+        if (layout === 'magazine' || layout === 'grid') {
+          setMode(layout)
+        }
+      })
+      .catch(() => {})
+  }, [])
+
+  return mode
+}
 
 function getHeroEvents(
   days: CalendarDay[] | null,
@@ -85,8 +107,24 @@ function HeroStripWithData({ heroEvents }: { heroEvents: HeroEvent[] }) {
   )
 }
 
+function Widgets({ layout }: { layout: LayoutMode }) {
+  const Layout = layout === 'magazine' ? MagazineLayout : GridLayout
+
+  return (
+    <Layout>
+      <SportsWidget />
+      <PackagesWidget />
+      <CountdownsWidget />
+      <ChoresWidget />
+      <LunchMenuWidget />
+      <OnThisDayWidget />
+    </Layout>
+  )
+}
+
 export function HomeBoard() {
   const calendar = useGoogleCalendar()
+  const layoutMode = useLayoutMode()
 
   const allEvents = (calendar.data ?? []).flatMap((d) => d.events)
   const driveInfo = useDrivingTime(allEvents)
@@ -112,18 +150,8 @@ export function HomeBoard() {
           />
         </div>
 
-        {/* Widgets -- 3-col grid, 2 rows, dense fill */}
-        <div className="flex-1 grid grid-cols-3 grid-rows-2 gap-[var(--spacing-grid-gap)] min-h-0" style={{ gridAutoFlow: 'dense' }}>
-          <PackagesWidget />
-          <CountdownsWidget />
-          <SportsWidget />
-          <ChoresWidget />
-          <LunchMenuWidget />
-          <OnThisDayWidget />
-          <WidgetCard title="Grocery List" category="grocery" badge="0 items">
-            <div className="text-text-muted text-sm">Grocery list placeholder</div>
-          </WidgetCard>
-        </div>
+        {/* Widgets area */}
+        <Widgets layout={layoutMode} />
       </div>
     </div>
   )
