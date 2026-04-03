@@ -15,9 +15,13 @@ import { TimerBanner } from '@/integrations/timers'
 import { useDrivingTime } from '@/integrations/driving-time'
 import type { EventDriveInfo } from '@/integrations/driving-time/types'
 import { OnThisDayWidget } from '@/integrations/on-this-day/OnThisDayWidget'
-import { DEFAULT_WIDGET_META } from '@/lib/widget-types'
 import type { WidgetSize } from '@/lib/widget-types'
 import { useSportsWidgetMeta } from '@/integrations/sports/useWidgetMeta'
+import { usePackagesWidgetMeta } from '@/integrations/packages/useWidgetMeta'
+import { useChoresWidgetMeta } from '@/integrations/chores/useWidgetMeta'
+import { useCountdownsWidgetMeta } from '@/integrations/countdowns/useWidgetMeta'
+import { useLunchWidgetMeta } from '@/integrations/nutrislice/useWidgetMeta'
+import { useOnThisDayWidgetMeta } from '@/integrations/on-this-day/useWidgetMeta'
 import { GridLayout } from './layouts/GridLayout'
 import { MagazineLayout } from './layouts/MagazineLayout'
 import type { MagazineWidget } from './layouts/MagazineLayout'
@@ -134,15 +138,20 @@ function useWidgetMaxSizes(): Record<string, WidgetSize | undefined> {
 
 function Widgets({ layout }: { layout: LayoutMode }) {
   const sportsMeta = useSportsWidgetMeta()
+  const packagesMeta = usePackagesWidgetMeta()
+  const choresMeta = useChoresWidgetMeta()
+  const countdownsMeta = useCountdownsWidgetMeta()
+  const lunchMeta = useLunchWidgetMeta()
+  const onThisDayMeta = useOnThisDayWidgetMeta()
   const maxSizes = useWidgetMaxSizes()
 
   const widgets: MagazineWidget[] = [
     { key: 'sports', element: <SportsWidget />, meta: sportsMeta, maxSize: maxSizes['sports'] },
-    { key: 'packages', element: <PackagesWidget />, meta: DEFAULT_WIDGET_META, maxSize: maxSizes['packages'] },
-    { key: 'countdowns', element: <CountdownsWidget />, meta: DEFAULT_WIDGET_META, maxSize: maxSizes['countdowns'] },
-    { key: 'chores', element: <ChoresWidget />, meta: DEFAULT_WIDGET_META, maxSize: maxSizes['chores'] },
-    { key: 'lunch', element: <LunchMenuWidget />, meta: DEFAULT_WIDGET_META, maxSize: maxSizes['lunch'] },
-    { key: 'on-this-day', element: <OnThisDayWidget />, meta: DEFAULT_WIDGET_META, maxSize: maxSizes['on-this-day'] },
+    { key: 'packages', element: <PackagesWidget />, meta: packagesMeta, maxSize: maxSizes['packages'] },
+    { key: 'countdowns', element: <CountdownsWidget />, meta: countdownsMeta, maxSize: maxSizes['countdowns'] },
+    { key: 'chores', element: <ChoresWidget />, meta: choresMeta, maxSize: maxSizes['chores'] },
+    { key: 'lunch', element: <LunchMenuWidget />, meta: lunchMeta, maxSize: maxSizes['lunch'] },
+    { key: 'on-this-day', element: <OnThisDayWidget />, meta: onThisDayMeta, maxSize: maxSizes['on-this-day'] },
   ]
 
   const Layout = layout === 'magazine' ? MagazineLayout : GridLayout
