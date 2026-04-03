@@ -2,6 +2,7 @@ import { LoadingSpinner } from '@/ui/LoadingSpinner'
 import { ErrorDisplay } from '@/ui/ErrorDisplay'
 import { WidgetCard } from '@/ui/WidgetCard'
 import { useLunchMenu, type LunchMenuDay, type MenuEntry } from './useLunchMenu'
+import type { WidgetSize } from '@/lib/widget-types'
 
 function EntryItem({ entry, compact = false }: { entry: MenuEntry; compact?: boolean }) {
   return (
@@ -75,7 +76,11 @@ function MenuDaySection({
   )
 }
 
-export function LunchMenuWidget() {
+interface LunchMenuWidgetProps {
+  size?: WidgetSize
+}
+
+export function LunchMenuWidget({ size = 'standard' }: LunchMenuWidgetProps) {
   const { data, isLoading, error, refetch } = useLunchMenu()
 
   const hasToday = data?.today != null
@@ -94,6 +99,51 @@ export function LunchMenuWidget() {
     return (
       <WidgetCard title="Lunch Menu" category="food">
         <ErrorDisplay message={error} onRetry={refetch} />
+      </WidgetCard>
+    )
+  }
+
+  if (size === 'compact') {
+    const compactDay = data?.today ?? data?.tomorrow
+    const compactLabel = data?.today ? 'Today' : 'Tomorrow'
+    const mainEntries = compactDay?.entries.filter((e) => !e.isAlternative) ?? []
+
+    return (
+      <WidgetCard
+        title="Lunch Menu"
+        category="food"
+        visible={hasMenu}
+        detail={
+          hasToday ? (
+            <div className="flex flex-col gap-[6px]">
+              <MenuDaySection day={data!.today!} label="Today" />
+              {hasTomorrow && (
+                <>
+                  <div className="border-t border-border" />
+                  <MenuDaySection day={data!.tomorrow!} label="Tomorrow" compact />
+                </>
+              )}
+            </div>
+          ) : hasTomorrow ? (
+            <MenuDaySection day={data!.tomorrow!} label="Tomorrow" />
+          ) : undefined
+        }
+      >
+        {compactDay && (
+          <div>
+            <div className="text-[10px] font-bold text-palette-4 uppercase tracking-[0.5px] mb-1">
+              {compactLabel}
+            </div>
+            <div className="flex flex-col gap-0.5">
+              {mainEntries.slice(0, 4).map((entry, i) => (
+                <div key={i} className="flex items-center gap-1 text-xs">
+                  <span className="w-1 h-1 rounded-full bg-palette-4 flex-shrink-0" />
+                  <span className="text-text-primary truncate">{entry.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </WidgetCard>
     )
   }
