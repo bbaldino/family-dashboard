@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::Json;
 use axum::extract::{Query, State};
 use serde::Deserialize;
@@ -6,6 +8,7 @@ use crate::error::AppError;
 use crate::integrations::IntegrationConfig;
 
 use super::cache::EspnCache;
+use super::preview::PreviewCache;
 use super::types::*;
 use super::{INTEGRATION_ID, espn, transform};
 
@@ -14,6 +17,7 @@ pub struct SportsState {
     pub pool: sqlx::SqlitePool,
     pub cache: EspnCache,
     pub client: reqwest::Client,
+    pub preview_cache: Arc<PreviewCache>,
 }
 
 pub async fn get_games(State(state): State<SportsState>) -> Result<Json<GamesResponse>, AppError> {
@@ -180,6 +184,48 @@ pub async fn search_teams(
         .collect();
 
     Ok(Json(TeamsResponse { teams: filtered }))
+}
+
+#[derive(Deserialize)]
+pub struct PreviewQuery {
+    pub game_id: String,
+}
+
+pub async fn get_preview(
+    State(state): State<SportsState>,
+    Query(params): Query<PreviewQuery>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    // Check cache first
+    if let Some(summary) = state.preview_cache.get(&params.game_id) {
+        return Ok(Json(serde_json::json!({ "summary": summary })));
+    }
+
+    // Build game context from cached ESPN data across all leagues
+    let mut game_context = format!("Game ID: {}", params.game_id);
+    for &(league_id, _, _) in LEAGUES {
+        if let Some(data) = state.cache.get_stale(league_id).await {
+            let games = transform::transform_scoreboard(&data, league_id, &[], 24.0);
+            if let Some(game) = games.iter().find(|g| g.id == params.game_id) {
+                game_context = format!(
+                    "Game: {} vs {}\nHome record: {}\nAway record: {}\nLeague: {}\nStart: {}",
+                    game.away.name,
+                    game.home.name,
+                    game.home.record.as_deref().unwrap_or("?"),
+                    game.away.record.as_deref().unwrap_or("?"),
+                    game.league,
+                    game.start_time,
+                );
+                break;
+            }
+        }
+    }
+
+    let summary = super::preview::generate_preview(&state.pool, &game_context).await?;
+
+    // Cache the result
+    state.preview_cache.set(&params.game_id, summary.clone());
+
+    Ok(Json(serde_json::json!({ "summary": summary })))
 }
 
 async fn fetch_cached_teams(

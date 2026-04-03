@@ -1,8 +1,11 @@
 pub mod cache;
 pub mod espn;
+pub mod preview;
 pub mod routes;
 pub mod transform;
 pub mod types;
+
+use std::sync::Arc;
 
 use axum::Router;
 use sqlx::SqlitePool;
@@ -14,11 +17,13 @@ pub fn router(pool: SqlitePool) -> Router {
         pool,
         cache: cache::EspnCache::new(),
         client: reqwest::Client::new(),
+        preview_cache: Arc::new(preview::PreviewCache::new()),
     };
 
     Router::new()
         .route("/games", axum::routing::get(routes::get_games))
         .route("/teams", axum::routing::get(routes::get_teams))
         .route("/teams/search", axum::routing::get(routes::search_teams))
+        .route("/preview", axum::routing::get(routes::get_preview))
         .with_state(state)
 }
