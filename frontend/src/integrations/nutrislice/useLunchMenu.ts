@@ -129,13 +129,28 @@ function parseDayMenu(day: NutriSliceDay | undefined): LunchMenuDay | null {
   }
 }
 
+function nextMonday(from: Date): Date {
+  const d = new Date(from)
+  d.setDate(d.getDate() + ((8 - d.getDay()) % 7 || 7))
+  return d
+}
+
 async function fetchMenu(): Promise<LunchMenuData> {
   const now = new Date()
   const dateStr = formatDate(now)
 
+  // Fetch this week
   const data = await nutrisliceIntegration.api!.get<NutriSliceResponse>(
     `/menu?date=${encodeURIComponent(dateStr)}`,
   )
+
+  // Fetch next week for expanded view
+  const nextWeekDate = nextMonday(now)
+  const nextWeekData = await nutrisliceIntegration.api!.get<NutriSliceResponse>(
+    `/menu?date=${encodeURIComponent(formatDate(nextWeekDate))}`,
+  )
+
+  const allDays = [...(data.days ?? []), ...(nextWeekData.days ?? [])]
 
   const todayStr = toLocalDateStr(now)
   const tomorrow = new Date(now)
@@ -143,9 +158,9 @@ async function fetchMenu(): Promise<LunchMenuData> {
   const tomorrowStr = toLocalDateStr(tomorrow)
 
   const todayData = data.days?.find((d) => d.date === todayStr)
-  const tomorrowData = data.days?.find((d) => d.date === tomorrowStr)
+  const tomorrowData = allDays.find((d) => d.date === tomorrowStr)
 
-  const week: LunchMenuDay[] = (data.days ?? [])
+  const week: LunchMenuDay[] = allDays
     .map((d: NutriSliceDay) => parseDayMenu(d))
     .filter((d: LunchMenuDay | null): d is LunchMenuDay => d != null)
     .filter((d: LunchMenuDay) => {

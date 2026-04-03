@@ -29,7 +29,7 @@ export function useSportsWidgetMeta(): WidgetMeta {
     return { visible: true, preferredSize: 'standard', priority: 3 }
   }
   if (hasFinal) {
-    return { visible: true, preferredSize: 'standard', priority: 2 }
+    return { visible: true, preferredSize: 'expanded', priority: 4 }
   }
 
   return { visible: true, preferredSize: 'standard', priority: 1 }

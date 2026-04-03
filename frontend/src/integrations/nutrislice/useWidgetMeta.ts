@@ -12,9 +12,9 @@ export function useLunchWidgetMeta(): WidgetMeta {
   }
 
   if (hasToday) {
-    return { visible: true, preferredSize: 'expanded', priority: 4 }
+    return { visible: true, preferredSize: 'expanded', priority: 3 }
   }
 
   // Tomorrow only
-  return { visible: true, preferredSize: 'standard', priority: 2 }
+  return { visible: true, preferredSize: 'standard', priority: 1 }
 }
