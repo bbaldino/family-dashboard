@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { RefreshCw } from 'lucide-react'
 import { WidgetCard } from '@/ui/WidgetCard'
+import type { WidgetSize } from '@/lib/widget-types'
 
 interface OnThisDayEvent {
   year: number
@@ -27,7 +28,11 @@ async function fetchOnThisDay(): Promise<OnThisDayEvent[]> {
   return events
 }
 
-export function OnThisDayWidget() {
+interface OnThisDayWidgetProps {
+  size?: WidgetSize
+}
+
+export function OnThisDayWidget({ size = 'standard' }: OnThisDayWidgetProps) {
   const [index, setIndex] = useState(0)
 
   const { data: events, isLoading } = useQuery({
@@ -52,6 +57,34 @@ export function OnThisDayWidget() {
   }
 
   const event = events[index % events.length]
+
+  if (size === 'compact') {
+    return (
+      <WidgetCard
+        title="On This Day"
+        category="info"
+        detail={
+          <div className="flex flex-col gap-2">
+            <div className="text-4xl font-extrabold text-palette-3 leading-none tracking-tight">
+              {event.year}
+            </div>
+            <p className="text-text-primary text-sm leading-relaxed">{event.text}</p>
+            <button
+              onClick={(e) => { e.stopPropagation(); advance() }}
+              className="self-end p-1.5 rounded-full text-text-muted hover:text-text-primary hover:bg-bg-primary transition-colors"
+            >
+              <RefreshCw size={14} />
+            </button>
+          </div>
+        }
+      >
+        <div className="flex flex-col gap-1">
+          <div className="text-xl font-extrabold text-palette-3 leading-none">{event.year}</div>
+          <p className="text-text-primary text-xs leading-snug line-clamp-2">{event.text}</p>
+        </div>
+      </WidgetCard>
+    )
+  }
 
   return (
     <WidgetCard title="On This Day" category="info">
