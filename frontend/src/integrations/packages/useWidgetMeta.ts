@@ -13,10 +13,7 @@ export function usePackagesWidgetMeta(): WidgetMeta {
     return { visible: false }
   }
 
-  const hasDeliveryToday = visible.some((s) => {
-    if (s.status !== 'out_for_delivery') return false
-    return true
-  })
+  const hasDeliveryToday = visible.some((s) => s.status === 'out_for_delivery')
 
   return {
     visible: true,

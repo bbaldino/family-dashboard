@@ -52,6 +52,22 @@ export function PackagesWidget({ size = 'standard' }: PackagesWidgetProps) {
   const shipments = [...active, ...delivered]
   const activeCount = active.length
 
+  if (isLoading && shipments.length === 0) {
+    return (
+      <WidgetCard title="Packages" category="grocery">
+        <LoadingSpinner />
+      </WidgetCard>
+    )
+  }
+
+  if (error && shipments.length === 0) {
+    return (
+      <WidgetCard title="Packages" category="grocery">
+        <div className="text-[13px] text-text-muted">Unable to load packages</div>
+      </WidgetCard>
+    )
+  }
+
   if (size === 'compact') {
     const compactShipments = active.slice(0, 3)
     return (
@@ -90,22 +106,6 @@ export function PackagesWidget({ size = 'standard' }: PackagesWidgetProps) {
             </div>
           ))}
         </div>
-      </WidgetCard>
-    )
-  }
-
-  if (isLoading && shipments.length === 0) {
-    return (
-      <WidgetCard title="Packages" category="grocery">
-        <LoadingSpinner />
-      </WidgetCard>
-    )
-  }
-
-  if (error && shipments.length === 0) {
-    return (
-      <WidgetCard title="Packages" category="grocery">
-        <div className="text-[13px] text-text-muted">Unable to load packages</div>
       </WidgetCard>
     )
   }

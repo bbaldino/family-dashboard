@@ -43,53 +43,65 @@ export function ChoresWidget({ size = 'standard' }: ChoresWidgetProps) {
 
   if (size === 'compact') {
     return (
-      <WidgetCard
-        title="Chores"
-        category="chores"
-        badge={badge}
-        className="h-full"
-        visible={persons.length > 0}
-        detail={
-          <div className="flex flex-col gap-3">
-            {persons.map((pa) => (
-              <PersonSection
-                key={pa.person.id}
-                personAssignments={pa}
-                onComplete={completeAssignment}
-                onUncomplete={uncompleteAssignment}
-                onOpenPicker={(assignmentId, pickFromTags, currentPickId) =>
-                  setPicker({ assignmentId, pickFromTags, currentPickId })
-                }
-              />
-            ))}
+      <>
+        <WidgetCard
+          title="Chores"
+          category="chores"
+          badge={badge}
+          className="h-full"
+          visible={persons.length > 0}
+          detail={
+            <div className="flex flex-col gap-3">
+              {persons.map((pa) => (
+                <PersonSection
+                  key={pa.person.id}
+                  personAssignments={pa}
+                  onComplete={completeAssignment}
+                  onUncomplete={uncompleteAssignment}
+                  onOpenPicker={(assignmentId, pickFromTags, currentPickId) =>
+                    setPicker({ assignmentId, pickFromTags, currentPickId })
+                  }
+                />
+              ))}
+            </div>
+          }
+        >
+          <div className="flex flex-col gap-1">
+            {persons.map((pa) => {
+              const done = pa.assignments.filter((a) => a.completed).length
+              const total = pa.assignments.length
+              return (
+                <div key={pa.person.id} className="flex items-center gap-2 text-xs">
+                  {pa.person.avatar ? (
+                    <img src={pa.person.avatar} alt="" className="w-4 h-4 rounded-full object-cover" />
+                  ) : (
+                    <div
+                      className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
+                      style={{ background: pa.person.color }}
+                    >
+                      {pa.person.name[0].toUpperCase()}
+                    </div>
+                  )}
+                  <span className="text-text-primary">{pa.person.name}:</span>
+                  <span className={done === total ? 'text-success' : 'text-text-secondary'}>
+                    {done}/{total} done
+                  </span>
+                </div>
+              )
+            })}
           </div>
-        }
-      >
-        <div className="flex flex-col gap-1">
-          {persons.map((pa) => {
-            const done = pa.assignments.filter((a) => a.completed).length
-            const total = pa.assignments.length
-            return (
-              <div key={pa.person.id} className="flex items-center gap-2 text-xs">
-                {pa.person.avatar ? (
-                  <img src={pa.person.avatar} alt="" className="w-4 h-4 rounded-full object-cover" />
-                ) : (
-                  <div
-                    className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
-                    style={{ background: pa.person.color }}
-                  >
-                    {pa.person.name[0].toUpperCase()}
-                  </div>
-                )}
-                <span className="text-text-primary">{pa.person.name}:</span>
-                <span className={done === total ? 'text-success' : 'text-text-secondary'}>
-                  {done}/{total} done
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      </WidgetCard>
+        </WidgetCard>
+        {picker && (
+          <MetaChorePicker
+            assignmentId={picker.assignmentId}
+            pickFromTags={picker.pickFromTags}
+            currentPickId={picker.currentPickId}
+            onPick={pickChore}
+            onClear={clearPick}
+            onClose={() => setPicker(null)}
+          />
+        )}
+      </>
     )
   }
 

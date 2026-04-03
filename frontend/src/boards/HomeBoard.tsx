@@ -145,7 +145,7 @@ function Widgets({ layout }: { layout: LayoutMode }) {
   const onThisDayMeta = useOnThisDayWidgetMeta()
   const maxSizes = useWidgetMaxSizes()
 
-  const widgets: MagazineWidget[] = [
+  const allWidgets: MagazineWidget[] = [
     { key: 'sports', element: <SportsWidget />, meta: sportsMeta, maxSize: maxSizes['sports'] },
     { key: 'packages', element: <PackagesWidget />, meta: packagesMeta, maxSize: maxSizes['packages'] },
     { key: 'countdowns', element: <CountdownsWidget />, meta: countdownsMeta, maxSize: maxSizes['countdowns'] },
@@ -153,6 +153,8 @@ function Widgets({ layout }: { layout: LayoutMode }) {
     { key: 'lunch', element: <LunchMenuWidget />, meta: lunchMeta, maxSize: maxSizes['lunch'] },
     { key: 'on-this-day', element: <OnThisDayWidget />, meta: onThisDayMeta, maxSize: maxSizes['on-this-day'] },
   ]
+
+  const widgets = allWidgets.filter((w) => w.meta.visible)
 
   const Layout = layout === 'magazine' ? MagazineLayout : GridLayout
 
