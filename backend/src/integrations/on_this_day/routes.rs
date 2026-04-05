@@ -175,18 +175,33 @@ pub async fn get_events(
         .await?;
 
     // Filter events through Ollama for family-friendliness
+    // If Ollama is unreachable, include all events unfiltered
     let mut events = Vec::new();
-    for ev in selected {
+    let mut ollama_available = true;
+    for ev in &selected {
         match is_family_friendly(&state.client, &ollama_url, &ev.text).await {
             Ok(true) => events.push(OnThisDayEvent {
                 year: ev.year,
-                text: ev.text,
+                text: ev.text.clone(),
             }),
             Ok(false) => {}
             Err(e) => {
-                tracing::warn!("Ollama filter failed for event, skipping: {}", e);
+                tracing::warn!("Ollama filter unavailable, including all events: {}", e);
+                ollama_available = false;
+                break;
             }
         }
+    }
+
+    // Fallback: if Ollama is down, include all events unfiltered
+    if !ollama_available {
+        events = selected
+            .iter()
+            .map(|ev| OnThisDayEvent {
+                year: ev.year,
+                text: ev.text.clone(),
+            })
+            .collect();
     }
 
     // Add holidays as events (no filtering needed)
@@ -204,7 +219,10 @@ pub async fn get_events(
         births: picked_births,
     };
 
-    state.cache.set(cache_key, response.clone()).await;
+    // Only cache if we have content
+    if !response.events.is_empty() || !response.births.is_empty() {
+        state.cache.set(cache_key, response.clone()).await;
+    }
 
     Ok(Json(response))
 }
