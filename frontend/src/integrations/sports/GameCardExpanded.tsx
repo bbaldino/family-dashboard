@@ -1,4 +1,4 @@
-import type { Game, Leader, GameAthlete } from './types'
+import type { Game, Leader } from './types'
 import { AiPreview } from './AiPreview'
 
 interface GameCardExpandedProps {

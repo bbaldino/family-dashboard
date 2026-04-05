@@ -30,7 +30,7 @@ function formatDeliveredAgo(updatedAt: string): string {
 
 interface ShipmentRowProps {
   shipment: Shipment
-  onClick: () => void
+  onClick?: () => void
 }
 
 export function ShipmentRow({ shipment, onClick }: ShipmentRowProps) {

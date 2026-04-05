@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/ui/Button'
-import type { WidgetSize } from '@/lib/widget-types'
 
 const LAYOUTS = [
   { value: 'grid', label: 'Grid', description: 'Uniform 3-column grid — clean and predictable' },

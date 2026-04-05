@@ -87,7 +87,7 @@ function resolveLayout(widgets: MagazineWidget[]): LayoutConfig {
 }
 
 function renderWithSize(widget: ResolvedWidget): ReactElement {
-  return cloneElement(widget.element, { size: widget.size, key: widget.key })
+  return cloneElement(widget.element, { size: widget.size, key: widget.key } as Record<string, unknown>)
 }
 
 export function MagazineLayout({ widgets }: MagazineLayoutProps) {

@@ -12,7 +12,7 @@ export function GridLayout({ widgets }: GridLayoutProps) {
       style={{ gridAutoFlow: 'dense' }}
     >
       {widgets.map((w) =>
-        cloneElement(w.element, { size: 'standard' as const, key: w.key }),
+        cloneElement(w.element, { size: 'standard' as const, key: w.key } as Record<string, unknown>),
       )}
     </div>
   )
