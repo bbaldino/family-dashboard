@@ -9,7 +9,7 @@ interface OnThisDayWidgetProps {
   size?: WidgetSize
 }
 
-const CYCLE_INTERVAL_MS = 30_000
+const CYCLE_INTERVAL_MS = 30 * 60 * 1000
 
 function BirthsFooter({ births }: { births: OnThisDayBirth[] }) {
   if (births.length === 0) return null
