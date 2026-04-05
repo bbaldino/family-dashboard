@@ -48,6 +48,25 @@ pub enum GameState {
     Postponed,
 }
 
+/// Sport-specific live game situation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "camelCase")]
+pub enum GameSituation {
+    Mlb {
+        outs: u8,
+        on_first: bool,
+        on_second: bool,
+        on_third: bool,
+        balls: Option<u8>,
+        strikes: Option<u8>,
+        batter: Option<String>,
+        pitcher: Option<String>,
+    },
+    Nba {},
+    Nhl {},
+    Nfl {},
+}
+
 /// A single game in our API response
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -67,7 +86,9 @@ pub struct Game {
     pub period_label: Option<String>,
     pub leaders: Vec<Leader>,
     pub all_leaders: Vec<Leader>,
-    pub situation: Option<String>,
+    pub situation: Option<GameSituation>,
+    pub last_play: Option<String>,
+    pub headline: Option<String>,
     pub linescores: Vec<LinescoreEntry>,
     pub athletes: Vec<GameAthlete>,
     pub espn_url: Option<String>,
