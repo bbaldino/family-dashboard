@@ -9,9 +9,14 @@ use sqlx::SqlitePool;
 pub const INTEGRATION_ID: &str = "on_this_day";
 
 pub fn router(pool: SqlitePool) -> Router {
+    let client = reqwest::Client::builder()
+        .user_agent("DashboardApp/1.0 (family kitchen dashboard)")
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new());
+
     let state = routes::OnThisDayState {
         pool,
-        client: reqwest::Client::new(),
+        client,
         cache: Arc::new(routes::OnThisDayCache::new()),
     };
 
