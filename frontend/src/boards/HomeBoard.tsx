@@ -30,9 +30,13 @@ import { useChoresWidgetMeta } from '@/integrations/chores/useWidgetMeta'
 import { useCountdownsWidgetMeta } from '@/integrations/countdowns/useWidgetMeta'
 import { useLunchWidgetMeta } from '@/integrations/nutrislice/useWidgetMeta'
 import { useOnThisDayWidgetMeta } from '@/integrations/on-this-day/useWidgetMeta'
+import { MetaFillerWidget } from '@/ui/MetaFillerWidget'
 import { GridLayout } from './layouts/GridLayout'
 import { MagazineLayout } from './layouts/MagazineLayout'
 import type { MagazineWidget } from './layouts/MagazineLayout'
+
+const MAX_WIDGET_SLOTS = 6
+const FILLER_PRIORITY = 0
 
 type LayoutMode = 'grid' | 'magazine'
 
@@ -157,12 +161,15 @@ function Widgets({ layout }: { layout: LayoutMode }) {
   const jokeMeta = useJokeWidgetMeta()
   const maxSizes = useWidgetMaxSizes()
 
-  const allWidgets: MagazineWidget[] = [
+  const contentWidgets: MagazineWidget[] = [
     { key: 'sports', element: <SportsWidget />, meta: sportsMeta, maxSize: maxSizes['sports'] },
     { key: 'packages', element: <PackagesWidget />, meta: packagesMeta, maxSize: maxSizes['packages'] },
     { key: 'countdowns', element: <CountdownsWidget />, meta: countdownsMeta, maxSize: maxSizes['countdowns'] },
     { key: 'chores', element: <ChoresWidget />, meta: choresMeta, maxSize: maxSizes['chores'] },
     { key: 'lunch', element: <LunchMenuWidget />, meta: lunchMeta, maxSize: maxSizes['lunch'] },
+  ]
+
+  const fillerWidgets: MagazineWidget[] = [
     { key: 'on-this-day', element: <OnThisDayWidget />, meta: onThisDayMeta, maxSize: maxSizes['on-this-day'] },
     { key: 'word-of-the-day', element: <WordOfTheDayWidget />, meta: wordMeta, maxSize: maxSizes['word-of-the-day'] },
     { key: 'daily-quote', element: <DailyQuoteWidget />, meta: quoteMeta, maxSize: maxSizes['daily-quote'] },
@@ -170,7 +177,44 @@ function Widgets({ layout }: { layout: LayoutMode }) {
     { key: 'jokes', element: <JokeWidget />, meta: jokeMeta, maxSize: maxSizes['jokes'] },
   ]
 
-  const widgets = allWidgets.filter((w) => w.meta.visible)
+  const visibleContent = contentWidgets.filter((w) => w.meta.visible)
+  const visibleFillers = fillerWidgets.filter((w) => w.meta.visible)
+
+  const fillerSlots = Math.max(0, MAX_WIDGET_SLOTS - visibleContent.length)
+
+  let widgets: MagazineWidget[]
+  if (fillerSlots === 0) {
+    // No room for fillers
+    widgets = visibleContent
+  } else if (fillerSlots >= visibleFillers.length) {
+    // Enough room for all fillers individually
+    widgets = [...visibleContent, ...visibleFillers]
+  } else if (fillerSlots === 1) {
+    // Only one slot — meta widget cycles through all fillers
+    const metaElement = (
+      <MetaFillerWidget
+        fillers={visibleFillers.map((f) => ({ key: f.key, element: f.element }))}
+      />
+    )
+    widgets = [
+      ...visibleContent,
+      { key: 'meta-filler', element: metaElement, meta: { visible: true, preferredSize: 'standard', priority: FILLER_PRIORITY } },
+    ]
+  } else {
+    // N slots, N < fillers: put N-1 individual + 1 meta for the rest
+    const individual = visibleFillers.slice(0, fillerSlots - 1)
+    const overflow = visibleFillers.slice(fillerSlots - 1)
+    const metaElement = (
+      <MetaFillerWidget
+        fillers={overflow.map((f) => ({ key: f.key, element: f.element }))}
+      />
+    )
+    widgets = [
+      ...visibleContent,
+      ...individual,
+      { key: 'meta-filler', element: metaElement, meta: { visible: true, preferredSize: 'standard', priority: FILLER_PRIORITY } },
+    ]
+  }
 
   const Layout = layout === 'magazine' ? MagazineLayout : GridLayout
 
