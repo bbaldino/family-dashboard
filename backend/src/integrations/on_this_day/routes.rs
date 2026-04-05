@@ -90,6 +90,7 @@ async fn is_family_friendly(
     client: &reqwest::Client,
     ollama_url: &str,
     ollama_token: Option<&str>,
+    model: &str,
     text: &str,
 ) -> Result<bool, AppError> {
     let prompt = format!(
@@ -102,7 +103,7 @@ async fn is_family_friendly(
     let mut req = client
         .post(format!("{}/api/generate", ollama_url.trim_end_matches('/')))
         .json(&serde_json::json!({
-            "model": "llama3.2",
+            "model": model,
             "prompt": prompt,
             "stream": false,
         }));
@@ -181,6 +182,11 @@ pub async fn get_events(
         .await?;
     let ollama_token = ollama_config.get("token").await.ok();
 
+    let integration_config = IntegrationConfig::new(&state.pool, "on_this_day");
+    let model = integration_config
+        .get_or("ollama_model", "llama3.2:3b")
+        .await?;
+
     // Filter events through Ollama for family-friendliness
     // If Ollama is unreachable, include all events unfiltered
     let mut events = Vec::new();
@@ -190,6 +196,7 @@ pub async fn get_events(
             &state.client,
             &ollama_url,
             ollama_token.as_deref(),
+            &model,
             &ev.text,
         )
         .await

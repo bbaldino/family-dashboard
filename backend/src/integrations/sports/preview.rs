@@ -51,6 +51,9 @@ pub async fn generate_preview(pool: &SqlitePool, game_context: &str) -> Result<S
         .await?;
     let ollama_token = ollama_config.get("token").await.ok();
 
+    let sports_config = IntegrationConfig::new(pool, "sports");
+    let model = sports_config.get_or("ollama_model", "llama3.1:8b").await?;
+
     let prompt = format!(
         "You are a friendly sports analyst for a family kitchen dashboard. \
          Given the following game information, write a 2-3 sentence preview \
@@ -64,7 +67,7 @@ pub async fn generate_preview(pool: &SqlitePool, game_context: &str) -> Result<S
     let mut req = client
         .post(format!("{}/api/generate", ollama_url.trim_end_matches('/')))
         .json(&serde_json::json!({
-            "model": "llama3.2",
+            "model": model,
             "prompt": prompt,
             "stream": false,
         }));
