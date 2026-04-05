@@ -103,8 +103,26 @@ fn parse_game(
     let leaders = parse_leaders(competition, league_id, 2);
     let all_leaders = parse_leaders(competition, league_id, 20);
 
-    let situation = if league_id == "mlb" && state == GameState::Live {
-        parse_mlb_situation(&competition["situation"])
+    let situation = if state == GameState::Live {
+        match league_id {
+            "mlb" => parse_mlb_situation(&competition["situation"]),
+            "nba" => Some(GameSituation::Nba {}),
+            "nhl" => Some(GameSituation::Nhl {}),
+            "nfl" => Some(GameSituation::Nfl {}),
+            _ => None,
+        }
+    } else {
+        None
+    };
+
+    let last_play = if state == GameState::Live {
+        parse_last_play(competition)
+    } else {
+        None
+    };
+
+    let headline = if state == GameState::Final {
+        parse_headline(competition)
     } else {
         None
     };
@@ -146,6 +164,8 @@ fn parse_game(
         leaders,
         all_leaders,
         situation,
+        last_play,
+        headline,
         linescores,
         athletes,
         espn_url,
@@ -327,41 +347,38 @@ fn parse_athletes(competition: &serde_json::Value) -> Vec<GameAthlete> {
     result
 }
 
-fn parse_mlb_situation(situation: &serde_json::Value) -> Option<String> {
+fn parse_mlb_situation(situation: &serde_json::Value) -> Option<GameSituation> {
     if situation.is_null() {
         return None;
     }
-    let outs = situation["outs"].as_i64().unwrap_or(0);
-    let on_first = situation["onFirst"].as_bool().unwrap_or(false);
-    let on_second = situation["onSecond"].as_bool().unwrap_or(false);
-    let on_third = situation["onThird"].as_bool().unwrap_or(false);
+    Some(GameSituation::Mlb {
+        outs: situation["outs"].as_u64().unwrap_or(0) as u8,
+        on_first: situation["onFirst"].as_bool().unwrap_or(false),
+        on_second: situation["onSecond"].as_bool().unwrap_or(false),
+        on_third: situation["onThird"].as_bool().unwrap_or(false),
+        balls: situation["balls"].as_u64().map(|v| v as u8),
+        strikes: situation["strikes"].as_u64().map(|v| v as u8),
+        batter: situation["batter"]["athlete"]["displayName"]
+            .as_str()
+            .map(|s| s.to_string()),
+        pitcher: situation["pitcher"]["athlete"]["displayName"]
+            .as_str()
+            .map(|s| s.to_string()),
+    })
+}
 
-    let mut runners = Vec::new();
-    if on_first {
-        runners.push("1st");
-    }
-    if on_second {
-        runners.push("2nd");
-    }
-    if on_third {
-        runners.push("3rd");
-    }
+fn parse_last_play(competition: &serde_json::Value) -> Option<String> {
+    competition["situation"]["lastPlay"]["text"]
+        .as_str()
+        .map(|s| s.to_string())
+}
 
-    let outs_str = if outs == 1 {
-        "1 out".to_string()
-    } else {
-        format!("{} outs", outs)
-    };
-    if runners.is_empty() {
-        Some(outs_str)
-    } else {
-        Some(format!(
-            "{} · Runner{} on {}",
-            outs_str,
-            if runners.len() > 1 { "s" } else { "" },
-            runners.join(", ")
-        ))
-    }
+fn parse_headline(competition: &serde_json::Value) -> Option<String> {
+    competition["headlines"]
+        .as_array()
+        .and_then(|h| h.first())
+        .and_then(|h| h["description"].as_str())
+        .map(|s| s.to_string())
 }
 
 pub fn transform_teams(raw: &serde_json::Value, league_id: &str) -> Vec<TeamInfo> {
