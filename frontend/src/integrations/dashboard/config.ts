@@ -6,11 +6,7 @@ export const dashboardIntegration = defineIntegration({
   id: 'dashboard',
   name: 'Dashboard',
   hasBackend: false,
-  schema: z.object({
-    layout: z.string().optional(),
-  }),
-  fields: {
-    layout: { label: 'Layout' },
-  },
+  schema: z.object({}),
+  fields: {},
   settingsComponent: DashboardSettings,
 })
