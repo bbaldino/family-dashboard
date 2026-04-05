@@ -119,6 +119,9 @@ async fn is_family_friendly(
     model: &str,
     text: &str,
 ) -> Result<bool, AppError> {
+    let url = format!("{}/api/generate", ollama_url.trim_end_matches('/'));
+    tracing::debug!("Ollama filter request: url={}, model={}", url, model);
+
     let prompt = format!(
         "Is this historical event appropriate for a family kitchen dashboard seen by young \
          children? Only say yes if the content is free of violence, crime, disasters, and death. \
@@ -126,13 +129,11 @@ async fn is_family_friendly(
         text
     );
 
-    let mut req = client
-        .post(format!("{}/api/generate", ollama_url.trim_end_matches('/')))
-        .json(&serde_json::json!({
-            "model": model,
-            "prompt": prompt,
-            "stream": false,
-        }));
+    let mut req = client.post(&url).json(&serde_json::json!({
+        "model": model,
+        "prompt": prompt,
+        "stream": false,
+    }));
 
     if let Some(token) = ollama_token {
         req = req.bearer_auth(token);
@@ -141,10 +142,15 @@ async fn is_family_friendly(
     let resp = req
         .send()
         .await
-        .map_err(|e| AppError::Internal(format!("Ollama request failed: {}", e)))?;
+        .map_err(|e| AppError::Internal(format!("Ollama request to {} failed: {}", url, e)))?;
 
     if !resp.status().is_success() {
-        return Err(AppError::Internal("Ollama returned error".to_string()));
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        return Err(AppError::Internal(format!(
+            "Ollama returned {} for model '{}': {}",
+            status, model, body
+        )));
     }
 
     let data: serde_json::Value = resp
@@ -158,7 +164,15 @@ async fn is_family_friendly(
         .trim()
         .to_lowercase();
 
-    Ok(answer.starts_with("yes"))
+    let is_ok = answer.starts_with("yes");
+    tracing::info!(
+        "Ollama filter: '{}' → {} (answer: '{}')",
+        &text[..text.len().min(60)],
+        if is_ok { "PASS" } else { "FILTERED" },
+        answer
+    );
+
+    Ok(is_ok)
 }
 
 fn pick_births(births: Vec<WikiBirth>) -> Vec<OnThisDayBirth> {
@@ -213,6 +227,13 @@ pub async fn get_events(
         .get_or("ollama_model", "llama3.2:3b")
         .await?;
 
+    tracing::info!(
+        "On This Day: filtering {} events via Ollama at {} with model '{}'",
+        selected.len(),
+        ollama_url,
+        model
+    );
+
     // Filter events through Ollama for family-friendliness
     // If Ollama is unreachable, include all events unfiltered
     let mut events = Vec::new();
@@ -240,8 +261,20 @@ pub async fn get_events(
         }
     }
 
+    if ollama_available {
+        tracing::info!(
+            "Ollama filtering complete: {}/{} events passed",
+            events.len(),
+            selected.len()
+        );
+    }
+
     // Fallback: if Ollama is down, include all events unfiltered
     if !ollama_available {
+        tracing::warn!(
+            "Ollama unavailable, returning all {} events unfiltered",
+            selected.len()
+        );
         events = selected
             .iter()
             .map(|ev| OnThisDayEvent {
