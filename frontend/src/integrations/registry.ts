@@ -19,6 +19,7 @@ import { onThisDayIntegration } from './on-this-day/config'
 import { wordOfTheDayIntegration } from './word-of-the-day/config'
 import { dailyQuoteIntegration } from './daily-quote/config'
 import { triviaIntegration } from './trivia/config'
+import { jokesIntegration } from './jokes/config'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const integrations: Integration<any>[] = [
@@ -42,4 +43,5 @@ export const integrations: Integration<any>[] = [
   wordOfTheDayIntegration,
   dailyQuoteIntegration,
   triviaIntegration,
+  jokesIntegration,
 ]

@@ -21,6 +21,8 @@ import { DailyQuoteWidget } from '@/integrations/daily-quote/DailyQuoteWidget'
 import { useDailyQuoteWidgetMeta } from '@/integrations/daily-quote/useWidgetMeta'
 import { TriviaWidget } from '@/integrations/trivia/TriviaWidget'
 import { useTriviaWidgetMeta } from '@/integrations/trivia/useWidgetMeta'
+import { JokeWidget } from '@/integrations/jokes/JokeWidget'
+import { useJokeWidgetMeta } from '@/integrations/jokes/useWidgetMeta'
 import type { WidgetSize } from '@/lib/widget-types'
 import { useSportsWidgetMeta } from '@/integrations/sports/useWidgetMeta'
 import { usePackagesWidgetMeta } from '@/integrations/packages/useWidgetMeta'
@@ -152,6 +154,7 @@ function Widgets({ layout }: { layout: LayoutMode }) {
   const wordMeta = useWordOfTheDayWidgetMeta()
   const quoteMeta = useDailyQuoteWidgetMeta()
   const triviaMeta = useTriviaWidgetMeta()
+  const jokeMeta = useJokeWidgetMeta()
   const maxSizes = useWidgetMaxSizes()
 
   const allWidgets: MagazineWidget[] = [
@@ -164,6 +167,7 @@ function Widgets({ layout }: { layout: LayoutMode }) {
     { key: 'word-of-the-day', element: <WordOfTheDayWidget />, meta: wordMeta, maxSize: maxSizes['word-of-the-day'] },
     { key: 'daily-quote', element: <DailyQuoteWidget />, meta: quoteMeta, maxSize: maxSizes['daily-quote'] },
     { key: 'trivia', element: <TriviaWidget />, meta: triviaMeta, maxSize: maxSizes['trivia'] },
+    { key: 'jokes', element: <JokeWidget />, meta: jokeMeta, maxSize: maxSizes['jokes'] },
   ]
 
   const widgets = allWidgets.filter((w) => w.meta.visible)
