@@ -36,13 +36,13 @@ import { placeWidgets, computeSpan } from './layouts/gridEngine'
 import { useCalendarWidgetMeta } from '@/integrations/google-calendar/useWidgetMeta'
 
 function useGridConfig(): { columns: number; rows: number } {
-  const [config, setConfig] = useState({ columns: 6, rows: 4 })
+  const [config, setConfig] = useState({ columns: 8, rows: 4 })
 
   useEffect(() => {
     fetch('/api/config')
       .then((r) => r.json())
       .then((data: Record<string, string>) => {
-        const cols = parseInt(data['dashboard.columns'] ?? '6', 10) || 6
+        const cols = parseInt(data['dashboard.columns'] ?? '8', 10) || 8
         const rows = parseInt(data['dashboard.rows'] ?? '4', 10) || 4
         setConfig({ columns: cols, rows: rows })
       })

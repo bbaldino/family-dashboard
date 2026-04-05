@@ -51,11 +51,8 @@ export function computeSpan(pref: WidgetSizePreference, grid: GridConfig): Span 
   const rs = rowSpans[pref.relativeSize]
 
   switch (pref.orientation) {
-    case 'square': {
-      // Use the larger of the two to ensure square widgets get enough space
-      const sq = Math.max(cs, rs)
-      return { colSpan: sq, rowSpan: sq }
-    }
+    case 'square':
+      return { colSpan: cs, rowSpan: rs }
     case 'vertical': {
       const vCols = pref.relativeSize === 'large' ? Math.max(1, Math.round(grid.columns / 4)) : 1
       return {
