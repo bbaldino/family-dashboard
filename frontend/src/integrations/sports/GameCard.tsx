@@ -146,8 +146,16 @@ export function GameCard({ game, onClick }: { game: Game; onClick?: () => void }
               {leader.stats}
             </div>
           ))}
-          {isLive && game.situation && (
-            <div className="text-[11px] text-text-muted mt-[2px]">{game.situation}</div>
+          {isLive && game.situation?.type === 'mlb' && (
+            <div className="text-[11px] text-text-muted mt-[2px]">
+              {game.situation.outs} {game.situation.outs === 1 ? 'out' : 'outs'}
+              {(game.situation.onFirst || game.situation.onSecond || game.situation.onThird) && ' · '}
+              {[
+                game.situation.onFirst && '1st',
+                game.situation.onSecond && '2nd',
+                game.situation.onThird && '3rd',
+              ].filter(Boolean).join(', ')}
+            </div>
           )}
         </div>
       )}

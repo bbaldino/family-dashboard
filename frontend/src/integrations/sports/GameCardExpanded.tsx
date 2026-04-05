@@ -1,48 +1,15 @@
 import type { Game, Leader } from './types'
 import { AiPreview } from './AiPreview'
+import { MlbSituation } from './MlbSituation'
+import { MlbLinescore } from './MlbLinescore'
+import { NbaLinescore } from './NbaLinescore'
+import { LastPlayBar } from './LastPlayBar'
+import { GameHeadline } from './GameHeadline'
 
 interface GameCardExpandedProps {
   game: Game
   allGames: Game[]
   onClick?: () => void
-}
-
-function Linescore({ game }: { game: Game }) {
-  if (game.linescores.length === 0) return null
-
-  return (
-    <div className="overflow-x-auto mt-3">
-      <table className="w-full text-xs text-text-secondary">
-        <thead>
-          <tr className="border-b border-border">
-            <th className="text-left py-1 pr-3 font-medium">Team</th>
-            {game.linescores.map((_, i) => (
-              <th key={i} className="px-1.5 py-1 font-medium text-center">
-                {i + 1}
-              </th>
-            ))}
-            <th className="pl-2 py-1 font-bold text-center">T</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td className="py-1 pr-3 font-medium text-text-primary">{game.away.abbreviation}</td>
-            {game.linescores.map((ls, i) => (
-              <td key={i} className="px-1.5 py-1 text-center">{ls.awayScore}</td>
-            ))}
-            <td className="pl-2 py-1 font-bold text-center text-text-primary">{game.away.score}</td>
-          </tr>
-          <tr>
-            <td className="py-1 pr-3 font-medium text-text-primary">{game.home.abbreviation}</td>
-            {game.linescores.map((ls, i) => (
-              <td key={i} className="px-1.5 py-1 text-center">{ls.homeScore}</td>
-            ))}
-            <td className="pl-2 py-1 font-bold text-center text-text-primary">{game.home.score}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  )
 }
 
 function LeadersList({ leaders }: { leaders: Leader[] }) {
@@ -87,6 +54,14 @@ function UpcomingSchedule({ games, currentGameId }: { games: Game[]; currentGame
       </div>
     </div>
   )
+}
+
+function SportLinescore({ game }: { game: Game }) {
+  if (game.league === 'mlb') return <MlbLinescore game={game} />
+  if (game.league === 'nba') return <NbaLinescore game={game} />
+  // Generic fallback for NHL/NFL — reuse NBA's quarter-style table
+  if (game.linescores.length === 0) return null
+  return <NbaLinescore game={game} />
 }
 
 export function GameCardExpanded({ game, allGames, onClick }: GameCardExpandedProps) {
@@ -136,22 +111,30 @@ export function GameCardExpanded({ game, allGames, onClick }: GameCardExpandedPr
         </div>
       </div>
 
-      {/* Situation (MLB live) */}
-      {isLive && game.situation && (
-        <div className="text-xs text-text-secondary mt-1 text-center">{game.situation}</div>
+      {/* Live: sport-specific situation */}
+      {isLive && game.situation?.type === 'mlb' && (
+        <MlbSituation situation={game.situation} />
       )}
 
-      {/* Linescore (live + final) */}
-      {(isLive || isFinal) && <Linescore game={game} />}
+      {/* Live: last play */}
+      {isLive && game.lastPlay && (
+        <LastPlayBar text={game.lastPlay} />
+      )}
 
-      {/* Leaders (live + final) */}
+      {/* Live + Final: sport-specific linescore */}
+      {(isLive || isFinal) && <SportLinescore game={game} />}
+
+      {/* Live + Final: leaders */}
       {(isLive || isFinal) && <LeadersList leaders={game.allLeaders ?? game.leaders} />}
 
-      {/* Athletes (upcoming: probable pitchers, final: featured) */}
-      {game.athletes.length > 0 && (
+      {/* Final: ESPN recap headline */}
+      {isFinal && game.headline && <GameHeadline text={game.headline} />}
+
+      {/* Upcoming: athletes (probable pitchers, etc) */}
+      {isUpcoming && game.athletes.length > 0 && (
         <div className="mt-3">
           <div className="text-xs font-medium text-text-secondary mb-1">
-            {isUpcoming ? 'Probable Pitchers' : 'Notable'}
+            {game.league === 'mlb' ? 'Probable Pitchers' : 'Notable'}
           </div>
           <div className="space-y-0.5">
             {game.athletes.map((a, i) => (
@@ -164,9 +147,15 @@ export function GameCardExpanded({ game, allGames, onClick }: GameCardExpandedPr
         </div>
       )}
 
-      {/* Upcoming schedule (when this game is upcoming or there's room) */}
-      {isUpcoming && <UpcomingSchedule games={allGames} currentGameId={game.id} />}
+      {/* Upcoming: broadcast info */}
+      {isUpcoming && game.broadcast && (
+        <div className="mt-2 text-xs text-text-muted">
+          {game.broadcast}
+        </div>
+      )}
 
+      {/* Upcoming: schedule + AI preview */}
+      {isUpcoming && <UpcomingSchedule games={allGames} currentGameId={game.id} />}
       {isUpcoming && <AiPreview gameId={game.id} />}
     </div>
   )

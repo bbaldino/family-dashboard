@@ -1,5 +1,6 @@
 import { Modal } from '@/ui/Modal'
 import type { Game } from './types'
+import { MlbSituation } from './MlbSituation'
 
 function formatGameTime(startTime: string): string {
   const d = new Date(startTime)
@@ -90,10 +91,8 @@ export function GameDetailModal({ game, onClose }: { game: Game | null; onClose:
         )}
 
         {/* Situation (MLB live) */}
-        {isLive && game.situation && (
-          <div className="text-[12px] text-text-secondary bg-error/5 rounded-lg px-3 py-2">
-            {game.situation}
-          </div>
+        {isLive && game.situation?.type === 'mlb' && (
+          <MlbSituation situation={game.situation} />
         )}
 
         {/* Leaders */}
