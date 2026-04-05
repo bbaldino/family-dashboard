@@ -85,7 +85,7 @@ async function fetchCalendarEvents(): Promise<CalendarDay[]> {
     events.sort((a, b) => {
       const aTime = a.start.dateTime ?? a.start.date ?? ''
       const bTime = b.start.dateTime ?? b.start.date ?? ''
-      return aTime.localeCompare(bTime)
+      return new Date(aTime).getTime() - new Date(bTime).getTime()
     })
     days.push({
       date,
