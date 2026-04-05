@@ -16,6 +16,9 @@ import { musicIntegration } from './music/config'
 import { dashboardIntegration } from './dashboard/config'
 import { ollamaIntegration } from './ollama/config'
 import { onThisDayIntegration } from './on-this-day/config'
+import { wordOfTheDayIntegration } from './word-of-the-day/config'
+import { dailyQuoteIntegration } from './daily-quote/config'
+import { triviaIntegration } from './trivia/config'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const integrations: Integration<any>[] = [
@@ -36,4 +39,7 @@ export const integrations: Integration<any>[] = [
   dashboardIntegration,
   ollamaIntegration,
   onThisDayIntegration,
+  wordOfTheDayIntegration,
+  dailyQuoteIntegration,
+  triviaIntegration,
 ]

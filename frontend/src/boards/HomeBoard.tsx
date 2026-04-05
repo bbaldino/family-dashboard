@@ -15,6 +15,12 @@ import { TimerBanner } from '@/integrations/timers'
 import { useDrivingTime } from '@/integrations/driving-time'
 import type { EventDriveInfo } from '@/integrations/driving-time/types'
 import { OnThisDayWidget } from '@/integrations/on-this-day/OnThisDayWidget'
+import { WordOfTheDayWidget } from '@/integrations/word-of-the-day/WordOfTheDayWidget'
+import { useWordOfTheDayWidgetMeta } from '@/integrations/word-of-the-day/useWidgetMeta'
+import { DailyQuoteWidget } from '@/integrations/daily-quote/DailyQuoteWidget'
+import { useDailyQuoteWidgetMeta } from '@/integrations/daily-quote/useWidgetMeta'
+import { TriviaWidget } from '@/integrations/trivia/TriviaWidget'
+import { useTriviaWidgetMeta } from '@/integrations/trivia/useWidgetMeta'
 import type { WidgetSize } from '@/lib/widget-types'
 import { useSportsWidgetMeta } from '@/integrations/sports/useWidgetMeta'
 import { usePackagesWidgetMeta } from '@/integrations/packages/useWidgetMeta'
@@ -143,6 +149,9 @@ function Widgets({ layout }: { layout: LayoutMode }) {
   const countdownsMeta = useCountdownsWidgetMeta()
   const lunchMeta = useLunchWidgetMeta()
   const onThisDayMeta = useOnThisDayWidgetMeta()
+  const wordMeta = useWordOfTheDayWidgetMeta()
+  const quoteMeta = useDailyQuoteWidgetMeta()
+  const triviaMeta = useTriviaWidgetMeta()
   const maxSizes = useWidgetMaxSizes()
 
   const allWidgets: MagazineWidget[] = [
@@ -152,6 +161,9 @@ function Widgets({ layout }: { layout: LayoutMode }) {
     { key: 'chores', element: <ChoresWidget />, meta: choresMeta, maxSize: maxSizes['chores'] },
     { key: 'lunch', element: <LunchMenuWidget />, meta: lunchMeta, maxSize: maxSizes['lunch'] },
     { key: 'on-this-day', element: <OnThisDayWidget />, meta: onThisDayMeta, maxSize: maxSizes['on-this-day'] },
+    { key: 'word-of-the-day', element: <WordOfTheDayWidget />, meta: wordMeta, maxSize: maxSizes['word-of-the-day'] },
+    { key: 'daily-quote', element: <DailyQuoteWidget />, meta: quoteMeta, maxSize: maxSizes['daily-quote'] },
+    { key: 'trivia', element: <TriviaWidget />, meta: triviaMeta, maxSize: maxSizes['trivia'] },
   ]
 
   const widgets = allWidgets.filter((w) => w.meta.visible)
