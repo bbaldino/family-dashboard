@@ -51,26 +51,52 @@ async fn fetch_selected(client: &reqwest::Client, month: u32, day: u32) -> Vec<W
     let url = format!("{}/selected/{:02}/{:02}", WIKI_BASE, month, day);
     let resp = match client.get(&url).send().await {
         Ok(r) if r.status().is_success() => r,
-        _ => return vec![],
+        Ok(r) => {
+            tracing::warn!("Wikipedia selected returned status {}", r.status());
+            return vec![];
+        }
+        Err(e) => {
+            tracing::warn!("Wikipedia selected fetch failed: {}", e);
+            return vec![];
+        }
     };
-    resp.json::<WikiSelectedResponse>()
-        .await
-        .ok()
-        .and_then(|r| r.selected)
-        .unwrap_or_default()
+    match resp.json::<WikiSelectedResponse>().await {
+        Ok(r) => {
+            let events = r.selected.unwrap_or_default();
+            tracing::info!("Fetched {} selected events from Wikipedia", events.len());
+            events
+        }
+        Err(e) => {
+            tracing::warn!("Wikipedia selected parse failed: {}", e);
+            vec![]
+        }
+    }
 }
 
 async fn fetch_births(client: &reqwest::Client, month: u32, day: u32) -> Vec<WikiBirth> {
     let url = format!("{}/births/{:02}/{:02}", WIKI_BASE, month, day);
     let resp = match client.get(&url).send().await {
         Ok(r) if r.status().is_success() => r,
-        _ => return vec![],
+        Ok(r) => {
+            tracing::warn!("Wikipedia births returned status {}", r.status());
+            return vec![];
+        }
+        Err(e) => {
+            tracing::warn!("Wikipedia births fetch failed: {}", e);
+            return vec![];
+        }
     };
-    resp.json::<WikiBirthsResponse>()
-        .await
-        .ok()
-        .and_then(|r| r.births)
-        .unwrap_or_default()
+    match resp.json::<WikiBirthsResponse>().await {
+        Ok(r) => {
+            let births = r.births.unwrap_or_default();
+            tracing::info!("Fetched {} births from Wikipedia", births.len());
+            births
+        }
+        Err(e) => {
+            tracing::warn!("Wikipedia births parse failed: {}", e);
+            vec![]
+        }
+    }
 }
 
 async fn fetch_holidays(client: &reqwest::Client, month: u32, day: u32) -> Vec<WikiHoliday> {
