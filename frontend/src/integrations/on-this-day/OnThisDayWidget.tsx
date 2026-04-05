@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { WidgetCard } from '@/ui/WidgetCard'
-import type { WidgetSize } from '@/lib/widget-types'
 import { useOnThisDay } from './useOnThisDay'
 import type { OnThisDayBirth } from './useOnThisDay'
 import { useIntegrationConfig } from '@/integrations/use-integration-config'
 import { onThisDayIntegration } from './config'
+
+type WidgetSize = 'compact' | 'standard' | 'expanded'
 
 interface OnThisDayWidgetProps {
   size?: WidgetSize

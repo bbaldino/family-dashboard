@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { WidgetCard } from '@/ui/WidgetCard'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
-import type { WidgetSize } from '@/lib/widget-types'
 import { useSportsGames } from './useSportsGames'
 import { GameCard } from './GameCard'
 import { GameCardCompact } from './GameCardCompact'
 import { GameCardExpanded } from './GameCardExpanded'
 import { GameDetailModal } from './GameDetailModal'
 import type { Game } from './types'
+
+type WidgetSize = 'compact' | 'standard' | 'expanded'
 
 interface SportsWidgetProps {
   size?: WidgetSize

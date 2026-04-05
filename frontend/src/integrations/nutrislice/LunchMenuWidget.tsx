@@ -2,7 +2,7 @@ import { LoadingSpinner } from '@/ui/LoadingSpinner'
 import { ErrorDisplay } from '@/ui/ErrorDisplay'
 import { WidgetCard } from '@/ui/WidgetCard'
 import { useLunchMenu, type LunchMenuDay, type MenuEntry } from './useLunchMenu'
-import type { WidgetSize } from '@/lib/widget-types'
+type WidgetSize = 'compact' | 'standard' | 'expanded'
 
 function EntryItem({ entry, compact = false }: { entry: MenuEntry; compact?: boolean }) {
   return (

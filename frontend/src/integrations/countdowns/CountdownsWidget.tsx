@@ -1,7 +1,7 @@
 import { WidgetCard } from '@/ui/WidgetCard'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
 import { useCountdowns } from './useCountdowns'
-import type { WidgetSize } from '@/lib/widget-types'
+type WidgetSize = 'compact' | 'standard' | 'expanded'
 
 function formatDays(days: number): string {
   if (days === 0) return 'Today!'

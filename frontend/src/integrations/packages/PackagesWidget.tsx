@@ -6,7 +6,7 @@ import { ShipmentRow } from './ShipmentRow'
 import { PackageDetailModal } from './PackageDetailModal'
 import type { Shipment, ShipmentStatus } from './types'
 import { STATUS_LABELS } from './types'
-import type { WidgetSize } from '@/lib/widget-types'
+type WidgetSize = 'compact' | 'standard' | 'expanded'
 
 const STATUS_ORDER: Record<ShipmentStatus, number> = {
   out_for_delivery: 0,

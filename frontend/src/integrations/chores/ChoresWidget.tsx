@@ -5,7 +5,7 @@ import { WidgetCard } from '@/ui/WidgetCard'
 import { useChores } from './useChores'
 import { MetaChorePicker } from './MetaChorePicker'
 import type { TodayAssignment, PersonAssignments } from './types'
-import type { WidgetSize } from '@/lib/widget-types'
+type WidgetSize = 'compact' | 'standard' | 'expanded'
 
 interface PickerState {
   assignmentId: number

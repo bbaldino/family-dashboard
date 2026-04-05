@@ -1,6 +1,8 @@
 import { cloneElement } from 'react'
 import type { ReactElement } from 'react'
-import type { WidgetMeta, WidgetSize } from '@/lib/widget-types'
+import type { WidgetMeta } from '@/lib/widget-types'
+
+type WidgetSize = 'compact' | 'standard' | 'expanded'
 
 export interface MagazineWidget {
   key: string
@@ -43,7 +45,12 @@ function resolveLayout(widgets: MagazineWidget[]): LayoutConfig {
   // Cap preferred sizes at user maxSize
   const capped = sorted.map((w) => ({
     ...w,
-    effectivePreferred: capSize(w.meta.preferredSize, w.maxSize),
+    effectivePreferred: capSize(
+      w.meta.sizePreference.relativeSize === 'large' ? 'expanded'
+        : w.meta.sizePreference.relativeSize === 'medium' ? 'standard'
+        : 'compact',
+      w.maxSize,
+    ),
   }))
 
   // Check if any widget wants expanded
