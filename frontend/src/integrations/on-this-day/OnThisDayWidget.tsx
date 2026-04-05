@@ -4,12 +4,12 @@ import { WidgetCard } from '@/ui/WidgetCard'
 import type { WidgetSize } from '@/lib/widget-types'
 import { useOnThisDay } from './useOnThisDay'
 import type { OnThisDayBirth } from './useOnThisDay'
+import { useIntegrationConfig } from '@/integrations/use-integration-config'
+import { onThisDayIntegration } from './config'
 
 interface OnThisDayWidgetProps {
   size?: WidgetSize
 }
-
-const CYCLE_INTERVAL_MS = 30 * 60 * 1000
 
 function BirthsFooter({ births }: { births: OnThisDayBirth[] }) {
   if (births.length === 0) return null
@@ -35,20 +35,22 @@ function BirthsFooter({ births }: { births: OnThisDayBirth[] }) {
 
 export function OnThisDayWidget({ size = 'standard' }: OnThisDayWidgetProps) {
   const { data, isLoading } = useOnThisDay()
+  const config = useIntegrationConfig(onThisDayIntegration)
   const [index, setIndex] = useState(0)
   const [cycleKey, setCycleKey] = useState(0)
 
   const events = data?.events ?? []
   const births = data?.births ?? []
+  const cycleMs = (parseInt(config?.cycle_minutes ?? '30', 10) || 30) * 60 * 1000
 
   // Auto-cycle timer — resets when cycleKey changes (manual advance)
   useEffect(() => {
     if (events.length <= 1) return
     const timer = setInterval(() => {
       setIndex((prev) => (prev + 1) % events.length)
-    }, CYCLE_INTERVAL_MS)
+    }, cycleMs)
     return () => clearInterval(timer)
-  }, [events.length, cycleKey])
+  }, [events.length, cycleKey, cycleMs])
 
   const advance = useCallback(() => {
     if (events.length > 0) {
