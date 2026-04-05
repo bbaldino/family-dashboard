@@ -14,6 +14,32 @@ export interface Leader {
   stats: string
 }
 
+export interface MlbSituationData {
+  type: 'mlb'
+  outs: number
+  onFirst: boolean
+  onSecond: boolean
+  onThird: boolean
+  balls: number | null
+  strikes: number | null
+  batter: string | null
+  pitcher: string | null
+}
+
+export interface NbaSituationData {
+  type: 'nba'
+}
+
+export interface NhlSituationData {
+  type: 'nhl'
+}
+
+export interface NflSituationData {
+  type: 'nfl'
+}
+
+export type GameSituation = MlbSituationData | NbaSituationData | NhlSituationData | NflSituationData
+
 export type GameState = 'live' | 'final' | 'upcoming' | 'postponed'
 
 export interface Game {
@@ -32,7 +58,9 @@ export interface Game {
   periodLabel: string | null
   leaders: Leader[]
   allLeaders: Leader[]
-  situation: string | null
+  situation: GameSituation | null
+  lastPlay: string | null
+  headline: string | null
   linescores: LinescoreEntry[]
   athletes: GameAthlete[]
   espnUrl: string | null
