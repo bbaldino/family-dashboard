@@ -91,30 +91,32 @@ pub async fn get_question(
         return Ok(Json(cached));
     }
 
-    let resp = state
-        .client
-        .get(OPENTDB_URL)
-        .send()
-        .await
-        .map_err(|e| AppError::Internal(format!("OpenTDB request failed: {}", e)))?;
+    tracing::info!("Fetching trivia question from OpenTDB");
+
+    let resp = state.client.get(OPENTDB_URL).send().await.map_err(|e| {
+        tracing::warn!("OpenTDB request failed: {}", e);
+        AppError::Internal(format!("OpenTDB request failed: {}", e))
+    })?;
 
     if !resp.status().is_success() {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        tracing::warn!("OpenTDB returned {}: {}", status, body);
         return Err(AppError::Internal(format!(
-            "OpenTDB returned status {}",
-            resp.status()
+            "OpenTDB returned {}: {}",
+            status, body
         )));
     }
 
-    let data: OpenTdbResponse = resp
-        .json()
-        .await
-        .map_err(|e| AppError::Internal(format!("OpenTDB parse failed: {}", e)))?;
+    let data: OpenTdbResponse = resp.json().await.map_err(|e| {
+        tracing::warn!("OpenTDB parse failed: {}", e);
+        AppError::Internal(format!("OpenTDB parse failed: {}", e))
+    })?;
 
-    let q = data
-        .results
-        .into_iter()
-        .next()
-        .ok_or_else(|| AppError::Internal("OpenTDB returned no results".to_string()))?;
+    let q = data.results.into_iter().next().ok_or_else(|| {
+        tracing::warn!("OpenTDB returned no results");
+        AppError::Internal("OpenTDB returned no results".to_string())
+    })?;
 
     let question = decode_html_entities(&q.question);
     let category = decode_html_entities(&q.category);
@@ -125,11 +127,16 @@ pub async fn get_question(
         .map(|s| decode_html_entities(s))
         .collect();
 
-    // Deterministic placement: insert correct answer at position derived from question length
     let insert_pos = question.len() % (incorrect.len() + 1);
     incorrect.insert(insert_pos, correct);
     let choices = incorrect;
     let correct_index = insert_pos;
+
+    tracing::info!(
+        "Trivia: [{}] {}",
+        category,
+        &question[..question.len().min(60)]
+    );
 
     let response = TriviaResponse {
         question,

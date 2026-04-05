@@ -61,29 +61,38 @@ pub async fn get_today(State(state): State<QuoteState>) -> Result<Json<QuoteResp
         return Ok(Json(cached));
     }
 
-    let resp = state
-        .client
-        .get(ZENQUOTES_URL)
-        .send()
-        .await
-        .map_err(|e| AppError::Internal(format!("ZenQuotes request failed: {}", e)))?;
+    tracing::info!("Fetching daily quote from ZenQuotes");
+
+    let resp = state.client.get(ZENQUOTES_URL).send().await.map_err(|e| {
+        tracing::warn!("ZenQuotes request failed: {}", e);
+        AppError::Internal(format!("ZenQuotes request failed: {}", e))
+    })?;
 
     if !resp.status().is_success() {
+        let status = resp.status();
+        let body = resp.text().await.unwrap_or_default();
+        tracing::warn!("ZenQuotes returned {}: {}", status, body);
         return Err(AppError::Internal(format!(
-            "ZenQuotes returned status {}",
-            resp.status()
+            "ZenQuotes returned {}: {}",
+            status, body
         )));
     }
 
-    let quotes: Vec<ZenQuote> = resp
-        .json()
-        .await
-        .map_err(|e| AppError::Internal(format!("ZenQuotes parse failed: {}", e)))?;
+    let quotes: Vec<ZenQuote> = resp.json().await.map_err(|e| {
+        tracing::warn!("ZenQuotes parse failed: {}", e);
+        AppError::Internal(format!("ZenQuotes parse failed: {}", e))
+    })?;
 
-    let zen = quotes
-        .into_iter()
-        .next()
-        .ok_or_else(|| AppError::Internal("ZenQuotes returned empty response".to_string()))?;
+    let zen = quotes.into_iter().next().ok_or_else(|| {
+        tracing::warn!("ZenQuotes returned empty response");
+        AppError::Internal("ZenQuotes returned empty response".to_string())
+    })?;
+
+    tracing::info!(
+        "Daily quote: '{}' — {}",
+        &zen.q[..zen.q.len().min(50)],
+        zen.a
+    );
 
     let response = QuoteResponse {
         quote: zen.q,

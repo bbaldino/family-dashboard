@@ -63,26 +63,37 @@ pub async fn get_today(State(state): State<JokesState>) -> Result<Json<JokeRespo
         return Ok(Json(cached));
     }
 
+    tracing::info!("Fetching joke from JokeAPI");
+
     let resp = state
         .client
         .get("https://v2.jokeapi.dev/joke/Any?blacklistFlags=nsfw,religious,political,racist,sexist,explicit&type=twopart,single")
         .send()
         .await
-        .map_err(|e| AppError::Internal(format!("JokeAPI request failed: {}", e)))?;
+        .map_err(|e| {
+            tracing::warn!("JokeAPI request failed: {}", e);
+            AppError::Internal(format!("JokeAPI request failed: {}", e))
+        })?;
 
     if !resp.status().is_success() {
+        let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
-        return Err(AppError::Internal(format!("JokeAPI error: {}", body)));
+        tracing::warn!("JokeAPI returned {}: {}", status, body);
+        return Err(AppError::Internal(format!(
+            "JokeAPI error {}: {}",
+            status, body
+        )));
     }
 
-    let data: serde_json::Value = resp
-        .json()
-        .await
-        .map_err(|e| AppError::Internal(format!("JokeAPI parse failed: {}", e)))?;
+    let data: serde_json::Value = resp.json().await.map_err(|e| {
+        tracing::warn!("JokeAPI parse failed: {}", e);
+        AppError::Internal(format!("JokeAPI parse failed: {}", e))
+    })?;
 
     let joke_type = data["type"].as_str().unwrap_or("single").to_string();
 
     let response = if joke_type == "twopart" {
+        tracing::info!("Joke (twopart): {}", data["setup"].as_str().unwrap_or("?"));
         JokeResponse {
             joke_type,
             setup: data["setup"].as_str().map(|s| s.to_string()),
@@ -90,6 +101,11 @@ pub async fn get_today(State(state): State<JokesState>) -> Result<Json<JokeRespo
             joke: None,
         }
     } else {
+        tracing::info!(
+            "Joke (single): {}",
+            &data["joke"].as_str().unwrap_or("?")
+                [..data["joke"].as_str().unwrap_or("?").len().min(60)]
+        );
         JokeResponse {
             joke_type,
             setup: None,

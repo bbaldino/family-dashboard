@@ -68,36 +68,48 @@ pub async fn get_today(State(state): State<WordState>) -> Result<Json<WordRespon
         .get("api_key")
         .await?;
 
+    tracing::info!("Fetching word of the day from Wordnik");
+
     let resp = state
         .client
         .get(WORDNIK_URL)
         .query(&[("api_key", &api_key)])
         .send()
         .await
-        .map_err(|e| AppError::Internal(format!("Wordnik request failed: {}", e)))?;
+        .map_err(|e| {
+            tracing::warn!("Wordnik request failed: {}", e);
+            AppError::Internal(format!("Wordnik request failed: {}", e))
+        })?;
 
     if !resp.status().is_success() {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
+        tracing::warn!("Wordnik returned {}: {}", status, body);
         return Err(AppError::Internal(format!(
             "Wordnik returned {}: {}",
             status, body
         )));
     }
 
-    let data: serde_json::Value = resp
-        .json()
-        .await
-        .map_err(|e| AppError::Internal(format!("Wordnik parse failed: {}", e)))?;
+    let data: serde_json::Value = resp.json().await.map_err(|e| {
+        tracing::warn!("Wordnik parse failed: {}", e);
+        AppError::Internal(format!("Wordnik parse failed: {}", e))
+    })?;
 
     let word = data["word"]
         .as_str()
-        .ok_or_else(|| AppError::Internal("Wordnik response missing 'word'".to_string()))?
+        .ok_or_else(|| {
+            tracing::warn!("Wordnik response missing 'word': {:?}", data);
+            AppError::Internal("Wordnik response missing 'word'".to_string())
+        })?
         .to_string();
 
     let definition = data["definitions"][0]["text"]
         .as_str()
-        .ok_or_else(|| AppError::Internal("Wordnik response missing definition".to_string()))?
+        .ok_or_else(|| {
+            tracing::warn!("Wordnik response missing definition: {:?}", data);
+            AppError::Internal("Wordnik response missing definition".to_string())
+        })?
         .to_string();
 
     let part_of_speech = data["definitions"][0]["partOfSpeech"]
@@ -105,6 +117,12 @@ pub async fn get_today(State(state): State<WordState>) -> Result<Json<WordRespon
         .map(|s| s.to_string());
 
     let example = data["examples"][0]["text"].as_str().map(|s| s.to_string());
+
+    tracing::info!(
+        "Word of the day: '{}' ({})",
+        word,
+        part_of_speech.as_deref().unwrap_or("?")
+    );
 
     let response = WordResponse {
         word,
