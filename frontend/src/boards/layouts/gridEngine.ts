@@ -63,11 +63,13 @@ export function computeSpan(pref: WidgetSizePreference, grid: GridConfig): Span 
         rowSpan: pref.relativeSize === 'large' ? grid.rows : rs,
       }
     }
-    case 'horizontal':
+    case 'horizontal': {
+      const hRows = pref.relativeSize === 'large' ? Math.max(1, Math.round(grid.rows / 2)) : 1
       return {
-        colSpan: pref.relativeSize === 'large' ? grid.columns : cs,
-        rowSpan: 1,
+        colSpan: pref.relativeSize === 'large' ? Math.max(1, Math.round(grid.columns / 2)) : cs,
+        rowSpan: hRows,
       }
+    }
   }
 }
 
