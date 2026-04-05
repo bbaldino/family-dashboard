@@ -35,6 +35,8 @@ import { GridLayout } from './layouts/GridLayout'
 import { MagazineLayout } from './layouts/MagazineLayout'
 import type { MagazineWidget } from './layouts/MagazineLayout'
 
+// Stopgap: hardcoded until grid layout engine calculates cell count from screen size.
+// See docs/specs/2026-04-05-grid-layout-engine-notes.md
 const MAX_WIDGET_SLOTS = 6
 const FILLER_PRIORITY = 0
 
