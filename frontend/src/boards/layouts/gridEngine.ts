@@ -35,29 +35,38 @@ interface Span {
 // ---------------------------------------------------------------------------
 
 export function computeSpan(pref: WidgetSizePreference, grid: GridConfig): Span {
-  const minDim = Math.min(grid.columns, grid.rows)
-  const smallSpan = Math.max(1, Math.floor(minDim / 6))
-
-  const sizeToSpan: Record<RelativeSize, number> = {
-    small: smallSpan,
-    medium: Math.max(1, Math.floor(minDim / 3)),
-    large: Math.max(1, Math.floor(minDim / 2)),
+  // Compute spans independently for each axis
+  const colSpans: Record<RelativeSize, number> = {
+    small: 1,
+    medium: Math.max(1, Math.round(grid.columns / 3)),
+    large: Math.max(1, Math.round(grid.columns / 2)),
+  }
+  const rowSpans: Record<RelativeSize, number> = {
+    small: 1,
+    medium: Math.max(1, Math.round(grid.rows / 3)),
+    large: Math.max(1, Math.round(grid.rows / 2)),
   }
 
-  const span = sizeToSpan[pref.relativeSize]
+  const cs = colSpans[pref.relativeSize]
+  const rs = rowSpans[pref.relativeSize]
 
   switch (pref.orientation) {
-    case 'square':
-      return { colSpan: span, rowSpan: span }
-    case 'vertical':
+    case 'square': {
+      // Use the larger of the two to ensure square widgets get enough space
+      const sq = Math.max(cs, rs)
+      return { colSpan: sq, rowSpan: sq }
+    }
+    case 'vertical': {
+      const vCols = pref.relativeSize === 'large' ? Math.max(1, Math.round(grid.columns / 4)) : 1
       return {
-        colSpan: smallSpan,
-        rowSpan: pref.relativeSize === 'large' ? grid.rows : span,
+        colSpan: vCols,
+        rowSpan: pref.relativeSize === 'large' ? grid.rows : rs,
       }
+    }
     case 'horizontal':
       return {
-        colSpan: pref.relativeSize === 'large' ? grid.columns : span,
-        rowSpan: smallSpan,
+        colSpan: pref.relativeSize === 'large' ? grid.columns : cs,
+        rowSpan: 1,
       }
   }
 }
