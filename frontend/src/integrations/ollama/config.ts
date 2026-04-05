@@ -4,7 +4,6 @@ import { defineIntegration } from '../define-integration'
 export const ollamaIntegration = defineIntegration({
   id: 'ollama',
   name: 'Ollama',
-  hasBackend: false,
   schema: z.object({
     url: z.string().optional().default('http://localhost:11434'),
     token: z.string().optional(),

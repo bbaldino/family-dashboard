@@ -5,6 +5,7 @@ pub mod driving_time;
 pub mod google_calendar;
 pub mod music;
 pub mod nutrislice;
+pub mod ollama;
 pub mod on_this_day;
 pub mod packages;
 pub mod sports;
@@ -27,5 +28,6 @@ pub fn router(pool: SqlitePool) -> Router {
         .nest("/sports", sports::router(pool.clone()))
         .nest("/driving-time", driving_time::router(pool.clone()))
         .nest("/music", music::router(pool.clone()))
+        .nest("/ollama", ollama::router(pool.clone()))
         .nest("/on-this-day", on_this_day::router(pool.clone()))
 }

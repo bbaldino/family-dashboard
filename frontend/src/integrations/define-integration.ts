@@ -3,7 +3,7 @@ import type { ComponentType } from 'react'
 
 export interface FieldMeta {
   label: string
-  type?: 'text' | 'secret' | 'boolean'
+  type?: 'text' | 'secret' | 'boolean' | 'ollama-model'
   description?: string
 }
 

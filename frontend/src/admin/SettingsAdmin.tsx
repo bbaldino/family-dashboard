@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/ui/Button'
 import { integrations } from '@/integrations/registry'
+import { OllamaModelSelect } from '@/integrations/ollama/OllamaModelSelect'
 
 /** Get default values from all integrations' Zod schemas, prefixed with integration ID */
 function getSchemaDefaults(): Record<string, string> {
@@ -160,6 +161,18 @@ export function SettingsAdmin() {
                     ).map(([key, meta]) => {
                       const fullKey = `${selectedIntegration.id}.${key}`
                       const value = localConfig[fullKey] ?? ''
+
+                      if (meta.type === 'ollama-model') {
+                        return (
+                          <OllamaModelSelect
+                            key={key}
+                            value={value}
+                            onChange={(v) => handleChange(fullKey, v)}
+                            label={meta.label}
+                            description={meta.description}
+                          />
+                        )
+                      }
 
                       if (meta.type === 'boolean') {
                         return (

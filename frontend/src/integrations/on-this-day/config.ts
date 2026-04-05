@@ -8,6 +8,6 @@ export const onThisDayIntegration = defineIntegration({
     ollama_model: z.string().optional().default('llama3.2:3b'),
   }),
   fields: {
-    ollama_model: { label: 'Ollama Model', description: 'Model for content filtering (e.g. llama3.2:3b)' },
+    ollama_model: { label: 'Ollama Model', type: 'ollama-model', description: 'Model for content filtering' },
   },
 })

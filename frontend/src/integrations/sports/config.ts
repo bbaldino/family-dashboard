@@ -17,7 +17,7 @@ export const sportsIntegration = defineIntegration({
     poll_interval_live: { label: 'Live Poll Interval (seconds)', description: 'How often to refresh during live games' },
     poll_interval_idle: { label: 'Idle Poll Interval (seconds)', description: 'How often to refresh when no live games' },
     window_hours: { label: 'Time Window (hours)', description: 'How far back/forward to show games' },
-    ollama_model: { label: 'Ollama Model', description: 'Model for AI game previews (e.g. llama3.1:8b)' },
+    ollama_model: { label: 'Ollama Model', type: 'ollama-model', description: 'Model for AI game previews' },
   },
   settingsComponent: SportsSettings,
 })
