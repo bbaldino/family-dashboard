@@ -17,7 +17,7 @@ export function usePackagesWidgetMeta(): WidgetMeta {
 
   return {
     visible: true,
-    preferredSize: 'standard',
+    sizePreference: { orientation: 'square', relativeSize: 'medium' },
     priority: hasDeliveryToday ? 5 : 3,
   }
 }

@@ -6,8 +6,8 @@ export function useOnThisDayWidgetMeta(): WidgetMeta {
   const events = data?.events ?? []
 
   if (events.length === 0) {
-    return { visible: true, preferredSize: 'standard', priority: 0 }
+    return { visible: true, sizePreference: { orientation: 'square', relativeSize: 'small' }, priority: 0 }
   }
 
-  return { visible: true, preferredSize: 'standard', priority: 0 }
+  return { visible: true, sizePreference: { orientation: 'square', relativeSize: 'small' }, priority: 0 }
 }
