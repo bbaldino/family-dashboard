@@ -45,11 +45,11 @@ impl PreviewCache {
 }
 
 pub async fn generate_preview(pool: &SqlitePool, game_context: &str) -> Result<String, AppError> {
-    let config = IntegrationConfig::new(pool, "sports");
-    let ollama_url = config
-        .get("ollama_url")
-        .await
-        .map_err(|_| AppError::BadRequest("Ollama URL not configured".to_string()))?;
+    let ollama_config = IntegrationConfig::new(pool, "ollama");
+    let ollama_url = ollama_config
+        .get_or("url", "http://localhost:11434")
+        .await?;
+    let ollama_token = ollama_config.get("token").await.ok();
 
     let prompt = format!(
         "You are a friendly sports analyst for a family kitchen dashboard. \
@@ -61,13 +61,19 @@ pub async fn generate_preview(pool: &SqlitePool, game_context: &str) -> Result<S
     );
 
     let client = reqwest::Client::new();
-    let resp = client
+    let mut req = client
         .post(format!("{}/api/generate", ollama_url.trim_end_matches('/')))
         .json(&serde_json::json!({
             "model": "llama3.2",
             "prompt": prompt,
             "stream": false,
-        }))
+        }));
+
+    if let Some(token) = &ollama_token {
+        req = req.bearer_auth(token);
+    }
+
+    let resp = req
         .send()
         .await
         .map_err(|e| AppError::Internal(format!("Ollama request failed: {}", e)))?;

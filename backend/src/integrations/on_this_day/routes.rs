@@ -8,7 +8,6 @@ use tokio::sync::RwLock;
 use crate::error::AppError;
 use crate::integrations::IntegrationConfig;
 
-use super::INTEGRATION_ID;
 use super::types::*;
 
 const WIKI_BASE: &str = "https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday";
@@ -90,6 +89,7 @@ async fn fetch_holidays(client: &reqwest::Client, month: u32, day: u32) -> Vec<W
 async fn is_family_friendly(
     client: &reqwest::Client,
     ollama_url: &str,
+    ollama_token: Option<&str>,
     text: &str,
 ) -> Result<bool, AppError> {
     let prompt = format!(
@@ -99,13 +99,19 @@ async fn is_family_friendly(
         text
     );
 
-    let resp = client
+    let mut req = client
         .post(format!("{}/api/generate", ollama_url.trim_end_matches('/')))
         .json(&serde_json::json!({
             "model": "llama3.2",
             "prompt": prompt,
             "stream": false,
-        }))
+        }));
+
+    if let Some(token) = ollama_token {
+        req = req.bearer_auth(token);
+    }
+
+    let resp = req
         .send()
         .await
         .map_err(|e| AppError::Internal(format!("Ollama request failed: {}", e)))?;
@@ -169,17 +175,25 @@ pub async fn get_events(
         fetch_holidays(&state.client, month, day),
     );
 
-    let config = IntegrationConfig::new(&state.pool, INTEGRATION_ID);
-    let ollama_url = config
-        .get_or("ollama_url", "http://localhost:11434")
+    let ollama_config = IntegrationConfig::new(&state.pool, "ollama");
+    let ollama_url = ollama_config
+        .get_or("url", "http://localhost:11434")
         .await?;
+    let ollama_token = ollama_config.get("token").await.ok();
 
     // Filter events through Ollama for family-friendliness
     // If Ollama is unreachable, include all events unfiltered
     let mut events = Vec::new();
     let mut ollama_available = true;
     for ev in &selected {
-        match is_family_friendly(&state.client, &ollama_url, &ev.text).await {
+        match is_family_friendly(
+            &state.client,
+            &ollama_url,
+            ollama_token.as_deref(),
+            &ev.text,
+        )
+        .await
+        {
             Ok(true) => events.push(OnThisDayEvent {
                 year: ev.year,
                 text: ev.text.clone(),
