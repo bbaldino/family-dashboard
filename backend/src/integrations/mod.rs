@@ -1,6 +1,7 @@
 pub mod chores;
 pub mod config;
 pub mod config_helpers;
+pub mod daily_quote;
 pub mod driving_time;
 pub mod google_calendar;
 pub mod music;
@@ -9,7 +10,9 @@ pub mod ollama;
 pub mod on_this_day;
 pub mod packages;
 pub mod sports;
+pub mod trivia;
 pub mod weather;
+pub mod word_of_the_day;
 
 pub use config_helpers::IntegrationConfig;
 
@@ -30,4 +33,7 @@ pub fn router(pool: SqlitePool) -> Router {
         .nest("/music", music::router(pool.clone()))
         .nest("/ollama", ollama::router(pool.clone()))
         .nest("/on-this-day", on_this_day::router(pool.clone()))
+        .nest("/daily-quote", daily_quote::router())
+        .nest("/trivia", trivia::router())
+        .nest("/word-of-the-day", word_of_the_day::router(pool.clone()))
 }
