@@ -36,7 +36,7 @@ import { placeWidgets, computeSpan } from './layouts/gridEngine'
 import { useCalendarWidgetMeta } from '@/integrations/google-calendar/useWidgetMeta'
 
 function useGridConfig(): { columns: number; rows: number } {
-  const [config, setConfig] = useState({ columns: 8, rows: 4 })
+  const [config, setConfig] = useState({ columns: 8, rows: 6 })
 
   useEffect(() => {
     fetch('/api/config')
