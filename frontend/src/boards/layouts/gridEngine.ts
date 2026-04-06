@@ -38,13 +38,13 @@ export function computeSpan(pref: WidgetSizePreference, grid: GridConfig): Span 
   // Compute spans independently for each axis
   const colSpans: Record<RelativeSize, number> = {
     small: 1,
-    medium: Math.max(1, Math.round(grid.columns / 3)),
-    large: Math.max(1, Math.round(grid.columns / 2)),
+    medium: Math.max(1, Math.floor(grid.columns / 3)),
+    large: Math.max(2, Math.floor(grid.columns / 2)),
   }
   const rowSpans: Record<RelativeSize, number> = {
     small: 1,
-    medium: Math.max(1, Math.round(grid.rows / 3)),
-    large: Math.max(1, Math.round(grid.rows / 2)),
+    medium: Math.max(1, Math.floor(grid.rows / 3)),
+    large: Math.max(2, Math.floor(grid.rows / 2)),
   }
 
   const cs = colSpans[pref.relativeSize]
