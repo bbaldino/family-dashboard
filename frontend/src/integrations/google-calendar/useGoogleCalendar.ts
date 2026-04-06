@@ -16,9 +16,10 @@ function dayLabel(date: Date, today: Date): string {
   const diff = Math.floor(
     (date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
   )
-  if (diff === 0) return 'Today'
-  if (diff === 1) return 'Tomorrow'
-  return date.toLocaleDateString([], { weekday: 'long' })
+  const short = date.toLocaleDateString([], { month: 'numeric', day: 'numeric' })
+  if (diff === 0) return `Today ${short}`
+  if (diff === 1) return `Tomorrow ${short}`
+  return `${date.toLocaleDateString([], { weekday: 'long' })} ${short}`
 }
 
 async function fetchCalendarEvents(): Promise<CalendarDay[]> {
