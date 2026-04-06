@@ -218,9 +218,6 @@ pub async fn get_preview(
                 if let Some(venue) = &game.venue {
                     context.push_str(&format!("\nVenue: {}", venue));
                 }
-                if let Some(broadcast) = &game.broadcast {
-                    context.push_str(&format!("\nBroadcast: {}", broadcast));
-                }
                 if let Some(round) = &game.playoff_round {
                     context.push_str(&format!("\nPlayoff: {}", round));
                 }
@@ -236,6 +233,121 @@ pub async fn get_preview(
                             .push_str(&format!("\n  {} - {}{}", athlete.role, athlete.name, stats));
                     }
                 }
+
+                // Enrich with raw ESPN data (headlines, odds, team stats, leaders)
+                let empty_events = vec![];
+                let events = data["events"].as_array().unwrap_or(&empty_events);
+                if let Some(event) = events
+                    .iter()
+                    .find(|e| e["id"].as_str() == Some(&params.game_id))
+                {
+                    let comp = &event["competitions"][0];
+
+                    // ESPN preview headline (e.g., "Rays play the Cubs in first of 3-game series")
+                    if let Some(headline) = comp["headlines"]
+                        .as_array()
+                        .and_then(|h| h.first())
+                        .and_then(|h| h["shortLinkText"].as_str())
+                    {
+                        context.push_str(&format!("\nSeries context: {}", headline));
+                    }
+
+                    // Odds
+                    if let Some(odds) = comp["odds"].as_array().and_then(|o| o.first()) {
+                        if let Some(details) = odds["details"].as_str() {
+                            context.push_str(&format!("\nOdds: {}", details));
+                        }
+                        if let Some(ou) = odds["overUnder"].as_f64() {
+                            context.push_str(&format!(", O/U {}", ou));
+                        }
+                    }
+
+                    // Team stats and leaders for each competitor
+                    let empty_comps = vec![];
+                    let competitors = comp["competitors"].as_array().unwrap_or(&empty_comps);
+                    for competitor in competitors {
+                        let ha = competitor["homeAway"].as_str().unwrap_or("?");
+                        let team_name = competitor["team"]["shortDisplayName"]
+                            .as_str()
+                            .unwrap_or("?");
+
+                        // Home/away record
+                        if let Some(records) = competitor["records"].as_array() {
+                            let parts: Vec<String> = records
+                                .iter()
+                                .filter_map(|r| {
+                                    let rtype = r["type"].as_str()?;
+                                    let summary = r["summary"].as_str()?;
+                                    if rtype == "total" {
+                                        None // Already have overall record
+                                    } else {
+                                        Some(format!(
+                                            "{}: {}",
+                                            r["name"].as_str().unwrap_or(rtype),
+                                            summary
+                                        ))
+                                    }
+                                })
+                                .collect();
+                            if !parts.is_empty() {
+                                context.push_str(&format!(
+                                    "\n{} ({}) split records: {}",
+                                    team_name,
+                                    ha,
+                                    parts.join(", ")
+                                ));
+                            }
+                        }
+
+                        // Team stats (batting avg, ERA, etc.)
+                        if let Some(stats) = competitor["statistics"].as_array() {
+                            let stat_lines: Vec<String> = stats
+                                .iter()
+                                .filter_map(|s| {
+                                    let name = s["name"].as_str()?;
+                                    let val = s["displayValue"].as_str()?;
+                                    let rank = s["rankDisplayValue"].as_str().unwrap_or("");
+                                    if rank.is_empty() {
+                                        Some(format!("{}: {}", name, val))
+                                    } else {
+                                        Some(format!("{}: {} ({})", name, val, rank))
+                                    }
+                                })
+                                .collect();
+                            if !stat_lines.is_empty() {
+                                context.push_str(&format!(
+                                    "\n{} ({}) team stats: {}",
+                                    team_name,
+                                    ha,
+                                    stat_lines.join(", ")
+                                ));
+                            }
+                        }
+
+                        // Team leaders
+                        if let Some(leaders) = competitor["leaders"].as_array() {
+                            let leader_lines: Vec<String> = leaders
+                                .iter()
+                                .filter_map(|l| {
+                                    let cat = l["shortDisplayName"].as_str()?;
+                                    let top = l["leaders"].as_array()?.first()?;
+                                    let name = top["athlete"]["displayName"].as_str()?;
+                                    let val = top["displayValue"].as_str()?;
+                                    Some(format!("{}: {} ({})", cat, name, val))
+                                })
+                                .collect();
+                            if !leader_lines.is_empty() {
+                                context.push_str(&format!(
+                                    "\n{} ({}) leaders: {}",
+                                    team_name,
+                                    ha,
+                                    leader_lines.join(", ")
+                                ));
+                            }
+                        }
+                    }
+                }
+
                 game_context = context;
                 break;
             }
