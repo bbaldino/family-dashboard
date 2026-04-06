@@ -61,11 +61,11 @@ export function computeSpan(pref: WidgetSizePreference, grid: GridConfig): Span 
       }
     }
     case 'horizontal': {
-      const hRows = pref.relativeSize === 'large' ? Math.max(1, Math.round(grid.rows / 2)) : 1
-      return {
-        colSpan: pref.relativeSize === 'large' ? Math.max(1, Math.round(grid.columns / 2)) : cs,
-        rowSpan: hRows,
-      }
+      // For large horizontal: use 1/3 of columns and 1/3 of rows
+      // This gives a wide-but-not-dominant block (e.g., 3×2 on 8×6)
+      const hCols = pref.relativeSize === 'large' ? Math.max(2, Math.round(grid.columns / 3)) : cs
+      const hRows = pref.relativeSize === 'large' ? Math.max(1, Math.round(grid.rows / 3)) : 1
+      return { colSpan: hCols, rowSpan: hRows }
     }
   }
 }
