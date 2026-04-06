@@ -134,6 +134,7 @@ function findFreeRegion(
   gridRows: number,
   gridCols: number,
 ): { row: number; col: number } | null {
+  // Scan row-first: fill left-to-right, top-to-bottom
   for (let r = 0; r <= gridRows - rowSpan; r++) {
     for (let c = 0; c <= gridCols - colSpan; c++) {
       if (regionFits(occupied, r, c, rowSpan, colSpan, gridRows, gridCols)) {
