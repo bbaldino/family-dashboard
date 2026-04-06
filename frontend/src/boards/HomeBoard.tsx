@@ -43,7 +43,7 @@ function useGridConfig(): { columns: number; rows: number } {
       .then((r) => r.json())
       .then((data: Record<string, string>) => {
         const cols = parseInt(data['dashboard.columns'] ?? '8', 10) || 8
-        const rows = parseInt(data['dashboard.rows'] ?? '4', 10) || 4
+        const rows = parseInt(data['dashboard.rows'] ?? '6', 10) || 6
         setConfig({ columns: cols, rows: rows })
       })
       .catch(() => {})
