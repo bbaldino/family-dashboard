@@ -1,5 +1,5 @@
 export type Orientation = 'vertical' | 'horizontal' | 'square'
-export type RelativeSize = 'small' | 'medium' | 'large'
+export type RelativeSize = 'small' | 'medium' | 'large' | 'xlarge'
 
 export interface WidgetSizePreference {
   orientation: Orientation

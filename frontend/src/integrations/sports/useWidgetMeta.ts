@@ -20,7 +20,7 @@ export function useSportsWidgetMeta(): WidgetMeta {
   const hasUpcoming = games.some((g) => g.state === 'upcoming')
 
   if (hasLive) {
-    return { visible: true, sizePreference: { orientation: 'horizontal', relativeSize: 'large' }, priority: 10 }
+    return { visible: true, sizePreference: { orientation: 'horizontal', relativeSize: 'xlarge' }, priority: 10 }
   }
   if (hasUpcomingToday) {
     return { visible: true, sizePreference: { orientation: 'horizontal', relativeSize: 'large' }, priority: 5 }

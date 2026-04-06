@@ -39,12 +39,14 @@ export function computeSpan(pref: WidgetSizePreference, grid: GridConfig): Span 
   const colSpans: Record<RelativeSize, number> = {
     small: 1,
     medium: Math.max(1, Math.floor(grid.columns / 3)),
-    large: Math.max(2, Math.floor(grid.columns / 2)),
+    large: Math.max(2, Math.floor(grid.columns / 3)),
+    xlarge: Math.max(2, Math.floor(grid.columns / 2)),
   }
   const rowSpans: Record<RelativeSize, number> = {
     small: 1,
     medium: Math.max(1, Math.floor(grid.rows / 3)),
-    large: Math.max(2, Math.floor(grid.rows / 2)),
+    large: Math.max(2, Math.floor(grid.rows / 3)),
+    xlarge: Math.max(2, Math.floor(grid.rows / 2)),
   }
 
   const cs = colSpans[pref.relativeSize]
@@ -54,15 +56,20 @@ export function computeSpan(pref: WidgetSizePreference, grid: GridConfig): Span 
     case 'square':
       return { colSpan: cs, rowSpan: rs }
     case 'vertical': {
-      const vCols = pref.relativeSize === 'large' ? Math.max(1, Math.round(grid.columns / 4)) : 1
+      const isLargeOrXl = pref.relativeSize === 'large' || pref.relativeSize === 'xlarge'
+      const vCols = isLargeOrXl ? Math.max(1, Math.round(grid.columns / 4)) : 1
       return {
         colSpan: vCols,
-        rowSpan: pref.relativeSize === 'large' ? grid.rows : rs,
+        rowSpan: isLargeOrXl ? grid.rows : rs,
       }
     }
     case 'horizontal': {
-      // For large horizontal: use 1/3 of columns and 1/3 of rows
-      // This gives a wide-but-not-dominant block (e.g., 3×2 on 8×6)
+      if (pref.relativeSize === 'xlarge') {
+        return {
+          colSpan: Math.max(2, Math.floor(grid.columns / 2)),
+          rowSpan: Math.max(2, Math.floor(grid.rows / 2)),
+        }
+      }
       const hCols = pref.relativeSize === 'large' ? Math.max(2, Math.round(grid.columns / 3)) : cs
       const hRows = pref.relativeSize === 'large' ? Math.max(1, Math.round(grid.rows / 3)) : 1
       return { colSpan: hCols, rowSpan: hRows }
@@ -139,6 +146,8 @@ function findFreeRegion(
 
 function shrinkSize(size: RelativeSize): RelativeSize | null {
   switch (size) {
+    case 'xlarge':
+      return 'large'
     case 'large':
       return 'medium'
     case 'medium':
