@@ -206,7 +206,7 @@ pub async fn get_preview(
         if let Some(data) = state.cache.get_stale(league_id).await {
             let games = transform::transform_scoreboard(&data, league_id, &[], 24.0);
             if let Some(game) = games.iter().find(|g| g.id == params.game_id) {
-                game_context = format!(
+                let mut context = format!(
                     "Game: {} vs {}\nHome record: {}\nAway record: {}\nLeague: {}\nStart: {}",
                     game.away.name,
                     game.home.name,
@@ -215,6 +215,28 @@ pub async fn get_preview(
                     game.league,
                     game.start_time,
                 );
+                if let Some(venue) = &game.venue {
+                    context.push_str(&format!("\nVenue: {}", venue));
+                }
+                if let Some(broadcast) = &game.broadcast {
+                    context.push_str(&format!("\nBroadcast: {}", broadcast));
+                }
+                if let Some(round) = &game.playoff_round {
+                    context.push_str(&format!("\nPlayoff: {}", round));
+                }
+                if !game.athletes.is_empty() {
+                    context.push_str("\nProbable pitchers:");
+                    for athlete in &game.athletes {
+                        let stats = athlete
+                            .stats
+                            .as_deref()
+                            .map(|s| format!(" ({})", s))
+                            .unwrap_or_default();
+                        context
+                            .push_str(&format!("\n  {} - {}{}", athlete.role, athlete.name, stats));
+                    }
+                }
+                game_context = context;
                 break;
             }
         }
