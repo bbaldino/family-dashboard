@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, type ReactElement } from 'react'
+import { useState, useEffect, useCallback, useRef, type ReactElement } from 'react'
 import { RefreshCw } from 'lucide-react'
 
 const CYCLE_INTERVAL_MS = 5 * 60 * 1000
+const SWIPE_THRESHOLD = 50
 
 interface FillerEntry {
   key: string
@@ -15,6 +16,7 @@ interface MetaFillerWidgetProps {
 export function MetaFillerWidget({ fillers }: MetaFillerWidgetProps) {
   const [index, setIndex] = useState(0)
   const [cycleKey, setCycleKey] = useState(0)
+  const touchStartX = useRef<number | null>(null)
 
   useEffect(() => {
     if (fillers.length <= 1) return
@@ -31,12 +33,39 @@ export function MetaFillerWidget({ fillers }: MetaFillerWidgetProps) {
     }
   }, [fillers.length])
 
+  const goBack = useCallback(() => {
+    if (fillers.length > 0) {
+      setIndex((prev) => (prev - 1 + fillers.length) % fillers.length)
+      setCycleKey((prev) => prev + 1)
+    }
+  }, [fillers.length])
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+  }, [])
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartX.current === null) return
+    const diff = e.changedTouches[0].clientX - touchStartX.current
+    touchStartX.current = null
+    if (Math.abs(diff) < SWIPE_THRESHOLD) return
+    if (diff < 0) {
+      advance()
+    } else {
+      goBack()
+    }
+  }, [advance, goBack])
+
   if (fillers.length === 0) return null
 
   const current = fillers[index % fillers.length]
 
   return (
-    <div className="relative h-full">
+    <div
+      className="relative h-full"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Render the current filler widget (includes its own WidgetCard) */}
       <div key={`${current.key}-${cycleKey}`} className="h-full">
         {current.element}
