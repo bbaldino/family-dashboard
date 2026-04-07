@@ -236,5 +236,60 @@ export function placeWidgets(
     // If currentSize became null, widget is dropped (doesn't fit at any size)
   }
 
+  // 4. Expand widgets to fill adjacent empty cells
+  expandToFillGaps(placed, occupied, grid)
+
   return { placed, freeCells: countFreeCells(occupied) }
+}
+
+/**
+ * After placement, try to grow each widget downward and rightward
+ * to fill adjacent empty cells. This reduces visual gaps.
+ */
+function expandToFillGaps(
+  placed: PlacedWidget[],
+  occupied: boolean[][],
+  grid: GridConfig,
+): void {
+  // Try expanding each widget (in reverse priority order — lower priority widgets expand first
+  // so they fill gaps without stealing space from important widgets)
+  for (const w of [...placed].reverse()) {
+    const row0 = w.rowStart - 1
+    const col0 = w.colStart - 1
+
+    // Try expanding down
+    while (row0 + w.rowSpan < grid.rows) {
+      const newRow = row0 + w.rowSpan
+      let canExpand = true
+      for (let c = col0; c < col0 + w.colSpan; c++) {
+        if (occupied[newRow][c]) {
+          canExpand = false
+          break
+        }
+      }
+      if (!canExpand) break
+      // Mark the new row as occupied
+      for (let c = col0; c < col0 + w.colSpan; c++) {
+        occupied[newRow][c] = true
+      }
+      w.rowSpan++
+    }
+
+    // Try expanding right
+    while (col0 + w.colSpan < grid.columns) {
+      const newCol = col0 + w.colSpan
+      let canExpand = true
+      for (let r = row0; r < row0 + w.rowSpan; r++) {
+        if (occupied[r][newCol]) {
+          canExpand = false
+          break
+        }
+      }
+      if (!canExpand) break
+      for (let r = row0; r < row0 + w.rowSpan; r++) {
+        occupied[r][newCol] = true
+      }
+      w.colSpan++
+    }
+  }
 }
