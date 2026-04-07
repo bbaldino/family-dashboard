@@ -1,5 +1,5 @@
 import type { WidgetMeta } from '@/lib/widget-types'
 
 export function useJokeWidgetMeta(): WidgetMeta {
-  return { visible: true, sizePreference: { orientation: 'horizontal', relativeSize: 'medium' }, priority: 0 }
+  return { visible: true, sizePreference: { orientation: 'square', relativeSize: 'large' }, priority: 0 }
 }

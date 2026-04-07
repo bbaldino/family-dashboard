@@ -36,17 +36,18 @@ interface Span {
 
 export function computeSpan(pref: WidgetSizePreference, grid: GridConfig): Span {
   // Compute spans independently for each axis
+  // Ensure each size is strictly larger than the previous
   const colSpans: Record<RelativeSize, number> = {
     small: 1,
-    medium: Math.max(1, Math.floor(grid.columns / 3)),
-    large: Math.max(2, Math.floor(grid.columns / 3)),
-    xlarge: Math.max(2, Math.floor(grid.columns / 2)),
+    medium: Math.max(2, Math.round(grid.columns / 4)),
+    large: Math.max(3, Math.round(grid.columns / 3)),
+    xlarge: Math.max(4, Math.round(grid.columns / 2)),
   }
   const rowSpans: Record<RelativeSize, number> = {
     small: 1,
-    medium: Math.max(1, Math.floor(grid.rows / 3)),
-    large: Math.max(2, Math.floor(grid.rows / 3)),
-    xlarge: Math.max(2, Math.floor(grid.rows / 2)),
+    medium: Math.max(2, Math.round(grid.rows / 4)),
+    large: Math.max(2, Math.round(grid.rows / 3)),
+    xlarge: Math.max(3, Math.round(grid.rows / 2)),
   }
 
   const cs = colSpans[pref.relativeSize]
