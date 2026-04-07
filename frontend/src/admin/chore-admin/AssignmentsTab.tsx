@@ -12,6 +12,8 @@ import { Button } from '@/ui/Button'
 import { choresIntegration } from '@/integrations/chores'
 import type { AssignmentResponse, Chore, Person } from '@/integrations/chores/types'
 import { ChorePool } from './ChorePool'
+import { googleCalendarIntegration } from '@/integrations/google-calendar/config'
+import type { CalendarEvent } from '@/integrations/google-calendar/types'
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -111,6 +113,61 @@ export function AssignmentsTab() {
   const hasLoadedOnce = useRef(false)
 
   const weekStr = toIsoDate(weekOf)
+  const [calendarEvents, setCalendarEvents] = useState<Record<number, CalendarEvent[]>>({})
+
+  // Fetch calendar events for the week
+  useEffect(() => {
+    async function fetchCalendar() {
+      try {
+        const allConfig: Record<string, string> = await fetch('/api/config').then((r) => r.json())
+        const saved = allConfig['google-calendar.calendar_ids']
+        let calendarIds: string[] = saved ? JSON.parse(saved) : ['primary']
+
+        const startDate = new Date(weekOf)
+        const endDate = new Date(weekOf)
+        endDate.setDate(endDate.getDate() + 7)
+
+        const results = await Promise.all(
+          calendarIds.map((id) =>
+            googleCalendarIntegration.api
+              .get<CalendarEvent[]>(
+                `/events?calendar=${encodeURIComponent(id)}&start=${encodeURIComponent(startDate.toISOString())}&end=${encodeURIComponent(endDate.toISOString())}`,
+              )
+              .catch(() => []),
+          ),
+        )
+
+        const allEvents = results.flat()
+        const byDay: Record<number, CalendarEvent[]> = {}
+        for (let i = 0; i < 7; i++) byDay[i] = []
+
+        for (const event of allEvents) {
+          const start = event.start.dateTime ?? event.start.date ?? ''
+          const eventDate = new Date(start)
+          const dayOfWeek = eventDate.getDay()
+          // Convert to Mon=0...Sun=6
+          const dayIdx = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+          if (dayIdx >= 0 && dayIdx < 7) {
+            byDay[dayIdx].push(event)
+          }
+        }
+
+        // Sort each day's events by time
+        for (const day of Object.values(byDay)) {
+          day.sort((a, b) => {
+            const aTime = a.start.dateTime ?? a.start.date ?? ''
+            const bTime = b.start.dateTime ?? b.start.date ?? ''
+            return new Date(aTime).getTime() - new Date(bTime).getTime()
+          })
+        }
+
+        setCalendarEvents(byDay)
+      } catch {
+        // Calendar not available — no problem
+      }
+    }
+    fetchCalendar()
+  }, [weekOf])
 
   const fetchData = useCallback(async () => {
     if (!hasLoadedOnce.current) setLoading(true)
@@ -303,6 +360,41 @@ export function AssignmentsTab() {
                   {day}
                 </div>
               ))}
+
+              {/* Calendar row */}
+              <div className="bg-bg-card p-2 text-xs text-text-muted flex items-start">
+                📅
+              </div>
+              {DAY_NAMES.map((_, dayIdx) => {
+                const events = calendarEvents[dayIdx] ?? []
+                return (
+                  <div key={`cal-${dayIdx}`} className="bg-bg-card p-1.5">
+                    {events.length === 0 ? (
+                      <div className="text-[10px] text-text-muted italic">—</div>
+                    ) : (
+                      <div className="flex flex-col gap-0.5">
+                        {events.map((event) => {
+                          const start = event.start.dateTime ?? event.start.date ?? ''
+                          const isAllDay = !event.start.dateTime
+                          const time = isAllDay
+                            ? ''
+                            : new Date(start).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+                          return (
+                            <div
+                              key={event.id}
+                              className="text-[10px] text-text-secondary leading-tight truncate"
+                              title={event.summary ?? ''}
+                            >
+                              {time && <span className="text-text-muted">{time} </span>}
+                              {event.summary ?? '(No title)'}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
 
               {/* Person rows */}
               {people.map((person) => (
