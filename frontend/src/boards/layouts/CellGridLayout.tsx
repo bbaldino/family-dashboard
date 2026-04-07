@@ -23,6 +23,9 @@ export function CellGridLayout({ widgets, columns, rows }: CellGridLayoutProps) 
 
   const { placed } = placeWidgets(gridWidgets, grid)
 
+  console.log(`[CellGrid] ${columns}×${rows}, ${placed.length} placed:`,
+    placed.map(w => `${w.key}:${w.colStart}c${w.colSpan}×${w.rowStart}r${w.rowSpan}`).join(', '))
+
   if (placed.length === 0) return null
 
   return (

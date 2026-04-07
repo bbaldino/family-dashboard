@@ -194,11 +194,11 @@ function Widgets({
   }
 
   let widgets: CellGridWidget[]
-  if (fillerSlots === 0) {
-    widgets = visibleContent
-  } else if (fillerSlots >= visibleFillers.length) {
+  if (fillerSlots >= visibleFillers.length) {
+    // All fillers fit at their requested size — show individually
     widgets = [...visibleContent, ...visibleFillers]
-  } else if (fillerSlots === 1) {
+  } else if (visibleFillers.length > 0) {
+    // Not all fillers fit — bundle ALL into meta widget
     const metaElement = (
       <MetaFillerWidget
         fillers={visibleFillers.map((f) => ({ key: f.key, element: f.element }))}
@@ -213,22 +213,7 @@ function Widgets({
       },
     ]
   } else {
-    const individual = visibleFillers.slice(0, fillerSlots - 1)
-    const overflow = visibleFillers.slice(fillerSlots - 1)
-    const metaElement = (
-      <MetaFillerWidget
-        fillers={overflow.map((f) => ({ key: f.key, element: f.element }))}
-      />
-    )
-    widgets = [
-      ...visibleContent,
-      ...individual,
-      {
-        key: 'meta-filler',
-        element: metaElement,
-        meta: { visible: true, priority: 1, sizePreference: { orientation: 'square', relativeSize: 'large' } },
-      },
-    ]
+    widgets = visibleContent
   }
 
   return <CellGridLayout widgets={widgets} columns={grid.columns} rows={grid.rows} />
