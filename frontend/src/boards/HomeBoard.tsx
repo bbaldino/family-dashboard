@@ -32,7 +32,7 @@ import { useOnThisDayWidgetMeta } from '@/integrations/on-this-day/useWidgetMeta
 import { MetaFillerWidget } from '@/ui/MetaFillerWidget'
 import { CellGridLayout } from './layouts/CellGridLayout'
 import type { CellGridWidget } from './layouts/CellGridLayout'
-import { placeWidgets, computeSpan } from './layouts/gridEngine'
+import { placeWidgets, computeSpan, type GridWidget } from './layouts/gridEngine'
 import { useCalendarWidgetMeta } from '@/integrations/google-calendar/useWidgetMeta'
 
 function useGridConfig(): { columns: number; rows: number } {
@@ -174,31 +174,22 @@ function Widgets({
   const visibleContent = contentWidgets.filter((w) => w.meta.visible)
   const visibleFillers = fillerWidgets.filter((w) => w.meta.visible)
 
-  // Dry run: place content widgets to find free cells
-  const contentAsGridWidgets = visibleContent
+  // Dry run: place content + all fillers to see how many fillers fit at their requested size
+  const allForDryRun = [...visibleContent, ...visibleFillers]
     .filter((w): w is CellGridWidget & { meta: { visible: true } } => w.meta.visible)
-    .map((w) => ({
-      key: w.key,
-      element: w.element,
-      meta: w.meta as { visible: true; priority: number; sizePreference: { orientation: 'vertical' | 'horizontal' | 'square'; relativeSize: 'small' | 'medium' | 'large' }; anchor?: { column: number; row: number } },
-    }))
-  const { freeCells } = placeWidgets(contentAsGridWidgets, grid)
+    .map((w) => ({ key: w.key, element: w.element, meta: w.meta as GridWidget['meta'] }))
+  const { placed: dryPlaced } = placeWidgets(allForDryRun, grid)
 
-  // Estimate how many fillers can fit at their requested sizes
-  const visibleFillerWidgets = visibleFillers.filter(
-    (w): w is CellGridWidget & { meta: { visible: true } } => w.meta.visible,
-  )
-  let cellsNeeded = 0
+  // Count fillers that were placed at their full requested size (not downgraded)
+  const fillerKeys = new Set(visibleFillers.map((f) => f.key))
   let fillerSlots = 0
-  for (const f of visibleFillerWidgets) {
-    const meta = f.meta as { visible: true; sizePreference: { orientation: 'vertical' | 'horizontal' | 'square'; relativeSize: 'small' | 'medium' | 'large' | 'xlarge' } }
-    const span = computeSpan(meta.sizePreference, grid)
-    const area = span.colSpan * span.rowSpan
-    if (cellsNeeded + area <= freeCells) {
-      cellsNeeded += area
+  for (const p of dryPlaced) {
+    if (!fillerKeys.has(p.key)) continue
+    const filler = visibleFillers.find((f) => f.key === p.key)
+    if (!filler || !filler.meta.visible) continue
+    const requested = computeSpan((filler.meta as { visible: true; sizePreference: GridWidget['meta']['sizePreference'] }).sizePreference, grid)
+    if (p.colSpan === requested.colSpan && p.rowSpan === requested.rowSpan) {
       fillerSlots++
-    } else {
-      break
     }
   }
 
