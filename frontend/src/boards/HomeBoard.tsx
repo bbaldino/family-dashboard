@@ -209,7 +209,7 @@ function Widgets({
       {
         key: 'meta-filler',
         element: metaElement,
-        meta: { visible: true, priority: 0, sizePreference: { orientation: 'square', relativeSize: 'medium' } },
+        meta: { visible: true, priority: 1, sizePreference: { orientation: 'square', relativeSize: 'large' } },
       },
     ]
   } else {
@@ -226,7 +226,7 @@ function Widgets({
       {
         key: 'meta-filler',
         element: metaElement,
-        meta: { visible: true, priority: 0, sizePreference: { orientation: 'square', relativeSize: 'medium' } },
+        meta: { visible: true, priority: 1, sizePreference: { orientation: 'square', relativeSize: 'large' } },
       },
     ]
   }
