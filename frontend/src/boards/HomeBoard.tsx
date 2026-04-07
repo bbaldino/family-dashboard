@@ -184,10 +184,23 @@ function Widgets({
     }))
   const { freeCells } = placeWidgets(contentAsGridWidgets, grid)
 
-  // Compute how many filler cells we can use
-  const fillerCellSize = computeSpan({ orientation: 'square', relativeSize: 'small' }, grid)
-  const fillerCellArea = fillerCellSize.colSpan * fillerCellSize.rowSpan
-  const fillerSlots = fillerCellArea > 0 ? Math.floor(freeCells / fillerCellArea) : 0
+  // Estimate how many fillers can fit at their requested sizes
+  const visibleFillerWidgets = visibleFillers.filter(
+    (w): w is CellGridWidget & { meta: { visible: true } } => w.meta.visible,
+  )
+  let cellsNeeded = 0
+  let fillerSlots = 0
+  for (const f of visibleFillerWidgets) {
+    const meta = f.meta as { visible: true; sizePreference: { orientation: 'vertical' | 'horizontal' | 'square'; relativeSize: 'small' | 'medium' | 'large' | 'xlarge' } }
+    const span = computeSpan(meta.sizePreference, grid)
+    const area = span.colSpan * span.rowSpan
+    if (cellsNeeded + area <= freeCells) {
+      cellsNeeded += area
+      fillerSlots++
+    } else {
+      break
+    }
+  }
 
   let widgets: CellGridWidget[]
   if (fillerSlots === 0) {
@@ -205,7 +218,7 @@ function Widgets({
       {
         key: 'meta-filler',
         element: metaElement,
-        meta: { visible: true, priority: 0, sizePreference: { orientation: 'square', relativeSize: 'small' } },
+        meta: { visible: true, priority: 0, sizePreference: { orientation: 'square', relativeSize: 'medium' } },
       },
     ]
   } else {
@@ -222,7 +235,7 @@ function Widgets({
       {
         key: 'meta-filler',
         element: metaElement,
-        meta: { visible: true, priority: 0, sizePreference: { orientation: 'square', relativeSize: 'small' } },
+        meta: { visible: true, priority: 0, sizePreference: { orientation: 'square', relativeSize: 'medium' } },
       },
     ]
   }
