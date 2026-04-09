@@ -186,7 +186,7 @@ function Widgets({
       {
         key: 'meta-filler',
         element: metaElement,
-        meta: { visible: true, priority: 1, sizePreference: { orientation: 'square', relativeSize: 'large' } },
+        meta: { visible: true, priority: 1, sizePreference: { orientation: 'square', relativeSize: 'medium' } },
       },
     ]
   } else {
