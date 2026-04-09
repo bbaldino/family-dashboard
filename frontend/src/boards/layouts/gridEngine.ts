@@ -244,21 +244,22 @@ export function placeWidgets(
 
 /**
  * After placement, try to grow each widget downward and rightward
- * to fill adjacent empty cells. This reduces visual gaps.
+ * to fill adjacent empty cells. Limited to 1 extra cell per direction
+ * so widgets don't grow far beyond their requested size.
  */
 function expandToFillGaps(
   placed: PlacedWidget[],
   occupied: boolean[][],
   grid: GridConfig,
 ): void {
-  // Try expanding each widget (in reverse priority order — lower priority widgets expand first
-  // so they fill gaps without stealing space from important widgets)
   for (const w of [...placed].reverse()) {
     const row0 = w.rowStart - 1
     const col0 = w.colStart - 1
+    const originalRowSpan = w.rowSpan
+    const originalColSpan = w.colSpan
 
-    // Try expanding down
-    while (row0 + w.rowSpan < grid.rows) {
+    // Try expanding down (max 1 row)
+    if (w.rowSpan - originalRowSpan < 1 && row0 + w.rowSpan < grid.rows) {
       const newRow = row0 + w.rowSpan
       let canExpand = true
       for (let c = col0; c < col0 + w.colSpan; c++) {
@@ -267,16 +268,16 @@ function expandToFillGaps(
           break
         }
       }
-      if (!canExpand) break
-      // Mark the new row as occupied
-      for (let c = col0; c < col0 + w.colSpan; c++) {
-        occupied[newRow][c] = true
+      if (canExpand) {
+        for (let c = col0; c < col0 + w.colSpan; c++) {
+          occupied[newRow][c] = true
+        }
+        w.rowSpan++
       }
-      w.rowSpan++
     }
 
-    // Try expanding right
-    while (col0 + w.colSpan < grid.columns) {
+    // Try expanding right (max 1 column)
+    if (w.colSpan - originalColSpan < 1 && col0 + w.colSpan < grid.columns) {
       const newCol = col0 + w.colSpan
       let canExpand = true
       for (let r = row0; r < row0 + w.rowSpan; r++) {
@@ -285,11 +286,12 @@ function expandToFillGaps(
           break
         }
       }
-      if (!canExpand) break
-      for (let r = row0; r < row0 + w.rowSpan; r++) {
-        occupied[r][newCol] = true
+      if (canExpand) {
+        for (let r = row0; r < row0 + w.rowSpan; r++) {
+          occupied[r][newCol] = true
+        }
+        w.colSpan++
       }
-      w.colSpan++
     }
   }
 }
