@@ -32,7 +32,6 @@ import { useOnThisDayWidgetMeta } from '@/integrations/on-this-day/useWidgetMeta
 import { MetaFillerWidget } from '@/ui/MetaFillerWidget'
 import { CellGridLayout } from './layouts/CellGridLayout'
 import type { CellGridWidget } from './layouts/CellGridLayout'
-import { placeWidgets, computeSpan, type GridWidget } from './layouts/gridEngine'
 import { useCalendarWidgetMeta } from '@/integrations/google-calendar/useWidgetMeta'
 
 function useGridConfig(): { columns: number; rows: number } {
@@ -174,31 +173,9 @@ function Widgets({
   const visibleContent = contentWidgets.filter((w) => w.meta.visible)
   const visibleFillers = fillerWidgets.filter((w) => w.meta.visible)
 
-  // Dry run: place content + all fillers to see how many fillers fit at their requested size
-  const allForDryRun = [...visibleContent, ...visibleFillers]
-    .filter((w): w is CellGridWidget & { meta: { visible: true } } => w.meta.visible)
-    .map((w) => ({ key: w.key, element: w.element, meta: w.meta as GridWidget['meta'] }))
-  const { placed: dryPlaced } = placeWidgets(allForDryRun, grid)
-
-  // Count fillers that were placed at their full requested size (not downgraded)
-  const fillerKeys = new Set(visibleFillers.map((f) => f.key))
-  let fillerSlots = 0
-  for (const p of dryPlaced) {
-    if (!fillerKeys.has(p.key)) continue
-    const filler = visibleFillers.find((f) => f.key === p.key)
-    if (!filler || !filler.meta.visible) continue
-    const requested = computeSpan((filler.meta as { visible: true; sizePreference: GridWidget['meta']['sizePreference'] }).sizePreference, grid)
-    if (p.colSpan === requested.colSpan && p.rowSpan === requested.rowSpan) {
-      fillerSlots++
-    }
-  }
-
+  // Always bundle fillers into a single meta widget
   let widgets: CellGridWidget[]
-  if (fillerSlots >= visibleFillers.length) {
-    // All fillers fit at their requested size — show individually
-    widgets = [...visibleContent, ...visibleFillers]
-  } else if (visibleFillers.length > 0) {
-    // Not all fillers fit — bundle ALL into meta widget
+  if (visibleFillers.length > 0) {
     const metaElement = (
       <MetaFillerWidget
         fillers={visibleFillers.map((f) => ({ key: f.key, element: f.element }))}
