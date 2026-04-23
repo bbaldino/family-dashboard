@@ -138,6 +138,16 @@ async fn fetch_holidays(client: &reqwest::Client, month: u32, day: u32) -> Vec<W
         .unwrap_or_default()
 }
 
+/// Extract thumbnail URL from a WikiEvent's pages
+fn event_image_url(event: &WikiEvent) -> Option<String> {
+    event
+        .pages
+        .as_ref()
+        .and_then(|pages| pages.first())
+        .and_then(|p| p.thumbnail.as_ref())
+        .and_then(|t| t.source.clone())
+}
+
 /// Clean up Wikipedia event text by removing picture references
 fn clean_event_text(text: &str) -> String {
     text.replace(" (pictured)", "")
@@ -229,6 +239,7 @@ async fn curate_events(
             Some(OnThisDayEvent {
                 year: ev.year,
                 text: clean_event_text(&ev.text),
+                image_url: event_image_url(ev),
             })
         })
         .collect();
@@ -444,6 +455,7 @@ pub async fn get_events(
                 events.push(OnThisDayEvent {
                     year: None,
                     text: holiday.text,
+                    image_url: None,
                 });
             }
             events
@@ -455,12 +467,14 @@ pub async fn get_events(
                 .map(|ev| OnThisDayEvent {
                     year: ev.year,
                     text: clean_event_text(&ev.text),
+                    image_url: event_image_url(ev),
                 })
                 .collect();
             for holiday in holidays {
                 events.push(OnThisDayEvent {
                     year: None,
                     text: holiday.text,
+                    image_url: None,
                 });
             }
             events

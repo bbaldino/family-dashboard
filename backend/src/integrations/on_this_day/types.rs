@@ -2,9 +2,20 @@ use serde::{Deserialize, Serialize};
 
 // Wikipedia API response types
 #[derive(Debug, Deserialize)]
+pub struct WikiThumbnail {
+    pub source: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct WikiEventPage {
+    pub thumbnail: Option<WikiThumbnail>,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct WikiEvent {
     pub text: String,
     pub year: Option<i32>,
+    pub pages: Option<Vec<WikiEventPage>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -46,9 +57,11 @@ pub struct WikiHolidaysResponse {
 
 // API response types
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OnThisDayEvent {
     pub year: Option<i32>,
     pub text: String,
+    pub image_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]

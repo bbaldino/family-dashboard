@@ -4,6 +4,7 @@ import { onThisDayIntegration } from './config'
 export interface OnThisDayEvent {
   year: number | null
   text: string
+  imageUrl: string | null
 }
 
 export interface OnThisDayBirth {

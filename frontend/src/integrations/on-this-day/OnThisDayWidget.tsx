@@ -79,13 +79,23 @@ export function OnThisDayWidget({ size = 'standard' }: OnThisDayWidgetProps) {
     <WidgetCard title="On This Day" category="info">
       <div className="flex flex-col h-full" style={{ gap: '2cqi' }}>
         <div className="flex items-start justify-between" style={{ gap: '2cqi' }}>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             {event.year && (
               <div className="font-extrabold text-palette-3 leading-none tracking-tight" style={{ fontSize: '7cqi' }}>
                 {event.year}
               </div>
             )}
-            <p className="text-text-primary leading-relaxed" style={{ fontSize: '3cqi', marginTop: '1.5cqi' }}>{event.text}</p>
+            <div className="flex" style={{ gap: '2cqi', marginTop: '1.5cqi' }}>
+              <p className="text-text-primary leading-relaxed flex-1" style={{ fontSize: '3cqi' }}>{event.text}</p>
+              {event.imageUrl && (
+                <img
+                  src={event.imageUrl}
+                  alt=""
+                  className="rounded object-cover flex-shrink-0"
+                  style={{ width: '20cqi', height: '20cqi' }}
+                />
+              )}
+            </div>
           </div>
           <button
             onClick={(e) => {
