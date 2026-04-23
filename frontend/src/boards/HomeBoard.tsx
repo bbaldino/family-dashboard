@@ -19,10 +19,6 @@ import { WordOfTheDayWidget } from '@/integrations/word-of-the-day/WordOfTheDayW
 import { useWordOfTheDayWidgetMeta } from '@/integrations/word-of-the-day/useWidgetMeta'
 import { DailyQuoteWidget } from '@/integrations/daily-quote/DailyQuoteWidget'
 import { useDailyQuoteWidgetMeta } from '@/integrations/daily-quote/useWidgetMeta'
-import { TriviaWidget } from '@/integrations/trivia/TriviaWidget'
-import { useTriviaWidgetMeta } from '@/integrations/trivia/useWidgetMeta'
-import { JokeWidget } from '@/integrations/jokes/JokeWidget'
-import { useJokeWidgetMeta } from '@/integrations/jokes/useWidgetMeta'
 import { useSportsWidgetMeta } from '@/integrations/sports/useWidgetMeta'
 import { usePackagesWidgetMeta } from '@/integrations/packages/useWidgetMeta'
 import { useChoresWidgetMeta } from '@/integrations/chores/useWidgetMeta'
@@ -141,8 +137,6 @@ function Widgets({
   const onThisDayMeta = useOnThisDayWidgetMeta()
   const wordMeta = useWordOfTheDayWidgetMeta()
   const quoteMeta = useDailyQuoteWidgetMeta()
-  const triviaMeta = useTriviaWidgetMeta()
-  const jokeMeta = useJokeWidgetMeta()
 
   const calendarElement = (
     <CalendarWidget
@@ -166,8 +160,6 @@ function Widgets({
     { key: 'on-this-day', element: <OnThisDayWidget />, meta: onThisDayMeta },
     { key: 'word-of-the-day', element: <WordOfTheDayWidget />, meta: wordMeta },
     { key: 'daily-quote', element: <DailyQuoteWidget />, meta: quoteMeta },
-    { key: 'trivia', element: <TriviaWidget />, meta: triviaMeta },
-    { key: 'jokes', element: <JokeWidget />, meta: jokeMeta },
   ]
 
   const visibleContent = contentWidgets.filter((w) => w.meta.visible)

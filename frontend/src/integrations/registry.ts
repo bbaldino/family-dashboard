@@ -18,8 +18,6 @@ import { ollamaIntegration } from './ollama/config'
 import { onThisDayIntegration } from './on-this-day/config'
 import { wordOfTheDayIntegration } from './word-of-the-day/config'
 import { dailyQuoteIntegration } from './daily-quote/config'
-import { triviaIntegration } from './trivia/config'
-import { jokesIntegration } from './jokes/config'
 import { tmdbIntegration } from './tmdb/config'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -43,7 +41,5 @@ export const integrations: Integration<any>[] = [
   onThisDayIntegration,
   wordOfTheDayIntegration,
   dailyQuoteIntegration,
-  triviaIntegration,
-  jokesIntegration,
   tmdbIntegration,
 ]
