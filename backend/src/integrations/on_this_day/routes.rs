@@ -99,6 +99,32 @@ async fn fetch_births(client: &reqwest::Client, month: u32, day: u32) -> Vec<Wik
     }
 }
 
+async fn fetch_events(client: &reqwest::Client, month: u32, day: u32) -> Vec<WikiEvent> {
+    let url = format!("{}/events/{:02}/{:02}", WIKI_BASE, month, day);
+    let resp = match client.get(&url).send().await {
+        Ok(r) if r.status().is_success() => r,
+        Ok(r) => {
+            tracing::warn!("Wikipedia events returned status {}", r.status());
+            return vec![];
+        }
+        Err(e) => {
+            tracing::warn!("Wikipedia events fetch failed: {}", e);
+            return vec![];
+        }
+    };
+    match resp.json::<WikiEventsResponse>().await {
+        Ok(r) => {
+            let events = r.events.unwrap_or_default();
+            tracing::info!("Fetched {} general events from Wikipedia", events.len());
+            events
+        }
+        Err(e) => {
+            tracing::warn!("Wikipedia events parse failed: {}", e);
+            vec![]
+        }
+    }
+}
+
 async fn fetch_holidays(client: &reqwest::Client, month: u32, day: u32) -> Vec<WikiHoliday> {
     let url = format!("{}/holidays/{:02}/{:02}", WIKI_BASE, month, day);
     let resp = match client.get(&url).send().await {
@@ -112,22 +138,42 @@ async fn fetch_holidays(client: &reqwest::Client, month: u32, day: u32) -> Vec<W
         .unwrap_or_default()
 }
 
-async fn is_family_friendly(
+/// Use Ollama to curate the best events from the full list.
+/// Instead of filtering one-by-one, send all events in one prompt and ask
+/// Ollama to pick the most interesting, family-friendly ones.
+async fn curate_events(
     client: &reqwest::Client,
     ollama_url: &str,
     ollama_token: Option<&str>,
     model: &str,
-    text: &str,
-) -> Result<bool, AppError> {
-    let url = format!("{}/api/generate", ollama_url.trim_end_matches('/'));
-    tracing::debug!("Ollama filter request: url={}, model={}", url, model);
+    events: &[WikiEvent],
+) -> Result<Vec<OnThisDayEvent>, AppError> {
+    // Build a numbered list of events for the prompt
+    let event_list: String = events
+        .iter()
+        .enumerate()
+        .map(|(i, e)| {
+            format!(
+                "{}. [{}] {}",
+                i + 1,
+                e.year.map(|y| y.to_string()).unwrap_or_default(),
+                e.text
+            )
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
 
     let prompt = format!(
-        "Is this historical event appropriate for a family kitchen dashboard seen by young \
-         children? Only say yes if the content is free of violence, crime, disasters, and death. \
-         Answer only 'yes' or 'no'.\n\nEvent: {}",
-        text
+        "You are curating content for a family kitchen dashboard. From the following historical events \
+         that happened on this day, pick the 5 most interesting and fun ones. \
+         Prefer pop culture, science, technology, space, sports, music, and entertainment. \
+         Avoid violence, war, crime, disasters, and death. \
+         Respond with ONLY the numbers of your picks, separated by commas. Nothing else.\n\n{}",
+        event_list
     );
+
+    let url = format!("{}/api/generate", ollama_url.trim_end_matches('/'));
+    tracing::info!("Curating {} events via Ollama", events.len());
 
     let mut req = client.post(&url).json(&serde_json::json!({
         "model": model,
@@ -142,7 +188,7 @@ async fn is_family_friendly(
     let resp = req
         .send()
         .await
-        .map_err(|e| AppError::Internal(format!("Ollama request to {} failed: {}", url, e)))?;
+        .map_err(|e| AppError::Internal(format!("Ollama request failed: {}", e)))?;
 
     if !resp.status().is_success() {
         let status = resp.status();
@@ -158,21 +204,24 @@ async fn is_family_friendly(
         .await
         .map_err(|e| AppError::Internal(format!("Ollama parse failed: {}", e)))?;
 
-    let answer = data["response"]
-        .as_str()
-        .unwrap_or("no")
-        .trim()
-        .to_lowercase();
+    let answer = data["response"].as_str().unwrap_or("").trim().to_string();
+    tracing::info!("Ollama curated picks: '{}'", answer);
 
-    let is_ok = answer.starts_with("yes");
-    tracing::info!(
-        "Ollama filter: '{}' → {} (answer: '{}')",
-        &text[..text.len().min(60)],
-        if is_ok { "PASS" } else { "FILTERED" },
-        answer
-    );
+    // Parse the comma-separated numbers
+    let picked: Vec<OnThisDayEvent> = answer
+        .split(|c: char| c == ',' || c == ' ' || c == '.')
+        .filter_map(|s| s.trim().parse::<usize>().ok())
+        .filter_map(|i| {
+            let idx = i.checked_sub(1)?; // 1-based to 0-based
+            let ev = events.get(idx)?;
+            Some(OnThisDayEvent {
+                year: ev.year,
+                text: ev.text.clone(),
+            })
+        })
+        .collect();
 
-    Ok(is_ok)
+    Ok(picked)
 }
 
 const ENTERTAINMENT_KEYWORDS: &[&str] = &[
@@ -324,9 +373,10 @@ pub async fn get_events(
         return Ok(Json(cached));
     }
 
-    // Fetch all three in parallel
-    let (selected, births, holidays) = tokio::join!(
+    // Fetch all four in parallel
+    let (selected, general_events, births, holidays) = tokio::join!(
         fetch_selected(&state.client, month, day),
+        fetch_events(&state.client, month, day),
         fetch_births(&state.client, month, day),
         fetch_holidays(&state.client, month, day),
     );
@@ -349,63 +399,61 @@ pub async fn get_events(
         model
     );
 
-    // Filter events through Ollama for family-friendliness
-    // If Ollama is unreachable, include all events unfiltered
-    let mut events = Vec::new();
-    let mut ollama_available = true;
-    for ev in &selected {
-        match is_family_friendly(
-            &state.client,
-            &ollama_url,
-            ollama_token.as_deref(),
-            &model,
-            &ev.text,
-        )
-        .await
-        {
-            Ok(true) => events.push(OnThisDayEvent {
-                year: ev.year,
-                text: ev.text.clone(),
-            }),
-            Ok(false) => {}
-            Err(e) => {
-                tracing::warn!("Ollama filter unavailable, including all events: {}", e);
-                ollama_available = false;
-                break;
-            }
+    // Combine selected + general events for a bigger pool to curate from
+    let mut all_events = selected;
+    // Deduplicate by text (selected and events overlap)
+    let existing_texts: std::collections::HashSet<String> =
+        all_events.iter().map(|e| e.text.clone()).collect();
+    for ev in general_events {
+        if !existing_texts.contains(&ev.text) {
+            all_events.push(ev);
         }
     }
 
-    if ollama_available {
-        tracing::info!(
-            "Ollama filtering complete: {}/{} events passed",
-            events.len(),
-            selected.len()
-        );
-    }
-
-    // Fallback: if Ollama is down, include all events unfiltered
-    if !ollama_available {
-        tracing::warn!(
-            "Ollama unavailable, returning all {} events unfiltered",
-            selected.len()
-        );
-        events = selected
-            .iter()
-            .map(|ev| OnThisDayEvent {
-                year: ev.year,
-                text: ev.text.clone(),
-            })
-            .collect();
-    }
-
-    // Add holidays as events (no filtering needed)
-    for holiday in holidays {
-        events.push(OnThisDayEvent {
-            year: None,
-            text: holiday.text,
-        });
-    }
+    // Use Ollama to curate the most interesting events
+    let events = match curate_events(
+        &state.client,
+        &ollama_url,
+        ollama_token.as_deref(),
+        &model,
+        &all_events,
+    )
+    .await
+    {
+        Ok(curated) => {
+            tracing::info!(
+                "Ollama curated {}/{} events",
+                curated.len(),
+                all_events.len()
+            );
+            let mut events = curated;
+            // Add holidays (always appropriate, no curation needed)
+            for holiday in holidays {
+                events.push(OnThisDayEvent {
+                    year: None,
+                    text: holiday.text,
+                });
+            }
+            events
+        }
+        Err(e) => {
+            tracing::warn!("Ollama curation failed, returning all events: {}", e);
+            let mut events: Vec<OnThisDayEvent> = all_events
+                .iter()
+                .map(|ev| OnThisDayEvent {
+                    year: ev.year,
+                    text: ev.text.clone(),
+                })
+                .collect();
+            for holiday in holidays {
+                events.push(OnThisDayEvent {
+                    year: None,
+                    text: holiday.text,
+                });
+            }
+            events
+        }
+    };
 
     let tmdb_config = IntegrationConfig::new(&state.pool, "tmdb");
     let tmdb_api_key = tmdb_config.get("api_key").await.ok();

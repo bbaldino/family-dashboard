@@ -35,6 +35,11 @@ pub struct WikiBirthsResponse {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct WikiEventsResponse {
+    pub events: Option<Vec<WikiEvent>>,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct WikiHolidaysResponse {
     pub holidays: Option<Vec<WikiHoliday>>,
 }
