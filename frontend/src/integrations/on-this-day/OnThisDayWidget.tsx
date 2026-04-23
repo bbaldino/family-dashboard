@@ -77,24 +77,25 @@ export function OnThisDayWidget({ size = 'standard' }: OnThisDayWidgetProps) {
   // Standard
   return (
     <WidgetCard title="On This Day" category="info">
-      <div className="flex flex-col gap-2 h-full">
-        <div className="flex items-start justify-between gap-2">
+      <div className="flex flex-col h-full" style={{ gap: '2cqi' }}>
+        <div className="flex items-start justify-between" style={{ gap: '2cqi' }}>
           <div className="flex-1">
             {event.year && (
-              <div className="text-4xl font-extrabold text-palette-3 leading-none tracking-tight">
+              <div className="font-extrabold text-palette-3 leading-none tracking-tight" style={{ fontSize: '10cqi' }}>
                 {event.year}
               </div>
             )}
-            <p className="text-text-primary text-[15px] leading-relaxed mt-2">{event.text}</p>
+            <p className="text-text-primary leading-relaxed" style={{ fontSize: '4cqi', marginTop: '2cqi' }}>{event.text}</p>
           </div>
           <button
             onClick={(e) => {
               e.stopPropagation()
               advance()
             }}
-            className="p-1.5 rounded-full text-text-muted hover:text-text-primary hover:bg-bg-primary transition-colors flex-shrink-0"
+            className="rounded-full text-text-muted hover:text-text-primary hover:bg-bg-primary transition-colors flex-shrink-0"
+            style={{ padding: '1.5cqi' }}
           >
-            <RefreshCw size={14} />
+            <RefreshCw style={{ width: '4cqi', height: '4cqi' }} />
           </button>
         </div>
       </div>

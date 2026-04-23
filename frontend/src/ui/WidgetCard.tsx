@@ -48,7 +48,7 @@ export function WidgetCard({
   return (
     <>
       <div
-        className={`bg-bg-card rounded-[var(--radius-card)] shadow-[var(--shadow-card)] p-[12px_14px] overflow-hidden flex flex-col h-full ${
+        className={`bg-bg-card rounded-[var(--radius-card)] shadow-[var(--shadow-card)] p-[12px_14px] overflow-hidden flex flex-col h-full @container ${
           detail ? 'cursor-pointer active:bg-bg-card-hover transition-colors' : ''
         } ${className}`}
         onClick={handleTap}

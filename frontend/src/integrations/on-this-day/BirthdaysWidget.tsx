@@ -8,7 +8,7 @@ export function BirthdaysWidget() {
   if (isLoading) {
     return (
       <WidgetCard title="Born Today" category="info">
-        <div className="text-text-muted text-sm">Loading...</div>
+        <div className="text-text-muted" style={{ fontSize: '3.5cqi' }}>Loading...</div>
       </WidgetCard>
     )
   }
@@ -16,30 +16,36 @@ export function BirthdaysWidget() {
   if (births.length === 0) {
     return (
       <WidgetCard title="Born Today" category="info">
-        <div className="text-text-muted text-sm">No birthdays today</div>
+        <div className="text-text-muted" style={{ fontSize: '3.5cqi' }}>No birthdays today</div>
       </WidgetCard>
     )
   }
 
   return (
     <WidgetCard title="Born Today" category="info">
-      <div className="flex flex-col gap-3 h-full justify-center">
+      <div className="flex flex-col h-full justify-center" style={{ gap: '3cqi' }}>
         {births.map((b, i) => (
-          <div key={i} className="flex items-center gap-4">
+          <div key={i} className="flex items-center" style={{ gap: '3cqi' }}>
             {b.photoUrl ? (
               <img
                 src={b.photoUrl}
                 alt={b.name}
-                className="w-14 h-14 rounded-full object-cover flex-shrink-0"
+                className="rounded-full object-cover flex-shrink-0"
+                style={{ width: '15cqi', height: '15cqi' }}
               />
             ) : (
-              <div className="w-14 h-14 rounded-full bg-bg-primary flex items-center justify-center text-text-muted text-lg flex-shrink-0">
+              <div
+                className="rounded-full bg-bg-primary flex items-center justify-center text-text-muted flex-shrink-0"
+                style={{ width: '15cqi', height: '15cqi', fontSize: '6cqi' }}
+              >
                 {b.name[0]}
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <div className="text-[15px] font-semibold text-text-primary truncate">{b.name}</div>
-              <div className="text-[13px] text-text-muted truncate">
+              <div className="font-semibold text-text-primary truncate" style={{ fontSize: '4.5cqi' }}>
+                {b.name}
+              </div>
+              <div className="text-text-muted truncate" style={{ fontSize: '3.5cqi' }}>
                 {b.knownFor.length > 0 ? b.knownFor.join(', ') : b.role}
               </div>
             </div>
