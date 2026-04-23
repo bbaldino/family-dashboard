@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { WidgetCard } from '@/ui/WidgetCard'
 import { useOnThisDay } from './useOnThisDay'
-import type { OnThisDayBirth } from './useOnThisDay'
 import { useIntegrationConfig } from '@/integrations/use-integration-config'
 import { onThisDayIntegration } from './config'
 
@@ -12,37 +11,6 @@ interface OnThisDayWidgetProps {
   size?: WidgetSize
 }
 
-function BirthsFooter({ births }: { births: OnThisDayBirth[] }) {
-  if (births.length === 0) return null
-
-  return (
-    <div className="mt-auto pt-2 border-t border-border">
-      <div className="text-[10px] font-semibold text-text-muted uppercase tracking-[0.3px] mb-1">
-        Also Born Today
-      </div>
-      <div className="flex flex-col gap-1">
-        {births.map((b, i) => (
-          <div key={i} className="flex items-center gap-2 text-[12px]">
-            {b.photoUrl && (
-              <img
-                src={b.photoUrl}
-                alt={b.name}
-                className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-              />
-            )}
-            <div className="flex-1 min-w-0">
-              <div className="text-text-primary truncate">{b.name}</div>
-              <div className="text-text-muted text-[10px] truncate">
-                {b.knownFor.length > 0 ? b.knownFor.join(', ') : b.role}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 export function OnThisDayWidget({ size = 'standard' }: OnThisDayWidgetProps) {
   const { data, isLoading } = useOnThisDay()
   const config = useIntegrationConfig(onThisDayIntegration)
@@ -50,7 +18,6 @@ export function OnThisDayWidget({ size = 'standard' }: OnThisDayWidgetProps) {
   const [cycleKey, setCycleKey] = useState(0)
 
   const events = data?.events ?? []
-  const births = data?.births ?? []
   const cycleMs = (parseInt(config?.cycle_minutes ?? '30', 10) || 30) * 60 * 1000
 
   // Auto-cycle timer — resets when cycleKey changes (manual advance)
@@ -94,7 +61,6 @@ export function OnThisDayWidget({ size = 'standard' }: OnThisDayWidgetProps) {
               </div>
             )}
             <p className="text-text-primary text-sm leading-relaxed">{event.text}</p>
-            <BirthsFooter births={births} />
           </div>
         }
       >
@@ -131,7 +97,6 @@ export function OnThisDayWidget({ size = 'standard' }: OnThisDayWidgetProps) {
             <RefreshCw size={14} />
           </button>
         </div>
-        <BirthsFooter births={births} />
       </div>
     </WidgetCard>
   )

@@ -15,10 +15,10 @@ import { TimerBanner } from '@/integrations/timers'
 import { useDrivingTime } from '@/integrations/driving-time'
 import type { EventDriveInfo } from '@/integrations/driving-time/types'
 import { OnThisDayWidget } from '@/integrations/on-this-day/OnThisDayWidget'
+import { BirthdaysWidget } from '@/integrations/on-this-day/BirthdaysWidget'
+import { useBirthdaysWidgetMeta } from '@/integrations/on-this-day/useBirthdaysWidgetMeta'
 import { WordOfTheDayWidget } from '@/integrations/word-of-the-day/WordOfTheDayWidget'
 import { useWordOfTheDayWidgetMeta } from '@/integrations/word-of-the-day/useWidgetMeta'
-import { DailyQuoteWidget } from '@/integrations/daily-quote/DailyQuoteWidget'
-import { useDailyQuoteWidgetMeta } from '@/integrations/daily-quote/useWidgetMeta'
 import { useSportsWidgetMeta } from '@/integrations/sports/useWidgetMeta'
 import { usePackagesWidgetMeta } from '@/integrations/packages/useWidgetMeta'
 import { useChoresWidgetMeta } from '@/integrations/chores/useWidgetMeta'
@@ -135,8 +135,9 @@ function Widgets({
   const countdownsMeta = useCountdownsWidgetMeta()
   const lunchMeta = useLunchWidgetMeta()
   const onThisDayMeta = useOnThisDayWidgetMeta()
+  const birthdaysMeta = useBirthdaysWidgetMeta()
   const wordMeta = useWordOfTheDayWidgetMeta()
-  const quoteMeta = useDailyQuoteWidgetMeta()
+
 
   const calendarElement = (
     <CalendarWidget
@@ -158,8 +159,8 @@ function Widgets({
 
   const fillerWidgets: CellGridWidget[] = [
     { key: 'on-this-day', element: <OnThisDayWidget />, meta: onThisDayMeta },
+    { key: 'birthdays', element: <BirthdaysWidget />, meta: birthdaysMeta },
     { key: 'word-of-the-day', element: <WordOfTheDayWidget />, meta: wordMeta },
-    { key: 'daily-quote', element: <DailyQuoteWidget />, meta: quoteMeta },
   ]
 
   const visibleContent = contentWidgets.filter((w) => w.meta.visible)
