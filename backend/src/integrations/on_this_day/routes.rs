@@ -160,6 +160,33 @@ fn clean_event_text(text: &str) -> String {
         .replace("(shown) ", "")
 }
 
+/// Filter out religious feast days and observances from holidays
+fn is_religious_holiday(text: &str) -> bool {
+    let lower = text.to_lowercase();
+    let keywords = [
+        "feast day",
+        "feast of",
+        "saint ",
+        "saints ",
+        "christian ",
+        "catholic ",
+        "orthodox ",
+        "protestant ",
+        "church of",
+        "liturgical",
+        "martyr",
+        "blessed ",
+        "patron saint",
+        "roman calendar",
+        "general roman",
+        "eastern orthodox",
+        "coptic ",
+        "anglican ",
+        "lutheran ",
+    ];
+    keywords.iter().any(|kw| lower.contains(kw))
+}
+
 /// Pre-filter events to remove obviously inappropriate ones before sending to Ollama.
 /// This reduces the chance of the model picking something bad from a long list.
 fn pre_filter_events(events: &[WikiEvent]) -> Vec<&WikiEvent> {
@@ -534,13 +561,15 @@ pub async fn get_events(
         Ok(curated) => {
             tracing::info!("Ollama curated {}/{} events", curated.len(), filtered.len());
             let mut events = curated;
-            // Add holidays (always appropriate, no curation needed)
-            for holiday in holidays {
-                events.push(OnThisDayEvent {
-                    year: None,
-                    text: holiday.text,
-                    image_url: None,
-                });
+            // Add non-religious holidays
+            for holiday in &holidays {
+                if !is_religious_holiday(&holiday.text) {
+                    events.push(OnThisDayEvent {
+                        year: None,
+                        text: holiday.text.clone(),
+                        image_url: None,
+                    });
+                }
             }
             events
         }
@@ -557,12 +586,14 @@ pub async fn get_events(
                     image_url: event_image_url(ev),
                 })
                 .collect();
-            for holiday in holidays {
-                events.push(OnThisDayEvent {
-                    year: None,
-                    text: holiday.text,
-                    image_url: None,
-                });
+            for holiday in &holidays {
+                if !is_religious_holiday(&holiday.text) {
+                    events.push(OnThisDayEvent {
+                        year: None,
+                        text: holiday.text.clone(),
+                        image_url: None,
+                    });
+                }
             }
             events
         }
