@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { Music, Play, Pause, SkipBack, SkipForward, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Music, Play, Pause, SkipBack, SkipForward, X, Lock, Unlock } from 'lucide-react'
 import { useMusic } from '@/integrations/music'
 
 interface FullscreenNowPlayingProps {
@@ -10,33 +10,52 @@ interface FullscreenNowPlayingProps {
 export function FullscreenNowPlaying({ isOpen, onClose }: FullscreenNowPlayingProps) {
   const { state, isPlaying, pause, resume, next, previous } = useMusic()
   const { activeQueue } = state
+  const [locked, setLocked] = useState(false)
 
   useEffect(() => {
     if (!isOpen) return
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape' && !locked) onClose()
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose])
+  }, [isOpen, onClose, locked])
+
+  // Reset lock when modal closes
+  useEffect(() => {
+    if (!isOpen) setLocked(false)
+  }, [isOpen])
 
   if (!isOpen) return null
 
   const currentItem = activeQueue?.currentItem ?? null
-  // isPlaying comes from context (optimistic)
 
   return (
     <div
       className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center"
-      onClick={onClose}
+      onClick={locked ? undefined : onClose}
     >
-      {/* Dismiss button */}
+      {/* Dismiss button — hidden when locked */}
+      {!locked && (
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center text-white/70 hover:text-white"
+          aria-label="Close"
+        >
+          <X size={28} />
+        </button>
+      )}
+
+      {/* Lock toggle — always visible but subtle */}
       <button
-        onClick={onClose}
-        className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center text-white/70 hover:text-white"
-        aria-label="Close"
+        onClick={(e) => {
+          e.stopPropagation()
+          setLocked((prev) => !prev)
+        }}
+        className="absolute top-4 left-4 w-10 h-10 flex items-center justify-center text-white/20 hover:text-white/50 transition-colors"
+        aria-label={locked ? 'Unlock' : 'Lock'}
       >
-        <X size={28} />
+        {locked ? <Lock size={18} /> : <Unlock size={18} />}
       </button>
 
       {/* Content — stop propagation so tapping the content area itself doesn't dismiss */}
@@ -76,30 +95,32 @@ export function FullscreenNowPlaying({ isOpen, onClose }: FullscreenNowPlayingPr
           )}
         </div>
 
-        {/* Playback controls */}
-        <div className="flex items-center gap-10">
-          <button
-            onClick={() => previous()}
-            className="w-14 h-14 flex items-center justify-center text-white/80 hover:text-white"
-            aria-label="Previous"
-          >
-            <SkipBack size={36} />
-          </button>
-          <button
-            onClick={() => (isPlaying ? pause() : resume())}
-            className="w-20 h-20 rounded-full bg-white flex items-center justify-center text-black"
-            aria-label={isPlaying ? 'Pause' : 'Play'}
-          >
-            {isPlaying ? <Pause size={36} /> : <Play size={36} />}
-          </button>
-          <button
-            onClick={() => next()}
-            className="w-14 h-14 flex items-center justify-center text-white/80 hover:text-white"
-            aria-label="Next"
-          >
-            <SkipForward size={36} />
-          </button>
-        </div>
+        {/* Playback controls — hidden when locked */}
+        {!locked && (
+          <div className="flex items-center gap-10">
+            <button
+              onClick={() => previous()}
+              className="w-14 h-14 flex items-center justify-center text-white/80 hover:text-white"
+              aria-label="Previous"
+            >
+              <SkipBack size={36} />
+            </button>
+            <button
+              onClick={() => (isPlaying ? pause() : resume())}
+              className="w-20 h-20 rounded-full bg-white flex items-center justify-center text-black"
+              aria-label={isPlaying ? 'Pause' : 'Play'}
+            >
+              {isPlaying ? <Pause size={36} /> : <Play size={36} />}
+            </button>
+            <button
+              onClick={() => next()}
+              className="w-14 h-14 flex items-center justify-center text-white/80 hover:text-white"
+              aria-label="Next"
+            >
+              <SkipForward size={36} />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
