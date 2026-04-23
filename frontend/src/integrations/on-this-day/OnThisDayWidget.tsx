@@ -81,11 +81,11 @@ export function OnThisDayWidget({ size = 'standard' }: OnThisDayWidgetProps) {
         <div className="flex items-start justify-between" style={{ gap: '2cqi' }}>
           <div className="flex-1">
             {event.year && (
-              <div className="font-extrabold text-palette-3 leading-none tracking-tight" style={{ fontSize: '10cqi' }}>
+              <div className="font-extrabold text-palette-3 leading-none tracking-tight" style={{ fontSize: '7cqi' }}>
                 {event.year}
               </div>
             )}
-            <p className="text-text-primary leading-relaxed" style={{ fontSize: '4cqi', marginTop: '2cqi' }}>{event.text}</p>
+            <p className="text-text-primary leading-relaxed" style={{ fontSize: '3cqi', marginTop: '1.5cqi' }}>{event.text}</p>
           </div>
           <button
             onClick={(e) => {
@@ -95,7 +95,7 @@ export function OnThisDayWidget({ size = 'standard' }: OnThisDayWidgetProps) {
             className="rounded-full text-text-muted hover:text-text-primary hover:bg-bg-primary transition-colors flex-shrink-0"
             style={{ padding: '1.5cqi' }}
           >
-            <RefreshCw style={{ width: '4cqi', height: '4cqi' }} />
+            <RefreshCw style={{ width: '3cqi', height: '3cqi' }} />
           </button>
         </div>
       </div>
