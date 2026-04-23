@@ -9,6 +9,6 @@ export const tmdbIntegration = defineIntegration({
     api_key: z.string().optional(),
   }),
   fields: {
-    api_key: { label: 'API Key', type: 'secret', description: 'API key from themoviedb.org' },
+    api_key: { label: 'API Key', description: 'API key from themoviedb.org' },
   },
 })
