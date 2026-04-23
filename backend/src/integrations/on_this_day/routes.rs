@@ -186,10 +186,11 @@ async fn curate_events(
         .join("\n");
 
     let prompt = format!(
-        "You are curating content for a family kitchen dashboard. From the following historical events \
-         that happened on this day, pick the 5 most interesting and fun ones. \
-         Prefer pop culture, science, technology, space, sports, music, and entertainment. \
-         Avoid violence, war, crime, disasters, and death. \
+        "You are curating content for a family kitchen dashboard seen by young children. \
+         From the following historical events that happened on this day, pick the 5 most interesting and fun ones. \
+         Strongly prefer: pop culture, science, technology, space, sports, music, entertainment, inventions, and achievements. \
+         Strictly avoid: violence, war, crime, disasters, death, controversial politics, immigration, protests, and anything divisive or upsetting. \
+         Only pick events that would make someone smile or say 'that's cool!' \
          Respond with ONLY the numbers of your picks, separated by commas. Nothing else.\n\n{}",
         event_list
     );
