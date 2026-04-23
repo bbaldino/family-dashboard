@@ -160,6 +160,21 @@ fn clean_event_text(text: &str) -> String {
         .replace("(shown) ", "")
 }
 
+/// Check if a holiday is worth showing — skip religious feast days and bare observance names
+fn should_skip_holiday(text: &str) -> bool {
+    // Skip religious content
+    if is_religious_holiday(text) {
+        return true;
+    }
+    // Skip bare observance names with no description (e.g. "Khongjom Day (Manipur)")
+    // These are just "X Day (Country)" with nothing else interesting
+    let trimmed = text.trim();
+    if trimmed.len() < 60 && trimmed.contains('(') && trimmed.ends_with(')') {
+        return true;
+    }
+    false
+}
+
 /// Filter out religious feast days and observances from holidays
 fn is_religious_holiday(text: &str) -> bool {
     let lower = text.to_lowercase();
@@ -563,7 +578,7 @@ pub async fn get_events(
             let mut events = curated;
             // Add non-religious holidays
             for holiday in &holidays {
-                if !is_religious_holiday(&holiday.text) {
+                if !should_skip_holiday(&holiday.text) {
                     events.push(OnThisDayEvent {
                         year: None,
                         text: holiday.text.clone(),
@@ -587,7 +602,7 @@ pub async fn get_events(
                 })
                 .collect();
             for holiday in &holidays {
-                if !is_religious_holiday(&holiday.text) {
+                if !should_skip_holiday(&holiday.text) {
                     events.push(OnThisDayEvent {
                         year: None,
                         text: holiday.text.clone(),
