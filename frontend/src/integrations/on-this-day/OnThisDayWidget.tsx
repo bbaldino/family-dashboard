@@ -85,7 +85,7 @@ export function OnThisDayWidget({ size = 'standard' }: OnThisDayWidgetProps) {
                 {event.year}
               </div>
             )}
-            <p className="text-text-primary text-sm leading-relaxed mt-2">{event.text}</p>
+            <p className="text-text-primary text-[15px] leading-relaxed mt-2">{event.text}</p>
           </div>
           <button
             onClick={(e) => {

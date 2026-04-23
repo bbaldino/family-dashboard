@@ -23,23 +23,23 @@ export function BirthdaysWidget() {
 
   return (
     <WidgetCard title="Born Today" category="info">
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-3 h-full justify-center">
         {births.map((b, i) => (
-          <div key={i} className="flex items-center gap-3">
+          <div key={i} className="flex items-center gap-4">
             {b.photoUrl ? (
               <img
                 src={b.photoUrl}
                 alt={b.name}
-                className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+                className="w-14 h-14 rounded-full object-cover flex-shrink-0"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-bg-primary flex items-center justify-center text-text-muted text-sm flex-shrink-0">
+              <div className="w-14 h-14 rounded-full bg-bg-primary flex items-center justify-center text-text-muted text-lg flex-shrink-0">
                 {b.name[0]}
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-text-primary truncate">{b.name}</div>
-              <div className="text-xs text-text-muted truncate">
+              <div className="text-[15px] font-semibold text-text-primary truncate">{b.name}</div>
+              <div className="text-[13px] text-text-muted truncate">
                 {b.knownFor.length > 0 ? b.knownFor.join(', ') : b.role}
               </div>
             </div>
