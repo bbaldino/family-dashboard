@@ -5,7 +5,7 @@ use std::sync::Arc;
 use axum::Router;
 use sqlx::SqlitePool;
 
-pub const INTEGRATION_ID: &str = "word_of_the_day";
+pub const INTEGRATION_ID: &str = "word-of-the-day";
 
 pub fn router(pool: SqlitePool) -> Router {
     let state = routes::WordState {
