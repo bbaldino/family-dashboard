@@ -160,6 +160,81 @@ fn clean_event_text(text: &str) -> String {
         .replace("(shown) ", "")
 }
 
+/// Pre-filter events to remove obviously inappropriate ones before sending to Ollama.
+/// This reduces the chance of the model picking something bad from a long list.
+fn pre_filter_events(events: &[WikiEvent]) -> Vec<&WikiEvent> {
+    const BAD_KEYWORDS: &[&str] = &[
+        "kill",
+        "killed",
+        "kills",
+        "murder",
+        "murdered",
+        "massacre",
+        "shooting",
+        "shot dead",
+        "assassin",
+        "death",
+        "dead",
+        "died",
+        "dies",
+        "fatal",
+        "bomb",
+        "bombed",
+        "bombing",
+        "attack",
+        "attacked",
+        "terrorist",
+        "war ",
+        "warfare",
+        "battle of",
+        "invasion",
+        "invaded",
+        "earthquake",
+        "tsunami",
+        "hurricane",
+        "flood",
+        "famine",
+        "crash",
+        "crashed",
+        "derail",
+        "sank",
+        "sinking",
+        "capsiz",
+        "riot",
+        "riots",
+        "protest",
+        "coup",
+        "rebellion",
+        "revolt",
+        "genocide",
+        "ethnic cleansing",
+        "concentration camp",
+        "collapse",
+        "collapsed",
+        "explosion",
+        "exploded",
+        "suicide",
+        "execution",
+        "executed",
+        "hanged",
+        "kidnap",
+        "hostage",
+        "hijack",
+        "immigration",
+        "deportation",
+        "controversial",
+        "scandal",
+    ];
+
+    events
+        .iter()
+        .filter(|e| {
+            let lower = e.text.to_lowercase();
+            !BAD_KEYWORDS.iter().any(|kw| lower.contains(kw))
+        })
+        .collect()
+}
+
 /// Use Ollama to curate the best events from the full list.
 /// Instead of filtering one-by-one, send all events in one prompt and ask
 /// Ollama to pick the most interesting, family-friendly ones.
@@ -434,22 +509,30 @@ pub async fn get_events(
         }
     }
 
+    // Pre-filter to remove obviously inappropriate events before sending to Ollama
+    let filtered: Vec<WikiEvent> = pre_filter_events(&all_events)
+        .into_iter()
+        .cloned()
+        .collect();
+    tracing::info!(
+        "Pre-filtered {}/{} events (removed {} inappropriate)",
+        filtered.len(),
+        all_events.len(),
+        all_events.len() - filtered.len()
+    );
+
     // Use Ollama to curate the most interesting events
     let events = match curate_events(
         &state.client,
         &ollama_url,
         ollama_token.as_deref(),
         &model,
-        &all_events,
+        &filtered,
     )
     .await
     {
         Ok(curated) => {
-            tracing::info!(
-                "Ollama curated {}/{} events",
-                curated.len(),
-                all_events.len()
-            );
+            tracing::info!("Ollama curated {}/{} events", curated.len(), filtered.len());
             let mut events = curated;
             // Add holidays (always appropriate, no curation needed)
             for holiday in holidays {
@@ -462,8 +545,11 @@ pub async fn get_events(
             events
         }
         Err(e) => {
-            tracing::warn!("Ollama curation failed, returning all events: {}", e);
-            let mut events: Vec<OnThisDayEvent> = all_events
+            tracing::warn!(
+                "Ollama curation failed, returning pre-filtered events: {}",
+                e
+            );
+            let mut events: Vec<OnThisDayEvent> = filtered
                 .iter()
                 .map(|ev| OnThisDayEvent {
                     year: ev.year,

@@ -1,17 +1,17 @@
 use serde::{Deserialize, Serialize};
 
 // Wikipedia API response types
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct WikiThumbnail {
     pub source: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct WikiEventPage {
     pub thumbnail: Option<WikiThumbnail>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct WikiEvent {
     pub text: String,
     pub year: Option<i32>,
