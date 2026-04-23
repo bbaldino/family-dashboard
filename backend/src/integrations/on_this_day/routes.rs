@@ -406,12 +406,19 @@ async fn pick_births_with_tmdb(
             continue;
         };
 
-        let popularity = top["popularity"].as_f64().unwrap_or(0.0);
+        // Score by sum of vote counts across known-for films (lifetime fame proxy)
+        let known_for_items = top["known_for"].as_array();
+        let fame_score: f64 = known_for_items
+            .map(|arr| {
+                arr.iter()
+                    .map(|k| k["vote_count"].as_f64().unwrap_or(0.0))
+                    .sum()
+            })
+            .unwrap_or(0.0);
         let photo_path = top["profile_path"]
             .as_str()
             .map(|p| format!("https://image.tmdb.org/t/p/w185{}", p));
-        let known_for: Vec<String> = top["known_for"]
-            .as_array()
+        let known_for: Vec<String> = known_for_items
             .map(|arr| {
                 arr.iter()
                     .filter_map(|k| {
@@ -426,7 +433,7 @@ async fn pick_births_with_tmdb(
             .unwrap_or_default();
 
         results.push((
-            popularity,
+            fame_score,
             OnThisDayBirth {
                 year: *year,
                 name: name.clone(),
@@ -441,7 +448,7 @@ async fn pick_births_with_tmdb(
         }
     }
 
-    // Sort by TMDB popularity descending, take top 3
+    // Sort by fame score (sum of vote counts) descending, take top 3
     results.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
     results.into_iter().take(3).map(|(_, b)| b).collect()
 }
