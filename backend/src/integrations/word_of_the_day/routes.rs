@@ -106,23 +106,26 @@ pub async fn get_today(State(state): State<WordState>) -> Result<Json<WordRespon
         .and_then(|c| c.get(1))
         .map(|m| m.as_str().trim().to_string());
 
-    // Parse definition — look for the first definition paragraph in wod-definition-container
-    let def_re = Regex::new(r#"class="wod-definition-container"[^>]*>.*?<p>(.*?)</p>"#).unwrap();
-    let definition = def_re
+    // Parse definition and example from wod-definition-container
+    // The container has: <h2>What It Means</h2> <p>definition...</p> <p>// example...</p>
+    let tag_re = Regex::new(r"<[^>]+>").unwrap();
+    let container_re =
+        Regex::new(r#"(?s)wod-definition-container">\s*<h2>[^<]*</h2>\s*<p>(.*?)</p>"#).unwrap();
+    let definition = container_re
         .captures(&html)
         .and_then(|c| c.get(1))
-        .map(|m| {
-            // Strip HTML tags from definition
-            let tag_re = Regex::new(r"<[^>]+>").unwrap();
-            tag_re.replace_all(m.as_str(), "").trim().to_string()
-        })
+        .map(|m| tag_re.replace_all(m.as_str(), "").trim().to_string())
         .unwrap_or_default();
 
-    // Parse example sentence — look for "wod-example-sentences" or example in definition
-    let example_re = Regex::new(r#"<p class="[^"]*definition-inner-item[^"]*">(.*?)</p>"#).unwrap();
+    // Example is the second <p> after the definition, starts with "// "
+    let example_re = Regex::new(
+        r#"(?s)wod-definition-container">\s*<h2>[^<]*</h2>\s*<p>.*?</p>\s*<p>(.*?)</p>"#,
+    )
+    .unwrap();
     let example = example_re.captures(&html).and_then(|c| c.get(1)).map(|m| {
-        let tag_re = Regex::new(r"<[^>]+>").unwrap();
-        tag_re.replace_all(m.as_str(), "").trim().to_string()
+        let text = tag_re.replace_all(m.as_str(), "").trim().to_string();
+        // Remove leading "// " prefix
+        text.strip_prefix("// ").unwrap_or(&text).to_string()
     });
 
     tracing::info!(
