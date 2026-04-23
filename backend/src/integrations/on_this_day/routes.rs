@@ -138,6 +138,18 @@ async fn fetch_holidays(client: &reqwest::Client, month: u32, day: u32) -> Vec<W
         .unwrap_or_default()
 }
 
+/// Clean up Wikipedia event text by removing picture references
+fn clean_event_text(text: &str) -> String {
+    text.replace(" (pictured)", "")
+        .replace("(pictured) ", "")
+        .replace(" (Pictured)", "")
+        .replace("(Pictured) ", "")
+        .replace(" (replica pictured)", "")
+        .replace("(replica pictured) ", "")
+        .replace(" (shown)", "")
+        .replace("(shown) ", "")
+}
+
 /// Use Ollama to curate the best events from the full list.
 /// Instead of filtering one-by-one, send all events in one prompt and ask
 /// Ollama to pick the most interesting, family-friendly ones.
@@ -216,7 +228,7 @@ async fn curate_events(
             let ev = events.get(idx)?;
             Some(OnThisDayEvent {
                 year: ev.year,
-                text: ev.text.clone(),
+                text: clean_event_text(&ev.text),
             })
         })
         .collect();
@@ -442,7 +454,7 @@ pub async fn get_events(
                 .iter()
                 .map(|ev| OnThisDayEvent {
                     year: ev.year,
-                    text: ev.text.clone(),
+                    text: clean_event_text(&ev.text),
                 })
                 .collect();
             for holiday in holidays {
