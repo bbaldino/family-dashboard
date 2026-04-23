@@ -125,19 +125,6 @@ async fn fetch_events(client: &reqwest::Client, month: u32, day: u32) -> Vec<Wik
     }
 }
 
-async fn fetch_holidays(client: &reqwest::Client, month: u32, day: u32) -> Vec<WikiHoliday> {
-    let url = format!("{}/holidays/{:02}/{:02}", WIKI_BASE, month, day);
-    let resp = match client.get(&url).send().await {
-        Ok(r) if r.status().is_success() => r,
-        _ => return vec![],
-    };
-    resp.json::<WikiHolidaysResponse>()
-        .await
-        .ok()
-        .and_then(|r| r.holidays)
-        .unwrap_or_default()
-}
-
 /// Extract thumbnail URL from a WikiEvent's pages
 fn event_image_url(event: &WikiEvent) -> Option<String> {
     event
@@ -158,48 +145,6 @@ fn clean_event_text(text: &str) -> String {
         .replace("(replica pictured) ", "")
         .replace(" (shown)", "")
         .replace("(shown) ", "")
-}
-
-/// Check if a holiday is worth showing — skip religious feast days and bare observance names
-fn should_skip_holiday(text: &str) -> bool {
-    // Skip religious content
-    if is_religious_holiday(text) {
-        return true;
-    }
-    // Skip bare observance names with no description (e.g. "Khongjom Day (Manipur)")
-    // These are just "X Day (Country)" with nothing else interesting
-    let trimmed = text.trim();
-    if trimmed.len() < 60 && trimmed.contains('(') && trimmed.ends_with(')') {
-        return true;
-    }
-    false
-}
-
-/// Filter out religious feast days and observances from holidays
-fn is_religious_holiday(text: &str) -> bool {
-    let lower = text.to_lowercase();
-    let keywords = [
-        "feast day",
-        "feast of",
-        "saint ",
-        "saints ",
-        "christian ",
-        "catholic ",
-        "orthodox ",
-        "protestant ",
-        "church of",
-        "liturgical",
-        "martyr",
-        "blessed ",
-        "patron saint",
-        "roman calendar",
-        "general roman",
-        "eastern orthodox",
-        "coptic ",
-        "anglican ",
-        "lutheran ",
-    ];
-    keywords.iter().any(|kw| lower.contains(kw))
 }
 
 /// Pre-filter events to remove obviously inappropriate ones before sending to Ollama.
@@ -515,11 +460,10 @@ pub async fn get_events(
     }
 
     // Fetch all four in parallel
-    let (selected, general_events, births, holidays) = tokio::join!(
+    let (selected, general_events, births) = tokio::join!(
         fetch_selected(&state.client, month, day),
         fetch_events(&state.client, month, day),
         fetch_births(&state.client, month, day),
-        fetch_holidays(&state.client, month, day),
     );
 
     let ollama_config = IntegrationConfig::new(&state.pool, "ollama");
@@ -575,17 +519,8 @@ pub async fn get_events(
     {
         Ok(curated) => {
             tracing::info!("Ollama curated {}/{} events", curated.len(), filtered.len());
-            let mut events = curated;
+            let events = curated;
             // Add non-religious holidays
-            for holiday in &holidays {
-                if !should_skip_holiday(&holiday.text) {
-                    events.push(OnThisDayEvent {
-                        year: None,
-                        text: holiday.text.clone(),
-                        image_url: None,
-                    });
-                }
-            }
             events
         }
         Err(e) => {
@@ -593,7 +528,7 @@ pub async fn get_events(
                 "Ollama curation failed, returning pre-filtered events: {}",
                 e
             );
-            let mut events: Vec<OnThisDayEvent> = filtered
+            let events: Vec<OnThisDayEvent> = filtered
                 .iter()
                 .map(|ev| OnThisDayEvent {
                     year: ev.year,
@@ -601,15 +536,6 @@ pub async fn get_events(
                     image_url: event_image_url(ev),
                 })
                 .collect();
-            for holiday in &holidays {
-                if !should_skip_holiday(&holiday.text) {
-                    events.push(OnThisDayEvent {
-                        year: None,
-                        text: holiday.text.clone(),
-                        image_url: None,
-                    });
-                }
-            }
             events
         }
     };
