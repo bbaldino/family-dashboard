@@ -60,22 +60,22 @@ export function FullscreenNowPlaying({ isOpen, onClose }: FullscreenNowPlayingPr
 
       {/* Content — stop propagation so tapping the content area itself doesn't dismiss */}
       <div
-        className="flex flex-col items-center gap-6 px-8 w-full max-w-lg"
+        className="flex flex-col items-center gap-6 px-8 w-full max-w-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Cover art */}
-        <div className="w-full" style={{ maxHeight: '60vh' }}>
+        <div className="w-full" style={{ maxHeight: '70vh' }}>
           {currentItem?.imageUrl ? (
             <img
               src={currentItem.imageUrl}
               alt={currentItem.name}
               className="w-full object-contain rounded-2xl shadow-2xl"
-              style={{ maxHeight: '60vh' }}
+              style={{ maxHeight: '70vh' }}
             />
           ) : (
             <div
               className="w-full rounded-2xl shadow-2xl bg-white/10 flex items-center justify-center"
-              style={{ aspectRatio: '1 / 1', maxHeight: '60vh' }}
+              style={{ aspectRatio: '1 / 1', maxHeight: '70vh' }}
             >
               <Music size={96} className="text-white/40" />
             </div>
