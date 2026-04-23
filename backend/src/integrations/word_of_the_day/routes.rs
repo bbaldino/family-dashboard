@@ -3,20 +3,17 @@ use std::time::Instant;
 
 use axum::Json;
 use axum::extract::State;
+use regex::Regex;
 use serde::Serialize;
 use tokio::sync::RwLock;
 
 use crate::error::AppError;
-use crate::integrations::IntegrationConfig;
 
-use super::INTEGRATION_ID;
-
-const WORDNIK_URL: &str = "https://api.wordnik.com/v4/words.json/wordOfTheDay";
+const MW_URL: &str = "https://www.merriam-webster.com/word-of-the-day";
 const CACHE_TTL_SECS: u64 = 24 * 60 * 60;
 
 #[derive(Clone)]
 pub struct WordState {
-    pub pool: sqlx::SqlitePool,
     pub client: reqwest::Client,
     pub cache: Arc<WordCache>,
 }
@@ -64,59 +61,69 @@ pub async fn get_today(State(state): State<WordState>) -> Result<Json<WordRespon
         return Ok(Json(cached));
     }
 
-    let api_key = IntegrationConfig::new(&state.pool, INTEGRATION_ID)
-        .get("api_key")
-        .await?;
-
-    tracing::info!("Fetching word of the day from Wordnik");
+    tracing::info!("Fetching word of the day from Merriam-Webster");
 
     let resp = state
         .client
-        .get(WORDNIK_URL)
-        .query(&[("api_key", &api_key)])
+        .get(MW_URL)
+        .header("User-Agent", "DashboardApp/1.0 (family kitchen dashboard)")
         .send()
         .await
         .map_err(|e| {
-            tracing::warn!("Wordnik request failed: {}", e);
-            AppError::Internal(format!("Wordnik request failed: {}", e))
+            tracing::warn!("Merriam-Webster request failed: {}", e);
+            AppError::Internal(format!("Merriam-Webster request failed: {}", e))
         })?;
 
     if !resp.status().is_success() {
         let status = resp.status();
-        let body = resp.text().await.unwrap_or_default();
-        tracing::warn!("Wordnik returned {}: {}", status, body);
+        tracing::warn!("Merriam-Webster returned {}", status);
         return Err(AppError::Internal(format!(
-            "Wordnik returned {}: {}",
-            status, body
+            "Merriam-Webster returned {}",
+            status
         )));
     }
 
-    let data: serde_json::Value = resp.json().await.map_err(|e| {
-        tracing::warn!("Wordnik parse failed: {}", e);
-        AppError::Internal(format!("Wordnik parse failed: {}", e))
+    let html = resp.text().await.map_err(|e| {
+        tracing::warn!("Merriam-Webster read failed: {}", e);
+        AppError::Internal(format!("Merriam-Webster read failed: {}", e))
     })?;
 
-    let word = data["word"]
-        .as_str()
+    // Parse word
+    let word_re = Regex::new(r#"<h2 class="word-header-txt">([^<]+)</h2>"#).unwrap();
+    let word = word_re
+        .captures(&html)
+        .and_then(|c| c.get(1))
+        .map(|m| m.as_str().trim().to_string())
         .ok_or_else(|| {
-            tracing::warn!("Wordnik response missing 'word': {:?}", data);
-            AppError::Internal("Wordnik response missing 'word'".to_string())
-        })?
-        .to_string();
+            tracing::warn!("Could not parse word from Merriam-Webster HTML");
+            AppError::Internal("Could not parse word from Merriam-Webster".to_string())
+        })?;
 
-    let definition = data["definitions"][0]["text"]
-        .as_str()
-        .ok_or_else(|| {
-            tracing::warn!("Wordnik response missing definition: {:?}", data);
-            AppError::Internal("Wordnik response missing definition".to_string())
-        })?
-        .to_string();
+    // Parse part of speech
+    let pos_re = Regex::new(r#"<span class="main-attr">([^<]+)</span>"#).unwrap();
+    let part_of_speech = pos_re
+        .captures(&html)
+        .and_then(|c| c.get(1))
+        .map(|m| m.as_str().trim().to_string());
 
-    let part_of_speech = data["definitions"][0]["partOfSpeech"]
-        .as_str()
-        .map(|s| s.to_string());
+    // Parse definition — look for the first definition paragraph in wod-definition-container
+    let def_re = Regex::new(r#"class="wod-definition-container"[^>]*>.*?<p>(.*?)</p>"#).unwrap();
+    let definition = def_re
+        .captures(&html)
+        .and_then(|c| c.get(1))
+        .map(|m| {
+            // Strip HTML tags from definition
+            let tag_re = Regex::new(r"<[^>]+>").unwrap();
+            tag_re.replace_all(m.as_str(), "").trim().to_string()
+        })
+        .unwrap_or_default();
 
-    let example = data["examples"][0]["text"].as_str().map(|s| s.to_string());
+    // Parse example sentence — look for "wod-example-sentences" or example in definition
+    let example_re = Regex::new(r#"<p class="[^"]*definition-inner-item[^"]*">(.*?)</p>"#).unwrap();
+    let example = example_re.captures(&html).and_then(|c| c.get(1)).map(|m| {
+        let tag_re = Regex::new(r"<[^>]+>").unwrap();
+        tag_re.replace_all(m.as_str(), "").trim().to_string()
+    });
 
     tracing::info!(
         "Word of the day: '{}' ({})",

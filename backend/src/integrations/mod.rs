@@ -37,5 +37,5 @@ pub fn router(pool: SqlitePool) -> Router {
         .nest("/daily-quote", daily_quote::router())
         .nest("/jokes", jokes::router())
         .nest("/trivia", trivia::router())
-        .nest("/word-of-the-day", word_of_the_day::router(pool.clone()))
+        .nest("/word-of-the-day", word_of_the_day::router())
 }

@@ -403,6 +403,7 @@ dependencies = [
  "chrono",
  "dotenvy",
  "futures",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",
