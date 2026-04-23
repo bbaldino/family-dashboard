@@ -175,9 +175,41 @@ async fn is_family_friendly(
     Ok(is_ok)
 }
 
-fn pick_births(births: Vec<WikiBirth>) -> Vec<OnThisDayBirth> {
-    births
-        .into_iter()
+const ENTERTAINMENT_KEYWORDS: &[&str] = &[
+    "actor",
+    "actress",
+    "singer",
+    "musician",
+    "comedian",
+    "director",
+    "filmmaker",
+    "rapper",
+    "entertainer",
+    "model",
+    "television",
+    "film",
+    "songwriter",
+    "producer",
+    "dancer",
+    "voice actor",
+    "screenwriter",
+    "animator",
+    "composer",
+];
+
+fn is_entertainment_figure(description: &str) -> bool {
+    let lower = description.to_lowercase();
+    ENTERTAINMENT_KEYWORDS.iter().any(|kw| lower.contains(kw))
+}
+
+async fn pick_births_with_tmdb(
+    client: &reqwest::Client,
+    births: &[WikiBirth],
+    tmdb_api_key: Option<&str>,
+) -> Vec<OnThisDayBirth> {
+    // Filter for entertainment figures first
+    let candidates: Vec<_> = births
+        .iter()
         .filter_map(|b| {
             let year = b.year?;
             let name = b.text.split(',').next()?.trim().to_string();
@@ -187,13 +219,96 @@ fn pick_births(births: Vec<WikiBirth>) -> Vec<OnThisDayBirth> {
                 .and_then(|pages| pages.first())
                 .and_then(|p| p.description.clone())
                 .unwrap_or_default();
-            if role.is_empty() {
+            if role.is_empty() || !is_entertainment_figure(&role) {
                 return None;
             }
-            Some(OnThisDayBirth { year, name, role })
+            Some((year, name, role))
         })
-        .take(3)
-        .collect()
+        .take(15) // Check top 15 candidates
+        .collect();
+
+    if candidates.is_empty() {
+        return vec![];
+    }
+
+    let Some(api_key) = tmdb_api_key else {
+        // No TMDB key — fall back to Wikipedia data only
+        return candidates
+            .into_iter()
+            .take(3)
+            .map(|(year, name, role)| OnThisDayBirth {
+                year,
+                name,
+                role,
+                known_for: vec![],
+                photo_url: None,
+            })
+            .collect();
+    };
+
+    // Enrich with TMDB data
+    let mut results: Vec<(f64, OnThisDayBirth)> = vec![];
+
+    for (year, name, role) in &candidates {
+        let search_url = format!(
+            "https://api.themoviedb.org/3/search/person?api_key={}&query={}",
+            api_key,
+            urlencoding::encode(name)
+        );
+
+        let resp = match client.get(&search_url).send().await {
+            Ok(r) if r.status().is_success() => r,
+            _ => continue,
+        };
+
+        let data: serde_json::Value = match resp.json().await {
+            Ok(d) => d,
+            Err(_) => continue,
+        };
+
+        let tmdb_results = data["results"].as_array();
+        let Some(top) = tmdb_results.and_then(|r| r.first()) else {
+            continue;
+        };
+
+        let popularity = top["popularity"].as_f64().unwrap_or(0.0);
+        let photo_path = top["profile_path"]
+            .as_str()
+            .map(|p| format!("https://image.tmdb.org/t/p/w185{}", p));
+        let known_for: Vec<String> = top["known_for"]
+            .as_array()
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|k| {
+                        k["title"]
+                            .as_str()
+                            .or_else(|| k["name"].as_str())
+                            .map(|s| s.to_string())
+                    })
+                    .take(2)
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        results.push((
+            popularity,
+            OnThisDayBirth {
+                year: *year,
+                name: name.clone(),
+                role: role.clone(),
+                known_for,
+                photo_url: photo_path,
+            },
+        ));
+
+        if results.len() >= 10 {
+            break;
+        }
+    }
+
+    // Sort by TMDB popularity descending, take top 3
+    results.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
+    results.into_iter().take(3).map(|(_, b)| b).collect()
 }
 
 pub async fn get_events(
@@ -292,7 +407,10 @@ pub async fn get_events(
         });
     }
 
-    let picked_births = pick_births(births);
+    let tmdb_config = IntegrationConfig::new(&state.pool, "tmdb");
+    let tmdb_api_key = tmdb_config.get("api_key").await.ok();
+    let picked_births =
+        pick_births_with_tmdb(&state.client, &births, tmdb_api_key.as_deref()).await;
 
     let response = OnThisDayResponse {
         events,

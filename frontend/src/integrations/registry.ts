@@ -20,6 +20,7 @@ import { wordOfTheDayIntegration } from './word-of-the-day/config'
 import { dailyQuoteIntegration } from './daily-quote/config'
 import { triviaIntegration } from './trivia/config'
 import { jokesIntegration } from './jokes/config'
+import { tmdbIntegration } from './tmdb/config'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const integrations: Integration<any>[] = [
@@ -44,4 +45,5 @@ export const integrations: Integration<any>[] = [
   dailyQuoteIntegration,
   triviaIntegration,
   jokesIntegration,
+  tmdbIntegration,
 ]

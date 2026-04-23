@@ -47,10 +47,13 @@ pub struct OnThisDayEvent {
 }
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct OnThisDayBirth {
     pub year: i32,
     pub name: String,
     pub role: String,
+    pub known_for: Vec<String>,
+    pub photo_url: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]

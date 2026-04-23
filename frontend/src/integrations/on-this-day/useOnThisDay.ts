@@ -10,6 +10,8 @@ export interface OnThisDayBirth {
   year: number
   name: string
   role: string
+  knownFor: string[]
+  photoUrl: string | null
 }
 
 export interface OnThisDayData {

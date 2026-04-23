@@ -20,13 +20,22 @@ function BirthsFooter({ births }: { births: OnThisDayBirth[] }) {
       <div className="text-[10px] font-semibold text-text-muted uppercase tracking-[0.3px] mb-1">
         Also Born Today
       </div>
-      <div className="flex flex-col gap-0.5">
+      <div className="flex flex-col gap-1">
         {births.map((b, i) => (
-          <div key={i} className="flex justify-between text-[12px]">
-            <span className="text-text-primary truncate mr-2">{b.name}</span>
-            <span className="text-text-muted whitespace-nowrap">
-              {b.year} · {b.role}
-            </span>
+          <div key={i} className="flex items-center gap-2 text-[12px]">
+            {b.photoUrl && (
+              <img
+                src={b.photoUrl}
+                alt={b.name}
+                className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+              />
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="text-text-primary truncate">{b.name}</div>
+              <div className="text-text-muted text-[10px] truncate">
+                {b.knownFor.length > 0 ? b.knownFor.join(', ') : b.role}
+              </div>
+            </div>
           </div>
         ))}
       </div>
