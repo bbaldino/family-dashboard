@@ -77,22 +77,22 @@ export function OnThisDayWidget({ size = 'standard' }: OnThisDayWidgetProps) {
   // Standard
   return (
     <WidgetCard title="On This Day" category="info">
-      <div className="flex flex-col h-full" style={{ gap: '2cqi' }}>
-        <div className="flex items-start justify-between" style={{ gap: '2cqi' }}>
+      <div className="flex flex-col h-full" style={{ gap: 'min(2cqi, 8px)' }}>
+        <div className="flex items-start justify-between" style={{ gap: 'min(2cqi, 8px)' }}>
           <div className="flex-1 min-w-0">
             {event.year && (
-              <div className="font-extrabold text-palette-3 leading-none tracking-tight" style={{ fontSize: '7cqi' }}>
+              <div className="font-extrabold text-palette-3 leading-none tracking-tight" style={{ fontSize: 'min(7cqi, 32px)' }}>
                 {event.year}
               </div>
             )}
-            <div className="flex" style={{ gap: '2cqi', marginTop: '1.5cqi' }}>
-              <p className="text-text-primary leading-relaxed flex-1" style={{ fontSize: '3cqi' }}>{event.text}</p>
+            <div className="flex" style={{ gap: 'min(2cqi, 8px)', marginTop: 'min(1.5cqi, 6px)' }}>
+              <p className="text-text-primary leading-relaxed flex-1" style={{ fontSize: 'min(3cqi, 14px)' }}>{event.text}</p>
               {event.imageUrl && (
                 <img
                   src={event.imageUrl}
                   alt=""
                   className="rounded object-cover flex-shrink-0"
-                  style={{ width: '20cqi', height: '20cqi' }}
+                  style={{ width: 'min(20cqi, 80px)', height: 'min(20cqi, 80px)' }}
                 />
               )}
             </div>
@@ -103,9 +103,9 @@ export function OnThisDayWidget({ size = 'standard' }: OnThisDayWidgetProps) {
               advance()
             }}
             className="rounded-full text-text-muted hover:text-text-primary hover:bg-bg-primary transition-colors flex-shrink-0"
-            style={{ padding: '1.5cqi' }}
+            style={{ padding: 'min(1.5cqi, 6px)' }}
           >
-            <RefreshCw style={{ width: '3cqi', height: '3cqi' }} />
+            <RefreshCw style={{ width: 'min(3cqi, 14px)', height: 'min(3cqi, 14px)' }} />
           </button>
         </div>
       </div>
