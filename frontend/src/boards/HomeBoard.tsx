@@ -47,6 +47,22 @@ function useGridConfig(): { columns: number; rows: number } {
   return config
 }
 
+function useHiddenWidgets(): Set<string> {
+  const [hidden, setHidden] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    fetch('/api/config')
+      .then((r) => r.json())
+      .then((data: Record<string, string>) => {
+        const hiddenStr = data['dashboard.hidden'] ?? ''
+        setHidden(new Set(hiddenStr.split(',').map((s) => s.trim()).filter(Boolean)))
+      })
+      .catch(() => {})
+  }, [])
+
+  return hidden
+}
+
 function getHeroEvents(
   days: CalendarDay[] | null,
   driveInfo: Record<string, EventDriveInfo>,
@@ -117,12 +133,14 @@ function HeroStripWithData({ heroEvents }: { heroEvents: HeroEvent[] }) {
 
 function Widgets({
   grid,
+  hidden,
   calendarDays,
   calendarLoading,
   calendarError,
   calendarRefetch,
 }: {
   grid: { columns: number; rows: number }
+  hidden: Set<string>
   calendarDays: CalendarDay[] | null
   calendarLoading: boolean
   calendarError: string | null
@@ -148,7 +166,7 @@ function Widgets({
     />
   )
 
-  const contentWidgets: CellGridWidget[] = [
+  const allContent: CellGridWidget[] = [
     { key: 'calendar', element: calendarElement, meta: calendarMeta },
     { key: 'sports', element: <SportsWidget />, meta: sportsMeta },
     { key: 'packages', element: <PackagesWidget />, meta: packagesMeta },
@@ -157,11 +175,14 @@ function Widgets({
     { key: 'lunch', element: <LunchMenuWidget />, meta: lunchMeta },
   ]
 
-  const fillerWidgets: CellGridWidget[] = [
+  const allFillers: CellGridWidget[] = [
     { key: 'on-this-day', element: <OnThisDayWidget />, meta: onThisDayMeta },
     { key: 'birthdays', element: <BirthdaysWidget />, meta: birthdaysMeta },
     { key: 'word-of-the-day', element: <WordOfTheDayWidget />, meta: wordMeta },
   ]
+
+  const contentWidgets = allContent.filter((w) => !hidden.has(w.key))
+  const fillerWidgets = allFillers.filter((w) => !hidden.has(w.key))
 
   const visibleContent = contentWidgets.filter((w) => w.meta.visible)
   const visibleFillers = fillerWidgets.filter((w) => w.meta.visible)
@@ -192,6 +213,7 @@ function Widgets({
 export function HomeBoard() {
   const calendar = useGoogleCalendar()
   const grid = useGridConfig()
+  const hidden = useHiddenWidgets()
 
   const allEvents = (calendar.data ?? []).flatMap((d) => d.events)
   const driveInfo = useDrivingTime(allEvents)
@@ -208,6 +230,7 @@ export function HomeBoard() {
       {/* Grid layout with all widgets including calendar */}
       <Widgets
         grid={grid}
+        hidden={hidden}
         calendarDays={calendar.data}
         calendarLoading={calendar.isLoading}
         calendarError={calendar.error}
