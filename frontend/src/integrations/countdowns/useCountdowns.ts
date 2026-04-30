@@ -39,7 +39,11 @@ export function useCountdowns(): CountdownsData {
       return events
         .map((event) => {
           const dateStr = event.start.dateTime ?? event.start.date ?? ''
-          const eventDate = new Date(dateStr)
+          // For all-day events (date only), parse as local midnight to avoid UTC offset issues.
+          // "2026-05-01" parsed with new Date() becomes midnight UTC = previous day in Pacific.
+          const eventDate = event.start.date && !event.start.dateTime
+            ? new Date(dateStr + 'T00:00:00') // local midnight
+            : new Date(dateStr)
           eventDate.setHours(0, 0, 0, 0)
 
           const diffMs = eventDate.getTime() - today.getTime()

@@ -71,7 +71,11 @@ async function fetchCalendarEvents(): Promise<CalendarDay[]> {
 
   for (const event of allEvents) {
     const start = event.start.dateTime ?? event.start.date ?? ''
-    const dateKey = start.substring(0, 10) // YYYY-MM-DD
+    // All-day events use date string as-is (no timezone conversion needed).
+    // Timed events must be parsed to a Date to convert UTC → local date.
+    const dateKey = event.start.date && !event.start.dateTime
+      ? start.substring(0, 10)
+      : toLocalDateStr(new Date(start))
     const bucket = dayMap.get(dateKey)
     if (bucket) {
       bucket.push(event)
