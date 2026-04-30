@@ -77,22 +77,22 @@ export function OnThisDayWidget({ size = 'standard' }: OnThisDayWidgetProps) {
   // Standard
   return (
     <WidgetCard title="On This Day" category="info">
-      <div className="flex flex-col h-full" style={{ gap: 'min(2cqi, 8px)' }}>
-        <div className="flex items-start justify-between" style={{ gap: 'min(2cqi, 8px)' }}>
+      <div className="flex flex-col h-full" style={{ gap: 'min(2cqi, 12px)' }}>
+        <div className="flex items-start justify-between" style={{ gap: 'min(2cqi, 12px)' }}>
           <div className="flex-1 min-w-0">
             {event.year && (
-              <div className="font-extrabold text-palette-3 leading-none tracking-tight" style={{ fontSize: 'min(7cqi, 32px)' }}>
+              <div className="font-extrabold text-palette-3 leading-none tracking-tight" style={{ fontSize: 'min(7cqi, 42px)' }}>
                 {event.year}
               </div>
             )}
-            <div className="flex" style={{ gap: 'min(2cqi, 8px)', marginTop: 'min(1.5cqi, 6px)' }}>
-              <p className="text-text-primary leading-relaxed flex-1" style={{ fontSize: 'min(3cqi, 14px)' }}>{event.text}</p>
+            <div className="flex" style={{ gap: 'min(2cqi, 12px)', marginTop: 'min(1.5cqi, 8px)' }}>
+              <p className="text-text-primary leading-relaxed flex-1" style={{ fontSize: 'min(3cqi, 18px)' }}>{event.text}</p>
               {event.imageUrl && (
                 <img
                   src={event.imageUrl}
                   alt=""
                   className="rounded object-cover flex-shrink-0"
-                  style={{ width: 'min(20cqi, 80px)', height: 'min(20cqi, 80px)' }}
+                  style={{ width: 'min(20cqi, 100px)', height: 'min(20cqi, 100px)' }}
                 />
               )}
             </div>
