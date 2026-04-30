@@ -15,8 +15,6 @@ import { TimerBanner } from '@/integrations/timers'
 import { useDrivingTime } from '@/integrations/driving-time'
 import type { EventDriveInfo } from '@/integrations/driving-time/types'
 import { OnThisDayWidget } from '@/integrations/on-this-day/OnThisDayWidget'
-import { BirthdaysWidget } from '@/integrations/on-this-day/BirthdaysWidget'
-import { useBirthdaysWidgetMeta } from '@/integrations/on-this-day/useBirthdaysWidgetMeta'
 import { WordOfTheDayWidget } from '@/integrations/word-of-the-day/WordOfTheDayWidget'
 import { useWordOfTheDayWidgetMeta } from '@/integrations/word-of-the-day/useWidgetMeta'
 import { useSportsWidgetMeta } from '@/integrations/sports/useWidgetMeta'
@@ -153,7 +151,6 @@ function Widgets({
   const countdownsMeta = useCountdownsWidgetMeta()
   const lunchMeta = useLunchWidgetMeta()
   const onThisDayMeta = useOnThisDayWidgetMeta()
-  const birthdaysMeta = useBirthdaysWidgetMeta()
   const wordMeta = useWordOfTheDayWidgetMeta()
 
 
@@ -177,7 +174,6 @@ function Widgets({
 
   const allFillers: CellGridWidget[] = [
     { key: 'on-this-day', element: <OnThisDayWidget />, meta: onThisDayMeta },
-    { key: 'birthdays', element: <BirthdaysWidget />, meta: birthdaysMeta },
     { key: 'word-of-the-day', element: <WordOfTheDayWidget />, meta: wordMeta },
   ]
 
