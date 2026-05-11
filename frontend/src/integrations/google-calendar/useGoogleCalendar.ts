@@ -1,7 +1,7 @@
 import { usePolling, type UsePollingResult } from '@/hooks/usePolling'
 import { googleCalendarIntegration } from './config'
 import type { CalendarEvent } from './types'
-import { toLocalDateStr } from '@/utils/date'
+import { eventLocalDateStr, parseLocalDate, toLocalDateStr } from '@/utils/date'
 
 export interface CalendarDay {
   date: Date
@@ -70,13 +70,7 @@ async function fetchCalendarEvents(): Promise<CalendarDay[]> {
   }
 
   for (const event of allEvents) {
-    const start = event.start.dateTime ?? event.start.date ?? ''
-    // All-day events use date string as-is (no timezone conversion needed).
-    // Timed events must be parsed to a Date to convert UTC → local date.
-    const dateKey = event.start.date && !event.start.dateTime
-      ? start.substring(0, 10)
-      : toLocalDateStr(new Date(start))
-    const bucket = dayMap.get(dateKey)
+    const bucket = dayMap.get(eventLocalDateStr(event))
     if (bucket) {
       bucket.push(event)
     }
@@ -86,7 +80,7 @@ async function fetchCalendarEvents(): Promise<CalendarDay[]> {
   const todayStr = toLocalDateStr(today)
 
   for (const [dateStr, events] of dayMap) {
-    const date = new Date(dateStr + 'T12:00:00')
+    const date = parseLocalDate(dateStr)
     events.sort((a, b) => {
       const aTime = a.start.dateTime ?? a.start.date ?? ''
       const bTime = b.start.dateTime ?? b.start.date ?? ''

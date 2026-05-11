@@ -4,6 +4,7 @@ import { countdownsIntegration } from './config'
 // Use the google-calendar integration's API to fetch events
 import { googleCalendarIntegration } from '@/integrations/google-calendar/config'
 import type { CalendarEvent } from '@/integrations/google-calendar/types'
+import { parseLocalDate } from '@/utils/date'
 
 export interface CountdownItem {
   id: string
@@ -39,10 +40,8 @@ export function useCountdowns(): CountdownsData {
       return events
         .map((event) => {
           const dateStr = event.start.dateTime ?? event.start.date ?? ''
-          // For all-day events (date only), parse as local midnight to avoid UTC offset issues.
-          // "2026-05-01" parsed with new Date() becomes midnight UTC = previous day in Pacific.
           const eventDate = event.start.date && !event.start.dateTime
-            ? new Date(dateStr + 'T00:00:00') // local midnight
+            ? parseLocalDate(dateStr)
             : new Date(dateStr)
           eventDate.setHours(0, 0, 0, 0)
 

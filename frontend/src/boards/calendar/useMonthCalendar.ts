@@ -1,7 +1,7 @@
 import { usePolling } from '@/hooks/usePolling'
 import { googleCalendarIntegration } from '@/integrations/google-calendar/config'
 import type { CalendarEvent } from '@/integrations/google-calendar/types'
-import { toLocalDateStr } from '@/utils/date'
+import { eventLocalDateStr, parseLocalDate, toLocalDateStr } from '@/utils/date'
 
 export interface MonthEvents {
   /** Map of "YYYY-MM-DD" → sorted events for that day */
@@ -51,27 +51,17 @@ async function fetchMonthEvents(year: number, month: number): Promise<MonthEvent
   const byDate: Record<string, CalendarEvent[]> = {}
 
   for (const event of allEvents) {
-    const startDate = event.start.dateTime ?? event.start.date ?? ''
-    if (!startDate) continue
-    // All-day events: date string is already local (YYYY-MM-DD).
-    // Timed events: dateTime is UTC ISO — convert to local date to avoid
-    // late-night-Pacific events bucketing as next-day UTC.
-    const dateKey = event.start.date && !event.start.dateTime
-      ? startDate.substring(0, 10)
-      : toLocalDateStr(new Date(startDate))
-
-    const endDate = event.end.dateTime ?? event.end.date ?? startDate
-    const endKey = event.end.date && !event.end.dateTime
-      ? endDate.substring(0, 10)
-      : toLocalDateStr(new Date(endDate))
+    const dateKey = eventLocalDateStr(event)
+    if (!dateKey) continue
+    const endKey = eventLocalDateStr({ start: event.end })
 
     if (dateKey === endKey) {
       if (!byDate[dateKey]) byDate[dateKey] = []
       byDate[dateKey].push(event)
     } else {
       // Multi-day event: add to each day
-      const cursor = new Date(dateKey + 'T12:00:00')
-      const end = new Date(endKey + 'T12:00:00')
+      const cursor = parseLocalDate(dateKey)
+      const end = parseLocalDate(endKey)
       while (cursor < end) {
         const key = toLocalDateStr(cursor)
         if (!byDate[key]) byDate[key] = []

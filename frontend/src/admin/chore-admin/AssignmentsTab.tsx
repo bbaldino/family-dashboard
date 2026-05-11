@@ -14,6 +14,7 @@ import type { AssignmentResponse, Chore, Person } from '@/integrations/chores/ty
 import { ChorePool } from './ChorePool'
 import { googleCalendarIntegration } from '@/integrations/google-calendar/config'
 import type { CalendarEvent } from '@/integrations/google-calendar/types'
+import { eventLocalDateStr, parseLocalDate, toLocalDateStr } from '@/utils/date'
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -29,13 +30,6 @@ function getMonday(date: Date): Date {
 
 function formatDate(date: Date): string {
   return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-}
-
-function toIsoDate(date: Date): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
 }
 
 function getTodayDayIndex(): number {
@@ -112,7 +106,7 @@ export function AssignmentsTab() {
   const [activeChore, setActiveChore] = useState<Chore | null>(null)
   const hasLoadedOnce = useRef(false)
 
-  const weekStr = toIsoDate(weekOf)
+  const weekStr = toLocalDateStr(weekOf)
   const [calendarEvents, setCalendarEvents] = useState<Record<number, CalendarEvent[]>>({})
 
   // Fetch calendar events for the week
@@ -142,11 +136,12 @@ export function AssignmentsTab() {
         for (let i = 0; i < 7; i++) byDay[i] = []
 
         for (const event of allEvents) {
-          const start = event.start.dateTime ?? event.start.date ?? ''
-          const eventDate = new Date(start)
-          const dayOfWeek = eventDate.getDay()
-          // Convert to Mon=0...Sun=6
-          const dayIdx = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+          // Bucket relative to Monday (weekOf is local-midnight Monday) so
+          // all-day events parse as local — not UTC — to avoid off-by-one.
+          const eventDate = parseLocalDate(eventLocalDateStr(event))
+          const dayIdx = Math.floor(
+            (eventDate.getTime() - weekOf.getTime()) / (1000 * 60 * 60 * 24),
+          )
           if (dayIdx >= 0 && dayIdx < 7) {
             byDay[dayIdx].push(event)
           }
@@ -217,7 +212,7 @@ export function AssignmentsTab() {
       const prevMonday = new Date(weekOf)
       prevMonday.setDate(prevMonday.getDate() - 7)
       await choresIntegration.api.post('/weeks/copy', {
-        from_week: toIsoDate(prevMonday),
+        from_week: toLocalDateStr(prevMonday),
         to_week: weekStr,
       })
       await fetchData()
@@ -294,7 +289,7 @@ export function AssignmentsTab() {
   const sensors = useSensors(pointerSensor)
 
   const todayDayIndex = getTodayDayIndex()
-  const isCurrentWeek = toIsoDate(getMonday(new Date())) === weekStr
+  const isCurrentWeek = toLocalDateStr(getMonday(new Date())) === weekStr
 
   if (loading) {
     return <p className="text-text-secondary">Loading assignments...</p>

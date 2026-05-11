@@ -1,12 +1,13 @@
 import type { Shipment } from './types'
 import { STATUS_ICONS, STATUS_LABELS } from './types'
+import { parseLocalDate } from '@/utils/date'
 
 function etaColor(deliveryDate: string | null): string {
   if (!deliveryDate) return 'text-text-muted'
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const delivery = new Date(deliveryDate + 'T00:00:00')
+  const delivery = parseLocalDate(deliveryDate)
   const diffDays = Math.round((delivery.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
 
   if (diffDays <= 0) return 'text-success'

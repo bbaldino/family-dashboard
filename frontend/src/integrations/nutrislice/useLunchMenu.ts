@@ -1,6 +1,6 @@
 import { usePolling, type UsePollingResult } from '@/hooks/usePolling'
 import { nutrisliceIntegration } from './config'
-import { toLocalDateStr } from '@/utils/date'
+import { parseLocalDate, toLocalDateStr } from '@/utils/date'
 
 interface NutriSliceItem {
   text: string
@@ -120,7 +120,7 @@ function parseDayMenu(day: NutriSliceDay | undefined): LunchMenuDay | null {
 
   if (entries.length === 0 && extras.length === 0) return null
 
-  const date = new Date(day.date + 'T12:00:00')
+  const date = parseLocalDate(day.date)
   return {
     date: day.date,
     dayName: date.toLocaleDateString([], { weekday: 'long' }),
@@ -164,8 +164,7 @@ async function fetchMenu(): Promise<LunchMenuData> {
     .map((d: NutriSliceDay) => parseDayMenu(d))
     .filter((d: LunchMenuDay | null): d is LunchMenuDay => d != null)
     .filter((d: LunchMenuDay) => {
-      const dayDate = new Date(d.date + 'T12:00:00')
-      dayDate.setHours(0, 0, 0, 0)
+      const dayDate = parseLocalDate(d.date)
       const todayDate = new Date()
       todayDate.setHours(0, 0, 0, 0)
       return dayDate >= todayDate
