@@ -52,11 +52,18 @@ async function fetchMonthEvents(year: number, month: number): Promise<MonthEvent
 
   for (const event of allEvents) {
     const startDate = event.start.dateTime ?? event.start.date ?? ''
-    const dateKey = startDate.substring(0, 10)
-    if (!dateKey) continue
+    if (!startDate) continue
+    // All-day events: date string is already local (YYYY-MM-DD).
+    // Timed events: dateTime is UTC ISO — convert to local date to avoid
+    // late-night-Pacific events bucketing as next-day UTC.
+    const dateKey = event.start.date && !event.start.dateTime
+      ? startDate.substring(0, 10)
+      : toLocalDateStr(new Date(startDate))
 
     const endDate = event.end.dateTime ?? event.end.date ?? startDate
-    const endKey = endDate.substring(0, 10)
+    const endKey = event.end.date && !event.end.dateTime
+      ? endDate.substring(0, 10)
+      : toLocalDateStr(new Date(endDate))
 
     if (dateKey === endKey) {
       if (!byDate[dateKey]) byDate[dateKey] = []

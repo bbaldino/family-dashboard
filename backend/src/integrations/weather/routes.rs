@@ -90,12 +90,18 @@ pub async fn get_forecast(
     let empty_vec = vec![];
     let list = data["list"].as_array().unwrap_or(&empty_vec);
 
+    // OpenWeatherMap returns the city's UTC offset (DST-aware) in seconds.
+    // Bucket entries by the *local* date so daily[0] is the user's "today",
+    // not UTC's today (which is already tomorrow once Pacific evening rolls in).
+    let tz_offset_secs = data["city"]["timezone"].as_i64().unwrap_or(0);
+
     let mut daily: std::collections::BTreeMap<String, DayAccumulator> =
         std::collections::BTreeMap::new();
 
     for entry in list {
         let dt = entry["dt"].as_i64().unwrap_or(0);
-        let date = chrono::DateTime::from_timestamp(dt, 0)
+        let local = chrono::DateTime::from_timestamp(dt + tz_offset_secs, 0);
+        let date = local
             .map(|d| d.format("%Y-%m-%d").to_string())
             .unwrap_or_default();
 
@@ -113,8 +119,8 @@ pub async fn get_forecast(
         acc.pop_max = acc.pop_max.max(entry["pop"].as_f64().unwrap_or(0.0));
         acc.count += 1;
 
-        // Use the midday (12:00-15:00) weather as representative
-        let hour = chrono::DateTime::from_timestamp(dt, 0)
+        // Use the midday (12:00-15:00) local weather as representative
+        let hour = local
             .map(|d| d.format("%H").to_string().parse::<u32>().unwrap_or(0))
             .unwrap_or(0);
         if (12..=15).contains(&hour) || acc.condition.is_empty() {
