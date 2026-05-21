@@ -5,11 +5,11 @@ export const onThisDayIntegration = defineIntegration({
   id: 'on-this-day',
   name: 'On This Day',
   schema: z.object({
-    ollama_model: z.string().optional().default('llama3.2:3b'),
+    model: z.string().optional().default('llama3.2:3b'),
     cycle_minutes: z.string().optional().default('30'),
   }),
   fields: {
-    ollama_model: { label: 'Ollama Model', type: 'ollama-model', description: 'Model for content filtering' },
+    model: { label: 'Model', description: 'Model name for content filtering (must be available on the configured LLM provider)' },
     cycle_minutes: { label: 'Cycle Interval (minutes)', description: 'How often to show the next event' },
   },
 })

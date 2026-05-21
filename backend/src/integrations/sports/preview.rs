@@ -45,14 +45,8 @@ impl PreviewCache {
 }
 
 pub async fn generate_preview(pool: &SqlitePool, game_context: &str) -> Result<String, AppError> {
-    let ollama_config = IntegrationConfig::new(pool, "ollama");
-    let ollama_url = ollama_config
-        .get_or("url", "http://localhost:11434")
-        .await?;
-    let ollama_token = ollama_config.get("token").await.ok();
-
     let sports_config = IntegrationConfig::new(pool, "sports");
-    let model = sports_config.get_or("ollama_model", "llama3.1:8b").await?;
+    let model = sports_config.get_or("model", "llama3.1:8b").await?;
 
     let prompt = format!(
         "You are a friendly sports analyst for a family kitchen dashboard. \
@@ -63,39 +57,9 @@ pub async fn generate_preview(pool: &SqlitePool, game_context: &str) -> Result<S
         game_context
     );
 
-    let client = reqwest::Client::new();
-    let mut req = client
-        .post(format!("{}/api/generate", ollama_url.trim_end_matches('/')))
-        .json(&serde_json::json!({
-            "model": model,
-            "prompt": prompt,
-            "stream": false,
-        }));
-
-    if let Some(token) = &ollama_token {
-        req = req.bearer_auth(token);
+    let summary = crate::llm::generate(pool, &model, &prompt).await?;
+    if summary.is_empty() {
+        return Ok("Unable to generate preview.".to_string());
     }
-
-    let resp = req
-        .send()
-        .await
-        .map_err(|e| AppError::Internal(format!("Ollama request failed: {}", e)))?;
-
-    if !resp.status().is_success() {
-        let body = resp.text().await.unwrap_or_default();
-        return Err(AppError::Internal(format!("Ollama error: {}", body)));
-    }
-
-    let data: serde_json::Value = resp
-        .json()
-        .await
-        .map_err(|e| AppError::Internal(format!("Ollama parse failed: {}", e)))?;
-
-    let summary = data["response"]
-        .as_str()
-        .unwrap_or("Unable to generate preview.")
-        .trim()
-        .to_string();
-
     Ok(summary)
 }

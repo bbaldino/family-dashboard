@@ -15,6 +15,7 @@ import { planIntegration } from './plan/config'
 import { musicIntegration } from './music/config'
 import { dashboardIntegration } from './dashboard/config'
 import { ollamaIntegration } from './ollama/config'
+import { llmIntegration } from './llm/config'
 import { onThisDayIntegration } from './on-this-day/config'
 import { wordOfTheDayIntegration } from './word-of-the-day/config'
 import { tmdbIntegration } from './tmdb/config'
@@ -37,6 +38,7 @@ export const integrations: Integration<any>[] = [
   musicIntegration,
   dashboardIntegration,
   ollamaIntegration,
+  llmIntegration,
   onThisDayIntegration,
   wordOfTheDayIntegration,
   tmdbIntegration,

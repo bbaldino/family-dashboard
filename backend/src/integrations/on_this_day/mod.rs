@@ -6,7 +6,7 @@ use std::sync::Arc;
 use axum::Router;
 use sqlx::SqlitePool;
 
-pub const INTEGRATION_ID: &str = "on_this_day";
+pub const INTEGRATION_ID: &str = "on-this-day";
 
 pub fn router(pool: SqlitePool) -> Router {
     let client = reqwest::Client::builder()

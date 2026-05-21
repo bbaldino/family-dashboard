@@ -5,9 +5,12 @@ use axum::Json;
 use axum::extract::State;
 use tokio::sync::RwLock;
 
+use sqlx::SqlitePool;
+
 use crate::error::AppError;
 use crate::integrations::IntegrationConfig;
 
+use super::INTEGRATION_ID;
 use super::types::*;
 
 const WIKI_BASE: &str = "https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday";
@@ -222,13 +225,11 @@ fn pre_filter_events(events: &[WikiEvent]) -> Vec<&WikiEvent> {
         .collect()
 }
 
-/// Use Ollama to curate the best events from the full list.
+/// Use the configured LLM to curate the best events from the full list.
 /// Instead of filtering one-by-one, send all events in one prompt and ask
-/// Ollama to pick the most interesting, family-friendly ones.
+/// the model to pick the most interesting, family-friendly ones.
 async fn curate_events(
-    client: &reqwest::Client,
-    ollama_url: &str,
-    ollama_token: Option<&str>,
+    pool: &SqlitePool,
     model: &str,
     events: &[WikiEvent],
 ) -> Result<Vec<OnThisDayEvent>, AppError> {
@@ -257,40 +258,9 @@ async fn curate_events(
         event_list
     );
 
-    let url = format!("{}/api/generate", ollama_url.trim_end_matches('/'));
-    tracing::info!("Curating {} events via Ollama", events.len());
-
-    let mut req = client.post(&url).json(&serde_json::json!({
-        "model": model,
-        "prompt": prompt,
-        "stream": false,
-    }));
-
-    if let Some(token) = ollama_token {
-        req = req.bearer_auth(token);
-    }
-
-    let resp = req
-        .send()
-        .await
-        .map_err(|e| AppError::Internal(format!("Ollama request failed: {}", e)))?;
-
-    if !resp.status().is_success() {
-        let status = resp.status();
-        let body = resp.text().await.unwrap_or_default();
-        return Err(AppError::Internal(format!(
-            "Ollama returned {} for model '{}': {}",
-            status, model, body
-        )));
-    }
-
-    let data: serde_json::Value = resp
-        .json()
-        .await
-        .map_err(|e| AppError::Internal(format!("Ollama parse failed: {}", e)))?;
-
-    let answer = data["response"].as_str().unwrap_or("").trim().to_string();
-    tracing::info!("Ollama curated picks: '{}'", answer);
+    tracing::info!("Curating {} events via LLM", events.len());
+    let answer = crate::llm::generate(pool, model, &prompt).await?;
+    tracing::info!("LLM curated picks: '{}'", answer);
 
     // Parse the comma-separated numbers
     let picked: Vec<OnThisDayEvent> = answer
@@ -473,21 +443,14 @@ pub async fn get_events(
         fetch_births(&state.client, month, day),
     );
 
-    let ollama_config = IntegrationConfig::new(&state.pool, "ollama");
-    let ollama_url = ollama_config
-        .get_or("url", "http://localhost:11434")
-        .await?;
-    let ollama_token = ollama_config.get("token").await.ok();
-
-    let integration_config = IntegrationConfig::new(&state.pool, "on_this_day");
+    let integration_config = IntegrationConfig::new(&state.pool, INTEGRATION_ID);
     let model = integration_config
-        .get_or("ollama_model", "llama3.2:3b")
+        .get_or("model", "llama3.2:3b")
         .await?;
 
     tracing::info!(
-        "On This Day: filtering {} events via Ollama at {} with model '{}'",
+        "On This Day: filtering {} events via LLM with model '{}'",
         selected.len(),
-        ollama_url,
         model
     );
 
@@ -514,18 +477,10 @@ pub async fn get_events(
         all_events.len() - filtered.len()
     );
 
-    // Use Ollama to curate the most interesting events
-    let events = match curate_events(
-        &state.client,
-        &ollama_url,
-        ollama_token.as_deref(),
-        &model,
-        &filtered,
-    )
-    .await
-    {
+    // Use the LLM to curate the most interesting events
+    let events = match curate_events(&state.pool, &model, &filtered).await {
         Ok(curated) => {
-            tracing::info!("Ollama curated {}/{} events", curated.len(), filtered.len());
+            tracing::info!("LLM curated {}/{} events", curated.len(), filtered.len());
             let events = curated;
             // Add non-religious holidays
             events
