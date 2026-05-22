@@ -17,7 +17,7 @@ export const sportsIntegration = defineIntegration({
     poll_interval_live: { label: 'Live Poll Interval (seconds)', description: 'How often to refresh during live games' },
     poll_interval_idle: { label: 'Idle Poll Interval (seconds)', description: 'How often to refresh when no live games' },
     window_hours: { label: 'Time Window (hours)', description: 'How far back/forward to show games' },
-    model: { label: 'Model', description: 'Model name for AI game previews (must be available on the configured LLM provider)' },
+    model: { label: 'Model', type: 'model-select', description: 'Model for AI game previews' },
   },
   settingsComponent: SportsSettings,
 })

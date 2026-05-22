@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/ui/Button'
+import { ModelSelect } from '@/integrations/llm/ModelSelect'
 import { sportsIntegration } from './config'
 import type { TeamInfo, TrackedTeam } from './types'
 
@@ -17,9 +18,10 @@ export function SportsSettings() {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<TeamInfo[]>([])
   const [searching, setSearching] = useState(false)
-  const [pollLive, setPollLive] = useState('30')
+  const [pollLive, setPollLive] = useState('5')
   const [pollIdle, setPollIdle] = useState('900')
   const [windowHours, setWindowHours] = useState('24')
+  const [model, setModel] = useState('llama3.1:8b')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
@@ -32,9 +34,10 @@ export function SportsSettings() {
       const tracked: TrackedTeam[] = config['sports.tracked_teams']
         ? JSON.parse(config['sports.tracked_teams'])
         : []
-      setPollLive(config['sports.poll_interval_live'] ?? '30')
+      setPollLive(config['sports.poll_interval_live'] ?? '5')
       setPollIdle(config['sports.poll_interval_idle'] ?? '900')
       setWindowHours(config['sports.window_hours'] ?? '24')
+      setModel(config['sports.model'] ?? 'llama3.1:8b')
 
       // Backfill display info for teams missing name/logo (legacy data)
       const needsBackfill = tracked.some((t) => !t.name)
@@ -139,6 +142,7 @@ export function SportsSettings() {
         ['sports.poll_interval_live', pollLive],
         ['sports.poll_interval_idle', pollIdle],
         ['sports.window_hours', windowHours],
+        ['sports.model', model],
       ]
       for (const [key, value] of saves) {
         await fetch(`/api/config/${encodeURIComponent(key)}`, {
@@ -303,6 +307,16 @@ export function SportsSettings() {
             />
           </div>
         </div>
+      </div>
+
+      {/* AI preview model */}
+      <div>
+        <ModelSelect
+          value={model}
+          onChange={setModel}
+          label="Model"
+          description="Used to generate game previews."
+        />
       </div>
 
       <div className="flex items-center gap-3">

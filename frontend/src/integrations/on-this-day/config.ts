@@ -9,7 +9,7 @@ export const onThisDayIntegration = defineIntegration({
     cycle_minutes: z.string().optional().default('30'),
   }),
   fields: {
-    model: { label: 'Model', description: 'Model name for content filtering (must be available on the configured LLM provider)' },
+    model: { label: 'Model', type: 'model-select', description: 'Model for content filtering' },
     cycle_minutes: { label: 'Cycle Interval (minutes)', description: 'How often to show the next event' },
   },
 })
