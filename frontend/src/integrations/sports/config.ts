@@ -7,7 +7,7 @@ export const sportsIntegration = defineIntegration({
   name: 'Sports',
   schema: z.object({
     tracked_teams: z.string().optional().default('[]'),
-    poll_interval_live: z.string().optional().default('30'),
+    poll_interval_live: z.string().optional().default('5'),
     poll_interval_idle: z.string().optional().default('900'),
     window_hours: z.string().optional().default('24'),
     model: z.string().optional().default('llama3.1:8b'),

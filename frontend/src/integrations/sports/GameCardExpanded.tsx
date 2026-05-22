@@ -5,6 +5,7 @@ import { MlbLinescore } from './MlbLinescore'
 import { NbaLinescore } from './NbaLinescore'
 import { LastPlayBar } from './LastPlayBar'
 import { GameHeadline } from './GameHeadline'
+import { MlbLiveCard } from './MlbLiveCard'
 
 interface GameCardExpandedProps {
   game: Game
@@ -68,6 +69,7 @@ export function GameCardExpanded({ game, allGames, onClick }: GameCardExpandedPr
   const isLive = game.state === 'live'
   const isFinal = game.state === 'final'
   const isUpcoming = game.state === 'upcoming'
+  const hasMlbLiveCard = isLive && game.league === 'mlb' && !!game.liveDetail
 
   return (
     <div className="cursor-pointer" onClick={onClick}>
@@ -111,21 +113,26 @@ export function GameCardExpanded({ game, allGames, onClick }: GameCardExpandedPr
         </div>
       </div>
 
+      {/* Live MLB: full live card (situation, linescore, plays, leaders) */}
+      {hasMlbLiveCard && game.liveDetail && (
+        <MlbLiveCard game={game} detail={game.liveDetail} />
+      )}
+
       {/* Live: sport-specific situation */}
-      {isLive && game.situation?.type === 'mlb' && (
+      {isLive && !hasMlbLiveCard && game.situation?.type === 'mlb' && (
         <MlbSituation situation={game.situation} />
       )}
 
       {/* Live: last play */}
-      {isLive && game.lastPlay && (
+      {isLive && !hasMlbLiveCard && game.lastPlay && (
         <LastPlayBar text={game.lastPlay} />
       )}
 
       {/* Live + Final: sport-specific linescore */}
-      {(isLive || isFinal) && <SportLinescore game={game} />}
+      {(isLive || isFinal) && !hasMlbLiveCard && <SportLinescore game={game} />}
 
       {/* Live + Final: leaders */}
-      {(isLive || isFinal) && <LeadersList leaders={game.allLeaders ?? game.leaders} />}
+      {(isLive || isFinal) && !hasMlbLiveCard && <LeadersList leaders={game.allLeaders ?? game.leaders} />}
 
       {/* Final: ESPN recap headline */}
       {isFinal && game.headline && <GameHeadline text={game.headline} />}
