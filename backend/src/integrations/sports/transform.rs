@@ -302,10 +302,8 @@ fn parse_athletes(competition: &serde_json::Value) -> Vec<GameAthlete> {
                 if name.is_empty() {
                     continue;
                 }
-                let athlete_id = athlete["id"].as_str().map(String::from);
-                let headshot_url = athlete_id
-                    .as_ref()
-                    .map(|id| format!("https://a.espncdn.com/i/headshots/mlb/players/full/{}.png", id));
+                let athlete_id = json_id(&athlete["id"]);
+                let headshot_url = athlete_id.as_deref().map(mlb_headshot_url);
                 let stats = prob["statistics"]
                     .as_array()
                     .map(|stats| {
@@ -341,10 +339,8 @@ fn parse_athletes(competition: &serde_json::Value) -> Vec<GameAthlete> {
                 continue;
             }
             let role = athlete["displayName"].as_str().unwrap_or("").to_string();
-            let athlete_id = inner["id"].as_str().map(String::from);
-            let headshot_url = athlete_id
-                .as_ref()
-                .map(|id| format!("https://a.espncdn.com/i/headshots/mlb/players/full/{}.png", id));
+            let athlete_id = json_id(&inner["id"]);
+            let headshot_url = athlete_id.as_deref().map(mlb_headshot_url);
             result.push(GameAthlete {
                 name,
                 stats: None,
@@ -430,18 +426,26 @@ fn parse_matchup(summary: &serde_json::Value) -> Option<Matchup> {
     })
 }
 
+/// ESPN's JSON inconsistently encodes athlete IDs as either strings ("42001")
+/// or numbers (30508). Accept both and return a string.
+fn json_id(v: &serde_json::Value) -> Option<String> {
+    match v {
+        serde_json::Value::String(s) if !s.is_empty() => Some(s.clone()),
+        serde_json::Value::Number(n) => Some(n.to_string()),
+        _ => None,
+    }
+}
+
+fn mlb_headshot_url(id: &str) -> String {
+    format!("https://a.espncdn.com/i/headshots/mlb/players/full/{}.png", id)
+}
+
 fn extract_pitcher_info(node: &serde_json::Value) -> PitcherInfo {
     let athlete = &node["athlete"];
-    let id = athlete["id"].as_str().unwrap_or("").to_string();
+    let id_opt = json_id(&athlete["id"]);
+    let id = id_opt.clone().unwrap_or_default();
     PitcherInfo {
-        headshot_url: if id.is_empty() {
-            None
-        } else {
-            Some(format!(
-                "https://a.espncdn.com/i/headshots/mlb/players/full/{}.png",
-                id
-            ))
-        },
+        headshot_url: id_opt.as_deref().map(mlb_headshot_url),
         id,
         name: athlete["displayName"].as_str().unwrap_or("").to_string(),
         hand: athlete["hand"]["abbreviation"].as_str().map(String::from),
@@ -453,16 +457,10 @@ fn extract_pitcher_info(node: &serde_json::Value) -> PitcherInfo {
 
 fn extract_batter_info(node: &serde_json::Value) -> BatterInfo {
     let athlete = &node["athlete"];
-    let id = athlete["id"].as_str().unwrap_or("").to_string();
+    let id_opt = json_id(&athlete["id"]);
+    let id = id_opt.clone().unwrap_or_default();
     BatterInfo {
-        headshot_url: if id.is_empty() {
-            None
-        } else {
-            Some(format!(
-                "https://a.espncdn.com/i/headshots/mlb/players/full/{}.png",
-                id
-            ))
-        },
+        headshot_url: id_opt.as_deref().map(mlb_headshot_url),
         id,
         name: athlete["displayName"].as_str().unwrap_or("").to_string(),
         hand: athlete["batsAndThrows"].as_str().map(String::from),
