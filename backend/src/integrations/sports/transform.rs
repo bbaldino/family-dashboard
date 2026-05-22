@@ -415,15 +415,22 @@ fn parse_win_probability(summary: &serde_json::Value) -> Option<WinProbability> 
     })
 }
 
+/// ESPN's summary returns `situation.pitcher = { playerId }` and
+/// `situation.batter = { playerId }` — just IDs, no nested athlete data.
+/// The athlete details + stats live in `boxscore.players[].statistics[].athletes[]`
+/// keyed by `type: "pitching"` / `type: "batting"`. We look up the current
+/// player in the right stat group and read everything from there.
 fn parse_matchup(summary: &serde_json::Value) -> Option<Matchup> {
     let situation = summary["situation"].as_object()?;
-    let pitcher_raw = situation.get("pitcher")?;
-    let batter_raw = situation.get("batter")?;
+    let pitcher_id = json_id(&situation.get("pitcher")?["playerId"])?;
+    let batter_id = json_id(&situation.get("batter")?["playerId"])?;
 
-    Some(Matchup {
-        pitcher: extract_pitcher_info(pitcher_raw),
-        batter: extract_batter_info(batter_raw),
-    })
+    let pitcher = find_box_entry(summary, &pitcher_id, "pitching")
+        .map(|(entry, stats)| pitcher_info_from_box(entry, &stats))?;
+    let batter = find_box_entry(summary, &batter_id, "batting")
+        .map(|(entry, stats)| batter_info_from_box(entry, &stats))?;
+
+    Some(Matchup { pitcher, batter })
 }
 
 /// ESPN's JSON inconsistently encodes athlete IDs as either strings ("42001")
@@ -440,40 +447,105 @@ fn mlb_headshot_url(id: &str) -> String {
     format!("https://a.espncdn.com/i/headshots/mlb/players/full/{}.png", id)
 }
 
-fn extract_pitcher_info(node: &serde_json::Value) -> PitcherInfo {
-    let athlete = &node["athlete"];
-    let id_opt = json_id(&athlete["id"]);
-    let id = id_opt.clone().unwrap_or_default();
+/// Find `boxscore.players[].statistics[].athletes[]` entry matching `player_id`
+/// in the stat group of type `stat_type` ("pitching" or "batting"). Returns
+/// the entry node plus a key→value map of that group's stats for the player.
+fn find_box_entry<'a>(
+    summary: &'a serde_json::Value,
+    player_id: &str,
+    stat_type: &str,
+) -> Option<(&'a serde_json::Value, std::collections::HashMap<String, String>)> {
+    let teams = summary["boxscore"]["players"].as_array()?;
+    for team in teams {
+        let Some(groups) = team["statistics"].as_array() else {
+            continue;
+        };
+        for group in groups {
+            if group["type"].as_str() != Some(stat_type) {
+                continue;
+            }
+            let Some(athletes) = group["athletes"].as_array() else {
+                continue;
+            };
+            for entry in athletes {
+                if json_id(&entry["athlete"]["id"]).as_deref() == Some(player_id) {
+                    return Some((entry, box_stats_map(entry, group)));
+                }
+            }
+        }
+    }
+    None
+}
+
+fn box_stats_map(
+    entry: &serde_json::Value,
+    group: &serde_json::Value,
+) -> std::collections::HashMap<String, String> {
+    let mut map = std::collections::HashMap::new();
+    if let (Some(keys), Some(stats)) = (group["keys"].as_array(), entry["stats"].as_array()) {
+        for (k, v) in keys.iter().zip(stats.iter()) {
+            if let (Some(k), Some(v)) = (k.as_str(), v.as_str()) {
+                map.insert(k.to_string(), v.to_string());
+            }
+        }
+    }
+    map
+}
+
+fn pitcher_info_from_box(
+    entry: &serde_json::Value,
+    stats: &std::collections::HashMap<String, String>,
+) -> PitcherInfo {
+    let athlete = &entry["athlete"];
+    let id = json_id(&athlete["id"]).unwrap_or_default();
+    // ESPN provides headshot.href directly in the boxscore — prefer it over
+    // constructing the URL.
+    let headshot_url = athlete["headshot"]["href"]
+        .as_str()
+        .map(String::from)
+        .or_else(|| {
+            if id.is_empty() {
+                None
+            } else {
+                Some(mlb_headshot_url(&id))
+            }
+        });
     PitcherInfo {
-        headshot_url: id_opt.as_deref().map(mlb_headshot_url),
+        headshot_url,
         id,
         name: athlete["displayName"].as_str().unwrap_or("").to_string(),
-        hand: athlete["hand"]["abbreviation"].as_str().map(String::from),
-        era: node["summary"].as_str().map(String::from),
-        pitches_today: node["pitchesThrown"].as_u64().map(|n| n as u32),
-        record: athlete["record"].as_str().map(String::from),
+        hand: None,
+        era: stats.get("ERA").cloned(),
+        pitches_today: stats.get("pitches").and_then(|s| s.parse().ok()),
+        record: None,
     }
 }
 
-fn extract_batter_info(node: &serde_json::Value) -> BatterInfo {
-    let athlete = &node["athlete"];
-    let id_opt = json_id(&athlete["id"]);
-    let id = id_opt.clone().unwrap_or_default();
+fn batter_info_from_box(
+    entry: &serde_json::Value,
+    stats: &std::collections::HashMap<String, String>,
+) -> BatterInfo {
+    let athlete = &entry["athlete"];
+    let id = json_id(&athlete["id"]).unwrap_or_default();
+    let headshot_url = athlete["headshot"]["href"]
+        .as_str()
+        .map(String::from)
+        .or_else(|| {
+            if id.is_empty() {
+                None
+            } else {
+                Some(mlb_headshot_url(&id))
+            }
+        });
     BatterInfo {
-        headshot_url: id_opt.as_deref().map(mlb_headshot_url),
+        headshot_url,
         id,
         name: athlete["displayName"].as_str().unwrap_or("").to_string(),
-        hand: athlete["batsAndThrows"].as_str().map(String::from),
-        avg: node["summary"].as_str().map(String::from),
-        hr: node["statistics"][1]["displayValue"]
-            .as_str()
-            .and_then(|s| s.parse::<u32>().ok()),
-        rbi: node["statistics"][2]["displayValue"]
-            .as_str()
-            .and_then(|s| s.parse::<u32>().ok()),
-        today_line: node["statistics"][0]["displayValue"]
-            .as_str()
-            .map(String::from),
+        hand: None,
+        avg: stats.get("avg").cloned(),
+        hr: stats.get("homeRuns").and_then(|s| s.parse().ok()),
+        rbi: stats.get("RBIs").and_then(|s| s.parse().ok()),
+        today_line: stats.get("hits-atBats").cloned(),
     }
 }
 
