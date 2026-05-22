@@ -2,12 +2,15 @@
 # Capture paired scoreboard + summary snapshots for a live MLB game.
 #
 # Usage:
-#   scripts/capture-live-mlb-game.sh [GAME_ID] [INTERVAL_SECS]
+#   scripts/capture-live-mlb-game.sh [options] [GAME_ID]
 #
-# - GAME_ID: optional. If omitted, picks the first scoreboard event whose
-#   status.type.state == "in". If no live game exists right now, exits with
-#   a hint.
-# - INTERVAL_SECS: poll cadence between snapshots. Default 60.
+# Options:
+#   -i, --interval N    Poll interval in seconds (default: 60)
+#   -l, --list          List currently in-progress MLB games and exit
+#   -h, --help          Show this help
+#
+# GAME_ID is optional. If omitted, the first in-progress game on today's
+# scoreboard is used.
 #
 # Output: backend/tests/fixtures/live-snapshots/<GAME_ID>/
 #   <ISO8601>-scoreboard.json   (full scoreboard response at that moment)
@@ -23,8 +26,33 @@ SUMMARY_URL_BASE='https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/sum
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT_BASE="$REPO_ROOT/backend/tests/fixtures/live-snapshots"
 
-GAME_ID="${1:-}"
-INTERVAL="${2:-60}"
+GAME_ID=""
+INTERVAL=60
+MODE="capture"
+
+usage() {
+  sed -n '2,18p' "${BASH_SOURCE[0]}"
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -i|--interval)
+      INTERVAL="$2"; shift 2 ;;
+    --interval=*)
+      INTERVAL="${1#*=}"; shift ;;
+    -l|--list)
+      MODE="list"; shift ;;
+    -h|--help)
+      usage; exit 0 ;;
+    -*)
+      echo "unknown option: $1" >&2; usage; exit 2 ;;
+    *)
+      if [[ -n "$GAME_ID" ]]; then
+        echo "unexpected extra argument: $1" >&2; usage; exit 2
+      fi
+      GAME_ID="$1"; shift ;;
+  esac
+done
 
 log() { echo "[capture] $*" >&2; }
 
@@ -34,22 +62,36 @@ require() {
 require curl
 require jq
 
-find_live_game_id() {
-  local resp
-  resp=$(curl -fsS "$SCOREBOARD_URL")
-  echo "$resp" | jq -r '
+list_live_games() {
+  curl -fsS "$SCOREBOARD_URL" | jq -r '
     .events
     | map(select(.status.type.state == "in"))
-    | .[0].id // empty
+    | .[]
+    | "\(.id)\t\(.status.type.detail)\t\(.name)"
   '
 }
+
+find_live_game_id() {
+  list_live_games | head -1 | cut -f1
+}
+
+if [[ "$MODE" == "list" ]]; then
+  out=$(list_live_games || true)
+  if [[ -z "$out" ]]; then
+    log "no live MLB games right now"
+    exit 1
+  fi
+  printf "%s\n" "$out"
+  exit 0
+fi
 
 if [[ -z "$GAME_ID" ]]; then
   log "no GAME_ID given; looking for any in-progress MLB game..."
   GAME_ID=$(find_live_game_id || true)
   if [[ -z "$GAME_ID" ]]; then
-    log "no live MLB games right now. Pass a GAME_ID explicitly, or wait for a game to start."
-    log "  example: $(curl -fsS "$SCOREBOARD_URL" | jq -r '.events[] | "\(.id) \(.status.type.detail) \(.name)"' | head -3)"
+    log "no live MLB games right now. Pass a GAME_ID explicitly, or use --list."
+    log "  upcoming today:"
+    curl -fsS "$SCOREBOARD_URL" | jq -r '.events[] | "    \(.id)  \(.status.type.detail)  \(.name)"' | head -5 >&2
     exit 1
   fi
   log "found live game: $GAME_ID"
