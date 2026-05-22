@@ -382,6 +382,179 @@ fn parse_headline(competition: &serde_json::Value) -> Option<String> {
         .map(|s| s.to_string())
 }
 
+pub fn parse_summary_to_live_detail(summary: &serde_json::Value) -> Option<LiveGameDetail> {
+    // Bail if the payload doesn't look like a real summary (e.g. error response)
+    if !summary.is_object() || summary.get("header").is_none() {
+        return None;
+    }
+
+    Some(LiveGameDetail {
+        win_probability: parse_win_probability(summary),
+        sport_specific: SportSpecificLive::Mlb(MlbLiveDetail {
+            matchup: parse_matchup(summary),
+            pitch_sequence: parse_pitch_sequence(summary),
+            recent_plays: parse_recent_plays(summary, 5),
+            leaders: parse_game_leaders(summary),
+        }),
+    })
+}
+
+fn parse_win_probability(summary: &serde_json::Value) -> Option<WinProbability> {
+    let wp = summary["winprobability"].as_array()?.last()?;
+    let home = wp["homeWinPercentage"].as_f64().unwrap_or(0.0) as f32;
+    Some(WinProbability {
+        home,
+        away: 1.0 - home,
+    })
+}
+
+fn parse_matchup(summary: &serde_json::Value) -> Option<Matchup> {
+    let situation = summary["situation"].as_object()?;
+    let pitcher_raw = situation.get("pitcher")?;
+    let batter_raw = situation.get("batter")?;
+
+    Some(Matchup {
+        pitcher: extract_pitcher_info(pitcher_raw),
+        batter: extract_batter_info(batter_raw),
+    })
+}
+
+fn extract_pitcher_info(node: &serde_json::Value) -> PitcherInfo {
+    let athlete = &node["athlete"];
+    let id = athlete["id"].as_str().unwrap_or("").to_string();
+    PitcherInfo {
+        headshot_url: if id.is_empty() {
+            None
+        } else {
+            Some(format!(
+                "https://a.espncdn.com/i/headshots/mlb/players/full/{}.png",
+                id
+            ))
+        },
+        id,
+        name: athlete["displayName"].as_str().unwrap_or("").to_string(),
+        hand: athlete["hand"]["abbreviation"].as_str().map(String::from),
+        era: node["summary"].as_str().map(String::from),
+        pitches_today: node["pitchesThrown"].as_u64().map(|n| n as u32),
+        record: athlete["record"].as_str().map(String::from),
+    }
+}
+
+fn extract_batter_info(node: &serde_json::Value) -> BatterInfo {
+    let athlete = &node["athlete"];
+    let id = athlete["id"].as_str().unwrap_or("").to_string();
+    BatterInfo {
+        headshot_url: if id.is_empty() {
+            None
+        } else {
+            Some(format!(
+                "https://a.espncdn.com/i/headshots/mlb/players/full/{}.png",
+                id
+            ))
+        },
+        id,
+        name: athlete["displayName"].as_str().unwrap_or("").to_string(),
+        hand: athlete["batsAndThrows"].as_str().map(String::from),
+        avg: node["summary"].as_str().map(String::from),
+        hr: node["statistics"][1]["displayValue"]
+            .as_str()
+            .and_then(|s| s.parse::<u32>().ok()),
+        rbi: node["statistics"][2]["displayValue"]
+            .as_str()
+            .and_then(|s| s.parse::<u32>().ok()),
+        today_line: node["statistics"][0]["displayValue"]
+            .as_str()
+            .map(String::from),
+    }
+}
+
+fn parse_pitch_sequence(summary: &serde_json::Value) -> Vec<Pitch> {
+    summary["atBats"]
+        .as_array()
+        .and_then(|abs| abs.last())
+        .and_then(|ab| ab["plays"].as_array())
+        .map(|plays| {
+            plays
+                .iter()
+                .map(|p| Pitch {
+                    kind: classify_pitch(p),
+                    speed_mph: p["pitchVelocity"].as_u64().map(|n| n as u32),
+                    pitch_type: p["pitchType"]["text"].as_str().map(String::from),
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn classify_pitch(play: &serde_json::Value) -> String {
+    let type_text = play["type"]["text"].as_str().unwrap_or("");
+    match type_text.to_ascii_lowercase().as_str() {
+        s if s.contains("ball") => "ball",
+        s if s.contains("called strike") => "called_strike",
+        s if s.contains("swinging strike") || s.contains("strike (swinging)") => "swinging_strike",
+        s if s.contains("foul") => "foul",
+        _ => "in_play",
+    }
+    .to_string()
+}
+
+fn parse_recent_plays(summary: &serde_json::Value, n: usize) -> Vec<Play> {
+    summary["plays"]
+        .as_array()
+        .map(|plays| {
+            plays
+                .iter()
+                .rev()
+                .take(n)
+                .map(|p| Play {
+                    id: p["id"].as_str().unwrap_or("").to_string(),
+                    text: p["text"].as_str().unwrap_or("").to_string(),
+                    inning_half: p["period"]["type"].as_str().map(String::from),
+                    inning_number: p["period"]["number"].as_u64().map(|n| n as u32),
+                    scoring: p["scoringPlay"].as_bool().unwrap_or(false),
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn parse_game_leaders(summary: &serde_json::Value) -> GameLeaders {
+    let groups = summary["leaders"].as_array().cloned().unwrap_or_default();
+    let mut home = Vec::new();
+    let mut away = Vec::new();
+
+    for team_group in groups {
+        let is_home = team_group["team"]["homeAway"].as_str() == Some("home");
+        if let Some(categories) = team_group["leaders"].as_array() {
+            for cat in categories {
+                let category = cat["displayName"].as_str().unwrap_or("").to_string();
+                if let Some(leaders) = cat["leaders"].as_array() {
+                    for leader in leaders {
+                        let item = GameLeader {
+                            category: category.clone(),
+                            player_name: leader["athlete"]["displayName"]
+                                .as_str()
+                                .unwrap_or("")
+                                .to_string(),
+                            display_value: leader["displayValue"]
+                                .as_str()
+                                .unwrap_or("")
+                                .to_string(),
+                        };
+                        if is_home {
+                            home.push(item);
+                        } else {
+                            away.push(item);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    GameLeaders { home, away }
+}
+
 pub fn transform_teams(raw: &serde_json::Value, league_id: &str) -> Vec<TeamInfo> {
     let empty = vec![];
     let sports = raw["sports"].as_array().unwrap_or(&empty);

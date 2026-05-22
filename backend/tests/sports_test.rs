@@ -1,6 +1,26 @@
 use serde_json::json;
 
 #[test]
+fn parse_summary_returns_some_for_sample_fixture() {
+    let raw = include_str!("fixtures/mlb_summary_sample.json");
+    let value: serde_json::Value = serde_json::from_str(raw).expect("fixture parses");
+    let detail =
+        dashboard_backend::integrations::sports::transform::parse_summary_to_live_detail(&value);
+    assert!(
+        detail.is_some(),
+        "expected a LiveGameDetail from the sample summary"
+    );
+}
+
+#[test]
+fn parse_summary_returns_none_for_empty_object() {
+    let detail = dashboard_backend::integrations::sports::transform::parse_summary_to_live_detail(
+        &json!({}),
+    );
+    assert!(detail.is_none());
+}
+
+#[test]
 fn test_transform_scoreboard_filters_tracked_teams() {
     let raw = json!({
         "events": [
