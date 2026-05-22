@@ -169,6 +169,7 @@ fn parse_game(
         linescores,
         athletes,
         espn_url,
+        live_detail: None,
     })
 }
 
