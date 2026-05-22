@@ -98,12 +98,37 @@ pub async fn get_games(State(state): State<SportsState>) -> Result<Json<GamesRes
             },
         };
 
-        let games =
+        let mut games =
             transform::transform_scoreboard(&scoreboard, league_id, &tracked_ids, window_hours);
 
-        for game in &games {
-            if game.state == GameState::Live {
-                any_live = true;
+        for game in games.iter_mut() {
+            if game.state != GameState::Live {
+                continue;
+            }
+            any_live = true;
+
+            // 5s TTL cache for per-game summary
+            let summary_key = format!("summary:{}", game.id);
+            let summary_json = match state.cache.get(&summary_key, 5).await {
+                Some(cached) => Some(cached),
+                None => match espn::fetch_summary(&state.client, sport, league, &game.id).await {
+                    Ok(data) => {
+                        state.cache.set(&summary_key, data.clone()).await;
+                        Some(data)
+                    }
+                    Err(e) => {
+                        tracing::warn!(
+                            "ESPN summary fetch failed for game {}: {}",
+                            game.id,
+                            e
+                        );
+                        state.cache.get_stale(&summary_key).await
+                    }
+                },
+            };
+
+            if let Some(summary) = summary_json {
+                game.live_detail = transform::parse_summary_to_live_detail(&summary);
             }
         }
         all_games.extend(games);
