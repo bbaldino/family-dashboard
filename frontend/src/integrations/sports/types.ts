@@ -64,6 +64,7 @@ export interface Game {
   linescores: LinescoreEntry[]
   athletes: GameAthlete[]
   espnUrl: string | null
+  liveDetail: GameLiveDetail | null
 }
 
 export interface LinescoreEntry {
@@ -102,3 +103,79 @@ export interface TrackedTeam {
   name?: string
   logo?: string
 }
+
+export interface WinProbability {
+  home: number
+  away: number
+}
+
+export interface PitcherInfo {
+  id: string
+  name: string
+  headshotUrl: string | null
+  hand: string | null
+  era: string | null
+  pitchesToday: number | null
+  record: string | null
+}
+
+export interface BatterInfo {
+  id: string
+  name: string
+  headshotUrl: string | null
+  hand: string | null
+  avg: string | null
+  hr: number | null
+  rbi: number | null
+  todayLine: string | null
+}
+
+export interface Matchup {
+  pitcher: PitcherInfo
+  batter: BatterInfo
+}
+
+export interface Pitch {
+  kind: 'ball' | 'called_strike' | 'swinging_strike' | 'foul' | 'in_play'
+  speedMph: number | null
+  pitchType: string | null
+}
+
+export interface Play {
+  id: string
+  text: string
+  inningHalf: string | null
+  inningNumber: number | null
+  scoring: boolean
+}
+
+export interface GameLeader {
+  category: string
+  playerName: string
+  displayValue: string
+}
+
+export interface GameLeaders {
+  home: GameLeader[]
+  away: GameLeader[]
+}
+
+export interface MlbLiveDetail {
+  sport: 'mlb'
+  matchup: Matchup | null
+  pitchSequence: Pitch[]
+  recentPlays: Play[]
+  leaders: GameLeaders
+}
+
+export type SportSpecificLiveDetail = MlbLiveDetail
+// | NbaLiveDetail (future)
+
+export interface LiveGameDetailBase {
+  winProbability: WinProbability | null
+}
+
+// On the wire, the backend flattens the sport-specific block into LiveGameDetail
+// (Rust: #[serde(flatten)] on the sport_specific enum). So the JSON shape is
+// LiveGameDetailBase & SportSpecificLiveDetail merged at the same level.
+export type GameLiveDetail = LiveGameDetailBase & SportSpecificLiveDetail
