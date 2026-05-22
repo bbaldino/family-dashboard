@@ -7,17 +7,8 @@ export interface OnThisDayEvent {
   imageUrl: string | null
 }
 
-export interface OnThisDayBirth {
-  year: number
-  name: string
-  role: string
-  knownFor: string[]
-  photoUrl: string | null
-}
-
 export interface OnThisDayData {
   events: OnThisDayEvent[]
-  births: OnThisDayBirth[]
 }
 
 export function useOnThisDay() {

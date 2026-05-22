@@ -76,32 +76,6 @@ async fn fetch_selected(client: &reqwest::Client, month: u32, day: u32) -> Vec<W
     }
 }
 
-async fn fetch_births(client: &reqwest::Client, month: u32, day: u32) -> Vec<WikiBirth> {
-    let url = format!("{}/births/{:02}/{:02}", WIKI_BASE, month, day);
-    let resp = match client.get(&url).send().await {
-        Ok(r) if r.status().is_success() => r,
-        Ok(r) => {
-            tracing::warn!("Wikipedia births returned status {}", r.status());
-            return vec![];
-        }
-        Err(e) => {
-            tracing::warn!("Wikipedia births fetch failed: {}", e);
-            return vec![];
-        }
-    };
-    match resp.json::<WikiBirthsResponse>().await {
-        Ok(r) => {
-            let births = r.births.unwrap_or_default();
-            tracing::info!("Fetched {} births from Wikipedia", births.len());
-            births
-        }
-        Err(e) => {
-            tracing::warn!("Wikipedia births parse failed: {}", e);
-            vec![]
-        }
-    }
-}
-
 async fn fetch_events(client: &reqwest::Client, month: u32, day: u32) -> Vec<WikiEvent> {
     let url = format!("{}/events/{:02}/{:02}", WIKI_BASE, month, day);
     let resp = match client.get(&url).send().await {
@@ -280,149 +254,6 @@ async fn curate_events(
     Ok(picked)
 }
 
-const ENTERTAINMENT_KEYWORDS: &[&str] = &[
-    "actor",
-    "actress",
-    "singer",
-    "musician",
-    "comedian",
-    "director",
-    "filmmaker",
-    "rapper",
-    "entertainer",
-    "model",
-    "television",
-    "film",
-    "songwriter",
-    "producer",
-    "dancer",
-    "voice actor",
-    "screenwriter",
-    "animator",
-    "composer",
-];
-
-fn is_entertainment_figure(description: &str) -> bool {
-    let lower = description.to_lowercase();
-    ENTERTAINMENT_KEYWORDS.iter().any(|kw| lower.contains(kw))
-}
-
-async fn pick_births_with_tmdb(
-    client: &reqwest::Client,
-    births: &[WikiBirth],
-    tmdb_api_key: Option<&str>,
-) -> Vec<OnThisDayBirth> {
-    // Filter for entertainment figures first
-    let candidates: Vec<_> = births
-        .iter()
-        .filter_map(|b| {
-            let year = b.year?;
-            let name = b.text.split(',').next()?.trim().to_string();
-            let role = b
-                .pages
-                .as_ref()
-                .and_then(|pages| pages.first())
-                .and_then(|p| p.description.clone())
-                .unwrap_or_default();
-            if role.is_empty() || !is_entertainment_figure(&role) {
-                return None;
-            }
-            Some((year, name, role))
-        })
-        .take(15) // Check top 15 candidates
-        .collect();
-
-    if candidates.is_empty() {
-        return vec![];
-    }
-
-    let Some(api_key) = tmdb_api_key else {
-        // No TMDB key — fall back to Wikipedia data only
-        return candidates
-            .into_iter()
-            .take(3)
-            .map(|(year, name, role)| OnThisDayBirth {
-                year,
-                name,
-                role,
-                known_for: vec![],
-                photo_url: None,
-            })
-            .collect();
-    };
-
-    // Enrich with TMDB data
-    let mut results: Vec<(f64, OnThisDayBirth)> = vec![];
-
-    for (year, name, role) in &candidates {
-        let search_url = format!(
-            "https://api.themoviedb.org/3/search/person?api_key={}&query={}",
-            api_key,
-            urlencoding::encode(name)
-        );
-
-        let resp = match client.get(&search_url).send().await {
-            Ok(r) if r.status().is_success() => r,
-            _ => continue,
-        };
-
-        let data: serde_json::Value = match resp.json().await {
-            Ok(d) => d,
-            Err(_) => continue,
-        };
-
-        let tmdb_results = data["results"].as_array();
-        let Some(top) = tmdb_results.and_then(|r| r.first()) else {
-            continue;
-        };
-
-        // Score by sum of vote counts across known-for films (lifetime fame proxy)
-        let known_for_items = top["known_for"].as_array();
-        let fame_score: f64 = known_for_items
-            .map(|arr| {
-                arr.iter()
-                    .map(|k| k["vote_count"].as_f64().unwrap_or(0.0))
-                    .sum()
-            })
-            .unwrap_or(0.0);
-        let photo_path = top["profile_path"]
-            .as_str()
-            .map(|p| format!("https://image.tmdb.org/t/p/w185{}", p));
-        let known_for: Vec<String> = known_for_items
-            .map(|arr| {
-                arr.iter()
-                    .filter_map(|k| {
-                        k["title"]
-                            .as_str()
-                            .or_else(|| k["name"].as_str())
-                            .map(|s| s.to_string())
-                    })
-                    .take(2)
-                    .collect()
-            })
-            .unwrap_or_default();
-
-        results.push((
-            fame_score,
-            OnThisDayBirth {
-                year: *year,
-                name: name.clone(),
-                role: role.clone(),
-                known_for,
-                photo_url: photo_path,
-            },
-        ));
-
-        if results.len() >= 10 {
-            break;
-        }
-    }
-
-    // Sort by fame score (sum of vote counts) descending, take top 3
-    results.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal));
-    results.into_iter().take(3).map(|(_, b)| b).collect()
-}
-
 pub async fn get_events(
     State(state): State<OnThisDayState>,
 ) -> Result<Json<OnThisDayResponse>, AppError> {
@@ -436,11 +267,9 @@ pub async fn get_events(
         return Ok(Json(cached));
     }
 
-    // Fetch all four in parallel
-    let (selected, general_events, births) = tokio::join!(
+    let (selected, general_events) = tokio::join!(
         fetch_selected(&state.client, month, day),
         fetch_events(&state.client, month, day),
-        fetch_births(&state.client, month, day),
     );
 
     let integration_config = IntegrationConfig::new(&state.pool, INTEGRATION_ID);
@@ -502,18 +331,9 @@ pub async fn get_events(
         }
     };
 
-    let tmdb_config = IntegrationConfig::new(&state.pool, "tmdb");
-    let tmdb_api_key = tmdb_config.get("api_key").await.ok();
-    let picked_births =
-        pick_births_with_tmdb(&state.client, &births, tmdb_api_key.as_deref()).await;
+    let response = OnThisDayResponse { events };
 
-    let response = OnThisDayResponse {
-        events,
-        births: picked_births,
-    };
-
-    // Only cache if we have content
-    if !response.events.is_empty() || !response.births.is_empty() {
+    if !response.events.is_empty() {
         state.cache.set(cache_key, response.clone()).await;
     }
 

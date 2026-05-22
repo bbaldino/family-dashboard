@@ -9,7 +9,6 @@ const WIDGETS = [
   { id: 'chores', label: 'Chores' },
   { id: 'lunch', label: 'Lunch Menu' },
   { id: 'on-this-day', label: 'On This Day' },
-  { id: 'birthdays', label: 'Born Today' },
   { id: 'word-of-the-day', label: 'Word of the Day' },
 ]
 

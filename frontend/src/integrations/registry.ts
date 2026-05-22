@@ -17,7 +17,6 @@ import { dashboardIntegration } from './dashboard/config'
 import { llmIntegration } from './llm/config'
 import { onThisDayIntegration } from './on-this-day/config'
 import { wordOfTheDayIntegration } from './word-of-the-day/config'
-import { tmdbIntegration } from './tmdb/config'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const integrations: Integration<any>[] = [
@@ -39,5 +38,4 @@ export const integrations: Integration<any>[] = [
   llmIntegration,
   onThisDayIntegration,
   wordOfTheDayIntegration,
-  tmdbIntegration,
 ]
