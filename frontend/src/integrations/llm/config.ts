@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { defineIntegration } from '../define-integration'
+import { LlmSettings } from './LlmSettings'
 
 export const llmIntegration = defineIntegration({
   id: 'llm',
@@ -9,14 +10,10 @@ export const llmIntegration = defineIntegration({
     provider: z.string().optional().default('ollama'),
     url: z.string().optional().default(''),
   }),
+  // Fields are required by the type but not rendered — settingsComponent owns the UI.
   fields: {
-    provider: {
-      label: 'Provider',
-      description: '"ollama" (default — uses the Ollama integration config) or "openai_compat"',
-    },
-    url: {
-      label: 'Service URL',
-      description: 'Base URL for openai_compat provider (e.g. http://localhost:8080). Ignored when provider is "ollama".',
-    },
+    provider: { label: 'Provider' },
+    url: { label: 'Service URL' },
   },
+  settingsComponent: LlmSettings,
 })
