@@ -294,15 +294,18 @@ fn parse_athletes(competition: &serde_json::Value) -> Vec<GameAthlete> {
     let empty = vec![];
     let competitors = competition["competitors"].as_array().unwrap_or(&empty);
     for comp in competitors {
+        let team = comp["homeAway"].as_str().map(String::from);
         if let Some(probables) = comp["probables"].as_array() {
             for prob in probables {
-                let name = prob["athlete"]["displayName"]
-                    .as_str()
-                    .unwrap_or("")
-                    .to_string();
+                let athlete = &prob["athlete"];
+                let name = athlete["displayName"].as_str().unwrap_or("").to_string();
                 if name.is_empty() {
                     continue;
                 }
+                let athlete_id = athlete["id"].as_str().map(String::from);
+                let headshot_url = athlete_id
+                    .as_ref()
+                    .map(|id| format!("https://a.espncdn.com/i/headshots/mlb/players/full/{}.png", id));
                 let stats = prob["statistics"]
                     .as_array()
                     .map(|stats| {
@@ -321,6 +324,9 @@ fn parse_athletes(competition: &serde_json::Value) -> Vec<GameAthlete> {
                     name,
                     stats,
                     role: "probable".to_string(),
+                    athlete_id,
+                    team: team.clone(),
+                    headshot_url,
                 });
             }
         }
@@ -329,18 +335,23 @@ fn parse_athletes(competition: &serde_json::Value) -> Vec<GameAthlete> {
     // Featured athletes (winning/losing pitcher for finals)
     if let Some(featured) = competition["status"]["featuredAthletes"].as_array() {
         for athlete in featured {
-            let name = athlete["athlete"]["displayName"]
-                .as_str()
-                .unwrap_or("")
-                .to_string();
+            let inner = &athlete["athlete"];
+            let name = inner["displayName"].as_str().unwrap_or("").to_string();
             if name.is_empty() {
                 continue;
             }
             let role = athlete["displayName"].as_str().unwrap_or("").to_string();
+            let athlete_id = inner["id"].as_str().map(String::from);
+            let headshot_url = athlete_id
+                .as_ref()
+                .map(|id| format!("https://a.espncdn.com/i/headshots/mlb/players/full/{}.png", id));
             result.push(GameAthlete {
                 name,
                 stats: None,
                 role,
+                athlete_id,
+                team: None,
+                headshot_url,
             });
         }
     }

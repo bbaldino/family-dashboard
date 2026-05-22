@@ -36,6 +36,9 @@ pub struct GameAthlete {
     pub name: String,
     pub stats: Option<String>,
     pub role: String,
+    pub athlete_id: Option<String>,
+    pub team: Option<String>, // "home" | "away" (None for featured athletes that aren't per-team)
+    pub headshot_url: Option<String>,
 }
 
 /// Game state

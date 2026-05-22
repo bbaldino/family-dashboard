@@ -77,6 +77,9 @@ export interface GameAthlete {
   name: string
   stats: string | null
   role: string
+  athleteId: string | null
+  team: 'home' | 'away' | null
+  headshotUrl: string | null
 }
 
 export interface GamesResponse {

@@ -1,4 +1,4 @@
-import type { Game, Leader } from './types'
+import type { Game, GameAthlete, Leader } from './types'
 import { AiPreview } from './AiPreview'
 import { MlbSituation } from './MlbSituation'
 import { MlbLinescore } from './MlbLinescore'
@@ -52,6 +52,69 @@ function UpcomingSchedule({ games, currentGameId }: { games: Game[]; currentGame
             </div>
           )
         })}
+      </div>
+    </div>
+  )
+}
+
+function AthleteCard({ athlete }: { athlete: GameAthlete }) {
+  return (
+    <div className="flex items-center gap-2 min-w-0">
+      {athlete.headshotUrl ? (
+        <img
+          src={athlete.headshotUrl}
+          alt={athlete.name}
+          className="w-12 h-12 rounded-full object-cover bg-bg-primary border border-border flex-shrink-0"
+          onError={(e) => {
+            ;(e.currentTarget as HTMLImageElement).style.display = 'none'
+          }}
+        />
+      ) : (
+        <div className="w-12 h-12 rounded-full bg-bg-primary border border-border flex-shrink-0" />
+      )}
+      <div className="min-w-0">
+        <div className="text-xs font-semibold text-text-primary truncate">{athlete.name}</div>
+        <div className="text-[11px] text-text-secondary truncate">{athlete.stats ?? athlete.role}</div>
+      </div>
+    </div>
+  )
+}
+
+function ProbableAthletes({ athletes, game }: { athletes: GameAthlete[]; game: Game }) {
+  const away = athletes.filter((a) => a.team === 'away')
+  const home = athletes.filter((a) => a.team === 'home')
+  const teamless = athletes.filter((a) => a.team == null)
+
+  // Fallback to single list if no team info available (non-MLB or older data)
+  if (away.length === 0 && home.length === 0) {
+    return (
+      <div className="mt-3">
+        <div className="text-xs font-medium text-text-secondary mb-1">
+          {game.league === 'mlb' ? 'Probable Pitchers' : 'Notable'}
+        </div>
+        <div className="space-y-1">
+          {teamless.map((a, i) => (
+            <AthleteCard key={i} athlete={a} />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mt-3">
+      <div className="text-xs font-medium text-text-secondary mb-1">
+        {game.league === 'mlb' ? 'Probable Pitchers' : 'Notable'}
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-1">
+          <div className="text-[10px] text-text-muted font-semibold">{game.away.abbreviation}</div>
+          {away.map((a, i) => <AthleteCard key={i} athlete={a} />)}
+        </div>
+        <div className="flex flex-col gap-1">
+          <div className="text-[10px] text-text-muted font-semibold">{game.home.abbreviation}</div>
+          {home.map((a, i) => <AthleteCard key={i} athlete={a} />)}
+        </div>
       </div>
     </div>
   )
@@ -139,19 +202,10 @@ export function GameCardExpanded({ game, allGames, onClick }: GameCardExpandedPr
 
       {/* Upcoming: athletes (probable pitchers, etc) */}
       {isUpcoming && game.athletes.length > 0 && (
-        <div className="mt-3">
-          <div className="text-xs font-medium text-text-secondary mb-1">
-            {game.league === 'mlb' ? 'Probable Pitchers' : 'Notable'}
-          </div>
-          <div className="space-y-0.5">
-            {game.athletes.map((a, i) => (
-              <div key={i} className="text-xs flex justify-between">
-                <span className="text-text-primary">{a.name}</span>
-                <span className="text-text-secondary">{a.stats ?? a.role}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+        <ProbableAthletes
+          athletes={game.athletes}
+          game={game}
+        />
       )}
 
       {/* Upcoming: broadcast info */}
