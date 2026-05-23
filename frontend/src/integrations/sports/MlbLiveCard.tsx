@@ -61,7 +61,7 @@ export function MlbLiveCard({ game, detail }: MlbLiveCardProps) {
                   label="O"
                   filled={mlbSituation.outs}
                   total={3}
-                  color="bg-warning"
+                  color="bg-text-primary"
                   dotSize={12}
                 />
               </div>
@@ -83,9 +83,17 @@ export function MlbLiveCard({ game, detail }: MlbLiveCardProps) {
         allPlays={detail.scoringPlays}
         inProgressPlays={detail.inProgressScoring}
         recap={detail.scoringRecap}
+        homeTeamId={game.home.id}
+        awayTeamId={game.away.id}
       />
 
-      <PlayByPlayLog plays={detail.recentPlays} />
+      <PlayByPlayLog
+        plays={detail.recentPlays}
+        homeTeamId={game.home.id}
+        awayTeamId={game.away.id}
+        homeAbbr={game.home.abbreviation}
+        awayAbbr={game.away.abbreviation}
+      />
 
       <GameLeaders
         leaders={detail.leaders}

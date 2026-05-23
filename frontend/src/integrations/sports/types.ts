@@ -150,6 +150,7 @@ export interface Play {
   inningHalf: string | null
   inningNumber: number | null
   scoring: boolean
+  teamId: string | null
 }
 
 export interface GameLeader {

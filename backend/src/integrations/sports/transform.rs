@@ -669,6 +669,7 @@ fn play_from_value(p: &serde_json::Value) -> Play {
         text: p["text"].as_str().unwrap_or("").to_string(),
         inning_half: p["period"]["type"].as_str().map(String::from),
         inning_number: p["period"]["number"].as_u64().map(|n| n as u32),
+        team_id: json_id(&p["team"]["id"]),
         scoring: p["scoringPlay"].as_bool().unwrap_or(false),
     }
 }

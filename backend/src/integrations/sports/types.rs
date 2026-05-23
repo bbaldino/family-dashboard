@@ -195,6 +195,7 @@ pub struct Play {
     pub inning_half: Option<String>,
     pub inning_number: Option<u32>,
     pub scoring: bool,
+    pub team_id: Option<String>,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]

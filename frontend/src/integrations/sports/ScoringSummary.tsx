@@ -1,4 +1,5 @@
 import type { Play, ScoringRecap } from './types'
+import { teamTextColor } from './PlayByPlayLog'
 
 interface ScoringSummaryProps {
   /** All scoring plays — used as the raw fallback when no recap is available. */
@@ -7,6 +8,8 @@ interface ScoringSummaryProps {
   inProgressPlays: Play[]
   /** LLM-generated narrative of every completed-inning scoring play. */
   recap: ScoringRecap | null
+  homeTeamId: string
+  awayTeamId: string
 }
 
 function inningLabel(play: Play): string {
@@ -15,27 +18,48 @@ function inningLabel(play: Play): string {
   return `${half}${play.inningNumber}`
 }
 
-function PlayRow({ play }: { play: Play }) {
+function PlayRow({
+  play,
+  homeTeamId,
+  awayTeamId,
+}: {
+  play: Play
+  homeTeamId: string
+  awayTeamId: string
+}) {
+  const color = teamTextColor(play.teamId, homeTeamId, awayTeamId)
   return (
-    <li className="text-[12px] leading-snug text-text-primary flex gap-2">
+    <li className="text-[12px] leading-snug flex gap-2 font-semibold">
       <span className="text-text-muted tabular-nums shrink-0 w-7">
         {inningLabel(play)}
       </span>
-      <span className="min-w-0">{play.text}</span>
+      <span className={`min-w-0 ${color}`}>{play.text}</span>
     </li>
   )
 }
 
-export function ScoringSummary({ allPlays, inProgressPlays, recap }: ScoringSummaryProps) {
+export function ScoringSummary({
+  allPlays,
+  inProgressPlays,
+  recap,
+  homeTeamId,
+  awayTeamId,
+}: ScoringSummaryProps) {
   if (allPlays.length === 0) return null
 
-  // Fallback: no recap yet — show all scoring plays raw.
   if (!recap) {
     return (
       <div className="flex flex-col gap-1 pt-2 border-t border-border">
         <div className="text-[10px] text-text-muted font-semibold">Scoring</div>
         <ul className="flex flex-col gap-0.5">
-          {allPlays.map((play) => <PlayRow key={play.id} play={play} />)}
+          {allPlays.map((play) => (
+            <PlayRow
+              key={play.id}
+              play={play}
+              homeTeamId={homeTeamId}
+              awayTeamId={awayTeamId}
+            />
+          ))}
         </ul>
       </div>
     )
@@ -49,7 +73,14 @@ export function ScoringSummary({ allPlays, inProgressPlays, recap }: ScoringSumm
       </div>
       {inProgressPlays.length > 0 && (
         <ul className="flex flex-col gap-0.5">
-          {inProgressPlays.map((play) => <PlayRow key={play.id} play={play} />)}
+          {inProgressPlays.map((play) => (
+            <PlayRow
+              key={play.id}
+              play={play}
+              homeTeamId={homeTeamId}
+              awayTeamId={awayTeamId}
+            />
+          ))}
         </ul>
       )}
     </div>
