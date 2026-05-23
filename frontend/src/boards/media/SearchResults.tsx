@@ -209,7 +209,7 @@ export function SearchResults({ rawQuery, debouncedQuery }: SearchResultsProps) 
         heading="Tracks"
         items={results.tracks}
         pendingUri={pendingUri}
-        onTap={(item) => handleTap(item, true)}
+        onTap={(item) => handleTap(item)}
         showArtist
       />
       <ResultGroup
