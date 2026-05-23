@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Music } from 'lucide-react'
+import { Music, Loader2 } from 'lucide-react'
 import { musicIntegration } from '@/integrations/music/config'
 import { useMusic } from '@/integrations/music/useMusic'
 import type { SearchItem } from '@/integrations/music/types'
@@ -10,10 +11,12 @@ interface SearchResultsType {
   albums: SearchItem[]
   playlists: SearchItem[]
 }
-import { LoadingSpinner } from '@/ui/LoadingSpinner'
 
 interface SearchResultsProps {
-  query: string
+  /** What the user has typed right now — used to detect "still settling" state. */
+  rawQuery: string
+  /** Debounced query that's actually sent to the backend. */
+  debouncedQuery: string
 }
 
 // Raw shape returned by the Music Assistant search endpoint
@@ -27,7 +30,6 @@ interface RawSearchItem {
 }
 
 function getItemImage(raw: RawSearchItem): string | null {
-  // Try top-level image first, then metadata.images[0]
   if (raw.image?.path) return raw.image.path
   if (raw.metadata?.images?.[0]?.path) return raw.metadata.images[0].path
   return null
@@ -43,14 +45,12 @@ function normalizeItem(raw: RawSearchItem): SearchItem {
   }
 }
 
-function parseSearchResponse(data: any): SearchResultsType {
-  // MA returns an object with keys like "tracks", "artists", "albums", "playlists"
-  // Each value is an array of raw items
+function parseSearchResponse(data: unknown): SearchResultsType {
+  const obj = (data ?? {}) as Record<string, unknown>
   const extract = (key: string): SearchItem[] => {
-    const raw: RawSearchItem[] = Array.isArray(data?.[key]) ? data[key] : []
+    const raw = Array.isArray(obj[key]) ? (obj[key] as RawSearchItem[]) : []
     return raw.map(normalizeItem)
   }
-
   return {
     tracks: extract('tracks'),
     artists: extract('artists'),
@@ -80,17 +80,28 @@ function getDisplayImage(image: SearchItem['image']): string | null {
 
 interface ResultItemProps {
   item: SearchItem
+  pending: boolean
   onTap: () => void
   showArtist?: boolean
 }
 
-function ResultItem({ item, onTap, showArtist = false }: ResultItemProps) {
+function ResultItem({ item, pending, onTap, showArtist = false }: ResultItemProps) {
   return (
     <button
       onClick={onTap}
-      className="flex items-center gap-3 w-full px-3 py-2 rounded hover:bg-bg-primary active:scale-95 transition-transform text-left"
+      disabled={pending}
+      className={`flex items-center gap-3 w-full px-3 py-2 rounded text-left transition-transform ${
+        pending ? 'opacity-60' : 'hover:bg-bg-primary active:scale-95'
+      }`}
     >
-      <Thumbnail imageUrl={getDisplayImage(item.image)} name={item.name} />
+      <div className="relative">
+        <Thumbnail imageUrl={getDisplayImage(item.image)} name={item.name} />
+        {pending && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded">
+            <Loader2 size={16} className="text-white animate-spin" />
+          </div>
+        )}
+      </div>
       <div className="flex-1 min-w-0">
         <div className="text-text-primary text-sm font-medium truncate">{item.name}</div>
         {showArtist && item.artist && (
@@ -104,13 +115,13 @@ function ResultItem({ item, onTap, showArtist = false }: ResultItemProps) {
 interface ResultGroupProps {
   heading: string
   items: SearchItem[]
+  pendingUri: string | null
   onTap: (item: SearchItem) => void
   showArtist?: boolean
 }
 
-function ResultGroup({ heading, items, onTap, showArtist = false }: ResultGroupProps) {
+function ResultGroup({ heading, items, pendingUri, onTap, showArtist = false }: ResultGroupProps) {
   if (items.length === 0) return null
-
   return (
     <section className="mb-4">
       <h3 className="text-text-secondary text-xs font-semibold uppercase tracking-wide px-3 pb-1">
@@ -120,6 +131,7 @@ function ResultGroup({ heading, items, onTap, showArtist = false }: ResultGroupP
         <ResultItem
           key={item.uri}
           item={item}
+          pending={pendingUri === item.uri}
           onTap={() => onTap(item)}
           showArtist={showArtist}
         />
@@ -128,17 +140,44 @@ function ResultGroup({ heading, items, onTap, showArtist = false }: ResultGroupP
   )
 }
 
-export function SearchResults({ query }: SearchResultsProps) {
-  const { play } = useMusic()
+function StatusRow({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-2 px-3 py-6 text-text-secondary text-sm">
+      <Loader2 size={16} className="animate-spin" />
+      <span>{label}</span>
+    </div>
+  )
+}
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['music', 'search', query],
-    queryFn: () => musicIntegration.api.get<any>(`/search?q=${encodeURIComponent(query)}`),
-    enabled: query.length >= 2,
+export function SearchResults({ rawQuery, debouncedQuery }: SearchResultsProps) {
+  const { play } = useMusic()
+  const [pendingUri, setPendingUri] = useState<string | null>(null)
+
+  // True while the debounce window is still open (user is still typing).
+  const settling = rawQuery !== debouncedQuery
+
+  const { data, isFetching } = useQuery({
+    queryKey: ['music', 'search', debouncedQuery],
+    queryFn: () =>
+      musicIntegration.api.get<unknown>(`/search?q=${encodeURIComponent(debouncedQuery)}`),
+    enabled: debouncedQuery.length >= 2,
   })
 
-  if (isLoading) {
-    return <LoadingSpinner />
+  const handleTap = async (item: SearchItem, radio?: boolean) => {
+    setPendingUri(item.uri)
+    try {
+      await play(item.uri, radio)
+    } finally {
+      // Clear after a short window even if the call hung — keeps the UI honest.
+      setTimeout(() => setPendingUri((prev) => (prev === item.uri ? null : prev)), 1200)
+    }
+  }
+
+  // Settling or fetching the current debounced query → show the indicator
+  // before any results are rendered, even if older results are still cached.
+  const showFullPageLoading = (settling || isFetching) && !data
+  if (showFullPageLoading) {
+    return <StatusRow label={settling ? 'Searching…' : `Searching for "${debouncedQuery}"…`} />
   }
 
   const results = data ? parseSearchResponse(data) : null
@@ -152,34 +191,45 @@ export function SearchResults({ query }: SearchResultsProps) {
   if (!hasResults) {
     return (
       <div className="flex items-center justify-center p-8 text-text-secondary text-sm">
-        No results for &lsquo;{query}&rsquo;
+        No results for &lsquo;{debouncedQuery}&rsquo;
       </div>
     )
   }
 
   return (
     <div className="py-2">
+      {/* Subtle indicator when we have stale results showing while a new query is in flight */}
+      {(settling || isFetching) && (
+        <div className="flex items-center gap-2 px-3 pb-2 text-text-secondary text-xs">
+          <Loader2 size={12} className="animate-spin" />
+          <span>Updating…</span>
+        </div>
+      )}
       <ResultGroup
         heading="Tracks"
         items={results.tracks}
-        onTap={(item) => play(item.uri, true)}
+        pendingUri={pendingUri}
+        onTap={(item) => handleTap(item, true)}
         showArtist
       />
       <ResultGroup
         heading="Artists"
         items={results.artists}
-        onTap={(item) => play(item.uri)}
+        pendingUri={pendingUri}
+        onTap={(item) => handleTap(item)}
       />
       <ResultGroup
         heading="Albums"
         items={results.albums}
-        onTap={(item) => play(item.uri)}
+        pendingUri={pendingUri}
+        onTap={(item) => handleTap(item)}
         showArtist
       />
       <ResultGroup
         heading="Playlists"
         items={results.playlists}
-        onTap={(item) => play(item.uri)}
+        pendingUri={pendingUri}
+        onTap={(item) => handleTap(item)}
       />
     </div>
   )

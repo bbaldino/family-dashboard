@@ -23,7 +23,10 @@ export function MediaBoard() {
     return () => clearTimeout(timer)
   }, [searchQuery])
 
-  const isSearching = debouncedQuery.length >= 2
+  // Show the search view the moment the user has typed 2+ chars, even before
+  // the debounce fires — that way the "Searching…" indicator appears immediately
+  // instead of after a 300ms blank window.
+  const isSearching = searchQuery.length >= 2
 
   return (
     <div className="h-full flex gap-6">
@@ -41,7 +44,7 @@ export function MediaBoard() {
         </div>
 
         {isSearching ? (
-          <SearchResults query={debouncedQuery} />
+          <SearchResults rawQuery={searchQuery} debouncedQuery={debouncedQuery} />
         ) : (
           <>
             {/* Tabs */}

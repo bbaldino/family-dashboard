@@ -224,6 +224,7 @@ pub async fn search(
     State(pool): State<SqlitePool>,
     Query(params): Query<SearchQuery>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    let started = std::time::Instant::now();
     let client = MaClient::from_config(&pool).await?;
     let mut data: serde_json::Value = client
         .command(
@@ -235,7 +236,18 @@ pub async fn search(
             }),
         )
         .await?;
+    let ma_elapsed_ms = started.elapsed().as_millis();
     rewrite_image_urls(&mut data);
+    let count = |k: &str| data.get(k).and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);
+    tracing::info!(
+        query = %params.q,
+        ma_ms = ma_elapsed_ms,
+        tracks = count("tracks"),
+        artists = count("artists"),
+        albums = count("albums"),
+        playlists = count("playlists"),
+        "music search returned"
+    );
     Ok(Json(data))
 }
 
