@@ -9,6 +9,8 @@ export interface GameTeam {
   /** Hex without leading '#', e.g. "0e3386". May be null. */
   color: string | null
   altColor: string | null
+  hits: number | null
+  errors: number | null
 }
 
 export interface Leader {

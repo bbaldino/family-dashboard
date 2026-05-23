@@ -15,6 +15,10 @@ pub struct GameTeam {
     pub color: Option<String>,
     /// Alternate/secondary team color, same format.
     pub alt_color: Option<String>,
+    /// Total hits in the current/just-played game (MLB scoreboard).
+    pub hits: Option<u32>,
+    /// Total errors in the current/just-played game (MLB scoreboard).
+    pub errors: Option<u32>,
 }
 
 /// A stat leader line

@@ -4,10 +4,19 @@ interface MlbLinescoreProps {
   game: Game
 }
 
-export function MlbLinescore({ game }: MlbLinescoreProps) {
-  if (game.linescores.length === 0) return null
+const MIN_INNINGS = 9
 
+export function MlbLinescore({ game }: MlbLinescoreProps) {
+  // Render even when no innings have been played yet (pre-game and start
+  // of game both benefit from showing the empty 9-column grid).
+  const inningsPlayed = game.linescores.length
+  const columns = Math.max(MIN_INNINGS, inningsPlayed)
   const currentPeriod = game.period
+
+  const formatCell = (val: string | undefined) => (val == null || val === '' ? '·' : val)
+  const formatTotal = (val: number | null | undefined) => (val == null ? '·' : String(val))
+
+  const isCurrent = (i: number) => currentPeriod != null && i + 1 === currentPeriod
 
   return (
     <div className="overflow-x-auto mt-3">
@@ -15,48 +24,47 @@ export function MlbLinescore({ game }: MlbLinescoreProps) {
         <thead>
           <tr className="border-b border-border">
             <th className="text-left py-1 pr-3 font-medium" />
-            {game.linescores.map((_, i) => (
+            {Array.from({ length: columns }, (_, i) => (
               <th
                 key={i}
                 className={`px-1.5 py-1 font-medium text-center ${
-                  currentPeriod != null && i + 1 === currentPeriod ? 'text-palette-6' : ''
+                  isCurrent(i) ? 'text-palette-6' : ''
                 }`}
               >
                 {i + 1}
               </th>
             ))}
-            <th className="pl-2 py-1 font-bold text-center">R</th>
+            <th className="pl-3 py-1 font-bold text-center text-text-primary">R</th>
+            <th className="px-1.5 py-1 font-bold text-center text-text-primary">H</th>
+            <th className="px-1.5 py-1 font-bold text-center text-text-primary">E</th>
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td className="py-1 pr-3 font-medium text-text-primary">{game.away.abbreviation}</td>
-            {game.linescores.map((ls, i) => (
-              <td
-                key={i}
-                className={`px-1.5 py-1 text-center ${
-                  currentPeriod != null && i + 1 === currentPeriod ? 'text-palette-6' : ''
-                }`}
-              >
-                {ls.awayScore}
-              </td>
-            ))}
-            <td className="pl-2 py-1 font-bold text-center text-text-primary">{game.away.score}</td>
-          </tr>
-          <tr>
-            <td className="py-1 pr-3 font-medium text-text-primary">{game.home.abbreviation}</td>
-            {game.linescores.map((ls, i) => (
-              <td
-                key={i}
-                className={`px-1.5 py-1 text-center ${
-                  currentPeriod != null && i + 1 === currentPeriod ? 'text-palette-6' : ''
-                }`}
-              >
-                {ls.homeScore}
-              </td>
-            ))}
-            <td className="pl-2 py-1 font-bold text-center text-text-primary">{game.home.score}</td>
-          </tr>
+          {(['away', 'home'] as const).map((side) => {
+            const team = game[side]
+            return (
+              <tr key={side}>
+                <td className="py-1 pr-3 font-medium text-text-primary">{team.abbreviation}</td>
+                {Array.from({ length: columns }, (_, i) => (
+                  <td
+                    key={i}
+                    className={`px-1.5 py-1 text-center ${isCurrent(i) ? 'text-palette-6' : ''}`}
+                  >
+                    {formatCell(game.linescores[i]?.[`${side}Score` as 'awayScore' | 'homeScore'])}
+                  </td>
+                ))}
+                <td className="pl-3 py-1 font-bold text-center text-text-primary">
+                  {formatTotal(team.score)}
+                </td>
+                <td className="px-1.5 py-1 text-center text-text-primary">
+                  {formatTotal(team.hits)}
+                </td>
+                <td className="px-1.5 py-1 text-center text-text-primary">
+                  {formatTotal(team.errors)}
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>
