@@ -31,15 +31,17 @@ fn replay_response(
     let snapshot = replayer.current();
     let game_id = replayer.game_id();
 
-    // Funnel snapshot through the same transform the live path uses; restrict
-    // the tracked-team filter to the captured game and use a wide enough
-    // window that even an old fixture stays visible.
-    let mut games = transform::transform_scoreboard(
+    // Funnel snapshot through the same transform the live path uses. Pass
+    // an empty tracked-team list (no team filter) and a year-wide window so
+    // an old/finished fixture stays visible — then narrow the response to
+    // just the captured game id.
+    let all_games = transform::transform_scoreboard(
         &snapshot.scoreboard,
         "mlb",
-        &[game_id.to_string()],
+        &[],
         24.0 * 365.0,
     );
+    let mut games: Vec<Game> = all_games.into_iter().filter(|g| g.id == *game_id).collect();
 
     if let Some(game) = games.iter_mut().find(|g| g.id == *game_id) {
         if let Some(mut detail) = transform::parse_summary_to_live_detail(&snapshot.summary) {
