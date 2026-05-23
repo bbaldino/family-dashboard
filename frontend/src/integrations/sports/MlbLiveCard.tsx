@@ -5,6 +5,7 @@ import { WinProbabilityBar } from './WinProbabilityBar'
 import { PitcherBatterMatchup } from './PitcherBatterMatchup'
 import { PitchSequence } from './PitchSequence'
 import { PlayByPlayLog } from './PlayByPlayLog'
+import { ScoringSummary } from './ScoringSummary'
 import { GameLeaders } from './GameLeaders'
 import { MlbLinescore } from './MlbLinescore'
 
@@ -70,6 +71,8 @@ export function MlbLiveCard({ game, detail }: MlbLiveCardProps) {
       <PitchSequence pitches={detail.pitchSequence} />
 
       <MlbLinescore game={game} />
+
+      <ScoringSummary plays={detail.scoringPlays} />
 
       <PlayByPlayLog plays={detail.recentPlays} />
 

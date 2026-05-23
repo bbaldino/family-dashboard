@@ -218,6 +218,7 @@ pub struct MlbLiveDetail {
     pub matchup: Option<Matchup>,
     pub pitch_sequence: Vec<Pitch>,
     pub recent_plays: Vec<Play>,
+    pub scoring_plays: Vec<Play>,
     pub leaders: GameLeaders,
 }
 

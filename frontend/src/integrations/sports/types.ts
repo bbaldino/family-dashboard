@@ -168,6 +168,7 @@ export interface MlbLiveDetail {
   matchup: Matchup | null
   pitchSequence: Pitch[]
   recentPlays: Play[]
+  scoringPlays: Play[]
   leaders: GameLeaders
 }
 

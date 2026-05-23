@@ -401,6 +401,7 @@ pub fn parse_summary_to_live_detail(summary: &serde_json::Value) -> Option<LiveG
             matchup: parse_matchup(summary),
             pitch_sequence: parse_pitch_sequence(summary),
             recent_plays: parse_recent_plays(summary, 5),
+            scoring_plays: parse_scoring_plays(summary),
             leaders: parse_game_leaders(summary),
         }),
     })
@@ -606,24 +607,43 @@ fn classify_pitch(play: &serde_json::Value) -> String {
     .to_string()
 }
 
+/// Most-recent N at-bat outcomes (e.g. "Betts struck out looking.").
+/// Filters `summary.plays` to the `play-result` rows since those carry the
+/// human-readable narrative; everything else in `.plays` is per-pitch or
+/// inning-transition chatter that's too noisy for a glance card.
 fn parse_recent_plays(summary: &serde_json::Value, n: usize) -> Vec<Play> {
-    summary["plays"]
-        .as_array()
-        .map(|plays| {
-            plays
-                .iter()
-                .rev()
-                .take(n)
-                .map(|p| Play {
-                    id: p["id"].as_str().unwrap_or("").to_string(),
-                    text: p["text"].as_str().unwrap_or("").to_string(),
-                    inning_half: p["period"]["type"].as_str().map(String::from),
-                    inning_number: p["period"]["number"].as_u64().map(|n| n as u32),
-                    scoring: p["scoringPlay"].as_bool().unwrap_or(false),
-                })
-                .collect()
-        })
-        .unwrap_or_default()
+    let Some(plays) = summary["plays"].as_array() else {
+        return Vec::new();
+    };
+    plays
+        .iter()
+        .rev()
+        .filter(|p| p["type"]["type"].as_str() == Some("play-result"))
+        .take(n)
+        .map(play_from_value)
+        .collect()
+}
+
+/// All scoring plays from the game in chronological order.
+fn parse_scoring_plays(summary: &serde_json::Value) -> Vec<Play> {
+    let Some(plays) = summary["plays"].as_array() else {
+        return Vec::new();
+    };
+    plays
+        .iter()
+        .filter(|p| p["scoringPlay"].as_bool().unwrap_or(false))
+        .map(play_from_value)
+        .collect()
+}
+
+fn play_from_value(p: &serde_json::Value) -> Play {
+    Play {
+        id: p["id"].as_str().unwrap_or("").to_string(),
+        text: p["text"].as_str().unwrap_or("").to_string(),
+        inning_half: p["period"]["type"].as_str().map(String::from),
+        inning_number: p["period"]["number"].as_u64().map(|n| n as u32),
+        scoring: p["scoringPlay"].as_bool().unwrap_or(false),
+    }
 }
 
 fn parse_game_leaders(summary: &serde_json::Value) -> GameLeaders {
