@@ -2,6 +2,7 @@ pub mod cache;
 pub mod espn;
 pub mod preview;
 pub mod recap;
+pub mod replay;
 pub mod routes;
 pub mod transform;
 pub mod types;
@@ -20,6 +21,7 @@ pub fn router(pool: SqlitePool) -> Router {
         client: reqwest::Client::new(),
         preview_cache: Arc::new(preview::PreviewCache::new()),
         recap_cache: Arc::new(recap::RecapCache::new()),
+        replayer: replay::Replayer::from_env().map(Arc::new),
     };
 
     Router::new()

@@ -10,6 +10,7 @@ use crate::integrations::IntegrationConfig;
 use super::cache::EspnCache;
 use super::preview::PreviewCache;
 use super::recap::RecapCache;
+use super::replay::Replayer;
 use super::types::*;
 use super::{INTEGRATION_ID, espn, recap, transform};
 
@@ -20,6 +21,38 @@ pub struct SportsState {
     pub client: reqwest::Client,
     pub preview_cache: Arc<PreviewCache>,
     pub recap_cache: Arc<RecapCache>,
+    pub replayer: Option<Arc<Replayer>>,
+}
+
+fn replay_response(
+    state: &SportsState,
+    replayer: &Replayer,
+) -> Result<Json<GamesResponse>, AppError> {
+    let snapshot = replayer.current();
+    let game_id = replayer.game_id();
+
+    // Funnel snapshot through the same transform the live path uses; restrict
+    // the tracked-team filter to the captured game and use a wide enough
+    // window that even an old fixture stays visible.
+    let mut games = transform::transform_scoreboard(
+        &snapshot.scoreboard,
+        "mlb",
+        &[game_id.to_string()],
+        24.0 * 365.0,
+    );
+
+    if let Some(game) = games.iter_mut().find(|g| g.id == *game_id) {
+        if let Some(mut detail) = transform::parse_summary_to_live_detail(&snapshot.summary) {
+            attach_scoring_recap(state, game_id, &mut detail);
+            game.live_detail = Some(detail);
+        }
+    }
+
+    let any_live = games.iter().any(|g| g.state == GameState::Live);
+    Ok(Json(GamesResponse {
+        games,
+        has_live: any_live,
+    }))
 }
 
 /// Attach the LLM-generated scoring recap to a MLB live detail if one is
@@ -66,6 +99,11 @@ fn attach_scoring_recap(state: &SportsState, game_id: &str, detail: &mut LiveGam
 }
 
 pub async fn get_games(State(state): State<SportsState>) -> Result<Json<GamesResponse>, AppError> {
+    // Replay mode: snapshot data only, ignore tracked teams / ESPN entirely.
+    if let Some(replayer) = state.replayer.clone() {
+        return replay_response(&state, &replayer);
+    }
+
     let config = IntegrationConfig::new(&state.pool, INTEGRATION_ID);
 
     let tracked: Vec<TrackedTeam> = config.get_json_or("tracked_teams", vec![]).await?;
