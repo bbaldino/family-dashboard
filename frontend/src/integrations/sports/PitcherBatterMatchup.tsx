@@ -23,7 +23,7 @@ function Headshot({ url, alt }: { url: string | null; alt: string }) {
 export function PitcherBatterMatchup({ matchup }: PitcherBatterMatchupProps) {
   const { pitcher, batter } = matchup
   return (
-    <div className="flex items-stretch gap-3 py-2">
+    <div className="flex items-stretch gap-3">
       {/* Pitcher */}
       <div className="flex-1 flex items-center gap-2">
         <Headshot url={pitcher.headshotUrl} alt={pitcher.name} />
