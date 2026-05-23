@@ -3,7 +3,6 @@ import { BaseDiamond } from './BaseDiamond'
 import { CountIndicator } from './CountIndicator'
 import { WinProbabilityBar } from './WinProbabilityBar'
 import { PitcherBatterMatchup } from './PitcherBatterMatchup'
-import { PitchSequence } from './PitchSequence'
 import { PlayByPlayLog } from './PlayByPlayLog'
 import { ScoringSummary } from './ScoringSummary'
 import { GameLeaders } from './GameLeaders'
@@ -74,8 +73,6 @@ export function MlbLiveCard({ game, detail }: MlbLiveCardProps) {
           )}
         </div>
       )}
-
-      <PitchSequence pitches={detail.pitchSequence} />
 
       <MlbLinescore game={game} />
 

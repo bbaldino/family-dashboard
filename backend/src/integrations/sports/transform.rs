@@ -405,7 +405,6 @@ pub fn parse_summary_to_live_detail(summary: &serde_json::Value) -> Option<LiveG
         win_probability: parse_win_probability(summary),
         sport_specific: SportSpecificLive::Mlb(MlbLiveDetail {
             matchup: parse_matchup(summary),
-            pitch_sequence: parse_pitch_sequence(summary),
             recent_plays: parse_recent_plays(summary, 5),
             scoring_plays,
             in_progress_scoring,
@@ -556,63 +555,6 @@ fn batter_info_from_box(
         rbi: stats.get("RBIs").and_then(|s| s.parse().ok()),
         today_line: stats.get("hits-atBats").cloned(),
     }
-}
-
-/// Build the pitch-pip sequence for the current at-bat.
-///
-/// ESPN's `summary.plays` is a flat array; each play has an `atBatId`.
-/// The current at-bat = the atBatId of the most recent play. We pick out
-/// pitch-level plays (anything with `pitchVelocity` or `pitchType`) and
-/// sort by `sequenceNumber`. `summary.atBats` is an object keyed by
-/// atBatId — not an array — so the old `as_array().last()` path always
-/// returned None and the sequence was empty.
-fn parse_pitch_sequence(summary: &serde_json::Value) -> Vec<Pitch> {
-    let Some(plays) = summary["plays"].as_array() else {
-        return Vec::new();
-    };
-    let Some(current_at_bat) = plays.last().and_then(|p| p["atBatId"].as_str()) else {
-        return Vec::new();
-    };
-
-    let mut pitches: Vec<&serde_json::Value> = plays
-        .iter()
-        .filter(|p| {
-            p["atBatId"].as_str() == Some(current_at_bat)
-                && (p["pitchVelocity"].is_number() || !p["pitchType"].is_null())
-        })
-        .collect();
-
-    pitches.sort_by_key(|p| {
-        p["sequenceNumber"]
-            .as_str()
-            .and_then(|s| s.parse::<u32>().ok())
-            .or_else(|| p["sequenceNumber"].as_u64().map(|n| n as u32))
-            .unwrap_or(0)
-    });
-
-    pitches
-        .into_iter()
-        .map(|p| Pitch {
-            kind: classify_pitch(p),
-            speed_mph: p["pitchVelocity"].as_u64().map(|n| n as u32),
-            pitch_type: p["pitchType"]["text"].as_str().map(String::from),
-        })
-        .collect()
-}
-
-/// Classify a pitch play by its structured `type.type` rather than the
-/// `type.text` string (which has values like "Strike Looking" that didn't
-/// match the old substring rules anyway). Contact-result plays
-/// (single/home-run/fly-out/etc.) carry pitch data and map to "in_play".
-fn classify_pitch(play: &serde_json::Value) -> String {
-    match play["type"]["type"].as_str().unwrap_or("") {
-        "ball" => "ball",
-        "strike-looking" => "called_strike",
-        "strike-swinging" => "swinging_strike",
-        "foul-ball" | "foul-tip" => "foul",
-        _ => "in_play",
-    }
-    .to_string()
 }
 
 /// Most-recent N at-bat outcomes (e.g. "Betts struck out looking.").

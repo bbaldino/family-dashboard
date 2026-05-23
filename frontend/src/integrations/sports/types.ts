@@ -143,12 +143,6 @@ export interface Matchup {
   batter: BatterInfo
 }
 
-export interface Pitch {
-  kind: 'ball' | 'called_strike' | 'swinging_strike' | 'foul' | 'in_play'
-  speedMph: number | null
-  pitchType: string | null
-}
-
 export interface Play {
   id: string
   text: string
@@ -177,7 +171,6 @@ export interface ScoringRecap {
 export interface MlbLiveDetail {
   sport: 'mlb'
   matchup: Matchup | null
-  pitchSequence: Pitch[]
   recentPlays: Play[]
   scoringPlays: Play[]
   inProgressScoring: Play[]

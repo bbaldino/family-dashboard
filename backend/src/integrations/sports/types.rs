@@ -190,14 +190,6 @@ pub struct Matchup {
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct Pitch {
-    pub kind: String, // "ball" | "called_strike" | "swinging_strike" | "foul" | "in_play"
-    pub speed_mph: Option<u32>,
-    pub pitch_type: Option<String>,
-}
-
-#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
 pub struct Play {
     pub id: String,
     pub text: String,
@@ -226,7 +218,6 @@ pub struct GameLeaders {
 #[serde(rename_all = "camelCase")]
 pub struct MlbLiveDetail {
     pub matchup: Option<Matchup>,
-    pub pitch_sequence: Vec<Pitch>,
     pub recent_plays: Vec<Play>,
     /// All scoring plays in chronological order. Used as a fallback when
     /// scoring_recap isn't (yet) available.
