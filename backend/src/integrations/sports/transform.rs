@@ -395,13 +395,17 @@ pub fn parse_summary_to_live_detail(summary: &serde_json::Value) -> Option<LiveG
         return None;
     }
 
+    let scoring_plays = parse_scoring_plays(summary);
+    let in_progress_scoring = current_inning_scoring(summary, &scoring_plays);
     Some(LiveGameDetail {
         win_probability: parse_win_probability(summary),
         sport_specific: SportSpecificLive::Mlb(MlbLiveDetail {
             matchup: parse_matchup(summary),
             pitch_sequence: parse_pitch_sequence(summary),
             recent_plays: parse_recent_plays(summary, 5),
-            scoring_plays: parse_scoring_plays(summary),
+            scoring_plays,
+            in_progress_scoring,
+            scoring_recap: None,
             leaders: parse_game_leaders(summary),
         }),
     })
@@ -621,6 +625,29 @@ fn parse_recent_plays(summary: &serde_json::Value, n: usize) -> Vec<Play> {
         .filter(|p| p["type"]["type"].as_str() == Some("play-result"))
         .take(n)
         .map(play_from_value)
+        .collect()
+}
+
+/// Return the scoring plays that belong to the still-in-progress half-inning,
+/// i.e. share `(inning_half, inning_number)` with the most recent play. Returns
+/// an empty list if the game is final (every half-inning is "completed" in that
+/// case, so nothing is in-progress).
+pub fn current_inning_scoring(summary: &serde_json::Value, scoring: &[Play]) -> Vec<Play> {
+    if summary["header"]["competitions"][0]["status"]["type"]["state"].as_str() == Some("post") {
+        return Vec::new();
+    }
+    let Some(last) = summary["plays"].as_array().and_then(|a| a.last()) else {
+        return Vec::new();
+    };
+    let half = last["period"]["type"].as_str().map(String::from);
+    let number = last["period"]["number"].as_u64().map(|n| n as u32);
+    if half.is_none() || number.is_none() {
+        return Vec::new();
+    }
+    scoring
+        .iter()
+        .filter(|p| p.inning_half == half && p.inning_number == number)
+        .cloned()
         .collect()
 }
 

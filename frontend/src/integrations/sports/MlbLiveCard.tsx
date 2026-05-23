@@ -79,7 +79,11 @@ export function MlbLiveCard({ game, detail }: MlbLiveCardProps) {
 
       <MlbLinescore game={game} />
 
-      <ScoringSummary plays={detail.scoringPlays} />
+      <ScoringSummary
+        allPlays={detail.scoringPlays}
+        inProgressPlays={detail.inProgressScoring}
+        recap={detail.scoringRecap}
+      />
 
       <PlayByPlayLog plays={detail.recentPlays} />
 

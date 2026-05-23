@@ -163,12 +163,19 @@ export interface GameLeaders {
   away: GameLeader[]
 }
 
+export interface ScoringRecap {
+  text: string
+  throughInning: { half: string; number: number } | null
+}
+
 export interface MlbLiveDetail {
   sport: 'mlb'
   matchup: Matchup | null
   pitchSequence: Pitch[]
   recentPlays: Play[]
   scoringPlays: Play[]
+  inProgressScoring: Play[]
+  scoringRecap: ScoringRecap | null
   leaders: GameLeaders
 }
 

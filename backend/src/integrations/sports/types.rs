@@ -218,8 +218,31 @@ pub struct MlbLiveDetail {
     pub matchup: Option<Matchup>,
     pub pitch_sequence: Vec<Pitch>,
     pub recent_plays: Vec<Play>,
+    /// All scoring plays in chronological order. Used as a fallback when
+    /// scoring_recap isn't (yet) available.
     pub scoring_plays: Vec<Play>,
+    /// Scoring plays in the current, incomplete half-inning — shown raw
+    /// next to the recap of everything that came before.
+    pub in_progress_scoring: Vec<Play>,
+    /// LLM-generated narrative summary of every scoring play in completed
+    /// half-innings. None if not (yet) generated; the cache fills it
+    /// asynchronously after an inning transition.
+    pub scoring_recap: Option<ScoringRecap>,
     pub leaders: GameLeaders,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ScoringRecap {
+    pub text: String,
+    pub through_inning: Option<InningRef>,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct InningRef {
+    pub half: String,
+    pub number: u32,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]

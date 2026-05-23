@@ -9,8 +9,9 @@ use crate::integrations::IntegrationConfig;
 
 use super::cache::EspnCache;
 use super::preview::PreviewCache;
+use super::recap::RecapCache;
 use super::types::*;
-use super::{INTEGRATION_ID, espn, transform};
+use super::{INTEGRATION_ID, espn, recap, transform};
 
 #[derive(Clone)]
 pub struct SportsState {
@@ -18,6 +19,50 @@ pub struct SportsState {
     pub cache: EspnCache,
     pub client: reqwest::Client,
     pub preview_cache: Arc<PreviewCache>,
+    pub recap_cache: Arc<RecapCache>,
+}
+
+/// Attach the LLM-generated scoring recap to a MLB live detail if one is
+/// cached, or kick off a background generation if it isn't. Completed
+/// scoring plays = `scoring_plays` minus the tail `in_progress_scoring`
+/// (the in-progress half-inning, which is always the chronological end).
+fn attach_scoring_recap(state: &SportsState, game_id: &str, detail: &mut LiveGameDetail) {
+    let mlb = match &mut detail.sport_specific {
+        SportSpecificLive::Mlb(mlb) => mlb,
+    };
+
+    if mlb.scoring_plays.len() <= mlb.in_progress_scoring.len() {
+        return; // nothing in a completed inning yet
+    }
+    let completed_count = mlb.scoring_plays.len() - mlb.in_progress_scoring.len();
+    let completed: Vec<Play> = mlb.scoring_plays.iter().take(completed_count).cloned().collect();
+
+    let key = recap::cache_key(game_id, completed_count);
+    if let Some(text) = state.recap_cache.get(&key) {
+        let last_completed = completed.last();
+        mlb.scoring_recap = Some(ScoringRecap {
+            text,
+            through_inning: last_completed.and_then(|p| {
+                match (&p.inning_half, p.inning_number) {
+                    (Some(half), Some(number)) => Some(InningRef {
+                        half: half.clone(),
+                        number,
+                    }),
+                    _ => None,
+                }
+            }),
+        });
+        return;
+    }
+
+    // Not cached — kick off async generation. The cache will be populated
+    // before the next poll (typically within a few seconds).
+    recap::ensure_recap(
+        state.recap_cache.clone(),
+        state.pool.clone(),
+        key,
+        completed,
+    );
 }
 
 pub async fn get_games(State(state): State<SportsState>) -> Result<Json<GamesResponse>, AppError> {
@@ -128,7 +173,11 @@ pub async fn get_games(State(state): State<SportsState>) -> Result<Json<GamesRes
             };
 
             if let Some(summary) = summary_json {
-                game.live_detail = transform::parse_summary_to_live_detail(&summary);
+                let detail = transform::parse_summary_to_live_detail(&summary);
+                if let Some(mut detail) = detail {
+                    attach_scoring_recap(&state, &game.id, &mut detail);
+                    game.live_detail = Some(detail);
+                }
             }
         }
         all_games.extend(games);
