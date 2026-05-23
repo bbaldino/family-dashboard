@@ -8,8 +8,8 @@ const pitchColor: Record<Pitch['kind'], string> = {
   ball: 'bg-success',
   called_strike: 'bg-error',
   swinging_strike: 'bg-error',
-  foul: 'bg-warning',
-  in_play: 'bg-palette-3',
+  foul: 'bg-amber-500',
+  in_play: 'bg-sky-500',
 }
 
 const pitchLabel: Record<Pitch['kind'], string> = {
