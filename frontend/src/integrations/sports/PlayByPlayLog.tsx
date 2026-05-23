@@ -1,56 +1,57 @@
-import type { Play } from './types'
+import type { GameTeam, Play } from './types'
 
 interface PlayByPlayLogProps {
   plays: Play[]
-  homeTeamId: string
-  awayTeamId: string
-  /** Optional abbreviations to render as a small prefix tag per play. */
-  homeAbbr?: string
-  awayAbbr?: string
+  home: GameTeam
+  away: GameTeam
 }
 
-/** Pick the text color for a play row based on which team it belongs to. */
-export function teamTextColor(
-  teamId: string | null,
-  homeTeamId: string,
-  awayTeamId: string,
-): string {
-  if (teamId === homeTeamId) return 'text-palette-6'
-  if (teamId === awayTeamId) return 'text-palette-3'
-  return 'text-text-primary'
-}
-
-export function PlayByPlayLog({
-  plays,
-  homeTeamId,
-  awayTeamId,
-  homeAbbr,
-  awayAbbr,
-}: PlayByPlayLogProps) {
-  if (plays.length === 0) return null
-
-  const abbrFor = (teamId: string | null): string => {
-    if (teamId === homeTeamId) return homeAbbr ?? ''
-    if (teamId === awayTeamId) return awayAbbr ?? ''
-    return ''
+/** A small colored circle in the team's primary color. Falls back to a
+ *  border-only dot when no color is available. */
+export function TeamDot({ team }: { team: GameTeam | null }) {
+  const hex = team?.color
+  if (!hex) {
+    return (
+      <span className="inline-block w-2.5 h-2.5 rounded-full border border-border shrink-0" />
+    )
   }
+  return (
+    <span
+      className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+      style={{ backgroundColor: `#${hex}` }}
+    />
+  )
+}
 
+export function teamFor(
+  teamId: string | null,
+  home: GameTeam,
+  away: GameTeam,
+): GameTeam | null {
+  if (teamId === home.id) return home
+  if (teamId === away.id) return away
+  return null
+}
+
+export function PlayByPlayLog({ plays, home, away }: PlayByPlayLogProps) {
+  if (plays.length === 0) return null
   return (
     <div className="flex flex-col gap-1">
       <div className="text-[10px] text-text-muted">Recent</div>
       <ul className="flex flex-col gap-0.5">
         {plays.map((play) => {
-          const color = teamTextColor(play.teamId, homeTeamId, awayTeamId)
-          const abbr = abbrFor(play.teamId)
+          const team = teamFor(play.teamId, home, away)
+          const abbr = team?.abbreviation ?? ''
           return (
             <li
               key={play.id}
-              className={`text-[12px] leading-snug flex gap-2 ${play.scoring ? 'font-semibold' : ''}`}
+              className={`text-[12px] leading-snug flex items-center gap-2 text-text-primary ${play.scoring ? 'font-semibold' : ''}`}
             >
+              <TeamDot team={team} />
               {abbr && (
-                <span className="text-text-muted tabular-nums shrink-0 w-7">{abbr}</span>
+                <span className="text-text-muted tabular-nums shrink-0 w-9">{abbr}</span>
               )}
-              <span className={`min-w-0 truncate ${color}`}>{play.text}</span>
+              <span className="min-w-0 truncate">{play.text}</span>
             </li>
           )
         })}

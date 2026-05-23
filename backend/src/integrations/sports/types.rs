@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 /// A team in a game (home or away)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct GameTeam {
     pub id: String,
     pub name: String,
@@ -10,6 +11,10 @@ pub struct GameTeam {
     pub record: Option<String>,
     pub score: Option<i32>,
     pub winner: Option<bool>,
+    /// Primary team color as a hex string without leading '#', e.g. "0e3386".
+    pub color: Option<String>,
+    /// Alternate/secondary team color, same format.
+    pub alt_color: Option<String>,
 }
 
 /// A stat leader line

@@ -6,6 +6,9 @@ export interface GameTeam {
   record: string | null
   score: number | null
   winner: boolean | null
+  /** Hex without leading '#', e.g. "0e3386". May be null. */
+  color: string | null
+  altColor: string | null
 }
 
 export interface Leader {

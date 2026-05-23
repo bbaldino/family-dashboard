@@ -196,6 +196,8 @@ fn parse_team(competitor: &serde_json::Value) -> GameTeam {
         record,
         score,
         winner,
+        color: team["color"].as_str().map(String::from),
+        alt_color: team["alternateColor"].as_str().map(String::from),
     }
 }
 

@@ -83,16 +83,14 @@ export function MlbLiveCard({ game, detail }: MlbLiveCardProps) {
         allPlays={detail.scoringPlays}
         inProgressPlays={detail.inProgressScoring}
         recap={detail.scoringRecap}
-        homeTeamId={game.home.id}
-        awayTeamId={game.away.id}
+        home={game.home}
+        away={game.away}
       />
 
       <PlayByPlayLog
         plays={detail.recentPlays}
-        homeTeamId={game.home.id}
-        awayTeamId={game.away.id}
-        homeAbbr={game.home.abbreviation}
-        awayAbbr={game.away.abbreviation}
+        home={game.home}
+        away={game.away}
       />
 
       <GameLeaders
