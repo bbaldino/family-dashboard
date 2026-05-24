@@ -4,11 +4,22 @@ import { useIntegrationConfig } from '@/integrations/use-integration-config'
 import { musicIntegration } from './config'
 import type { MusicState, QueueState } from './types'
 
+export interface PlayOptions {
+  radio?: boolean
+  /** Display metadata so the backend's explicit-play log can render this in
+   *  Recently Played without re-querying MA for the URI's details. */
+  mediaType?: string
+  name?: string
+  artist?: string
+  album?: string
+  imageUrl?: string
+}
+
 interface MusicContextValue {
   state: MusicState
   isPlaying: boolean
   isConnected: boolean
-  play: (uri: string, radio?: boolean) => Promise<void>
+  play: (uri: string, options?: PlayOptions) => Promise<void>
   pause: () => Promise<void>
   resume: () => Promise<void>
   stop: () => Promise<void>
@@ -155,8 +166,16 @@ export function MusicProvider({ children }: MusicProviderProps) {
     return () => clearInterval(id)
   }, [isConfigured])
 
-  const play = useCallback(async (uri: string, radio?: boolean) => {
-    await musicIntegration.api.post('/play', { uri, radio })
+  const play = useCallback(async (uri: string, options?: PlayOptions) => {
+    await musicIntegration.api.post('/play', {
+      uri,
+      radio: options?.radio,
+      media_type: options?.mediaType,
+      name: options?.name,
+      artist: options?.artist,
+      album: options?.album,
+      image_url: options?.imageUrl,
+    })
   }, [])
 
   const pause = useCallback(async () => {

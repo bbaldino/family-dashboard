@@ -3,7 +3,6 @@ import { Music } from 'lucide-react'
 import { musicIntegration } from '@/integrations/music/config'
 import { useMusic } from '@/integrations/music/useMusic'
 import type { RecentItem, TopTrack } from '@/integrations/music/types'
-import { getImageUrl } from '@/integrations/music/utils'
 
 function typeLabel(mediaType: string | undefined): string {
   switch (mediaType) {
@@ -31,7 +30,7 @@ function DialSkeleton() {
 }
 
 function DialItem({ item, onTap }: { item: RecentItem; onTap: () => void }) {
-  const imgUrl = getImageUrl(item.image)
+  const imgUrl = item.image_url ?? null
   return (
     <button
       onClick={onTap}
@@ -132,7 +131,14 @@ export function QuickDials() {
               <TopTrackItem
                 key={track.uri}
                 track={track}
-                onTap={() => play(track.uri, true)}
+                onTap={() =>
+                  play(track.uri, {
+                    mediaType: 'track',
+                    name: track.name,
+                    artist: track.artist,
+                    imageUrl: track.image_url ?? undefined,
+                  })
+                }
               />
             ))}
           </div>
@@ -149,7 +155,15 @@ export function QuickDials() {
               <DialItem
                 key={item.uri}
                 item={item}
-                onTap={() => play(item.uri, item.media_type === 'track' ? true : undefined)}
+                onTap={() =>
+                  play(item.uri, {
+                    mediaType: item.media_type,
+                    name: item.name,
+                    artist: item.artist,
+                    album: item.album ?? undefined,
+                    imageUrl: item.image_url ?? undefined,
+                  })
+                }
               />
             ))}
           </div>

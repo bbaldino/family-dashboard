@@ -57,7 +57,10 @@ export interface SearchItem {
 export interface RecentItem {
   name: string
   uri: string
-  image?: { path: string } | string | null
+  /** Direct image URL from our explicit-play log. */
+  image_url?: string | null
   media_type: string // "playlist", "track", "album", "artist"
   artist?: string
+  album?: string | null
+  last_played?: number
 }

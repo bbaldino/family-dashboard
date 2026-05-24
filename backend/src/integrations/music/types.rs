@@ -12,6 +12,18 @@ pub struct PlayRequest {
     pub uri: String,
     pub queue_id: Option<String>,
     pub radio: Option<bool>,
+    /// Optional display metadata so the explicit-play log can render in
+    /// Recently Played without re-querying MA for the URI's details.
+    #[serde(default)]
+    pub media_type: Option<String>,
+    #[serde(default)]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub artist: Option<String>,
+    #[serde(default)]
+    pub album: Option<String>,
+    #[serde(default)]
+    pub image_url: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]

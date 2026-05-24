@@ -163,10 +163,15 @@ export function SearchResults({ rawQuery, debouncedQuery }: SearchResultsProps) 
     enabled: debouncedQuery.length >= 2,
   })
 
-  const handleTap = async (item: SearchItem, radio?: boolean) => {
+  const handleTap = async (item: SearchItem) => {
     setPendingUri(item.uri)
     try {
-      await play(item.uri, radio)
+      await play(item.uri, {
+        mediaType: item.media_type,
+        name: item.name,
+        artist: item.artist,
+        imageUrl: getDisplayImage(item.image) ?? undefined,
+      })
     } finally {
       // Clear after a short window even if the call hung — keeps the UI honest.
       setTimeout(() => setPendingUri((prev) => (prev === item.uri ? null : prev)), 1200)

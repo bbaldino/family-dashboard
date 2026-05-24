@@ -133,7 +133,13 @@ export function ForYou() {
         <PlaylistCard
           key={playlist.uri}
           playlist={playlist}
-          onTap={() => play(playlist.uri)}
+          onTap={() =>
+            play(playlist.uri, {
+              mediaType: 'playlist',
+              name: playlist.name,
+              imageUrl: getImageUrl(playlist.image) ?? undefined,
+            })
+          }
         />
       ))}
     </div>

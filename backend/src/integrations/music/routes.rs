@@ -105,7 +105,26 @@ pub async fn play(
         args["radio_mode"] = serde_json::Value::Bool(true);
     }
 
-    client.command_void("player_queues/play_media", args).await
+    client
+        .command_void("player_queues/play_media", args)
+        .await?;
+
+    // Log the explicit selection so Recently Played reflects what the user
+    // actually chose, not whatever ESPN/MA auto-advanced to next.
+    let _ = sqlx::query(
+        "INSERT INTO music_explicit_play_log (uri, media_type, name, artist, album, image_url) \
+         VALUES (?, ?, ?, ?, ?, ?)",
+    )
+    .bind(&req.uri)
+    .bind(req.media_type.as_deref().unwrap_or(""))
+    .bind(req.name.as_deref().unwrap_or(""))
+    .bind(req.artist.as_deref().unwrap_or(""))
+    .bind(&req.album)
+    .bind(&req.image_url)
+    .execute(&pool)
+    .await;
+
+    Ok(())
 }
 
 pub async fn pause(
@@ -254,12 +273,40 @@ pub async fn search(
 pub async fn get_recent(
     State(pool): State<SqlitePool>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let client = MaClient::from_config(&pool).await?;
-    let mut data: serde_json::Value = client
-        .command("music/recently_played_items", serde_json::Value::Null)
-        .await?;
-    rewrite_image_urls(&mut data);
-    Ok(Json(data))
+    // Most-recent explicit selection per URI, newest first. Keeps the list
+    // showing only what the user chose to play (not radio followups or
+    // album auto-advance).
+    let rows = sqlx::query_as::<
+        _,
+        (String, String, String, String, Option<String>, Option<String>, i64),
+    >(
+        "SELECT uri, media_type, name, artist, album, image_url, MAX(played_at) as last_played \
+         FROM music_explicit_play_log \
+         GROUP BY uri \
+         ORDER BY last_played DESC \
+         LIMIT 30",
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    let items: Vec<serde_json::Value> = rows
+        .into_iter()
+        .map(
+            |(uri, media_type, name, artist, album, image_url, last_played)| {
+                serde_json::json!({
+                    "uri": uri,
+                    "media_type": media_type,
+                    "name": name,
+                    "artist": artist,
+                    "album": album,
+                    "image_url": image_url,
+                    "last_played": last_played,
+                })
+            },
+        )
+        .collect();
+
+    Ok(Json(serde_json::json!(items)))
 }
 
 pub async fn get_queue(
