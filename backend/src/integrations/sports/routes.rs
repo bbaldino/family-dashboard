@@ -22,6 +22,11 @@ pub struct SportsState {
     pub preview_cache: Arc<PreviewCache>,
     pub recap_cache: Arc<RecapCache>,
     pub replayer: Option<Arc<Replayer>>,
+    /// One-shot tokio task scheduled to fire at the earliest tracked game's
+    /// start time. When it fires it sets `cache.has_live_flag = true` so the
+    /// next poll switches to live cadence immediately — independent of how
+    /// often the frontend is asking.
+    pub start_timer: Arc<tokio::sync::Mutex<Option<tokio::task::JoinHandle<()>>>>,
 }
 
 fn replay_response(
@@ -223,7 +228,25 @@ pub async fn get_games(State(state): State<SportsState>) -> Result<Json<GamesRes
         all_games.extend(games);
     }
 
-    state.cache.set_live_flag(any_live).await;
+    // "Should poll fast" widens has_live to include scheduled games whose
+    // start time has already passed but ESPN hasn't yet flipped them to Live
+    // — handles the case where the backend was idle when the game started.
+    let now = chrono::Utc::now();
+    let any_expected_live = all_games.iter().any(|g| {
+        g.state == GameState::Upcoming
+            && chrono::DateTime::parse_from_rfc3339(&g.start_time)
+                .map(|t| t.with_timezone(&chrono::Utc) <= now)
+                .unwrap_or(false)
+    });
+    let should_poll_fast = any_live || any_expected_live;
+
+    state.cache.set_live_flag(should_poll_fast).await;
+
+    // Schedule a one-shot wakeup for the earliest still-future upcoming start
+    // time. When it fires, mark live polling active so the next request — even
+    // an otherwise-idle one — switches to live cadence at the exact moment the
+    // game is supposed to start, not whenever the next poll happens.
+    schedule_next_start_wakeup(&state, &all_games, now).await;
 
     // Sort: live first, then final (most recent first), then upcoming (soonest first)
     all_games.sort_by(|a, b| {
@@ -248,8 +271,42 @@ pub async fn get_games(State(state): State<SportsState>) -> Result<Json<GamesRes
 
     Ok(Json(GamesResponse {
         games: all_games,
-        has_live: any_live,
+        has_live: should_poll_fast,
     }))
+}
+
+async fn schedule_next_start_wakeup(
+    state: &SportsState,
+    games: &[Game],
+    now: chrono::DateTime<chrono::Utc>,
+) {
+    let earliest = games
+        .iter()
+        .filter(|g| g.state == GameState::Upcoming)
+        .filter_map(|g| {
+            chrono::DateTime::parse_from_rfc3339(&g.start_time)
+                .ok()
+                .map(|t| t.with_timezone(&chrono::Utc))
+        })
+        .filter(|t| *t > now)
+        .min();
+
+    let mut guard = state.start_timer.lock().await;
+    if let Some(prev) = guard.take() {
+        prev.abort();
+    }
+    let Some(start) = earliest else {
+        return;
+    };
+    let Ok(delay) = (start - now).to_std() else {
+        return;
+    };
+    let cache = state.cache.clone();
+    *guard = Some(tokio::spawn(async move {
+        tokio::time::sleep(delay).await;
+        cache.set_live_flag(true).await;
+        tracing::info!("Scheduled game start reached — activating live polling cadence");
+    }));
 }
 
 #[derive(Deserialize)]
