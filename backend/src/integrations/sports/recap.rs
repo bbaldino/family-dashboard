@@ -6,7 +6,23 @@ use sqlx::SqlitePool;
 use crate::error::AppError;
 use crate::integrations::IntegrationConfig;
 
-use super::types::Play;
+use super::types::{InningRef, Play};
+
+/// Game context passed to the LLM so it can frame the recap correctly
+/// (which inning is being summarized vs. where the game currently stands).
+#[derive(Clone, Debug)]
+pub struct RecapContext {
+    pub through_inning: Option<InningRef>,
+    /// Period label as the user is currently seeing it on the dashboard,
+    /// e.g. "Top 5th" / "Mid 5th" / "Bot 5th". Used to anchor the LLM in
+    /// "the game is currently here" so it doesn't sound like a final recap.
+    pub current_period_label: Option<String>,
+    pub home_abbr: String,
+    pub away_abbr: String,
+    /// Map of team_id → abbreviation so we can tag each scoring play with
+    /// which side scored.
+    pub team_abbrs: std::collections::HashMap<String, String>,
+}
 
 /// In-memory cache of LLM-generated scoring recaps, keyed by
 /// `<game_id>:<completed_plays_count>`. Each entry covers a specific snapshot
@@ -65,6 +81,7 @@ pub fn ensure_recap(
     pool: SqlitePool,
     key: String,
     completed_plays: Vec<Play>,
+    ctx: RecapContext,
 ) {
     if cache.get(&key).is_some() {
         return;
@@ -73,7 +90,7 @@ pub fn ensure_recap(
         return;
     }
     tokio::spawn(async move {
-        let result = generate_recap(&pool, &completed_plays).await;
+        let result = generate_recap(&pool, &completed_plays, &ctx).await;
         match result {
             Ok(text) => {
                 cache.set(key.clone(), text);
@@ -86,7 +103,24 @@ pub fn ensure_recap(
     });
 }
 
-async fn generate_recap(pool: &SqlitePool, plays: &[Play]) -> Result<String, AppError> {
+fn format_inning(half: &str, number: u32) -> String {
+    let suffix = match number % 100 {
+        11 | 12 | 13 => "th",
+        _ => match number % 10 {
+            1 => "st",
+            2 => "nd",
+            3 => "rd",
+            _ => "th",
+        },
+    };
+    format!("{} of the {}{}", half.to_lowercase(), number, suffix)
+}
+
+async fn generate_recap(
+    pool: &SqlitePool,
+    plays: &[Play],
+    ctx: &RecapContext,
+) -> Result<String, AppError> {
     let sports_config = IntegrationConfig::new(pool, "sports");
     let model = sports_config.get_or("model", "llama3.1:8b").await?;
 
@@ -97,20 +131,43 @@ async fn generate_recap(pool: &SqlitePool, plays: &[Play]) -> Result<String, App
                 (Some(half), Some(n)) => format!("{} {}: ", half, n),
                 _ => String::new(),
             };
-            format!("- {}{}", inning, p.text)
+            let team_tag = p
+                .team_id
+                .as_ref()
+                .and_then(|id| ctx.team_abbrs.get(id))
+                .map(|abbr| format!("[{}] ", abbr))
+                .unwrap_or_default();
+            format!("- {}{}{}", inning, team_tag, p.text)
         })
         .collect::<Vec<_>>()
         .join("\n");
 
+    let through = ctx
+        .through_inning
+        .as_ref()
+        .map(|i| format_inning(&i.half, i.number))
+        .unwrap_or_else(|| "the early innings".to_string());
+
+    let current = ctx
+        .current_period_label
+        .clone()
+        .unwrap_or_else(|| "later in the game".to_string());
+
     let prompt = format!(
-        "You are a baseball analyst for a family kitchen dashboard. The game \
-         is currently in progress — these are the scoring plays so far, in \
-         chronological order. Write a 2-3 sentence narrative recap of how the \
-         scoring has unfolded up to this point. Use present or past tense for \
-         what's already happened, but do NOT use wrap-up language like \
-         'ultimately', 'in the end', 'finally' — the game isn't over. Mention \
-         teams and key players by name. No stat dumps.\n\nScoring plays so far:\n{}",
-        bullets
+        "You are a baseball analyst for a family kitchen dashboard. \
+         The game between the {away} and the {home} is in progress — currently {current}. \
+         Below are every scoring play through {through}, in chronological order. \
+         Write a 2-3 sentence narrative recap of how the scoring has unfolded \
+         through that point. Use past tense for what happened. Do NOT use \
+         wrap-up language like 'ultimately', 'in the end', 'finally', or \
+         declare a winner — the game is still going. Mention teams and key \
+         players by name. No stat dumps.\n\n\
+         Scoring plays (team prefix in brackets):\n{bullets}",
+        away = ctx.away_abbr,
+        home = ctx.home_abbr,
+        current = current,
+        through = through,
+        bullets = bullets,
     );
 
     crate::llm::generate(pool, &model, &prompt).await

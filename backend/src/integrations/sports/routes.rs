@@ -61,7 +61,7 @@ fn replay_response(
 
     if let Some(game) = games.iter_mut().find(|g| g.id == *game_id) {
         if let Some(mut detail) = transform::parse_summary_to_live_detail(&snapshot.summary) {
-            attach_scoring_recap(state, game_id, &mut detail);
+            attach_scoring_recap(state, game, &mut detail);
             game.live_detail = Some(detail);
         }
     }
@@ -77,7 +77,7 @@ fn replay_response(
 /// cached, or kick off a background generation if it isn't. Completed
 /// scoring plays = `scoring_plays` minus the tail `in_progress_scoring`
 /// (the in-progress half-inning, which is always the chronological end).
-fn attach_scoring_recap(state: &SportsState, game_id: &str, detail: &mut LiveGameDetail) {
+fn attach_scoring_recap(state: &SportsState, game: &Game, detail: &mut LiveGameDetail) {
     let mlb = match &mut detail.sport_specific {
         SportSpecificLive::Mlb(mlb) => mlb,
     };
@@ -88,23 +88,35 @@ fn attach_scoring_recap(state: &SportsState, game_id: &str, detail: &mut LiveGam
     let completed_count = mlb.scoring_plays.len() - mlb.in_progress_scoring.len();
     let completed: Vec<Play> = mlb.scoring_plays.iter().take(completed_count).cloned().collect();
 
-    let key = recap::cache_key(game_id, completed_count);
+    let through_inning = completed.last().and_then(|p| {
+        match (&p.inning_half, p.inning_number) {
+            (Some(half), Some(number)) => Some(InningRef {
+                half: half.clone(),
+                number,
+            }),
+            _ => None,
+        }
+    });
+
+    let key = recap::cache_key(&game.id, completed_count);
     if let Some(text) = state.recap_cache.get(&key) {
-        let last_completed = completed.last();
         mlb.scoring_recap = Some(ScoringRecap {
             text,
-            through_inning: last_completed.and_then(|p| {
-                match (&p.inning_half, p.inning_number) {
-                    (Some(half), Some(number)) => Some(InningRef {
-                        half: half.clone(),
-                        number,
-                    }),
-                    _ => None,
-                }
-            }),
+            through_inning,
         });
         return;
     }
+
+    let mut team_abbrs = std::collections::HashMap::new();
+    team_abbrs.insert(game.home.id.clone(), game.home.abbreviation.clone());
+    team_abbrs.insert(game.away.id.clone(), game.away.abbreviation.clone());
+    let ctx = recap::RecapContext {
+        through_inning,
+        current_period_label: game.period_label.clone(),
+        home_abbr: game.home.abbreviation.clone(),
+        away_abbr: game.away.abbreviation.clone(),
+        team_abbrs,
+    };
 
     // Not cached — kick off async generation. The cache will be populated
     // before the next poll (typically within a few seconds).
@@ -113,6 +125,7 @@ fn attach_scoring_recap(state: &SportsState, game_id: &str, detail: &mut LiveGam
         state.pool.clone(),
         key,
         completed,
+        ctx,
     );
 }
 
@@ -231,7 +244,7 @@ pub async fn get_games(State(state): State<SportsState>) -> Result<Json<GamesRes
             if let Some(summary) = summary_json {
                 let detail = transform::parse_summary_to_live_detail(&summary);
                 if let Some(mut detail) = detail {
-                    attach_scoring_recap(&state, &game.id, &mut detail);
+                    attach_scoring_recap(&state, game, &mut detail);
                     game.live_detail = Some(detail);
                 }
             }
