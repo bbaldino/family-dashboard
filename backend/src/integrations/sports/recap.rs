@@ -103,10 +103,13 @@ async fn generate_recap(pool: &SqlitePool, plays: &[Play]) -> Result<String, App
         .join("\n");
 
     let prompt = format!(
-        "You are a baseball analyst for a family kitchen dashboard. Given these \
-         scoring plays from a game in chronological order, write a 2-3 sentence \
-         narrative recap. Be brief and conversational; mention teams and key \
-         players by name. No stat dumps.\n\nScoring plays:\n{}",
+        "You are a baseball analyst for a family kitchen dashboard. The game \
+         is currently in progress — these are the scoring plays so far, in \
+         chronological order. Write a 2-3 sentence narrative recap of how the \
+         scoring has unfolded up to this point. Use present or past tense for \
+         what's already happened, but do NOT use wrap-up language like \
+         'ultimately', 'in the end', 'finally' — the game isn't over. Mention \
+         teams and key players by name. No stat dumps.\n\nScoring plays so far:\n{}",
         bullets
     );
 
