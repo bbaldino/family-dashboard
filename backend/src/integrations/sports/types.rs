@@ -62,7 +62,7 @@ pub enum GameState {
 
 /// Sport-specific live game situation
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "camelCase")]
+#[serde(tag = "type", rename_all = "camelCase", rename_all_fields = "camelCase")]
 pub enum GameSituation {
     Mlb {
         outs: u8,
