@@ -14,6 +14,14 @@ use super::replay::Replayer;
 use super::types::*;
 use super::{INTEGRATION_ID, espn, recap, transform};
 
+#[derive(Clone, Debug, serde::Serialize)]
+#[serde(rename_all = "snake_case", tag = "type")]
+pub enum SportsEvent {
+    /// "Please refetch /games now." Fires on scheduled-start wakeups so the
+    /// frontend doesn't have to wait for its idle poll to notice the transition.
+    Kick,
+}
+
 #[derive(Clone)]
 pub struct SportsState {
     pub pool: sqlx::SqlitePool,
@@ -27,6 +35,9 @@ pub struct SportsState {
     /// next poll switches to live cadence immediately — independent of how
     /// often the frontend is asking.
     pub start_timer: Arc<tokio::sync::Mutex<Option<tokio::task::JoinHandle<()>>>>,
+    /// Broadcast channel for SSE clients. Send a SportsEvent to nudge every
+    /// connected dashboard to refetch.
+    pub events_tx: tokio::sync::broadcast::Sender<SportsEvent>,
 }
 
 fn replay_response(
@@ -302,11 +313,53 @@ async fn schedule_next_start_wakeup(
         return;
     };
     let cache = state.cache.clone();
+    let events_tx = state.events_tx.clone();
     *guard = Some(tokio::spawn(async move {
         tokio::time::sleep(delay).await;
         cache.set_live_flag(true).await;
         tracing::info!("Scheduled game start reached — activating live polling cadence");
+        // Nudge every connected SSE client to refetch immediately. send()
+        // returns an error only when there are no subscribers, which is fine.
+        let _ = events_tx.send(SportsEvent::Kick);
     }));
+}
+
+/// SSE: stream a tiny stream of refresh-nudge events to the frontend.
+///
+/// We don't push the games payload itself — clients still GET /games to get
+/// real data. SSE just collapses the "wait until next idle poll" delay when
+/// something meaningful (e.g. scheduled game start) happens server-side.
+pub async fn events(
+    State(state): State<SportsState>,
+) -> impl axum::response::IntoResponse {
+    use axum::response::sse::{Event, KeepAlive, Sse};
+    use std::time::Duration;
+    use tokio_stream::wrappers::BroadcastStream;
+    use tokio_stream::StreamExt;
+
+    let rx = state.events_tx.subscribe();
+    let stream = BroadcastStream::new(rx).filter_map(|res| {
+        let evt = res.ok()?;
+        let json = serde_json::to_string(&evt).ok()?;
+        Some(Ok::<_, std::convert::Infallible>(
+            Event::default().event("kick").data(json),
+        ))
+    });
+    let sse = Sse::new(stream).keep_alive(
+        KeepAlive::new()
+            .interval(Duration::from_secs(15))
+            .text("keepalive"),
+    );
+    (
+        [
+            (axum::http::header::CACHE_CONTROL, "no-cache"),
+            (
+                axum::http::header::HeaderName::from_static("x-accel-buffering"),
+                "no",
+            ),
+        ],
+        sse,
+    )
 }
 
 #[derive(Deserialize)]

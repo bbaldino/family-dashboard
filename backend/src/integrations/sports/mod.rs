@@ -15,6 +15,7 @@ use sqlx::SqlitePool;
 pub const INTEGRATION_ID: &str = "sports";
 
 pub fn router(pool: SqlitePool) -> Router {
+    let (events_tx, _) = tokio::sync::broadcast::channel(16);
     let state = routes::SportsState {
         pool,
         cache: cache::EspnCache::new(),
@@ -23,6 +24,7 @@ pub fn router(pool: SqlitePool) -> Router {
         recap_cache: Arc::new(recap::RecapCache::new()),
         replayer: replay::Replayer::from_env().map(Arc::new),
         start_timer: Arc::new(tokio::sync::Mutex::new(None)),
+        events_tx,
     };
 
     Router::new()
@@ -30,5 +32,6 @@ pub fn router(pool: SqlitePool) -> Router {
         .route("/teams", axum::routing::get(routes::get_teams))
         .route("/teams/search", axum::routing::get(routes::search_teams))
         .route("/preview", axum::routing::get(routes::get_preview))
+        .route("/events", axum::routing::get(routes::events))
         .with_state(state)
 }
