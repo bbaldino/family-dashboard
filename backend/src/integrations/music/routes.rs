@@ -328,6 +328,25 @@ pub async fn get_queue(
     Ok(Json(data))
 }
 
+/// Debug: dump every MA player and queue with all fields intact. Useful for
+/// inspecting toggles MA doesn't expose in its UI (radio_mode, dont_stop_the_music,
+/// repeat_mode, crossfade, etc.) without juggling MA auth tokens manually.
+pub async fn debug_players(
+    State(pool): State<SqlitePool>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let client = MaClient::from_config(&pool).await?;
+    let players: serde_json::Value = client
+        .command("players/all", serde_json::Value::Null)
+        .await?;
+    let queues: serde_json::Value = client
+        .command("player_queues/all", serde_json::Value::Null)
+        .await?;
+    Ok(Json(serde_json::json!({
+        "players": players,
+        "queues": queues,
+    })))
+}
+
 pub async fn proxy_image(
     State(pool): State<SqlitePool>,
     Query(params): Query<ImageProxyQuery>,
