@@ -220,6 +220,14 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
   const refreshPlayers = () =>
     queryClient.invalidateQueries({ queryKey: ['music', 'players'] })
 
+  // Apply an optimistic mutation to the cached /players response so the UI
+  // reflects the group change instantly. The real refetch (kicked by
+  // refreshPlayers below) reconciles within a second.
+  const mutatePlayersCache = (fn: (p: RawPlayer) => RawPlayer) =>
+    queryClient.setQueryData<RawPlayer[]>(['music', 'players'], (prev) =>
+      prev ? prev.map(fn) : prev,
+    )
+
   const markPending = (ids: string[]) =>
     setPendingIds((prev) => {
       const next = new Set(prev)
@@ -236,6 +244,15 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
   const addToGroup = async (playerId: string) => {
     if (!leaderId) return
     markPending([playerId])
+    // Optimistic: bump the new follower into the leader's group_members
+    // immediately. MA pre-group leaders have an empty list; once grouped
+    // their own id is also in the list, so seed it in that case.
+    mutatePlayersCache((p) => {
+      if (p.player_id !== leaderId) return p
+      const current = p.group_members ?? []
+      const next = current.length === 0 ? [leaderId, playerId] : [...current, playerId]
+      return { ...p, group_members: next }
+    })
     try {
       await musicIntegration.api.post('/group', {
         player_id: playerId,
@@ -243,13 +260,20 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
       })
       await refreshPlayers()
     } finally {
-      // Belt-and-suspenders: clear after a short window even if something
-      // hung so the spinner doesn't get stuck.
       setTimeout(() => clearPending([playerId]), 800)
     }
   }
   const removeFromGroup = async (playerId: string) => {
     markPending([playerId])
+    // Optimistic: drop this player from the leader's group_members. If that
+    // leaves only the leader itself, clear the list so the UI returns to
+    // the "no group" state.
+    mutatePlayersCache((p) => {
+      if (p.player_id !== leaderId) return p
+      const remaining = (p.group_members ?? []).filter((id) => id !== playerId)
+      const cleared = remaining.length <= 1 ? [] : remaining
+      return { ...p, group_members: cleared }
+    })
     try {
       await musicIntegration.api.post('/ungroup', { player_id: playerId })
       await refreshPlayers()
@@ -261,6 +285,10 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
     if (!leader) return
     const followers = leader.groupMembers.filter((id) => id !== leader.playerId)
     markPending(followers)
+    // Optimistic: collapse the whole group on the leader.
+    mutatePlayersCache((p) =>
+      p.player_id === leader.playerId ? { ...p, group_members: [] } : p,
+    )
     try {
       await Promise.all(
         followers.map((id) =>
