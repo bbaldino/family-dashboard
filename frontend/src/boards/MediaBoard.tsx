@@ -3,6 +3,7 @@ import { Search } from 'lucide-react'
 import { QuickDials } from './media/QuickDials'
 import { ForYou } from './media/ForYou'
 import { NowPlaying } from './media/NowPlaying'
+import { Queue } from './media/Queue'
 import { SearchResults } from './media/SearchResults'
 import { PlayerPicker } from './media/PlayerPicker'
 import { FullscreenNowPlaying } from './media/FullscreenNowPlaying'
@@ -80,11 +81,12 @@ export function MediaBoard() {
       </div>
 
       {/* Right column */}
-      <div className="w-[380px]">
+      <div className="w-[380px] flex flex-col min-h-0">
         <NowPlaying
           onOpenFullscreen={() => setFullscreen(true)}
           onOpenPlayerPicker={() => setPickerOpen(true)}
         />
+        <Queue />
       </div>
 
       {/* Overlays */}
