@@ -37,6 +37,14 @@ export interface Player {
   state: string
   available: boolean
   volumeLevel: number | null
+  /** Player IDs synced into this player's group (only populated on the leader). */
+  groupMembers: string[]
+  /** Leader's player ID this player is synced to (only populated on followers). */
+  syncedTo: string | null
+  /** Other player IDs this player can be grouped with. */
+  canGroupWith: string[]
+  /** The group's combined volume when this player is a leader. */
+  groupVolume: number | null
 }
 
 export interface SearchResults {

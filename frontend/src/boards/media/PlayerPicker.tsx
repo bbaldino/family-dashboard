@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
-import { Volume2 } from 'lucide-react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Volume2, Users, Plus, X as XIcon } from 'lucide-react'
 import { musicIntegration } from '@/integrations/music/config'
 import { useMusic } from '@/integrations/music'
 import type { Player } from '@/integrations/music/types'
@@ -11,7 +11,7 @@ interface PlayerPickerProps {
   onClose: () => void
 }
 
-// Raw shape returned by the /players endpoint (snake_case from backend proxy)
+// Raw shape returned by MA via the /players proxy (snake_case fields).
 interface RawPlayer {
   player_id?: string
   display_name?: string
@@ -19,6 +19,10 @@ interface RawPlayer {
   state?: string
   available?: boolean
   volume_level?: number | null
+  group_members?: string[] | null
+  synced_to?: string | null
+  can_group_with?: string[] | null
+  group_volume?: number | null
 }
 
 function normalizePlayer(raw: RawPlayer): Player {
@@ -28,75 +32,131 @@ function normalizePlayer(raw: RawPlayer): Player {
     state: raw.state ?? 'idle',
     available: raw.available ?? true,
     volumeLevel: raw.volume_level ?? null,
+    groupMembers: raw.group_members ?? [],
+    syncedTo: raw.synced_to ?? null,
+    canGroupWith: raw.can_group_with ?? [],
+    groupVolume: raw.group_volume ?? null,
   }
 }
 
 function StateDot({ state }: { state: string }) {
   const isPlaying = state === 'playing'
   const isIdle = state === 'idle' || state === 'off'
-
   const colorClass = isPlaying
     ? 'bg-palette-1'
     : isIdle
       ? 'bg-text-secondary'
       : 'bg-yellow-400'
-
   return <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${colorClass}`} />
+}
+
+function VolumeSlider({
+  value,
+  onChange,
+}: {
+  value: number | null
+  onChange: (level: number) => void
+}) {
+  return (
+    <div className="flex items-center gap-2 pl-5">
+      <Volume2 size={13} className="text-text-secondary flex-shrink-0" />
+      <input
+        type="range"
+        min={0}
+        max={100}
+        value={value ?? 0}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="flex-1"
+      />
+      <span className="text-xs text-text-secondary w-7 text-right">{value ?? 0}</span>
+    </div>
+  )
+}
+
+interface PlayerRowProps {
+  player: Player
+  leaderId: string | null
+  isLeader: boolean
+  isFollower: boolean
+  canJoin: boolean
+  onVolumeChange: (level: number) => void
+  onAdd: () => void
+  onRemove: () => void
+  onUngroupAll: () => void
 }
 
 function PlayerRow({
   player,
-  isActive,
-  onTap,
+  isLeader,
+  isFollower,
+  canJoin,
   onVolumeChange,
-}: {
-  player: Player
-  isActive: boolean
-  onTap: () => void
-  onVolumeChange: (level: number) => void
-}) {
+  onAdd,
+  onRemove,
+  onUngroupAll,
+}: PlayerRowProps) {
+  const inGroup = isLeader || isFollower
   return (
     <div
       className={`flex flex-col gap-2 px-3 py-3 rounded-lg mb-2 border transition-colors ${
-        isActive
+        inGroup
           ? 'border-palette-1 bg-palette-1/10'
           : 'border-transparent hover:bg-bg-card-hover'
-      }`}
+      } ${!player.available || (!inGroup && !canJoin) ? 'opacity-50' : ''}`}
     >
-      <button
-        onClick={onTap}
-        className="flex items-center gap-3 w-full text-left"
-      >
+      <div className="flex items-center gap-3 w-full text-left">
         <StateDot state={player.state} />
         <span
           className={`flex-1 text-sm font-medium truncate ${
-            isActive ? 'text-palette-1' : 'text-text-primary'
+            inGroup ? 'text-palette-1' : 'text-text-primary'
           }`}
         >
           {player.displayName}
         </span>
-        <span className="text-xs text-text-secondary capitalize">{player.state}</span>
-      </button>
 
-      <div className="flex items-center gap-2 pl-5">
-        <Volume2 size={13} className="text-text-secondary flex-shrink-0" />
-        <input
-          type="range"
-          min={0}
-          max={100}
-          value={player.volumeLevel ?? 0}
-          onChange={(e) => onVolumeChange(Number(e.target.value))}
-          className="flex-1"
-        />
-        <span className="text-xs text-text-secondary w-7 text-right">
-          {player.volumeLevel ?? 0}
-        </span>
+        {isLeader && player.groupMembers.length > 0 && (
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-palette-1 px-1.5 py-0.5 rounded bg-palette-1/20">
+            Leader
+          </span>
+        )}
+        {!isLeader && !isFollower && (
+          <span className="text-xs text-text-secondary capitalize">
+            {canJoin ? player.state : 'incompatible'}
+          </span>
+        )}
+
+        {/* Right-side action */}
+        {isLeader && player.groupMembers.length > 0 ? (
+          <button
+            onClick={onUngroupAll}
+            className="text-xs px-2.5 py-1 rounded border border-error/40 text-error hover:bg-error/10"
+          >
+            Ungroup all
+          </button>
+        ) : isFollower ? (
+          <button
+            onClick={onRemove}
+            className="text-xs px-2.5 py-1 rounded border border-error/40 text-error hover:bg-error/10 flex items-center gap-1"
+          >
+            <XIcon size={11} /> Remove
+          </button>
+        ) : canJoin && !isLeader ? (
+          <button
+            onClick={onAdd}
+            className="text-xs px-2.5 py-1 rounded border border-palette-1/40 text-palette-1 hover:bg-palette-1/10 flex items-center gap-1"
+          >
+            <Plus size={11} /> Add
+          </button>
+        ) : null}
       </div>
+
+      <VolumeSlider value={player.volumeLevel} onChange={onVolumeChange} />
     </div>
   )
 }
 
 export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
+  const queryClient = useQueryClient()
   const { state, setVolume } = useMusic()
   const activeQueueId = state.activeQueue?.queueId ?? null
 
@@ -104,10 +164,65 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
     queryKey: ['music', 'players'],
     queryFn: () => musicIntegration.api.get<RawPlayer[]>('/players'),
     enabled: isOpen,
-    refetchInterval: isOpen ? 10_000 : false,
+    refetchInterval: isOpen ? 5_000 : false,
   })
 
   const players: Player[] = Array.isArray(data) ? data.map(normalizePlayer) : []
+  // The "leader" of the group we're managing on this dashboard is the
+  // currently-active queue (which falls back to the configured default
+  // player in MusicProvider). Everything else is a candidate follower.
+  const leader = players.find((p) => p.playerId === activeQueueId) ?? null
+  const leaderId = leader?.playerId ?? null
+
+  const refreshPlayers = () =>
+    queryClient.invalidateQueries({ queryKey: ['music', 'players'] })
+
+  const addToGroup = async (playerId: string) => {
+    if (!leaderId) return
+    await musicIntegration.api.post('/group', {
+      player_id: playerId,
+      target_player: leaderId,
+    })
+    refreshPlayers()
+  }
+  const removeFromGroup = async (playerId: string) => {
+    await musicIntegration.api.post('/ungroup', { player_id: playerId })
+    refreshPlayers()
+  }
+  const ungroupAll = async () => {
+    if (!leader) return
+    // Unsync each member individually. MA doesn't have a bulk "burst group"
+    // command — but a leader with N followers usually means we'd send
+    // unsync per follower.
+    await Promise.all(
+      leader.groupMembers.map((id) =>
+        musicIntegration.api.post('/ungroup', { player_id: id }),
+      ),
+    )
+    refreshPlayers()
+  }
+
+  const setGroupVolume = async (level: number) => {
+    if (!leaderId) return
+    await musicIntegration.api.post('/group-volume', {
+      player_id: leaderId,
+      level,
+    })
+    refreshPlayers()
+  }
+
+  // Sort: leader first, then group followers, then everything else.
+  const sorted = [...players].sort((a, b) => {
+    const score = (p: Player) => {
+      if (p.playerId === leaderId) return 0
+      if (p.syncedTo === leaderId) return 1
+      if (leader?.canGroupWith.includes(p.playerId)) return 2
+      return 3
+    }
+    return score(a) - score(b)
+  })
+
+  const hasGroup = leader != null && leader.groupMembers.length > 0
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Players">
@@ -119,17 +234,45 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
         <div className="text-center py-6 text-text-secondary text-sm">No players available</div>
       ) : (
         <div>
-          {players.map((player) => (
-            <PlayerRow
-              key={player.playerId}
-              player={player}
-              isActive={player.playerId === activeQueueId}
-              onTap={() => {
-                console.log('PlayerPicker: selected player', player.playerId)
-              }}
-              onVolumeChange={(level) => setVolume(player.playerId, level)}
-            />
-          ))}
+          {hasGroup && leader && (
+            <div className="mb-3 p-3 rounded-lg bg-palette-1/5 border border-palette-1/20">
+              <div className="flex items-center gap-2 mb-2">
+                <Users size={14} className="text-palette-1" />
+                <span className="text-xs font-semibold uppercase tracking-wider text-palette-1">
+                  Group volume
+                </span>
+                <span className="text-xs text-text-secondary ml-auto">
+                  {leader.groupMembers.length + 1} speakers
+                </span>
+              </div>
+              <VolumeSlider value={leader.groupVolume} onChange={setGroupVolume} />
+            </div>
+          )}
+
+          {sorted.map((player) => {
+            const isLeader = player.playerId === leaderId
+            const isFollower = !!leaderId && player.syncedTo === leaderId
+            const canJoin =
+              !!leader &&
+              !isLeader &&
+              !isFollower &&
+              leader.canGroupWith.includes(player.playerId)
+
+            return (
+              <PlayerRow
+                key={player.playerId}
+                player={player}
+                leaderId={leaderId}
+                isLeader={isLeader}
+                isFollower={isFollower}
+                canJoin={canJoin}
+                onVolumeChange={(level) => setVolume(player.playerId, level)}
+                onAdd={() => addToGroup(player.playerId)}
+                onRemove={() => removeFromGroup(player.playerId)}
+                onUngroupAll={ungroupAll}
+              />
+            )
+          })}
         </div>
       )}
     </Modal>

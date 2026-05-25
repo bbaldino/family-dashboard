@@ -7,7 +7,10 @@ use crate::error::AppError;
 use crate::integrations::IntegrationConfig;
 
 use super::proxy::MaClient;
-use super::types::{ImageProxyQuery, PlayRequest, QueueCommand, SearchQuery, VolumeRequest};
+use super::types::{
+    GroupRequest, ImageProxyQuery, PlayRequest, QueueCommand, SearchQuery, UngroupRequest,
+    VolumeRequest,
+};
 
 #[derive(serde::Deserialize)]
 pub struct TopTracksQuery {
@@ -237,6 +240,58 @@ pub async fn set_volume(
             serde_json::json!({
                 "player_id": req.player_id,
                 "volume_level": req.level,
+            }),
+        )
+        .await
+}
+
+/// Set the group's combined volume. Only meaningful when player_id is the
+/// leader of a sync group; MA scales every member's individual volume to
+/// reach the requested level.
+pub async fn set_group_volume(
+    State(pool): State<SqlitePool>,
+    Json(req): Json<VolumeRequest>,
+) -> Result<(), AppError> {
+    let client = MaClient::from_config(&pool).await?;
+    client
+        .command_void(
+            "players/cmd/group_volume_set",
+            serde_json::json!({
+                "player_id": req.player_id,
+                "volume_level": req.level,
+            }),
+        )
+        .await
+}
+
+/// Sync `player_id` into `target_player`'s group.
+pub async fn group(
+    State(pool): State<SqlitePool>,
+    Json(req): Json<GroupRequest>,
+) -> Result<(), AppError> {
+    let client = MaClient::from_config(&pool).await?;
+    client
+        .command_void(
+            "players/cmd/sync",
+            serde_json::json!({
+                "player_id": req.player_id,
+                "target_player": req.target_player,
+            }),
+        )
+        .await
+}
+
+/// Remove `player_id` from whatever sync group it's in.
+pub async fn ungroup(
+    State(pool): State<SqlitePool>,
+    Json(req): Json<UngroupRequest>,
+) -> Result<(), AppError> {
+    let client = MaClient::from_config(&pool).await?;
+    client
+        .command_void(
+            "players/cmd/unsync",
+            serde_json::json!({
+                "player_id": req.player_id,
             }),
         )
         .await

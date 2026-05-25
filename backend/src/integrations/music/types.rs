@@ -44,6 +44,19 @@ pub struct VolumeRequest {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct GroupRequest {
+    /// Player being grouped into the leader.
+    pub player_id: String,
+    /// The leader / target player (whoever is already playing or designated).
+    pub target_player: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct UngroupRequest {
+    pub player_id: String,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct SearchQuery {
     pub q: String,
 }
