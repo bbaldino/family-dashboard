@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { Volume2, Users, Plus, X as XIcon } from 'lucide-react'
+import { Volume2, Users, Plus, X as XIcon, Loader2 } from 'lucide-react'
 import { musicIntegration } from '@/integrations/music/config'
 import { useMusic } from '@/integrations/music'
 import type { Player } from '@/integrations/music/types'
@@ -82,6 +83,11 @@ interface PlayerRowProps {
   /** When true, the row shares a frame with siblings — drop its own outline
    *  and bg-tint so the group reads as a single panel. */
   framed?: boolean
+  /** Group/ungroup operation in flight for this player. */
+  pending?: boolean
+  /** Group/ungroup operation in flight for *any* follower of the leader —
+   *  used to disable the "Ungroup all" button on the leader row. */
+  groupBusy?: boolean
   onVolumeChange: (level: number) => void
   onAdd: () => void
   onRemove: () => void
@@ -94,6 +100,8 @@ function PlayerRow({
   isFollower,
   canJoin,
   framed = false,
+  pending = false,
+  groupBusy = false,
   onVolumeChange,
   onAdd,
   onRemove,
@@ -138,23 +146,48 @@ function PlayerRow({
         {isLeader && player.groupMembers.length > 0 ? (
           <button
             onClick={onUngroupAll}
-            className="text-xs px-2.5 py-1 rounded border border-error/40 text-error hover:bg-error/10"
+            disabled={groupBusy}
+            className="text-xs px-2.5 py-1 rounded border border-error/40 text-error hover:bg-error/10 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1"
           >
-            Ungroup all
+            {groupBusy ? (
+              <>
+                <Loader2 size={11} className="animate-spin" /> Ungrouping…
+              </>
+            ) : (
+              'Ungroup all'
+            )}
           </button>
         ) : isFollower ? (
           <button
             onClick={onRemove}
-            className="text-xs px-2.5 py-1 rounded border border-error/40 text-error hover:bg-error/10 flex items-center gap-1"
+            disabled={pending}
+            className="text-xs px-2.5 py-1 rounded border border-error/40 text-error hover:bg-error/10 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1"
           >
-            <XIcon size={11} /> Remove
+            {pending ? (
+              <>
+                <Loader2 size={11} className="animate-spin" /> Removing…
+              </>
+            ) : (
+              <>
+                <XIcon size={11} /> Remove
+              </>
+            )}
           </button>
         ) : canJoin && !isLeader ? (
           <button
             onClick={onAdd}
-            className="text-xs px-2.5 py-1 rounded border border-palette-1/40 text-palette-1 hover:bg-palette-1/10 flex items-center gap-1"
+            disabled={pending}
+            className="text-xs px-2.5 py-1 rounded border border-palette-1/40 text-palette-1 hover:bg-palette-1/10 disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1"
           >
-            <Plus size={11} /> Add
+            {pending ? (
+              <>
+                <Loader2 size={11} className="animate-spin" /> Adding…
+              </>
+            ) : (
+              <>
+                <Plus size={11} /> Add
+              </>
+            )}
           </button>
         ) : null}
       </div>
@@ -169,6 +202,10 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
   const { state, setVolume } = useMusic()
   const activeQueueId = state.activeQueue?.queueId ?? null
 
+  // Player IDs with an in-flight group/ungroup so we can show a spinner and
+  // dim/disable the action button until MA confirms the change.
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
+
   const { data, isLoading } = useQuery({
     queryKey: ['music', 'players'],
     queryFn: () => musicIntegration.api.get<RawPlayer[]>('/players'),
@@ -177,38 +214,63 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
   })
 
   const players: Player[] = Array.isArray(data) ? data.map(normalizePlayer) : []
-  // The "leader" of the group we're managing on this dashboard is the
-  // currently-active queue (which falls back to the configured default
-  // player in MusicProvider). Everything else is a candidate follower.
   const leader = players.find((p) => p.playerId === activeQueueId) ?? null
   const leaderId = leader?.playerId ?? null
 
   const refreshPlayers = () =>
     queryClient.invalidateQueries({ queryKey: ['music', 'players'] })
 
+  const markPending = (ids: string[]) =>
+    setPendingIds((prev) => {
+      const next = new Set(prev)
+      for (const id of ids) next.add(id)
+      return next
+    })
+  const clearPending = (ids: string[]) =>
+    setPendingIds((prev) => {
+      const next = new Set(prev)
+      for (const id of ids) next.delete(id)
+      return next
+    })
+
   const addToGroup = async (playerId: string) => {
     if (!leaderId) return
-    await musicIntegration.api.post('/group', {
-      player_id: playerId,
-      target_player: leaderId,
-    })
-    refreshPlayers()
+    markPending([playerId])
+    try {
+      await musicIntegration.api.post('/group', {
+        player_id: playerId,
+        target_player: leaderId,
+      })
+      await refreshPlayers()
+    } finally {
+      // Belt-and-suspenders: clear after a short window even if something
+      // hung so the spinner doesn't get stuck.
+      setTimeout(() => clearPending([playerId]), 800)
+    }
   }
   const removeFromGroup = async (playerId: string) => {
-    await musicIntegration.api.post('/ungroup', { player_id: playerId })
-    refreshPlayers()
+    markPending([playerId])
+    try {
+      await musicIntegration.api.post('/ungroup', { player_id: playerId })
+      await refreshPlayers()
+    } finally {
+      setTimeout(() => clearPending([playerId]), 800)
+    }
   }
   const ungroupAll = async () => {
     if (!leader) return
-    // Leader's group_members includes the leader's own id; only ungroup the
-    // followers (every other id in the list).
     const followers = leader.groupMembers.filter((id) => id !== leader.playerId)
-    await Promise.all(
-      followers.map((id) =>
-        musicIntegration.api.post('/ungroup', { player_id: id }),
-      ),
-    )
-    refreshPlayers()
+    markPending(followers)
+    try {
+      await Promise.all(
+        followers.map((id) =>
+          musicIntegration.api.post('/ungroup', { player_id: id }),
+        ),
+      )
+      await refreshPlayers()
+    } finally {
+      setTimeout(() => clearPending(followers), 800)
+    }
   }
 
   const setGroupVolume = async (level: number) => {
@@ -261,6 +323,12 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
               (p) => p.playerId !== leaderId && !followerIds.has(p.playerId),
             )
 
+            // The leader's "Ungroup all" button stays busy while any of its
+            // followers is mid-ungroup.
+            const anyFollowerPending = [...followerIds].some((id) =>
+              pendingIds.has(id),
+            )
+
             const rowProps = (player: Player, framed: boolean) => {
               const isLeader = player.playerId === leaderId
               const isFollower = followerIds.has(player.playerId)
@@ -276,6 +344,8 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
                 isFollower,
                 canJoin,
                 framed,
+                pending: pendingIds.has(player.playerId),
+                groupBusy: isLeader ? anyFollowerPending : false,
                 onVolumeChange: (level: number) =>
                   setVolume(player.playerId, level),
                 onAdd: () => addToGroup(player.playerId),
