@@ -116,14 +116,14 @@ function ResultItem({
   return (
     <div ref={containerRef} className="relative">
       <div
-        className={`flex items-center gap-3 w-full px-3 py-2 rounded text-left transition-transform ${
-          pending ? 'opacity-60' : 'hover:bg-bg-primary active:scale-95'
+        className={`flex items-center gap-3 w-full px-3 py-2 rounded text-left ${
+          pending ? 'opacity-60' : 'hover:bg-bg-primary'
         }`}
       >
         <button
           onClick={onTap}
           disabled={pending}
-          className="flex-1 flex items-center gap-3 min-w-0 text-left"
+          className="flex-1 flex items-center gap-3 min-w-0 text-left transition-transform active:scale-95"
         >
           <div className="relative">
             <Thumbnail imageUrl={getDisplayImage(item.image)} name={item.name} />
