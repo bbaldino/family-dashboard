@@ -19,9 +19,13 @@ pub async fn top_tracks(
     Query(params): Query<TopTracksQuery>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let limit = params.limit.unwrap_or(20);
+    // Counts only explicit picks (search taps, recently/frequently re-taps,
+    // ForYou playlist picks). This mirrors Recently Played's data source so
+    // both sections reflect the user's choices rather than auto-advance /
+    // radio followups in MA's queue.
     let rows = sqlx::query_as::<_, (String, String, String, Option<String>, Option<String>, i64, i64)>(
         "SELECT uri, name, artist, album, image_url, COUNT(*) as play_count, MAX(played_at) as last_played \
-         FROM music_play_log \
+         FROM music_explicit_play_log \
          GROUP BY uri \
          ORDER BY play_count DESC, last_played DESC \
          LIMIT ?"
