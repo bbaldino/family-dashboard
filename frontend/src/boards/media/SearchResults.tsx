@@ -101,16 +101,19 @@ function ResultItem({
   const [menuOpen, setMenuOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
 
-  // Close the menu on outside click.
+  // Close the menu on outside click. Listen in the capture phase and stop
+  // propagation so the underlying play button (or anything else) doesn't
+  // also fire — clicking outside a popover should *only* dismiss it.
   useEffect(() => {
     if (!menuOpen) return
     const handler = (e: MouseEvent) => {
-      if (!containerRef.current?.contains(e.target as Node)) {
-        setMenuOpen(false)
-      }
+      if (containerRef.current?.contains(e.target as Node)) return
+      e.stopPropagation()
+      e.preventDefault()
+      setMenuOpen(false)
     }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    document.addEventListener('click', handler, { capture: true })
+    return () => document.removeEventListener('click', handler, { capture: true })
   }, [menuOpen])
 
   return (
