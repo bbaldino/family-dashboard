@@ -114,33 +114,33 @@ function ResultItem({
   }, [menuOpen])
 
   return (
-    <div ref={containerRef} className="relative">
-      <div
-        className={`flex items-center gap-3 w-full px-3 py-2 rounded text-left ${
-          pending ? 'opacity-60' : 'hover:bg-bg-primary'
-        }`}
+    <div
+      className={`flex items-center gap-3 w-full px-3 py-2 rounded text-left ${
+        pending ? 'opacity-60' : 'hover:bg-bg-primary'
+      }`}
+    >
+      <button
+        onClick={onTap}
+        disabled={pending}
+        className="flex-1 flex items-center gap-3 min-w-0 text-left transition-transform active:scale-95"
       >
-        <button
-          onClick={onTap}
-          disabled={pending}
-          className="flex-1 flex items-center gap-3 min-w-0 text-left transition-transform active:scale-95"
-        >
-          <div className="relative">
-            <Thumbnail imageUrl={getDisplayImage(item.image)} name={item.name} />
-            {pending && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded">
-                <Loader2 size={16} className="text-white animate-spin" />
-              </div>
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-text-primary text-sm font-medium truncate">{item.name}</div>
-            {showArtist && item.artist && (
-              <div className="text-text-secondary text-xs truncate">{item.artist}</div>
-            )}
-          </div>
-        </button>
-        {showQueueActions && (
+        <div className="relative">
+          <Thumbnail imageUrl={getDisplayImage(item.image)} name={item.name} />
+          {pending && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded">
+              <Loader2 size={16} className="text-white animate-spin" />
+            </div>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-text-primary text-sm font-medium truncate">{item.name}</div>
+          {showArtist && item.artist && (
+            <div className="text-text-secondary text-xs truncate">{item.artist}</div>
+          )}
+        </div>
+      </button>
+      {showQueueActions && (
+        <div ref={containerRef} className="relative">
           <button
             onClick={(e) => {
               e.stopPropagation()
@@ -151,28 +151,28 @@ function ResultItem({
           >
             <MoreVertical size={16} />
           </button>
-        )}
-      </div>
-      {menuOpen && (
-        <div className="absolute right-2 top-full mt-1 z-10 bg-bg-card border border-border rounded-lg shadow-lg overflow-hidden min-w-[160px]">
-          <button
-            onClick={() => {
-              setMenuOpen(false)
-              onQueueAction('next')
-            }}
-            className="block w-full px-3 py-2 text-left text-sm text-text-primary hover:bg-bg-primary"
-          >
-            Play next
-          </button>
-          <button
-            onClick={() => {
-              setMenuOpen(false)
-              onQueueAction('add')
-            }}
-            className="block w-full px-3 py-2 text-left text-sm text-text-primary hover:bg-bg-primary"
-          >
-            Add to queue
-          </button>
+          {menuOpen && (
+            <div className="absolute right-0 top-full mt-1 z-10 bg-bg-card border border-border rounded-lg shadow-lg overflow-hidden min-w-[160px]">
+              <button
+                onClick={() => {
+                  setMenuOpen(false)
+                  onQueueAction('next')
+                }}
+                className="block w-full px-3 py-2 text-left text-sm text-text-primary hover:bg-bg-primary"
+              >
+                Play next
+              </button>
+              <button
+                onClick={() => {
+                  setMenuOpen(false)
+                  onQueueAction('add')
+                }}
+                className="block w-full px-3 py-2 text-left text-sm text-text-primary hover:bg-bg-primary"
+              >
+                Add to queue
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
