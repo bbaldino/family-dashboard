@@ -264,7 +264,8 @@ pub async fn set_group_volume(
         .await
 }
 
-/// Sync `player_id` into `target_player`'s group.
+/// Add `player_id` into `target_player`'s sync group.
+/// MA command: `players/cmd/group(target_player, player_id)`.
 pub async fn group(
     State(pool): State<SqlitePool>,
     Json(req): Json<GroupRequest>,
@@ -272,16 +273,17 @@ pub async fn group(
     let client = MaClient::from_config(&pool).await?;
     client
         .command_void(
-            "players/cmd/sync",
+            "players/cmd/group",
             serde_json::json!({
-                "player_id": req.player_id,
                 "target_player": req.target_player,
+                "player_id": req.player_id,
             }),
         )
         .await
 }
 
 /// Remove `player_id` from whatever sync group it's in.
+/// MA command: `players/cmd/ungroup(player_id)`.
 pub async fn ungroup(
     State(pool): State<SqlitePool>,
     Json(req): Json<UngroupRequest>,
@@ -289,7 +291,7 @@ pub async fn ungroup(
     let client = MaClient::from_config(&pool).await?;
     client
         .command_void(
-            "players/cmd/unsync",
+            "players/cmd/ungroup",
             serde_json::json!({
                 "player_id": req.player_id,
             }),
@@ -391,6 +393,20 @@ pub async fn get_queue(
         .await?;
     rewrite_image_urls(&mut data);
     Ok(Json(data))
+}
+
+/// Debug: send an arbitrary MA command. POST { command: "...", args: {...} }.
+pub async fn debug_command(
+    State(pool): State<SqlitePool>,
+    Json(req): Json<serde_json::Value>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let client = MaClient::from_config(&pool).await?;
+    let command = req["command"]
+        .as_str()
+        .ok_or_else(|| AppError::BadRequest("missing 'command'".into()))?;
+    let args = req.get("args").cloned().unwrap_or(serde_json::Value::Null);
+    let result: serde_json::Value = client.command(command, args).await?;
+    Ok(Json(result))
 }
 
 /// Debug: dump every MA player and queue with all fields intact. Useful for

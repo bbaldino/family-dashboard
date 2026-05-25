@@ -191,11 +191,11 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
   }
   const ungroupAll = async () => {
     if (!leader) return
-    // Unsync each member individually. MA doesn't have a bulk "burst group"
-    // command — but a leader with N followers usually means we'd send
-    // unsync per follower.
+    // Leader's group_members includes the leader's own id; only ungroup the
+    // followers (every other id in the list).
+    const followers = leader.groupMembers.filter((id) => id !== leader.playerId)
     await Promise.all(
-      leader.groupMembers.map((id) =>
+      followers.map((id) =>
         musicIntegration.api.post('/ungroup', { player_id: id }),
       ),
     )
@@ -211,18 +211,25 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
     refreshPlayers()
   }
 
+  // MA reports group state via the LEADER's group_members array (which
+  // includes the leader's own id). Followers don't reliably populate
+  // synced_to, so detect followers via the leader's group_members list.
+  const followerIds = new Set(
+    (leader?.groupMembers ?? []).filter((id) => id !== leaderId),
+  )
+
   // Sort: leader first, then group followers, then everything else.
   const sorted = [...players].sort((a, b) => {
     const score = (p: Player) => {
       if (p.playerId === leaderId) return 0
-      if (p.syncedTo === leaderId) return 1
+      if (followerIds.has(p.playerId)) return 1
       if (leader?.canGroupWith.includes(p.playerId)) return 2
       return 3
     }
     return score(a) - score(b)
   })
 
-  const hasGroup = leader != null && leader.groupMembers.length > 0
+  const hasGroup = followerIds.size > 0
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Players">
@@ -242,7 +249,7 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
                   Group volume
                 </span>
                 <span className="text-xs text-text-secondary ml-auto">
-                  {leader.groupMembers.length + 1} speakers
+                  {followerIds.size + 1} speakers
                 </span>
               </div>
               <VolumeSlider value={leader.groupVolume} onChange={setGroupVolume} />
@@ -251,7 +258,7 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
 
           {sorted.map((player) => {
             const isLeader = player.playerId === leaderId
-            const isFollower = !!leaderId && player.syncedTo === leaderId
+            const isFollower = followerIds.has(player.playerId)
             const canJoin =
               !!leader &&
               !isLeader &&

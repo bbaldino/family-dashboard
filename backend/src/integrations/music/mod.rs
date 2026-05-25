@@ -26,6 +26,7 @@ pub fn router(pool: SqlitePool) -> Router {
         .route("/top-tracks", axum::routing::get(routes::top_tracks))
         .route("/queue/{queue_id}", axum::routing::get(routes::get_queue))
         .route("/_debug/players", axum::routing::get(routes::debug_players))
+        .route("/_debug/command", axum::routing::post(routes::debug_command))
         .route("/events", axum::routing::get(sse::events))
         .route("/image", axum::routing::get(routes::proxy_image))
         .with_state(pool)
