@@ -253,27 +253,37 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
       return next
     })
 
-  // Apply optimistic state, fire the POST, then refetch only after MA has
-  // had time to propagate (so the refetch returns the post-mutation state
-  // rather than clobbering us with stale data).
+  // Lifecycle of a group/ungroup action:
+  //   1. Mark pending + pause polling (spinner appears on the ORIGINAL
+  //      branch's button — "Adding…" on a +Add row, "Removing…" on a
+  //      Remove row).
+  //   2. Cancel any in-flight /players fetch.
+  //   3. Fire the POST. Wait for it to return (~100ms).
+  //   4. Apply the optimistic cache mutation AND clear pending in the same
+  //      pass — the row transitions to its new branch with no spinner left
+  //      behind on the wrong-labeled button.
+  //   5. After MA's propagation window, resume polling + refetch.
   const withOptimistic = async (
-    optimisticPlayerIds: string[],
+    pendingPlayerIds: string[],
     mutator: (p: RawPlayer) => RawPlayer,
     apiCall: () => Promise<unknown>,
   ) => {
-    markPending(optimisticPlayerIds)
+    markPending(pendingPlayerIds)
     setPollingPaused(true)
     await cancelInFlightPlayersFetches()
-    mutatePlayersCache(mutator)
     try {
       await apiCall()
+      mutatePlayersCache(mutator)
+      clearPending(pendingPlayerIds)
+    } catch (err) {
+      // POST failed — drop pending so the spinner doesn't get stuck.
+      clearPending(pendingPlayerIds)
+      throw err
     } finally {
-      // Resume polling + force a refetch after MA's response converges.
-      // 1.5s is comfortably above the observed propagation lag.
+      // Resume polling + reconcile from MA once it's converged.
       setTimeout(() => {
         setPollingPaused(false)
         refreshPlayers()
-        clearPending(optimisticPlayerIds)
       }, 1500)
     }
   }
