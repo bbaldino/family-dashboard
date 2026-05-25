@@ -205,12 +205,18 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
   // Player IDs with an in-flight group/ungroup so we can show a spinner and
   // dim/disable the action button until MA confirms the change.
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
+  // True for ~1.5s after a mutation. MA's `players/all` response lags a few
+  // hundred ms behind a group/ungroup command landing, so we suppress both
+  // the polling refetch and any explicit refresh during that window —
+  // otherwise the stale response would clobber our optimistic update.
+  const [pollingPaused, setPollingPaused] = useState(false)
 
   const { data, isLoading } = useQuery({
     queryKey: ['music', 'players'],
     queryFn: () => musicIntegration.api.get<RawPlayer[]>('/players'),
     enabled: isOpen,
-    refetchInterval: isOpen ? 5_000 : false,
+    refetchInterval: isOpen && !pollingPaused ? 5_000 : false,
+    refetchOnWindowFocus: false,
   })
 
   const players: Player[] = Array.isArray(data) ? data.map(normalizePlayer) : []
@@ -247,67 +253,76 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
       return next
     })
 
-  const addToGroup = async (playerId: string) => {
+  // Apply optimistic state, fire the POST, then refetch only after MA has
+  // had time to propagate (so the refetch returns the post-mutation state
+  // rather than clobbering us with stale data).
+  const withOptimistic = async (
+    optimisticPlayerIds: string[],
+    mutator: (p: RawPlayer) => RawPlayer,
+    apiCall: () => Promise<unknown>,
+  ) => {
+    markPending(optimisticPlayerIds)
+    setPollingPaused(true)
+    await cancelInFlightPlayersFetches()
+    mutatePlayersCache(mutator)
+    try {
+      await apiCall()
+    } finally {
+      // Resume polling + force a refetch after MA's response converges.
+      // 1.5s is comfortably above the observed propagation lag.
+      setTimeout(() => {
+        setPollingPaused(false)
+        refreshPlayers()
+        clearPending(optimisticPlayerIds)
+      }, 1500)
+    }
+  }
+
+  const addToGroup = (playerId: string) => {
     if (!leaderId) return
-    markPending([playerId])
-    await cancelInFlightPlayersFetches()
-    // Optimistic: bump the new follower into the leader's group_members
-    // immediately. MA pre-group leaders have an empty list; once grouped
-    // their own id is also in the list, so seed it in that case.
-    mutatePlayersCache((p) => {
-      if (p.player_id !== leaderId) return p
-      const current = p.group_members ?? []
-      const next = current.length === 0 ? [leaderId, playerId] : [...current, playerId]
-      return { ...p, group_members: next }
-    })
-    try {
-      await musicIntegration.api.post('/group', {
-        player_id: playerId,
-        target_player: leaderId,
-      })
-      await refreshPlayers()
-    } finally {
-      setTimeout(() => clearPending([playerId]), 800)
-    }
+    return withOptimistic(
+      [playerId],
+      (p) => {
+        if (p.player_id !== leaderId) return p
+        const current = p.group_members ?? []
+        const next =
+          current.length === 0 ? [leaderId, playerId] : [...current, playerId]
+        return { ...p, group_members: next }
+      },
+      () =>
+        musicIntegration.api.post('/group', {
+          player_id: playerId,
+          target_player: leaderId,
+        }),
+    )
   }
-  const removeFromGroup = async (playerId: string) => {
-    markPending([playerId])
-    await cancelInFlightPlayersFetches()
-    // Optimistic: drop this player from the leader's group_members. If that
-    // leaves only the leader itself, clear the list so the UI returns to
-    // the "no group" state.
-    mutatePlayersCache((p) => {
-      if (p.player_id !== leaderId) return p
-      const remaining = (p.group_members ?? []).filter((id) => id !== playerId)
-      const cleared = remaining.length <= 1 ? [] : remaining
-      return { ...p, group_members: cleared }
-    })
-    try {
-      await musicIntegration.api.post('/ungroup', { player_id: playerId })
-      await refreshPlayers()
-    } finally {
-      setTimeout(() => clearPending([playerId]), 800)
-    }
-  }
-  const ungroupAll = async () => {
+  const removeFromGroup = (playerId: string) =>
+    withOptimistic(
+      [playerId],
+      (p) => {
+        if (p.player_id !== leaderId) return p
+        const remaining = (p.group_members ?? []).filter((id) => id !== playerId)
+        // If only the leader itself remains, collapse to [] so the UI returns
+        // to the "no group" state.
+        const cleared = remaining.length <= 1 ? [] : remaining
+        return { ...p, group_members: cleared }
+      },
+      () => musicIntegration.api.post('/ungroup', { player_id: playerId }),
+    )
+  const ungroupAll = () => {
     if (!leader) return
     const followers = leader.groupMembers.filter((id) => id !== leader.playerId)
-    markPending(followers)
-    await cancelInFlightPlayersFetches()
-    // Optimistic: collapse the whole group on the leader.
-    mutatePlayersCache((p) =>
-      p.player_id === leader.playerId ? { ...p, group_members: [] } : p,
-    )
-    try {
-      await Promise.all(
-        followers.map((id) =>
-          musicIntegration.api.post('/ungroup', { player_id: id }),
+    return withOptimistic(
+      followers,
+      (p) =>
+        p.player_id === leader.playerId ? { ...p, group_members: [] } : p,
+      () =>
+        Promise.all(
+          followers.map((id) =>
+            musicIntegration.api.post('/ungroup', { player_id: id }),
+          ),
         ),
-      )
-      await refreshPlayers()
-    } finally {
-      setTimeout(() => clearPending(followers), 800)
-    }
+    )
   }
 
   const setGroupVolume = async (level: number) => {
