@@ -79,6 +79,9 @@ interface PlayerRowProps {
   isLeader: boolean
   isFollower: boolean
   canJoin: boolean
+  /** When true, the row shares a frame with siblings — drop its own outline
+   *  and bg-tint so the group reads as a single panel. */
+  framed?: boolean
   onVolumeChange: (level: number) => void
   onAdd: () => void
   onRemove: () => void
@@ -90,18 +93,24 @@ function PlayerRow({
   isLeader,
   isFollower,
   canJoin,
+  framed = false,
   onVolumeChange,
   onAdd,
   onRemove,
   onUngroupAll,
 }: PlayerRowProps) {
   const inGroup = isLeader || isFollower
+  const ownContainer = !framed
   return (
     <div
-      className={`flex flex-col gap-2 px-3 py-3 rounded-lg mb-2 border transition-colors ${
-        inGroup
-          ? 'border-palette-1 bg-palette-1/10'
-          : 'border-transparent hover:bg-bg-card-hover'
+      className={`flex flex-col gap-2 px-3 py-3 ${
+        ownContainer
+          ? `rounded-lg mb-2 border transition-colors ${
+              inGroup
+                ? 'border-palette-1 bg-palette-1/10'
+                : 'border-transparent hover:bg-bg-card-hover'
+            }`
+          : ''
       } ${!player.available || (!inGroup && !canJoin) ? 'opacity-50' : ''}`}
     >
       <div className="flex items-center gap-3 w-full text-left">
@@ -241,45 +250,88 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
         <div className="text-center py-6 text-text-secondary text-sm">No players available</div>
       ) : (
         <div>
-          {hasGroup && leader && (
-            <div className="mb-3 p-3 rounded-lg bg-palette-1/5 border border-palette-1/20">
-              <div className="flex items-center gap-2 mb-2">
-                <Users size={14} className="text-palette-1" />
-                <span className="text-xs font-semibold uppercase tracking-wider text-palette-1">
-                  Group volume
-                </span>
-                <span className="text-xs text-text-secondary ml-auto">
-                  {followerIds.size + 1} speakers
-                </span>
-              </div>
-              <VolumeSlider value={leader.groupVolume} onChange={setGroupVolume} />
-            </div>
-          )}
+          {(() => {
+            // Pull group members out of the sorted list so we can render them
+            // as one unified panel (leader + group-volume header + followers),
+            // with everyone else rendered as standalone rows below.
+            const groupedRows = sorted.filter(
+              (p) => p.playerId === leaderId || followerIds.has(p.playerId),
+            )
+            const otherRows = sorted.filter(
+              (p) => p.playerId !== leaderId && !followerIds.has(p.playerId),
+            )
 
-          {sorted.map((player) => {
-            const isLeader = player.playerId === leaderId
-            const isFollower = followerIds.has(player.playerId)
-            const canJoin =
-              !!leader &&
-              !isLeader &&
-              !isFollower &&
-              leader.canGroupWith.includes(player.playerId)
+            const rowProps = (player: Player, framed: boolean) => {
+              const isLeader = player.playerId === leaderId
+              const isFollower = followerIds.has(player.playerId)
+              const canJoin =
+                !!leader &&
+                !isLeader &&
+                !isFollower &&
+                leader.canGroupWith.includes(player.playerId)
+              return {
+                player,
+                leaderId,
+                isLeader,
+                isFollower,
+                canJoin,
+                framed,
+                onVolumeChange: (level: number) =>
+                  setVolume(player.playerId, level),
+                onAdd: () => addToGroup(player.playerId),
+                onRemove: () => removeFromGroup(player.playerId),
+                onUngroupAll: ungroupAll,
+              }
+            }
 
             return (
-              <PlayerRow
-                key={player.playerId}
-                player={player}
-                leaderId={leaderId}
-                isLeader={isLeader}
-                isFollower={isFollower}
-                canJoin={canJoin}
-                onVolumeChange={(level) => setVolume(player.playerId, level)}
-                onAdd={() => addToGroup(player.playerId)}
-                onRemove={() => removeFromGroup(player.playerId)}
-                onUngroupAll={ungroupAll}
-              />
+              <>
+                {hasGroup && leader ? (
+                  <div className="mb-3 rounded-lg border border-palette-1 bg-palette-1/10 overflow-hidden">
+                    <div className="px-3 py-2 border-b border-palette-1/30 flex items-center gap-2">
+                      <Users size={14} className="text-palette-1" />
+                      <span className="text-xs font-semibold uppercase tracking-wider text-palette-1">
+                        Group volume
+                      </span>
+                      <span className="text-xs text-text-secondary ml-auto">
+                        {followerIds.size + 1} speakers
+                      </span>
+                    </div>
+                    <div className="px-3 py-2 border-b border-palette-1/30">
+                      <VolumeSlider
+                        value={leader.groupVolume}
+                        onChange={setGroupVolume}
+                      />
+                    </div>
+                    {groupedRows.map((player, i) => (
+                      <div
+                        key={player.playerId}
+                        className={i > 0 ? 'border-t border-palette-1/20' : ''}
+                      >
+                        <PlayerRow {...rowProps(player, true)} />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  // No group yet — render the leader as a regular standalone
+                  // row (no special framing).
+                  groupedRows.map((player) => (
+                    <PlayerRow
+                      key={player.playerId}
+                      {...rowProps(player, false)}
+                    />
+                  ))
+                )}
+
+                {otherRows.map((player) => (
+                  <PlayerRow
+                    key={player.playerId}
+                    {...rowProps(player, false)}
+                  />
+                ))}
+              </>
             )
-          })}
+          })()}
         </div>
       )}
     </Modal>
