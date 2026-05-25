@@ -245,11 +245,16 @@ export function SearchResults({ rawQuery, debouncedQuery }: SearchResultsProps) 
     enabled: debouncedQuery.length >= 2,
   })
 
-  const playItem = async (item: SearchItem, mode: EnqueueMode) => {
+  const playItem = async (
+    item: SearchItem,
+    mode: EnqueueMode,
+    radio: boolean,
+  ) => {
     setPendingUri(item.uri)
     try {
       await play(item.uri, {
         enqueueMode: mode,
+        radio,
         mediaType: item.media_type,
         name: item.name,
         artist: item.artist,
@@ -260,8 +265,15 @@ export function SearchResults({ rawQuery, debouncedQuery }: SearchResultsProps) 
       setTimeout(() => setPendingUri((prev) => (prev === item.uri ? null : prev)), 1200)
     }
   }
-  const handleTap = (item: SearchItem) => playItem(item, 'play')
-  const handleQueueAction = (item: SearchItem, mode: 'next' | 'add') => playItem(item, mode)
+  // Default tap on a track: play it, then continue with a radio station seeded
+  // from it ("...and keep going with similar music"). Albums / playlists /
+  // artists already have built-in continuation, so no radio there.
+  const handleTap = (item: SearchItem) =>
+    playItem(item, 'play', item.media_type === 'track')
+  // Explicit queue actions are literal — "Play next" means this exact track
+  // next, not "start a radio after the current one ends".
+  const handleQueueAction = (item: SearchItem, mode: 'next' | 'add') =>
+    playItem(item, mode, false)
 
   // Settling or fetching the current debounced query → show the indicator
   // before any results are rendered, even if older results are still cached.
