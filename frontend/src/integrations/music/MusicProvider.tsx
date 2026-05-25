@@ -4,8 +4,14 @@ import { useIntegrationConfig } from '@/integrations/use-integration-config'
 import { musicIntegration } from './config'
 import type { MusicState, QueueState } from './types'
 
+export type EnqueueMode = 'play' | 'next' | 'add'
+
 export interface PlayOptions {
   radio?: boolean
+  /** How MA should slot this into the queue. Default is "play" which replaces
+   *  the queue and starts immediately. "next" inserts after the current track,
+   *  "add" appends to the end of the queue. */
+  enqueueMode?: EnqueueMode
   /** Display metadata so the backend's explicit-play log can render this in
    *  Recently Played without re-querying MA for the URI's details. */
   mediaType?: string
@@ -170,6 +176,7 @@ export function MusicProvider({ children }: MusicProviderProps) {
     await musicIntegration.api.post('/play', {
       uri,
       radio: options?.radio,
+      enqueue_mode: options?.enqueueMode,
       media_type: options?.mediaType,
       name: options?.name,
       artist: options?.artist,

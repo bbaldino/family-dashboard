@@ -100,9 +100,19 @@ pub async fn play(
         None => default_queue_id(&pool).await?,
     };
 
+    // Default to "play" (replaces the queue) so a fresh pick doesn't continue
+    // into leftovers from a previous session. Caller can override with "next"
+    // or "add" to enqueue without replacing.
+    let option = req
+        .enqueue_mode
+        .as_deref()
+        .filter(|m| matches!(*m, "play" | "replace" | "next" | "replace_next" | "add"))
+        .unwrap_or("play");
+
     let mut args = serde_json::json!({
         "queue_id": queue_id,
         "media": req.uri,
+        "option": option,
     });
 
     if req.radio == Some(true) {

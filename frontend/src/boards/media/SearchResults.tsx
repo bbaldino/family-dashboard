@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Music, Loader2 } from 'lucide-react'
+import { Music, Loader2, MoreVertical } from 'lucide-react'
 import { musicIntegration } from '@/integrations/music/config'
 import { useMusic } from '@/integrations/music/useMusic'
+import type { EnqueueMode } from '@/integrations/music/MusicProvider'
 import type { SearchItem } from '@/integrations/music/types'
 
 interface SearchResultsType {
@@ -82,33 +83,99 @@ interface ResultItemProps {
   item: SearchItem
   pending: boolean
   onTap: () => void
+  onQueueAction: (mode: 'next' | 'add') => void
+  /** Only tracks make sense to "play next" or "add to queue" — albums and
+   *  playlists are containers, "queue next" semantics get murky. */
+  showQueueActions: boolean
   showArtist?: boolean
 }
 
-function ResultItem({ item, pending, onTap, showArtist = false }: ResultItemProps) {
+function ResultItem({
+  item,
+  pending,
+  onTap,
+  onQueueAction,
+  showQueueActions,
+  showArtist = false,
+}: ResultItemProps) {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+
+  // Close the menu on outside click.
+  useEffect(() => {
+    if (!menuOpen) return
+    const handler = (e: MouseEvent) => {
+      if (!containerRef.current?.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [menuOpen])
+
   return (
-    <button
-      onClick={onTap}
-      disabled={pending}
-      className={`flex items-center gap-3 w-full px-3 py-2 rounded text-left transition-transform ${
-        pending ? 'opacity-60' : 'hover:bg-bg-primary active:scale-95'
-      }`}
-    >
-      <div className="relative">
-        <Thumbnail imageUrl={getDisplayImage(item.image)} name={item.name} />
-        {pending && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded">
-            <Loader2 size={16} className="text-white animate-spin" />
+    <div ref={containerRef} className="relative">
+      <div
+        className={`flex items-center gap-3 w-full px-3 py-2 rounded text-left transition-transform ${
+          pending ? 'opacity-60' : 'hover:bg-bg-primary active:scale-95'
+        }`}
+      >
+        <button
+          onClick={onTap}
+          disabled={pending}
+          className="flex-1 flex items-center gap-3 min-w-0 text-left"
+        >
+          <div className="relative">
+            <Thumbnail imageUrl={getDisplayImage(item.image)} name={item.name} />
+            {pending && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded">
+                <Loader2 size={16} className="text-white animate-spin" />
+              </div>
+            )}
           </div>
+          <div className="flex-1 min-w-0">
+            <div className="text-text-primary text-sm font-medium truncate">{item.name}</div>
+            {showArtist && item.artist && (
+              <div className="text-text-secondary text-xs truncate">{item.artist}</div>
+            )}
+          </div>
+        </button>
+        {showQueueActions && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              setMenuOpen((v) => !v)
+            }}
+            className="p-1.5 rounded text-text-secondary hover:bg-bg-primary hover:text-text-primary"
+            aria-label="More play options"
+          >
+            <MoreVertical size={16} />
+          </button>
         )}
       </div>
-      <div className="flex-1 min-w-0">
-        <div className="text-text-primary text-sm font-medium truncate">{item.name}</div>
-        {showArtist && item.artist && (
-          <div className="text-text-secondary text-xs truncate">{item.artist}</div>
-        )}
-      </div>
-    </button>
+      {menuOpen && (
+        <div className="absolute right-2 top-full mt-1 z-10 bg-bg-card border border-border rounded-lg shadow-lg overflow-hidden min-w-[160px]">
+          <button
+            onClick={() => {
+              setMenuOpen(false)
+              onQueueAction('next')
+            }}
+            className="block w-full px-3 py-2 text-left text-sm text-text-primary hover:bg-bg-primary"
+          >
+            Play next
+          </button>
+          <button
+            onClick={() => {
+              setMenuOpen(false)
+              onQueueAction('add')
+            }}
+            className="block w-full px-3 py-2 text-left text-sm text-text-primary hover:bg-bg-primary"
+          >
+            Add to queue
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -117,10 +184,20 @@ interface ResultGroupProps {
   items: SearchItem[]
   pendingUri: string | null
   onTap: (item: SearchItem) => void
+  onQueueAction: (item: SearchItem, mode: 'next' | 'add') => void
+  showQueueActions: boolean
   showArtist?: boolean
 }
 
-function ResultGroup({ heading, items, pendingUri, onTap, showArtist = false }: ResultGroupProps) {
+function ResultGroup({
+  heading,
+  items,
+  pendingUri,
+  onTap,
+  onQueueAction,
+  showQueueActions,
+  showArtist = false,
+}: ResultGroupProps) {
   if (items.length === 0) return null
   return (
     <section className="mb-4">
@@ -133,6 +210,8 @@ function ResultGroup({ heading, items, pendingUri, onTap, showArtist = false }: 
           item={item}
           pending={pendingUri === item.uri}
           onTap={() => onTap(item)}
+          onQueueAction={(mode) => onQueueAction(item, mode)}
+          showQueueActions={showQueueActions}
           showArtist={showArtist}
         />
       ))}
@@ -163,10 +242,11 @@ export function SearchResults({ rawQuery, debouncedQuery }: SearchResultsProps) 
     enabled: debouncedQuery.length >= 2,
   })
 
-  const handleTap = async (item: SearchItem) => {
+  const playItem = async (item: SearchItem, mode: EnqueueMode) => {
     setPendingUri(item.uri)
     try {
       await play(item.uri, {
+        enqueueMode: mode,
         mediaType: item.media_type,
         name: item.name,
         artist: item.artist,
@@ -177,6 +257,8 @@ export function SearchResults({ rawQuery, debouncedQuery }: SearchResultsProps) 
       setTimeout(() => setPendingUri((prev) => (prev === item.uri ? null : prev)), 1200)
     }
   }
+  const handleTap = (item: SearchItem) => playItem(item, 'play')
+  const handleQueueAction = (item: SearchItem, mode: 'next' | 'add') => playItem(item, mode)
 
   // Settling or fetching the current debounced query → show the indicator
   // before any results are rendered, even if older results are still cached.
@@ -215,6 +297,8 @@ export function SearchResults({ rawQuery, debouncedQuery }: SearchResultsProps) 
         items={results.tracks}
         pendingUri={pendingUri}
         onTap={(item) => handleTap(item)}
+        onQueueAction={handleQueueAction}
+        showQueueActions
         showArtist
       />
       <ResultGroup
@@ -222,12 +306,16 @@ export function SearchResults({ rawQuery, debouncedQuery }: SearchResultsProps) 
         items={results.artists}
         pendingUri={pendingUri}
         onTap={(item) => handleTap(item)}
+        onQueueAction={handleQueueAction}
+        showQueueActions={false}
       />
       <ResultGroup
         heading="Albums"
         items={results.albums}
         pendingUri={pendingUri}
         onTap={(item) => handleTap(item)}
+        onQueueAction={handleQueueAction}
+        showQueueActions={false}
         showArtist
       />
       <ResultGroup
@@ -235,6 +323,8 @@ export function SearchResults({ rawQuery, debouncedQuery }: SearchResultsProps) 
         items={results.playlists}
         pendingUri={pendingUri}
         onTap={(item) => handleTap(item)}
+        onQueueAction={handleQueueAction}
+        showQueueActions={false}
       />
     </div>
   )

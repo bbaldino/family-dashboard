@@ -12,6 +12,12 @@ pub struct PlayRequest {
     pub uri: String,
     pub queue_id: Option<String>,
     pub radio: Option<bool>,
+    /// MA queue enqueue option:
+    ///   - `"play"` (default) — replace the queue and start immediately.
+    ///   - `"next"` — keep the queue, insert this as the next track.
+    ///   - `"add"` — append to the end of the queue.
+    #[serde(default)]
+    pub enqueue_mode: Option<String>,
     /// Optional display metadata so the explicit-play log can render in
     /// Recently Played without re-querying MA for the URI's details.
     #[serde(default)]
