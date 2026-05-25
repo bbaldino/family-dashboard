@@ -228,6 +228,12 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
       prev ? prev.map(fn) : prev,
     )
 
+  // Abort any in-flight /players refetch (e.g. one kicked by the 5s polling
+  // interval moments before the user clicked) so it doesn't return with
+  // stale pre-mutation data and overwrite our optimistic update.
+  const cancelInFlightPlayersFetches = () =>
+    queryClient.cancelQueries({ queryKey: ['music', 'players'] })
+
   const markPending = (ids: string[]) =>
     setPendingIds((prev) => {
       const next = new Set(prev)
@@ -244,6 +250,7 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
   const addToGroup = async (playerId: string) => {
     if (!leaderId) return
     markPending([playerId])
+    await cancelInFlightPlayersFetches()
     // Optimistic: bump the new follower into the leader's group_members
     // immediately. MA pre-group leaders have an empty list; once grouped
     // their own id is also in the list, so seed it in that case.
@@ -265,6 +272,7 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
   }
   const removeFromGroup = async (playerId: string) => {
     markPending([playerId])
+    await cancelInFlightPlayersFetches()
     // Optimistic: drop this player from the leader's group_members. If that
     // leaves only the leader itself, clear the list so the UI returns to
     // the "no group" state.
@@ -285,6 +293,7 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
     if (!leader) return
     const followers = leader.groupMembers.filter((id) => id !== leader.playerId)
     markPending(followers)
+    await cancelInFlightPlayersFetches()
     // Optimistic: collapse the whole group on the leader.
     mutatePlayersCache((p) =>
       p.player_id === leader.playerId ? { ...p, group_members: [] } : p,
