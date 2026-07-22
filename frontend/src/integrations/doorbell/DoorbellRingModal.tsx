@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 import { useWebRtcStream } from './useWebRtcStream'
 
@@ -13,6 +13,7 @@ export function DoorbellRingModal({ isOpen, onClose }: DoorbellRingModalProps) {
     streamName: 'doorbell',
     enabled: isOpen,
   })
+  const dismissBtnRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     if (!isOpen) return
@@ -23,12 +24,24 @@ export function DoorbellRingModal({ isOpen, onClose }: DoorbellRingModalProps) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isOpen, onClose])
 
+  useEffect(() => {
+    if (!isOpen) return
+    const prevFocus = document.activeElement as HTMLElement | null
+    dismissBtnRef.current?.focus()
+    return () => {
+      prevFocus?.focus?.()
+    }
+  }, [isOpen])
+
   if (!isOpen) return null
 
   return (
     <div
       className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center"
       onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="doorbell-ring-title"
     >
       <button
         onClick={onClose}
@@ -42,7 +55,12 @@ export function DoorbellRingModal({ isOpen, onClose }: DoorbellRingModalProps) {
         className="flex flex-col items-center gap-6 px-8 w-full max-w-4xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="text-white/80 text-lg font-semibold">Someone at the door</div>
+        <div
+          id="doorbell-ring-title"
+          className="text-white/80 text-lg font-semibold"
+        >
+          Someone at the door
+        </div>
 
         <div className="relative w-full" style={{ maxHeight: '75vh' }}>
           <video
@@ -76,6 +94,7 @@ export function DoorbellRingModal({ isOpen, onClose }: DoorbellRingModalProps) {
         </div>
 
         <button
+          ref={dismissBtnRef}
           onClick={onClose}
           className="px-6 py-3 bg-white text-black rounded-full text-base font-medium"
         >
