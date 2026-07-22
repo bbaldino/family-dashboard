@@ -11,6 +11,7 @@ interface DoorbellRingConfig {
   auto_dismiss_seconds: number
   chime_enabled: boolean
   chime_sound_id: string
+  camera_url: string
 }
 
 /**
@@ -48,6 +49,7 @@ function useDoorbellConfig(): DoorbellRingConfig | null {
           chime_enabled:
             get('chime_enabled', String(defaults.chime_enabled)) === 'true',
           chime_sound_id: get('chime_sound_id', defaults.chime_sound_id),
+          camera_url: get('camera_url', defaults.camera_url ?? ''),
         })
       } catch {
         setConfig({
@@ -56,6 +58,7 @@ function useDoorbellConfig(): DoorbellRingConfig | null {
           auto_dismiss_seconds: defaults.auto_dismiss_seconds,
           chime_enabled: defaults.chime_enabled,
           chime_sound_id: defaults.chime_sound_id,
+          camera_url: defaults.camera_url ?? '',
         })
       }
     }
@@ -153,5 +156,11 @@ function ActiveListener({ config }: { config: DoorbellRingConfig }) {
     }
   }, [])
 
-  return <DoorbellRingModal isOpen={isRinging} onClose={handleClose} />
+  return (
+    <DoorbellRingModal
+      isOpen={isRinging}
+      cameraUrl={config.camera_url || null}
+      onClose={handleClose}
+    />
+  )
 }

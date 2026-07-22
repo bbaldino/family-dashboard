@@ -117,10 +117,10 @@ export function DoorbellSettings() {
       <div className="space-y-4">
         <div>
           <h3 className="text-sm font-semibold text-text-primary mt-2 mb-1">
-            Manual camera view
+            Camera view
           </h3>
           <p className="text-xs text-text-muted mb-3">
-            Used by the Cameras tab and the two-way audio iframe.
+            Used by the Cameras tab and the ring popup.
           </p>
         </div>
 

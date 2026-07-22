@@ -1,18 +1,17 @@
 import { useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
-import { useWebRtcStream } from './useWebRtcStream'
 
 interface DoorbellRingModalProps {
   isOpen: boolean
+  cameraUrl: string | null
   onClose: () => void
 }
 
-export function DoorbellRingModal({ isOpen, onClose }: DoorbellRingModalProps) {
-  const { videoRef, isConnected, error, reconnect } = useWebRtcStream({
-    go2rtcUrl: 'http://frigate:1984',
-    streamName: 'doorbell',
-    enabled: isOpen,
-  })
+export function DoorbellRingModal({
+  isOpen,
+  cameraUrl,
+  onClose,
+}: DoorbellRingModalProps) {
   const dismissBtnRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -62,33 +61,16 @@ export function DoorbellRingModal({ isOpen, onClose }: DoorbellRingModalProps) {
           Someone at the door
         </div>
 
-        <div className="relative w-full" style={{ maxHeight: '75vh' }}>
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="w-full rounded-2xl shadow-2xl bg-black"
-            style={{ maxHeight: '75vh' }}
-          />
-          <div className="absolute top-3 left-3 flex items-center gap-2">
-            <div
-              className={`w-2.5 h-2.5 rounded-full ${
-                isConnected ? 'bg-success' : 'bg-error animate-pulse'
-              }`}
+        <div className="w-full" style={{ height: '75vh' }}>
+          {cameraUrl ? (
+            <iframe
+              src={cameraUrl}
+              className="w-full h-full rounded-2xl shadow-2xl border-0 bg-black"
+              allow="autoplay; camera; microphone"
             />
-            <span className="text-sm text-white/80 font-medium drop-shadow">
-              Doorbell
-            </span>
-          </div>
-          {error && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-2xl">
-              <button
-                onClick={reconnect}
-                className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm"
-              >
-                Reconnect
-              </button>
+          ) : (
+            <div className="w-full h-full rounded-2xl shadow-2xl bg-black flex items-center justify-center text-white/60 text-sm">
+              Configure camera URL in Settings → Doorbell Camera
             </div>
           )}
         </div>
