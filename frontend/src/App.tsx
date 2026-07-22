@@ -46,9 +46,11 @@ function useHaReachable(url: string | undefined): boolean {
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 3000)
 
-    fetch(`${url}/api/`, { signal: controller.signal })
+    // Probe an unauthenticated endpoint so we don't spam the console with 401s.
+    // /manifest.json is always served by HA, no bearer required.
+    fetch(`${url}/manifest.json`, { signal: controller.signal })
       .then((r) => {
-        if (r.ok || r.status === 401) setReachable(true) // 401 = HA is there, just needs auth
+        if (r.ok) setReachable(true)
       })
       .catch(() => {
         console.warn('HA not reachable, continuing without it')
