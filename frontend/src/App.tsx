@@ -11,6 +11,7 @@ import { AdminLayout } from './admin/AdminLayout'
 import { SettingsAdmin } from './admin/SettingsAdmin'
 import { getRuntimeConfig } from './lib/ha-client'
 import { useTheme } from './theme/useTheme'
+import { DoorbellRingListener } from './integrations/doorbell'
 
 function ThemeApplicator() {
   useTheme()
@@ -102,6 +103,7 @@ export function App() {
   if (haUrl && haReachable) {
     return (
       <HassConnect hassUrl={haUrl} hassToken={haToken}>
+        <DoorbellRingListener />
         {content}
       </HassConnect>
     )
