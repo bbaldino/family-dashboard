@@ -88,6 +88,7 @@ function ActiveListener({ config }: { config: DoorbellRingConfig }) {
   const [isRinging, setIsRinging] = useState(false)
   const prevStateRef = useRef<string | undefined>(undefined)
   const dismissTimerRef = useRef<number | null>(null)
+  const chimeCtxRef = useRef<AudioContext | null>(null)
 
   const clearDismissTimer = () => {
     if (dismissTimerRef.current !== null) {
@@ -108,6 +109,7 @@ function ActiveListener({ config }: { config: DoorbellRingConfig }) {
 
   const handleClose = () => {
     clearDismissTimer()
+    chimeCtxRef.current?.close().catch(() => {})
     setIsRinging(false)
   }
 
@@ -135,7 +137,8 @@ function ActiveListener({ config }: { config: DoorbellRingConfig }) {
 
     if (config.chime_enabled) {
       try {
-        getAlarmById(config.chime_sound_id).play()
+        chimeCtxRef.current?.close().catch(() => {})
+        chimeCtxRef.current = getAlarmById(config.chime_sound_id).play()
       } catch (e) {
         console.warn('[doorbell] chime failed to play', e)
       }
@@ -143,7 +146,12 @@ function ActiveListener({ config }: { config: DoorbellRingConfig }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pressSensor?.state])
 
-  useEffect(() => () => clearDismissTimer(), [])
+  useEffect(() => {
+    return () => {
+      clearDismissTimer()
+      chimeCtxRef.current?.close().catch(() => {})
+    }
+  }, [])
 
   return <DoorbellRingModal isOpen={isRinging} onClose={handleClose} />
 }
