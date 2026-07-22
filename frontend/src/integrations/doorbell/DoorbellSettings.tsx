@@ -114,122 +114,144 @@ export function DoorbellSettings() {
 
   return (
     <div className="space-y-6 max-w-md">
-      <div>
-        <label className="text-xs text-text-muted block mb-1">
-          Camera Page URL
-        </label>
-        <input
-          type="text"
-          value={cameraUrl}
-          onChange={(e) => setCameraUrl(e.target.value)}
-          className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
-        />
-      </div>
-
-      <div>
-        <label className="text-xs text-text-muted block mb-1">
-          Press Sensor Entity
-        </label>
-        <input
-          type="text"
-          value={pressSensor}
-          onChange={(e) => setPressSensor(e.target.value)}
-          className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
-        />
-        <div className="text-xs text-text-muted mt-1">
-          HA binary_sensor that flips on when someone presses the button.
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-sm font-semibold text-text-primary mt-2 mb-1">
+            Manual camera view
+          </h3>
+          <p className="text-xs text-text-muted mb-3">
+            Used by the Cameras tab and the two-way audio iframe.
+          </p>
         </div>
-      </div>
-
-      <div>
-        <label className="text-xs text-text-muted block mb-1">
-          Screensaver Entity (blank to disable skip)
-        </label>
-        <input
-          type="text"
-          value={screensaverEntity}
-          onChange={(e) => setScreensaverEntity(e.target.value)}
-          className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
-        />
-        <div className="text-xs text-text-muted mt-1">
-          Popup is skipped while this entity is on.
-        </div>
-      </div>
-
-      <div>
-        <label className="text-xs text-text-muted block mb-1">
-          Auto-dismiss (seconds, 0 = never)
-        </label>
-        <input
-          type="number"
-          min={0}
-          value={autoDismissSeconds}
-          onChange={(e) => setAutoDismissSeconds(e.target.value)}
-          className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
-        />
-      </div>
-
-      <div className="bg-bg-card rounded-[var(--radius-card)] p-4 border border-border space-y-3">
-        <label className="flex items-center gap-3 text-sm text-text-primary">
-          <input
-            type="checkbox"
-            checked={chimeEnabled}
-            onChange={(e) => setChimeEnabled(e.target.checked)}
-          />
-          <span>Play chime when popup opens</span>
-        </label>
 
         <div>
           <label className="text-xs text-text-muted block mb-1">
-            Chime Sound
+            Camera Page URL
           </label>
-          <div className="flex items-center gap-2">
-            <select
-              value={chimeSoundId}
-              onChange={(e) => setChimeSoundId(e.target.value)}
-              disabled={!chimeEnabled}
-              className="flex-1 px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm disabled:opacity-50"
-            >
-              {ALARM_SOUNDS.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={previewChime}
-              disabled={!chimeEnabled}
-              className="w-10 h-10 flex items-center justify-center rounded-[var(--radius-button)] bg-bg-card-hover text-text-primary disabled:opacity-50"
-              aria-label="Preview chime"
-            >
-              <Play size={16} />
-            </button>
+          <input
+            type="text"
+            value={cameraUrl}
+            onChange={(e) => setCameraUrl(e.target.value)}
+            className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
+          />
+        </div>
+
+        <div className="bg-bg-card rounded-[var(--radius-card)] p-4 border border-border">
+          <div className="text-sm font-medium text-text-primary mb-2">
+            Microphone Permission
+          </div>
+          <div className="text-xs text-text-muted mb-3">
+            Required for two-way audio on the camera feed. The iframe needs the parent page to have microphone access granted.
+          </div>
+          <div className="flex items-center gap-3">
+            {micStatus === 'granted' ? (
+              <span className="text-sm text-success font-medium">
+                Microphone access granted
+              </span>
+            ) : micStatus === 'denied' ? (
+              <span className="text-sm text-error font-medium">
+                Microphone access denied — check browser settings
+              </span>
+            ) : (
+              <Button onClick={requestMicrophone}>
+                Request Microphone Access
+              </Button>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="bg-bg-card rounded-[var(--radius-card)] p-4 border border-border">
-        <div className="text-sm font-medium text-text-primary mb-2">
-          Microphone Permission
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-sm font-semibold text-text-primary mt-2 mb-1">
+            Ring popup
+          </h3>
+          <p className="text-xs text-text-muted mb-3">
+            Behavior when someone presses the doorbell button.
+          </p>
         </div>
-        <div className="text-xs text-text-muted mb-3">
-          Required for two-way audio on the camera feed. The iframe needs the parent page to have microphone access granted.
+
+        <div>
+          <label className="text-xs text-text-muted block mb-1">
+            Press Sensor Entity
+          </label>
+          <input
+            type="text"
+            value={pressSensor}
+            onChange={(e) => setPressSensor(e.target.value)}
+            className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
+          />
+          <div className="text-xs text-text-muted mt-1">
+            HA binary_sensor that flips on when someone presses the button.
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          {micStatus === 'granted' ? (
-            <span className="text-sm text-success font-medium">
-              Microphone access granted
-            </span>
-          ) : micStatus === 'denied' ? (
-            <span className="text-sm text-error font-medium">
-              Microphone access denied — check browser settings
-            </span>
-          ) : (
-            <Button onClick={requestMicrophone}>
-              Request Microphone Access
-            </Button>
-          )}
+
+        <div>
+          <label className="text-xs text-text-muted block mb-1">
+            Screensaver Entity (blank to disable skip)
+          </label>
+          <input
+            type="text"
+            value={screensaverEntity}
+            onChange={(e) => setScreensaverEntity(e.target.value)}
+            className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
+          />
+          <div className="text-xs text-text-muted mt-1">
+            Popup is skipped while this entity is on.
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs text-text-muted block mb-1">
+            Auto-dismiss (seconds, 0 = never)
+          </label>
+          <input
+            type="number"
+            min={0}
+            value={autoDismissSeconds}
+            onChange={(e) => setAutoDismissSeconds(e.target.value)}
+            className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
+          />
+        </div>
+
+        <div className="bg-bg-card rounded-[var(--radius-card)] p-4 border border-border space-y-3">
+          <label className="flex items-center gap-3 text-sm text-text-primary">
+            <input
+              type="checkbox"
+              checked={chimeEnabled}
+              onChange={(e) => setChimeEnabled(e.target.checked)}
+            />
+            <span>Play chime when popup opens</span>
+          </label>
+
+          <div>
+            <label className="text-xs text-text-muted block mb-1">
+              Chime Sound
+            </label>
+            <div className="flex items-center gap-2">
+              <select
+                value={chimeSoundId}
+                onChange={(e) => setChimeSoundId(e.target.value)}
+                disabled={!chimeEnabled}
+                className="flex-1 px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm disabled:opacity-50"
+              >
+                {ALARM_SOUNDS.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={previewChime}
+                disabled={!chimeEnabled}
+                className="w-10 h-10 flex items-center justify-center rounded-[var(--radius-button)] bg-bg-card-hover text-text-primary disabled:opacity-50"
+                aria-label="Preview chime"
+              >
+                <Play size={16} />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
