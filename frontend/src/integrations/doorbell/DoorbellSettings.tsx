@@ -15,7 +15,10 @@ export function DoorbellSettings() {
   const [chimeEnabled, setChimeEnabled] = useState(defaults.chime_enabled)
   const [chimeSoundId, setChimeSoundId] = useState(defaults.chime_sound_id)
   const [loading, setLoading] = useState(true)
-  const [status, setStatus] = useState<string | null>(null)
+  const [status, setStatus] = useState<{
+    kind: 'ok' | 'error'
+    text: string
+  } | null>(null)
   const [micStatus, setMicStatus] = useState<
     'unknown' | 'granted' | 'denied' | 'prompt'
   >('unknown')
@@ -67,16 +70,22 @@ export function DoorbellSettings() {
     })
 
   const handleSave = async () => {
-    await Promise.all([
-      putConfig('camera_url', cameraUrl),
-      putConfig('press_sensor_entity', pressSensor),
-      putConfig('screensaver_entity', screensaverEntity),
-      putConfig('auto_dismiss_seconds', autoDismissSeconds),
-      putConfig('chime_enabled', String(chimeEnabled)),
-      putConfig('chime_sound_id', chimeSoundId),
-    ])
-    setStatus('Saved!')
-    setTimeout(() => setStatus(null), 2000)
+    try {
+      await Promise.all([
+        putConfig('camera_url', cameraUrl),
+        putConfig('press_sensor_entity', pressSensor),
+        putConfig('screensaver_entity', screensaverEntity),
+        putConfig('auto_dismiss_seconds', autoDismissSeconds),
+        putConfig('chime_enabled', String(chimeEnabled)),
+        putConfig('chime_sound_id', chimeSoundId),
+      ])
+      setStatus({ kind: 'ok', text: 'Saved!' })
+    } catch (err) {
+      console.error('Failed to save doorbell settings', err)
+      setStatus({ kind: 'error', text: 'Save failed' })
+    } finally {
+      setTimeout(() => setStatus(null), 2000)
+    }
   }
 
   const requestMicrophone = async () => {
@@ -226,7 +235,13 @@ export function DoorbellSettings() {
 
       <div className="flex items-center gap-3">
         <Button onClick={handleSave}>Save</Button>
-        {status && <span className="text-sm text-success">{status}</span>}
+        {status && (
+          <span
+            className={`text-sm ${status.kind === 'ok' ? 'text-success' : 'text-error'}`}
+          >
+            {status.text}
+          </span>
+        )}
       </div>
     </div>
   )
