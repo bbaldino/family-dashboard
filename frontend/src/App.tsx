@@ -6,6 +6,7 @@ import { AppShell } from './app/AppShell'
 import { HomeBoard } from './boards/HomeBoard'
 import { CalendarBoard } from './boards/calendar/CalendarBoard'
 import { MediaBoard } from './boards/MediaBoard'
+import { ArtistPage } from './boards/media/ArtistPage'
 import { CamerasBoard } from './boards/CamerasBoard'
 import { AdminLayout } from './admin/AdminLayout'
 import { SettingsAdmin } from './admin/SettingsAdmin'
@@ -68,6 +69,7 @@ function AppRoutes() {
         <Route index element={<HomeBoard />} />
         <Route path="calendar" element={<CalendarBoard />} />
         <Route path="media" element={<MediaBoard />} />
+        <Route path="media/artist/:uri" element={<ArtistPage />} />
         <Route path="cameras" element={<CamerasBoard />} />
       </Route>
       <Route path="admin" element={<AdminLayout />}>
