@@ -36,7 +36,7 @@ export function TrackActionsMenu({
   onAddToQueue,
   onGoToArtist,
   onGoToAlbum,
-}: TrackActionsMenuProps): JSX.Element | null {
+}: TrackActionsMenuProps) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement | null>(null)
 
