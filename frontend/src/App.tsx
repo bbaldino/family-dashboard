@@ -7,6 +7,7 @@ import { HomeBoard } from './boards/HomeBoard'
 import { CalendarBoard } from './boards/calendar/CalendarBoard'
 import { MediaBoard } from './boards/MediaBoard'
 import { ArtistPage } from './boards/media/ArtistPage'
+import { AlbumPage } from './boards/media/AlbumPage'
 import { CamerasBoard } from './boards/CamerasBoard'
 import { AdminLayout } from './admin/AdminLayout'
 import { SettingsAdmin } from './admin/SettingsAdmin'
@@ -70,6 +71,7 @@ function AppRoutes() {
         <Route path="calendar" element={<CalendarBoard />} />
         <Route path="media" element={<MediaBoard />} />
         <Route path="media/artist/:uri" element={<ArtistPage />} />
+        <Route path="media/album/:uri" element={<AlbumPage />} />
         <Route path="cameras" element={<CamerasBoard />} />
       </Route>
       <Route path="admin" element={<AdminLayout />}>
