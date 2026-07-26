@@ -69,4 +69,41 @@ describe('TrackActionsMenu', () => {
     expect(onPlayNext).toHaveBeenCalledTimes(1)
     expect(screen.queryByText('Play next')).not.toBeInTheDocument()
   })
+
+  it('opening a second menu with one tap closes the first, without swallowing the tap', () => {
+    const onPlayNextFirst = vi.fn()
+    const onPlayNextSecond = vi.fn()
+    render(
+      <>
+        <TrackActionsMenu
+          item={baseTrack}
+          onPlayRadio={noop}
+          onPlayJustThis={noop}
+          onPlayNext={onPlayNextFirst}
+          onAddToQueue={noop}
+          onGoToArtist={noop}
+          onGoToAlbum={noop}
+        />
+        <TrackActionsMenu
+          item={baseTrack}
+          onPlayRadio={noop}
+          onPlayJustThis={noop}
+          onPlayNext={onPlayNextSecond}
+          onAddToQueue={noop}
+          onGoToArtist={noop}
+          onGoToAlbum={noop}
+        />
+      </>,
+    )
+    const toggles = screen.getAllByLabelText('More play options')
+    fireEvent.click(toggles[0])
+    expect(screen.getAllByText('Play next')).toHaveLength(1)
+
+    fireEvent.click(toggles[1])
+    const playNextButtons = screen.getAllByText('Play next')
+    expect(playNextButtons).toHaveLength(1)
+    fireEvent.click(playNextButtons[0])
+    expect(onPlayNextSecond).toHaveBeenCalledTimes(1)
+    expect(onPlayNextFirst).not.toHaveBeenCalled()
+  })
 })

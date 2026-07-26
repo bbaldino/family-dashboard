@@ -44,8 +44,6 @@ export function TrackActionsMenu({
     if (!open) return
     const handler = (e: MouseEvent) => {
       if (containerRef.current?.contains(e.target as Node)) return
-      e.stopPropagation()
-      e.preventDefault()
       setOpen(false)
     }
     document.addEventListener('click', handler, { capture: true })
