@@ -1,6 +1,7 @@
 import { ArrowLeft, Music, Radio } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useMusic } from '@/integrations/music/useMusic'
+import type { EnqueueMode } from '@/integrations/music/MusicProvider'
 import { TrackActionsMenu } from './TrackActionsMenu'
 import { decodeUriParam, encodeUriParam } from './track-url'
 import { useArtistDetail } from './useArtistDetail'
@@ -72,79 +73,64 @@ export function ArtistPage() {
             Top tracks
           </div>
           <div className="flex flex-col">
-            {data.top_tracks.map((t) => (
-              <div
-                key={t.uri}
-                className="flex items-center gap-3 px-2 py-2 rounded hover:bg-bg-primary"
-              >
-                <button
-                  onClick={() =>
-                    play(t.uri, {
-                      radio: true,
-                      mediaType: 'track',
+            {data.top_tracks.map((t) => {
+              const commonPlay = (mode: EnqueueMode, radio: boolean) =>
+                play(t.uri, {
+                  radio,
+                  enqueueMode: mode,
+                  mediaType: 'track',
+                  name: t.name,
+                  artist: t.artist ?? undefined,
+                  artistUri: t.artist_uri ?? undefined,
+                  album: t.album ?? undefined,
+                  albumUri: t.album_uri ?? undefined,
+                  imageUrl: t.image_url ?? undefined,
+                })
+              return (
+                <div
+                  key={t.uri}
+                  className="flex items-center gap-3 px-2 py-2 rounded hover:bg-bg-primary"
+                >
+                  <button
+                    onClick={() => commonPlay('play', true)}
+                    className="flex-1 flex items-center gap-3 min-w-0 text-left"
+                  >
+                    {t.image_url ? (
+                      <img
+                        src={t.image_url}
+                        alt={t.name}
+                        className="w-10 h-10 rounded object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded bg-bg-card flex items-center justify-center">
+                        <Music size={16} className="text-text-secondary" />
+                      </div>
+                    )}
+                    <div className="text-text-primary text-sm truncate">{t.name}</div>
+                  </button>
+                  <TrackActionsMenu
+                    item={{
+                      uri: t.uri,
+                      media_type: 'track',
                       name: t.name,
                       artist: t.artist ?? undefined,
-                      artistUri: t.artist_uri ?? undefined,
-                      album: t.album ?? undefined,
-                      albumUri: t.album_uri ?? undefined,
-                      imageUrl: t.image_url ?? undefined,
-                    })
-                  }
-                  className="flex-1 flex items-center gap-3 min-w-0 text-left"
-                >
-                  {t.image_url ? (
-                    <img
-                      src={t.image_url}
-                      alt={t.name}
-                      className="w-10 h-10 rounded object-cover"
-                    />
-                  ) : (
-                    <div className="w-10 h-10 rounded bg-bg-card flex items-center justify-center">
-                      <Music size={16} className="text-text-secondary" />
-                    </div>
-                  )}
-                  <div className="text-text-primary text-sm truncate">{t.name}</div>
-                </button>
-                <TrackActionsMenu
-                  item={{
-                    uri: t.uri,
-                    media_type: 'track',
-                    name: t.name,
-                    artist: t.artist ?? undefined,
-                    artist_uri: t.artist_uri,
-                    album: t.album,
-                    album_uri: t.album_uri,
-                    image_url: t.image_url,
-                  }}
-                  onPlayRadio={() =>
-                    play(t.uri, { radio: true, mediaType: 'track', name: t.name })
-                  }
-                  onPlayJustThis={() =>
-                    play(t.uri, { radio: false, mediaType: 'track', name: t.name })
-                  }
-                  onPlayNext={() =>
-                    play(t.uri, {
-                      radio: false,
-                      enqueueMode: 'next',
-                      mediaType: 'track',
-                      name: t.name,
-                    })
-                  }
-                  onAddToQueue={() =>
-                    play(t.uri, {
-                      radio: false,
-                      enqueueMode: 'add',
-                      mediaType: 'track',
-                      name: t.name,
-                    })
-                  }
-                  onGoToArtist={() =>
-                    t.artist_uri && navigate(`/media/artist/${encodeUriParam(t.artist_uri)}`)
-                  }
-                  onGoToAlbum={() => t.album_uri && goToAlbum(t.album_uri)}
-                />
-              </div>
-            ))}
+                      artist_uri: t.artist_uri,
+                      album: t.album,
+                      album_uri: t.album_uri,
+                      image_url: t.image_url,
+                    }}
+                    onPlayRadio={() => commonPlay('play', true)}
+                    onPlayJustThis={() => commonPlay('play', false)}
+                    onPlayNext={() => commonPlay('next', false)}
+                    onAddToQueue={() => commonPlay('add', false)}
+                    onGoToArtist={() =>
+                      t.artist_uri && navigate(`/media/artist/${encodeUriParam(t.artist_uri)}`)
+                    }
+                    onGoToAlbum={() => t.album_uri && goToAlbum(t.album_uri)}
+                  />
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
