@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Music, Loader2, MoreVertical } from 'lucide-react'
+import { useNavigate, type NavigateFunction } from 'react-router-dom'
+import { Music, Loader2 } from 'lucide-react'
 import { musicIntegration } from '@/integrations/music/config'
 import { useMusic } from '@/integrations/music/useMusic'
 import type { EnqueueMode } from '@/integrations/music/MusicProvider'
 import type { SearchItem } from '@/integrations/music/types'
+import { TrackActionsMenu } from './TrackActionsMenu'
+import { encodeUriParam } from './track-url'
 
 interface SearchResultsType {
   tracks: SearchItem[]
@@ -87,39 +90,12 @@ interface ResultItemProps {
   item: SearchItem
   pending: boolean
   onTap: () => void
-  onQueueAction: (mode: 'next' | 'add') => void
-  /** Only tracks make sense to "play next" or "add to queue" — albums and
-   *  playlists are containers, "queue next" semantics get murky. */
-  showQueueActions: boolean
+  playItem: (item: SearchItem, mode: EnqueueMode, radio: boolean) => Promise<void>
+  navigate: NavigateFunction
   showArtist?: boolean
 }
 
-function ResultItem({
-  item,
-  pending,
-  onTap,
-  onQueueAction,
-  showQueueActions,
-  showArtist = false,
-}: ResultItemProps) {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement | null>(null)
-
-  // Close the menu on outside click. Listen in the capture phase and stop
-  // propagation so the underlying play button (or anything else) doesn't
-  // also fire — clicking outside a popover should *only* dismiss it.
-  useEffect(() => {
-    if (!menuOpen) return
-    const handler = (e: MouseEvent) => {
-      if (containerRef.current?.contains(e.target as Node)) return
-      e.stopPropagation()
-      e.preventDefault()
-      setMenuOpen(false)
-    }
-    document.addEventListener('click', handler, { capture: true })
-    return () => document.removeEventListener('click', handler, { capture: true })
-  }, [menuOpen])
-
+function ResultItem({ item, pending, onTap, playItem, navigate, showArtist = false }: ResultItemProps) {
   return (
     <div
       className={`flex items-center gap-3 w-full px-3 py-2 rounded text-left ${
@@ -146,42 +122,24 @@ function ResultItem({
           )}
         </div>
       </button>
-      {showQueueActions && (
-        <div ref={containerRef} className="relative">
-          <button
-            onClick={(e) => {
-              e.stopPropagation()
-              setMenuOpen((v) => !v)
-            }}
-            className="p-1.5 rounded text-text-secondary hover:bg-bg-primary hover:text-text-primary"
-            aria-label="More play options"
-          >
-            <MoreVertical size={16} />
-          </button>
-          {menuOpen && (
-            <div className="absolute right-0 top-full mt-1 z-10 bg-bg-card border border-border rounded-lg shadow-lg overflow-hidden min-w-[160px]">
-              <button
-                onClick={() => {
-                  setMenuOpen(false)
-                  onQueueAction('next')
-                }}
-                className="block w-full px-3 py-2 text-left text-sm text-text-primary hover:bg-bg-primary"
-              >
-                Play next
-              </button>
-              <button
-                onClick={() => {
-                  setMenuOpen(false)
-                  onQueueAction('add')
-                }}
-                className="block w-full px-3 py-2 text-left text-sm text-text-primary hover:bg-bg-primary"
-              >
-                Add to queue
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+      <TrackActionsMenu
+        item={{
+          uri: item.uri,
+          media_type: item.media_type,
+          name: item.name,
+          artist: item.artist,
+          artist_uri: item.artist_uri ?? null,
+          album: item.album ?? null,
+          album_uri: item.album_uri ?? null,
+          image_url: getDisplayImage(item.image),
+        }}
+        onPlayRadio={() => playItem(item, 'play', true)}
+        onPlayJustThis={() => playItem(item, 'play', false)}
+        onPlayNext={() => playItem(item, 'next', false)}
+        onAddToQueue={() => playItem(item, 'add', false)}
+        onGoToArtist={() => item.artist_uri && navigate(`/media/artist/${encodeUriParam(item.artist_uri)}`)}
+        onGoToAlbum={() => item.album_uri && navigate(`/media/album/${encodeUriParam(item.album_uri)}`)}
+      />
     </div>
   )
 }
@@ -191,8 +149,8 @@ interface ResultGroupProps {
   items: SearchItem[]
   pendingUri: string | null
   onTap: (item: SearchItem) => void
-  onQueueAction: (item: SearchItem, mode: 'next' | 'add') => void
-  showQueueActions: boolean
+  playItem: (item: SearchItem, mode: EnqueueMode, radio: boolean) => Promise<void>
+  navigate: NavigateFunction
   showArtist?: boolean
 }
 
@@ -201,8 +159,8 @@ function ResultGroup({
   items,
   pendingUri,
   onTap,
-  onQueueAction,
-  showQueueActions,
+  playItem,
+  navigate,
   showArtist = false,
 }: ResultGroupProps) {
   if (items.length === 0) return null
@@ -217,8 +175,8 @@ function ResultGroup({
           item={item}
           pending={pendingUri === item.uri}
           onTap={() => onTap(item)}
-          onQueueAction={(mode) => onQueueAction(item, mode)}
-          showQueueActions={showQueueActions}
+          playItem={playItem}
+          navigate={navigate}
           showArtist={showArtist}
         />
       ))}
@@ -237,6 +195,7 @@ function StatusRow({ label }: { label: string }) {
 
 export function SearchResults({ rawQuery, debouncedQuery }: SearchResultsProps) {
   const { play } = useMusic()
+  const navigate = useNavigate()
   const [pendingUri, setPendingUri] = useState<string | null>(null)
 
   // True while the debounce window is still open (user is still typing).
@@ -262,6 +221,9 @@ export function SearchResults({ rawQuery, debouncedQuery }: SearchResultsProps) 
         mediaType: item.media_type,
         name: item.name,
         artist: item.artist,
+        artistUri: item.artist_uri ?? undefined,
+        album: item.album ?? undefined,
+        albumUri: item.album_uri ?? undefined,
         imageUrl: getDisplayImage(item.image) ?? undefined,
       })
     } finally {
@@ -274,10 +236,6 @@ export function SearchResults({ rawQuery, debouncedQuery }: SearchResultsProps) 
   // artists already have built-in continuation, so no radio there.
   const handleTap = (item: SearchItem) =>
     playItem(item, 'play', item.media_type === 'track')
-  // Explicit queue actions are literal — "Play next" means this exact track
-  // next, not "start a radio after the current one ends".
-  const handleQueueAction = (item: SearchItem, mode: 'next' | 'add') =>
-    playItem(item, mode, false)
 
   // Settling or fetching the current debounced query → show the indicator
   // before any results are rendered, even if older results are still cached.
@@ -316,8 +274,8 @@ export function SearchResults({ rawQuery, debouncedQuery }: SearchResultsProps) 
         items={results.tracks}
         pendingUri={pendingUri}
         onTap={(item) => handleTap(item)}
-        onQueueAction={handleQueueAction}
-        showQueueActions
+        playItem={playItem}
+        navigate={navigate}
         showArtist
       />
       <ResultGroup
@@ -325,16 +283,16 @@ export function SearchResults({ rawQuery, debouncedQuery }: SearchResultsProps) 
         items={results.artists}
         pendingUri={pendingUri}
         onTap={(item) => handleTap(item)}
-        onQueueAction={handleQueueAction}
-        showQueueActions={false}
+        playItem={playItem}
+        navigate={navigate}
       />
       <ResultGroup
         heading="Albums"
         items={results.albums}
         pendingUri={pendingUri}
         onTap={(item) => handleTap(item)}
-        onQueueAction={handleQueueAction}
-        showQueueActions={false}
+        playItem={playItem}
+        navigate={navigate}
         showArtist
       />
       <ResultGroup
@@ -342,8 +300,8 @@ export function SearchResults({ rawQuery, debouncedQuery }: SearchResultsProps) 
         items={results.playlists}
         pendingUri={pendingUri}
         onTap={(item) => handleTap(item)}
-        onQueueAction={handleQueueAction}
-        showQueueActions={false}
+        playItem={playItem}
+        navigate={navigate}
       />
     </div>
   )
