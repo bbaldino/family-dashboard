@@ -81,7 +81,7 @@ pub async fn top_tracks(
 
 /// Recursively rewrite image URLs in JSON to go through our backend proxy.
 /// Looks for keys like "image", "image_url", "imageUrl" that contain URL strings.
-fn rewrite_image_urls(value: &mut serde_json::Value) {
+pub(super) fn rewrite_image_urls(value: &mut serde_json::Value) {
     match value {
         serde_json::Value::Object(map) => {
             for (key, val) in map.iter_mut() {
