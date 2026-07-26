@@ -22,16 +22,26 @@ pub async fn top_tracks(
     Query(params): Query<TopTracksQuery>,
 ) -> Result<Json<serde_json::Value>, AppError> {
     let limit = params.limit.unwrap_or(20);
-    // Counts only explicit picks (search taps, recently/frequently re-taps,
-    // ForYou playlist picks). This mirrors Recently Played's data source so
-    // both sections reflect the user's choices rather than auto-advance /
-    // radio followups in MA's queue.
-    let rows = sqlx::query_as::<_, (String, String, String, Option<String>, Option<String>, i64, i64)>(
-        "SELECT uri, name, artist, album, image_url, COUNT(*) as play_count, MAX(played_at) as last_played \
+    let rows = sqlx::query_as::<
+        _,
+        (
+            String,
+            String,
+            String,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+            i64,
+            i64,
+        ),
+    >(
+        "SELECT uri, name, artist, album, image_url, artist_uri, album_uri, \
+                COUNT(*) as play_count, MAX(played_at) as last_played \
          FROM music_explicit_play_log \
          GROUP BY uri \
          ORDER BY play_count DESC, last_played DESC \
-         LIMIT ?"
+         LIMIT ?",
     )
     .bind(limit)
     .fetch_all(&pool)
@@ -40,13 +50,25 @@ pub async fn top_tracks(
     let items: Vec<serde_json::Value> = rows
         .into_iter()
         .map(
-            |(uri, name, artist, album, image_url, play_count, last_played)| {
+            |(
+                uri,
+                name,
+                artist,
+                album,
+                image_url,
+                artist_uri,
+                album_uri,
+                play_count,
+                last_played,
+            )| {
                 serde_json::json!({
                     "uri": uri,
                     "name": name,
                     "artist": artist,
                     "album": album,
                     "image_url": image_url,
+                    "artist_uri": artist_uri,
+                    "album_uri": album_uri,
                     "play_count": play_count,
                     "last_played": last_played,
                 })
@@ -352,9 +374,6 @@ pub async fn search(
 pub async fn get_recent(
     State(pool): State<SqlitePool>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    // Most-recent explicit selection per URI, newest first. Keeps the list
-    // showing only what the user chose to play (not radio followups or
-    // album auto-advance).
     let rows = sqlx::query_as::<
         _,
         (
@@ -364,10 +383,13 @@ pub async fn get_recent(
             String,
             Option<String>,
             Option<String>,
+            Option<String>,
+            Option<String>,
             i64,
         ),
     >(
-        "SELECT uri, media_type, name, artist, album, image_url, MAX(played_at) as last_played \
+        "SELECT uri, media_type, name, artist, album, image_url, artist_uri, album_uri, \
+                MAX(played_at) as last_played \
          FROM music_explicit_play_log \
          GROUP BY uri \
          ORDER BY last_played DESC \
@@ -379,7 +401,17 @@ pub async fn get_recent(
     let items: Vec<serde_json::Value> = rows
         .into_iter()
         .map(
-            |(uri, media_type, name, artist, album, image_url, last_played)| {
+            |(
+                uri,
+                media_type,
+                name,
+                artist,
+                album,
+                image_url,
+                artist_uri,
+                album_uri,
+                last_played,
+            )| {
                 serde_json::json!({
                     "uri": uri,
                     "media_type": media_type,
@@ -387,6 +419,8 @@ pub async fn get_recent(
                     "artist": artist,
                     "album": album,
                     "image_url": image_url,
+                    "artist_uri": artist_uri,
+                    "album_uri": album_uri,
                     "last_played": last_played,
                 })
             },
