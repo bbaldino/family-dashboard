@@ -17,7 +17,9 @@ export interface PlayOptions {
   mediaType?: string
   name?: string
   artist?: string
+  artistUri?: string
   album?: string
+  albumUri?: string
   imageUrl?: string
 }
 
@@ -180,7 +182,9 @@ export function MusicProvider({ children }: MusicProviderProps) {
       media_type: options?.mediaType,
       name: options?.name,
       artist: options?.artist,
+      artist_uri: options?.artistUri,
       album: options?.album,
+      album_uri: options?.albumUri,
       image_url: options?.imageUrl,
     })
   }, [])

@@ -27,7 +27,8 @@ interface RawSearchItem {
   image?: { path?: string } | null
   metadata?: { images?: Array<{ path?: string }> }
   media_type?: string
-  artists?: Array<{ name?: string }>
+  artists?: Array<{ name?: string; uri?: string }>
+  album?: { name?: string; uri?: string } | null
 }
 
 function getItemImage(raw: RawSearchItem): string | null {
@@ -43,6 +44,9 @@ function normalizeItem(raw: RawSearchItem): SearchItem {
     image: getItemImage(raw),
     media_type: raw.media_type ?? '',
     artist: raw.artists?.[0]?.name,
+    artist_uri: raw.artists?.[0]?.uri ?? null,
+    album: raw.album?.name ?? null,
+    album_uri: raw.album?.uri ?? null,
   }
 }
 

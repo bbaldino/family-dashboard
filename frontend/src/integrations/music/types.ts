@@ -12,7 +12,9 @@ export interface TopTrack {
   uri: string
   name: string
   artist: string
+  artist_uri?: string | null
   album: string | null
+  album_uri?: string | null
   image_url: string | null
   play_count: number
   last_played: number
@@ -59,6 +61,9 @@ export interface SearchItem {
   uri: string
   image?: { path: string } | string | null
   artist?: string // for tracks/albums
+  artist_uri?: string | null
+  album?: string | null
+  album_uri?: string | null
   media_type: string
 }
 
@@ -69,6 +74,8 @@ export interface RecentItem {
   image_url?: string | null
   media_type: string // "playlist", "track", "album", "artist"
   artist?: string
+  artist_uri?: string | null
   album?: string | null
+  album_uri?: string | null
   last_played?: number
 }
