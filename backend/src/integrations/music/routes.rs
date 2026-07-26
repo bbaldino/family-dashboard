@@ -129,8 +129,9 @@ pub async fn play(
     // Log the explicit selection so Recently Played reflects what the user
     // actually chose, not whatever ESPN/MA auto-advanced to next.
     let _ = sqlx::query(
-        "INSERT INTO music_explicit_play_log (uri, media_type, name, artist, album, image_url) \
-         VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO music_explicit_play_log \
+         (uri, media_type, name, artist, album, image_url, artist_uri, album_uri) \
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     )
     .bind(&req.uri)
     .bind(req.media_type.as_deref().unwrap_or(""))
@@ -138,6 +139,8 @@ pub async fn play(
     .bind(req.artist.as_deref().unwrap_or(""))
     .bind(&req.album)
     .bind(&req.image_url)
+    .bind(&req.artist_uri)
+    .bind(&req.album_uri)
     .execute(&pool)
     .await;
 
@@ -328,7 +331,12 @@ pub async fn search(
         .await?;
     let ma_elapsed_ms = started.elapsed().as_millis();
     rewrite_image_urls(&mut data);
-    let count = |k: &str| data.get(k).and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);
+    let count = |k: &str| {
+        data.get(k)
+            .and_then(|v| v.as_array())
+            .map(|a| a.len())
+            .unwrap_or(0)
+    };
     tracing::info!(
         query = %params.q,
         ma_ms = ma_elapsed_ms,
@@ -349,7 +357,15 @@ pub async fn get_recent(
     // album auto-advance).
     let rows = sqlx::query_as::<
         _,
-        (String, String, String, String, Option<String>, Option<String>, i64),
+        (
+            String,
+            String,
+            String,
+            String,
+            Option<String>,
+            Option<String>,
+            i64,
+        ),
     >(
         "SELECT uri, media_type, name, artist, album, image_url, MAX(played_at) as last_played \
          FROM music_explicit_play_log \

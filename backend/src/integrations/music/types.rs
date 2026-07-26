@@ -30,6 +30,10 @@ pub struct PlayRequest {
     pub album: Option<String>,
     #[serde(default)]
     pub image_url: Option<String>,
+    #[serde(default)]
+    pub artist_uri: Option<String>,
+    #[serde(default)]
+    pub album_uri: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
