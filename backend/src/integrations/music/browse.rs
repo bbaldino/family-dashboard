@@ -162,6 +162,61 @@ pub async fn get_artist(
     }))
 }
 
+#[derive(Serialize)]
+pub struct AlbumDetail {
+    pub name: String,
+    pub artist: Option<String>,
+    pub artist_uri: Option<String>,
+    pub image_url: Option<String>,
+    pub tracks: Vec<Track>,
+}
+
+pub async fn get_album(
+    State(pool): State<SqlitePool>,
+    Query(q): Query<UriQuery>,
+) -> Result<Json<AlbumDetail>, AppError> {
+    let client = MaClient::from_config(&pool).await?;
+
+    const TRACKS_CMD: &str = "music/albums/album_tracks";
+
+    let mut tracks_raw: serde_json::Value = client
+        .command(TRACKS_CMD, serde_json::json!({ "item_uri": q.uri }))
+        .await
+        .unwrap_or(serde_json::json!([]));
+    rewrite_image_urls(&mut tracks_raw);
+
+    let tracks: Vec<Track> = tracks_raw
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(track_from)
+        .collect();
+
+    // Album header data pulled from the first track's album block.
+    let header = tracks_raw
+        .as_array()
+        .and_then(|arr| arr.first())
+        .and_then(|t| t.get("album"))
+        .cloned()
+        .unwrap_or(serde_json::json!({}));
+
+    let name = header
+        .get("name")
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string();
+    let image_url = first_image_path(&header);
+    let (artist, artist_uri) = first_artist_name_and_uri(&header);
+
+    Ok(Json(AlbumDetail {
+        name,
+        artist,
+        artist_uri,
+        image_url,
+        tracks,
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
