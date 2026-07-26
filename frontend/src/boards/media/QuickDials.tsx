@@ -133,6 +133,7 @@ export function QuickDials() {
                 track={track}
                 onTap={() =>
                   play(track.uri, {
+                    radio: true,
                     mediaType: 'track',
                     name: track.name,
                     artist: track.artist,
@@ -157,6 +158,7 @@ export function QuickDials() {
                 item={item}
                 onTap={() =>
                   play(item.uri, {
+                    radio: item.media_type === 'track',
                     mediaType: item.media_type,
                     name: item.name,
                     artist: item.artist,
