@@ -1,5 +1,6 @@
 use dashboard_backend::integrations::sports::enrichment::{
-    NewsItem, PriorSeason, RecentGame, TeamEnrichment, parse_recent_games, render, sport_path,
+    NewsItem, PriorSeason, RecentGame, TeamEnrichment, count_postseason_games, parse_recent_games,
+    parse_record_summary, render, sport_path,
 };
 use std::fs;
 
@@ -88,4 +89,37 @@ fn parse_recent_games_returns_empty_for_wrong_team() {
     let json: serde_json::Value = serde_json::from_str(&raw).expect("fixture parse");
     let games = parse_recent_games(&json, "9999", 5);
     assert!(games.is_empty(), "no games for a team not in the schedule");
+}
+
+#[test]
+fn parse_record_summary_extracts_overall_record() {
+    let raw = fs::read_to_string("tests/fixtures/enrichment/nba_lakers_2025_record.json")
+        .expect("fixture read");
+    let json: serde_json::Value = serde_json::from_str(&raw).expect("fixture parse");
+    let record = parse_record_summary(&json).expect("record");
+    assert_eq!(record, "50-32");
+}
+
+#[test]
+fn count_postseason_games_matches_fixture() {
+    let raw = fs::read_to_string("tests/fixtures/enrichment/espn_postseason_dodgers_2025.json")
+        .expect("fixture read");
+    let json: serde_json::Value = serde_json::from_str(&raw).expect("fixture parse");
+    // Dodgers 2025 fixture has 17 postseason events, all completed.
+    assert_eq!(count_postseason_games(&json, "19"), 17);
+}
+
+#[test]
+fn count_postseason_games_lakers_first_round_exit() {
+    let raw = fs::read_to_string("tests/fixtures/enrichment/espn_postseason_lakers_2025.json")
+        .expect("fixture read");
+    let json: serde_json::Value = serde_json::from_str(&raw).expect("fixture parse");
+    // Lakers 2025 fixture has 5 postseason events (first-round exit).
+    assert_eq!(count_postseason_games(&json, "13"), 5);
+}
+
+#[test]
+fn count_postseason_games_missed_playoffs_returns_zero() {
+    let json = serde_json::json!({ "events": [] });
+    assert_eq!(count_postseason_games(&json, "13"), 0);
 }

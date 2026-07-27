@@ -187,3 +187,102 @@ async fn fetch_schedule_and_parse(
         }
     }
 }
+
+pub fn parse_record_summary(record_json: &serde_json::Value) -> Option<String> {
+    record_json
+        .get("items")?
+        .as_array()?
+        .iter()
+        .find(|item| {
+            item.get("type").and_then(|t| t.as_str()) == Some("total")
+                || item.get("name").and_then(|n| n.as_str()) == Some("overall")
+        })
+        .and_then(|item| item.get("summary"))
+        .and_then(|s| s.as_str())
+        .map(str::to_string)
+}
+
+pub fn count_postseason_games(schedule_json: &serde_json::Value, team_id: &str) -> u32 {
+    schedule_json
+        .get("events")
+        .and_then(|e| e.as_array())
+        .map(|events| {
+            events
+                .iter()
+                .filter(|event| {
+                    let comp = match event
+                        .get("competitions")
+                        .and_then(|c| c.as_array())
+                        .and_then(|a| a.first())
+                    {
+                        Some(c) => c,
+                        None => return false,
+                    };
+                    let completed = comp
+                        .get("status")
+                        .and_then(|s| s.get("type"))
+                        .and_then(|t| t.get("completed"))
+                        .and_then(|b| b.as_bool())
+                        .unwrap_or(false);
+                    if !completed {
+                        return false;
+                    }
+                    comp.get("competitors")
+                        .and_then(|c| c.as_array())
+                        .map(|arr| {
+                            arr.iter()
+                                .any(|c| c.get("id").and_then(|i| i.as_str()) == Some(team_id))
+                        })
+                        .unwrap_or(false)
+                })
+                .count() as u32
+        })
+        .unwrap_or(0)
+}
+
+pub async fn fetch_prior_season(
+    client: &reqwest::Client,
+    sport: &str,
+    league: &str,
+    team_id: &str,
+    current_year: i32,
+) -> Option<PriorSeason> {
+    let year = current_year - 1;
+
+    let record_url = format!(
+        "https://sports.core.api.espn.com/v2/sports/{}/leagues/{}/seasons/{}/types/2/teams/{}/record",
+        sport, league, year, team_id
+    );
+    let postseason_url = format!(
+        "https://site.web.api.espn.com/apis/site/v2/sports/{}/{}/teams/{}/schedule?season={}&seasontype=3",
+        sport, league, team_id, year
+    );
+
+    let record_fut = fetch_json(client, &record_url);
+    let post_fut = fetch_json(client, &postseason_url);
+    let (record_json, post_json) = tokio::join!(record_fut, post_fut);
+
+    let record = parse_record_summary(&record_json.unwrap_or_default())?;
+    let postseason_games = count_postseason_games(&post_json.unwrap_or_default(), team_id);
+
+    Some(PriorSeason {
+        season: year,
+        record,
+        postseason_games,
+    })
+}
+
+/// Fetch + parse JSON; return None on any failure (network, non-2xx, bad JSON).
+async fn fetch_json(client: &reqwest::Client, url: &str) -> Option<serde_json::Value> {
+    match client.get(url).send().await {
+        Ok(r) if r.status().is_success() => r.json::<serde_json::Value>().await.ok(),
+        Ok(r) => {
+            tracing::info!(url = %url, status = %r.status(), "enrichment: non-200");
+            None
+        }
+        Err(e) => {
+            tracing::warn!(url = %url, error = %e, "enrichment: request failed");
+            None
+        }
+    }
+}
