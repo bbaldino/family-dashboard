@@ -29,6 +29,7 @@ pub struct Track {
     pub album: Option<String>,
     pub album_uri: Option<String>,
     pub image_url: Option<String>,
+    pub duration: Option<i64>,
 }
 
 #[derive(Serialize)]
@@ -108,6 +109,7 @@ fn track_from(item: &serde_json::Value) -> Option<Track> {
         .and_then(|u| u.as_str())
         .map(str::to_string);
     let image_url = first_image_path(item).or_else(|| album.and_then(first_image_path));
+    let duration = item.get("duration").and_then(|d| d.as_i64());
     Some(Track {
         uri,
         name,
@@ -116,6 +118,7 @@ fn track_from(item: &serde_json::Value) -> Option<Track> {
         album: album_name,
         album_uri,
         image_url,
+        duration,
     })
 }
 
@@ -125,7 +128,7 @@ pub async fn get_artist(
 ) -> Result<Json<ArtistDetail>, AppError> {
     let client = MaClient::from_config(&pool).await?;
 
-    const TOP_TRACKS_CMD: &str = "music/artists/artist_toptracks";
+    const TOP_TRACKS_CMD: &str = "music/artists/top_tracks";
     const ALBUMS_CMD: &str = "music/artists/artist_albums";
 
     let args = ma_item_args(&q.uri)
@@ -184,6 +187,7 @@ pub struct AlbumDetail {
     pub artist: Option<String>,
     pub artist_uri: Option<String>,
     pub image_url: Option<String>,
+    pub year: Option<i64>,
     pub tracks: Vec<Track>,
 }
 
@@ -208,10 +212,11 @@ pub async fn get_album(
         .filter_map(track_from)
         .collect();
 
-    // Album header data pulled from the first track's album block.
-    let header = tracks_raw
-        .as_array()
-        .and_then(|arr| arr.first())
+    // Album header: name / image / year live on each track's embedded album
+    // block; the artist name+uri lives on the track's own `artists` array
+    // (the embedded album block from album_tracks doesn't carry artists).
+    let first_track = tracks_raw.as_array().and_then(|arr| arr.first());
+    let header = first_track
         .and_then(|t| t.get("album"))
         .cloned()
         .unwrap_or(serde_json::json!({}));
@@ -221,14 +226,25 @@ pub async fn get_album(
         .and_then(|v| v.as_str())
         .unwrap_or("")
         .to_string();
-    let image_url = first_image_path(&header);
-    let (artist, artist_uri) = first_artist_name_and_uri(&header);
+    // album_tracks embeds a single `image` object on the album; the metadata
+    // fallback covers other MA response shapes.
+    let image_url = header
+        .get("image")
+        .and_then(|i| i.get("path"))
+        .and_then(|p| p.as_str())
+        .map(str::to_string)
+        .or_else(|| first_image_path(&header));
+    let year = header.get("year").and_then(|y| y.as_i64());
+    let (artist, artist_uri) = first_track
+        .map(first_artist_name_and_uri)
+        .unwrap_or((None, None));
 
     Ok(Json(AlbumDetail {
         name,
         artist,
         artist_uri,
         image_url,
+        year,
         tracks,
     }))
 }
@@ -373,11 +389,13 @@ mod tests {
             "name": "Go",
             "artists": [{"name": "The Chemical Brothers", "uri": "spotify--x://artist/1"}],
             "album": {"name": "Born In The Echoes", "uri": "spotify--x://album/1"},
+            "duration": 260,
         });
         let t = track_from(&raw).expect("track_from");
         assert_eq!(t.uri, "spotify--x://track/1");
         assert_eq!(t.artist.as_deref(), Some("The Chemical Brothers"));
         assert_eq!(t.artist_uri.as_deref(), Some("spotify--x://artist/1"));
         assert_eq!(t.album_uri.as_deref(), Some("spotify--x://album/1"));
+        assert_eq!(t.duration, Some(260));
     }
 }

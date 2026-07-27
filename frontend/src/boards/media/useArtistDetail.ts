@@ -9,6 +9,7 @@ export interface ArtistTrack {
   album: string | null
   album_uri: string | null
   image_url: string | null
+  duration: number | null
 }
 
 export interface ArtistAlbumSummary {

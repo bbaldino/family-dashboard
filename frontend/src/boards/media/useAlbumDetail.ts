@@ -7,6 +7,7 @@ export interface AlbumDetail {
   artist: string | null
   artist_uri: string | null
   image_url: string | null
+  year: number | null
   tracks: ArtistTrack[]
 }
 

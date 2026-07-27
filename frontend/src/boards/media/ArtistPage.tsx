@@ -6,6 +6,13 @@ import { TrackActionsMenu } from './TrackActionsMenu'
 import { decodeUriParam, encodeUriParam } from './track-url'
 import { useArtistDetail } from './useArtistDetail'
 
+function formatDuration(seconds: number | null): string {
+  if (seconds == null || seconds <= 0) return ''
+  const m = Math.floor(seconds / 60)
+  const s = Math.floor(seconds % 60)
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
 export function ArtistPage() {
   const params = useParams<{ uri: string }>()
   const uri = params.uri ? decodeUriParam(params.uri) : ''
@@ -108,6 +115,11 @@ export function ArtistPage() {
                     )}
                     <div className="text-text-primary text-sm truncate">{t.name}</div>
                   </button>
+                  {t.duration != null && (
+                    <span className="text-text-secondary text-xs tabular-nums">
+                      {formatDuration(t.duration)}
+                    </span>
+                  )}
                   <TrackActionsMenu
                     item={{
                       uri: t.uri,
