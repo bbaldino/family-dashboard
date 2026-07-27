@@ -214,6 +214,99 @@ pub async fn get_album(
     }))
 }
 
+/// One-off admin backfill: rows in `music_explicit_play_log` that predate the
+/// artist_uri/album_uri columns have NULL for both. This walks distinct URIs
+/// with missing values, asks MA for the item's full metadata, and updates
+/// the log so Recently/Frequently tiles can offer "Go to artist" / "Go to album".
+pub async fn backfill_uris(
+    State(pool): State<SqlitePool>,
+) -> Result<Json<BackfillReport>, AppError> {
+    let client = MaClient::from_config(&pool).await?;
+
+    let rows: Vec<(String, String)> = sqlx::query_as(
+        "SELECT DISTINCT uri, media_type FROM music_explicit_play_log \
+         WHERE (artist_uri IS NULL OR album_uri IS NULL) \
+         AND media_type IN ('track', 'album')",
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    let mut updated = 0usize;
+    let mut failed: Vec<String> = Vec::new();
+
+    for (uri, media_type) in &rows {
+        let (cmd, extract): (
+            &str,
+            fn(&serde_json::Value) -> (Option<String>, Option<String>),
+        ) = match media_type.as_str() {
+            "track" => ("music/tracks/get_track", extract_uris_from_track),
+            "album" => ("music/albums/get_album", extract_uris_from_album),
+            _ => continue,
+        };
+
+        let response: Result<serde_json::Value, _> = client
+            .command(cmd, serde_json::json!({ "item_uri": uri }))
+            .await;
+        let item = match response {
+            Ok(v) => v,
+            Err(e) => {
+                tracing::warn!(uri = %uri, error = %e, "backfill: MA lookup failed");
+                failed.push(uri.clone());
+                continue;
+            }
+        };
+
+        let (artist_uri, album_uri) = extract(&item);
+        if artist_uri.is_none() && album_uri.is_none() {
+            failed.push(uri.clone());
+            continue;
+        }
+
+        let rows_affected = sqlx::query(
+            "UPDATE music_explicit_play_log SET \
+                artist_uri = COALESCE(artist_uri, ?), \
+                album_uri  = COALESCE(album_uri, ?) \
+             WHERE uri = ?",
+        )
+        .bind(&artist_uri)
+        .bind(&album_uri)
+        .bind(uri)
+        .execute(&pool)
+        .await?
+        .rows_affected();
+
+        updated += rows_affected as usize;
+    }
+
+    Ok(Json(BackfillReport {
+        distinct_uris_checked: rows.len(),
+        rows_updated: updated,
+        failed_uris: failed,
+    }))
+}
+
+#[derive(Serialize)]
+pub struct BackfillReport {
+    pub distinct_uris_checked: usize,
+    pub rows_updated: usize,
+    pub failed_uris: Vec<String>,
+}
+
+fn extract_uris_from_track(item: &serde_json::Value) -> (Option<String>, Option<String>) {
+    let (_, artist_uri) = first_artist_name_and_uri(item);
+    let album_uri = item
+        .get("album")
+        .and_then(|a| a.get("uri"))
+        .and_then(|u| u.as_str())
+        .map(str::to_string);
+    (artist_uri, album_uri)
+}
+
+fn extract_uris_from_album(item: &serde_json::Value) -> (Option<String>, Option<String>) {
+    let (_, artist_uri) = first_artist_name_and_uri(item);
+    (artist_uri, None)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
