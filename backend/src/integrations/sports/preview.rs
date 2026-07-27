@@ -60,6 +60,13 @@ pub async fn generate_preview(pool: &SqlitePool, game_context: &str) -> Result<S
          not a generic setup. Weave in the strongest angles from the recent-form, \
          prior-season, and news blocks below; two threads is fine when they earn it. \
          Use vivid, plainspoken language. Family-friendly.\n\n\
+         Grounding rules (strict):\n\
+         - Only reference player names, trades, stats, or facts that appear \
+         verbatim in the game information block below. Do NOT rely on prior \
+         knowledge about rosters, star players, or league history — rosters \
+         change every year and training-data recall is stale.\n\
+         - If a name doesn't appear in the game information, don't mention it. \
+         Refer to teams by team name only.\n\n\
          Format rules (strict):\n\
          - Output ONLY the preview text. No preamble, no headers, no bullet points, \
          no markdown formatting (no **, no ##, no ---), no \"Sources:\" section, \
