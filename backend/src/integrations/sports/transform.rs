@@ -1,5 +1,24 @@
 use crate::integrations::sports::types::*;
 
+/// ESPN's scoreboard timestamps come in two shapes:
+///   "2026-10-05T04:00:00Z"  — strict RFC 3339
+///   "2026-10-05T04:00Z"     — minute precision, no seconds; NOT valid RFC 3339
+/// chrono::DateTime::parse_from_rfc3339 rejects the second form outright,
+/// which used to silently drop games months out through the window filter.
+fn parse_espn_timestamp(s: &str) -> Option<chrono::DateTime<chrono::Utc>> {
+    if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(s) {
+        return Some(dt.with_timezone(&chrono::Utc));
+    }
+    let padded = if s.ends_with('Z') && s.matches(':').count() == 1 {
+        format!("{}:00Z", &s[..s.len() - 1])
+    } else {
+        return None;
+    };
+    chrono::DateTime::parse_from_rfc3339(&padded)
+        .ok()
+        .map(|dt| dt.with_timezone(&chrono::Utc))
+}
+
 pub fn transform_scoreboard(
     raw: &serde_json::Value,
     league_id: &str,
@@ -24,17 +43,24 @@ pub fn transform_scoreboard(
             }
 
             if game.state != GameState::Live {
-                if let Ok(start) = chrono::DateTime::parse_from_rfc3339(&game.start_time) {
-                    let start_utc = start.with_timezone(&chrono::Utc);
-                    let hours_diff = (now - start_utc).num_minutes() as f64 / 60.0;
-                    if game.state == GameState::Final || game.state == GameState::Postponed {
-                        if hours_diff > window_hours {
+                match parse_espn_timestamp(&game.start_time) {
+                    Some(start_utc) => {
+                        let hours_diff = (now - start_utc).num_minutes() as f64 / 60.0;
+                        if game.state == GameState::Final || game.state == GameState::Postponed {
+                            if hours_diff > window_hours {
+                                return None;
+                            }
+                        } else if -hours_diff > window_hours {
                             return None;
                         }
-                    } else {
-                        if -hours_diff > window_hours {
-                            return None;
-                        }
+                    }
+                    None => {
+                        tracing::warn!(
+                            "sports: dropping game {} with unparseable start_time {:?}",
+                            game.id,
+                            game.start_time
+                        );
+                        return None;
                     }
                 }
             }
@@ -452,7 +478,10 @@ fn json_id(v: &serde_json::Value) -> Option<String> {
 }
 
 fn mlb_headshot_url(id: &str) -> String {
-    format!("https://a.espncdn.com/i/headshots/mlb/players/full/{}.png", id)
+    format!(
+        "https://a.espncdn.com/i/headshots/mlb/players/full/{}.png",
+        id
+    )
 }
 
 /// Find `boxscore.players[].statistics[].athletes[]` entry matching `player_id`
@@ -462,7 +491,10 @@ fn find_box_entry<'a>(
     summary: &'a serde_json::Value,
     player_id: &str,
     stat_type: &str,
-) -> Option<(&'a serde_json::Value, std::collections::HashMap<String, String>)> {
+) -> Option<(
+    &'a serde_json::Value,
+    std::collections::HashMap<String, String>,
+)> {
     let teams = summary["boxscore"]["players"].as_array()?;
     for team in teams {
         let Some(groups) = team["statistics"].as_array() else {
@@ -689,4 +721,27 @@ pub fn transform_teams(raw: &serde_json::Value, league_id: &str) -> Vec<TeamInfo
             })
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_espn_timestamp_accepts_strict_rfc3339() {
+        let dt = parse_espn_timestamp("2026-10-05T04:00:00Z").expect("parse");
+        assert_eq!(dt.to_rfc3339(), "2026-10-05T04:00:00+00:00");
+    }
+
+    #[test]
+    fn parse_espn_timestamp_accepts_minute_precision_no_seconds() {
+        let dt = parse_espn_timestamp("2026-10-05T04:00Z").expect("parse");
+        assert_eq!(dt.to_rfc3339(), "2026-10-05T04:00:00+00:00");
+    }
+
+    #[test]
+    fn parse_espn_timestamp_rejects_gibberish() {
+        assert!(parse_espn_timestamp("not-a-timestamp").is_none());
+        assert!(parse_espn_timestamp("").is_none());
+    }
 }
