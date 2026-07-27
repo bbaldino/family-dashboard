@@ -1,4 +1,5 @@
 import type { Game } from './types'
+import { formatUpcomingTime } from './formatTime'
 
 function formatRelativeTime(startTime: string): string {
   const start = new Date(startTime)
@@ -9,25 +10,6 @@ function formatRelativeTime(startTime: string): string {
   if (diffHours < 12) return `${Math.round(diffHours)}h ago`
   if (diffHours < 24) return 'Earlier today'
   return 'Yesterday'
-}
-
-function formatUpcomingTime(startTime: string): string {
-  const start = new Date(startTime)
-  const now = new Date()
-  const diffHours = (start.getTime() - now.getTime()) / (1000 * 60 * 60)
-
-  const timeStr = start.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-
-  if (diffHours < 0) return timeStr
-  if (diffHours < 12) return `Today ${timeStr}`
-
-  const tomorrow = new Date(now)
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  if (start.toDateString() === tomorrow.toDateString()) {
-    return `Tomorrow ${timeStr}`
-  }
-
-  return `${start.toLocaleDateString([], { weekday: 'short' })} ${timeStr}`
 }
 
 export function GameCard({ game, onClick }: { game: Game; onClick?: () => void }) {

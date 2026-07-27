@@ -1,4 +1,5 @@
 import type { Game, GameAthlete, Leader } from './types'
+import { formatUpcomingTime } from './formatTime'
 import { AiPreview } from './AiPreview'
 import { AiFinalRecap } from './AiFinalRecap'
 import { MlbSituation } from './MlbSituation'
@@ -163,7 +164,7 @@ export function GameCardExpanded({ game, allGames, onClick }: GameCardExpandedPr
           )}
           {isUpcoming && (
             <div className="text-xs text-text-secondary">
-              {new Date(game.startTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+              {formatUpcomingTime(game.startTime)}
             </div>
           )}
         </div>
