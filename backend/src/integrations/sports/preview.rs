@@ -61,6 +61,10 @@ pub async fn generate_preview(pool: &SqlitePool, game_context: &str) -> Result<S
          no meta-commentary about the game or your process.\n\
          - Do not start with phrases like \"Here's...\", \"This preview...\", \
          \"Let me...\", or explain what you're doing.\n\
+         - You will see recent-form, prior-season, and news blocks below. Pick ONE \
+         storyline from them if any grabs you (a hot streak, a rivalry return, a \
+         standout headline). Do not dump multiple stats or facts. If nothing stands \
+         out, write a plain matchup line and stop.\n\
          - Conversational, family-friendly. Cover matchup context, recent form, or \
          one notable storyline. No stat dumps.\n\
          - Plain prose only. If you can't say something interesting, say something \

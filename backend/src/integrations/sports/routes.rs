@@ -8,6 +8,7 @@ use crate::error::AppError;
 use crate::integrations::IntegrationConfig;
 
 use super::cache::EspnCache;
+use super::enrichment;
 use super::preview::PreviewCache;
 use super::recap::RecapCache;
 use super::replay::Replayer;
@@ -28,6 +29,7 @@ pub struct SportsState {
     pub cache: EspnCache,
     pub client: reqwest::Client,
     pub preview_cache: Arc<PreviewCache>,
+    pub enrichment_cache: Arc<super::enrichment::EnrichmentCache>,
     pub recap_cache: Arc<RecapCache>,
     pub replayer: Option<Arc<Replayer>>,
     /// One-shot tokio task scheduled to fire at the earliest tracked game's
@@ -51,12 +53,7 @@ fn replay_response(
     // an empty tracked-team list (no team filter) and a year-wide window so
     // an old/finished fixture stays visible — then narrow the response to
     // just the captured game id.
-    let all_games = transform::transform_scoreboard(
-        &snapshot.scoreboard,
-        "mlb",
-        &[],
-        24.0 * 365.0,
-    );
+    let all_games = transform::transform_scoreboard(&snapshot.scoreboard, "mlb", &[], 24.0 * 365.0);
     let mut games: Vec<Game> = all_games.into_iter().filter(|g| g.id == *game_id).collect();
 
     if let Some(game) = games.iter_mut().find(|g| g.id == *game_id) {
@@ -86,17 +83,22 @@ fn attach_scoring_recap(state: &SportsState, game: &Game, detail: &mut LiveGameD
         return; // nothing in a completed inning yet
     }
     let completed_count = mlb.scoring_plays.len() - mlb.in_progress_scoring.len();
-    let completed: Vec<Play> = mlb.scoring_plays.iter().take(completed_count).cloned().collect();
+    let completed: Vec<Play> = mlb
+        .scoring_plays
+        .iter()
+        .take(completed_count)
+        .cloned()
+        .collect();
 
-    let through_inning = completed.last().and_then(|p| {
-        match (&p.inning_half, p.inning_number) {
+    let through_inning = completed
+        .last()
+        .and_then(|p| match (&p.inning_half, p.inning_number) {
             (Some(half), Some(number)) => Some(InningRef {
                 half: half.clone(),
                 number,
             }),
             _ => None,
-        }
-    });
+        });
 
     let key = recap::cache_key(&game.id, completed_count);
     if let Some(text) = state.recap_cache.get(&key) {
@@ -231,11 +233,7 @@ pub async fn get_games(State(state): State<SportsState>) -> Result<Json<GamesRes
                         Some(data)
                     }
                     Err(e) => {
-                        tracing::warn!(
-                            "ESPN summary fetch failed for game {}: {}",
-                            game.id,
-                            e
-                        );
+                        tracing::warn!("ESPN summary fetch failed for game {}: {}", game.id, e);
                         state.cache.get_stale(&summary_key).await
                     }
                 },
@@ -342,13 +340,11 @@ async fn schedule_next_start_wakeup(
 /// We don't push the games payload itself — clients still GET /games to get
 /// real data. SSE just collapses the "wait until next idle poll" delay when
 /// something meaningful (e.g. scheduled game start) happens server-side.
-pub async fn events(
-    State(state): State<SportsState>,
-) -> impl axum::response::IntoResponse {
+pub async fn events(State(state): State<SportsState>) -> impl axum::response::IntoResponse {
     use axum::response::sse::{Event, KeepAlive, Sse};
     use std::time::Duration;
-    use tokio_stream::wrappers::BroadcastStream;
     use tokio_stream::StreamExt;
+    use tokio_stream::wrappers::BroadcastStream;
 
     let rx = state.events_tx.subscribe();
     let stream = BroadcastStream::new(rx).filter_map(|res| {
@@ -582,6 +578,45 @@ pub async fn get_preview(
                                 ));
                             }
                         }
+                    }
+                }
+
+                // Enrichment: recent form, prior season, filtered team news.
+                if let Some((sport, league)) = enrichment::sport_path(&game.league) {
+                    let year = chrono::Utc::now()
+                        .format("%Y")
+                        .to_string()
+                        .parse::<i32>()
+                        .unwrap_or(2026);
+                    let home_fut = enrichment::enrich_team(
+                        &state.client,
+                        &state.enrichment_cache,
+                        sport,
+                        league,
+                        &game.home.id,
+                        &game.home.name,
+                        year,
+                    );
+                    let away_fut = enrichment::enrich_team(
+                        &state.client,
+                        &state.enrichment_cache,
+                        sport,
+                        league,
+                        &game.away.id,
+                        &game.away.name,
+                        year,
+                    );
+                    let (home_enrich, away_enrich) = tokio::join!(home_fut, away_fut);
+
+                    let home_block = enrichment::render(&home_enrich, &game.home.name);
+                    let away_block = enrichment::render(&away_enrich, &game.away.name);
+                    if !home_block.is_empty() {
+                        context.push_str("\n\n");
+                        context.push_str(&home_block);
+                    }
+                    if !away_block.is_empty() {
+                        context.push_str("\n\n");
+                        context.push_str(&away_block);
                     }
                 }
 

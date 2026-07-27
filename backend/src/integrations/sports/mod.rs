@@ -22,6 +22,7 @@ pub fn router(pool: SqlitePool) -> Router {
         cache: cache::EspnCache::new(),
         client: reqwest::Client::new(),
         preview_cache: Arc::new(preview::PreviewCache::new()),
+        enrichment_cache: Arc::new(enrichment::EnrichmentCache::new()),
         recap_cache: Arc::new(recap::RecapCache::new()),
         replayer: replay::Replayer::from_env().map(Arc::new),
         start_timer: Arc::new(tokio::sync::Mutex::new(None)),
