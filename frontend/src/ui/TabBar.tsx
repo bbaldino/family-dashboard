@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom'
-import { Home, CalendarDays, Music, Camera, type LucideIcon } from 'lucide-react'
+import { Home, CalendarDays, Music, Camera, Activity, type LucideIcon } from 'lucide-react'
 
 const tabs: { to: string; label: string; icon: LucideIcon }[] = [
   { to: '/', label: 'Home', icon: Home },
   { to: '/calendar', label: 'Calendar', icon: CalendarDays },
   { to: '/media', label: 'Media', icon: Music },
   { to: '/cameras', label: 'Cameras', icon: Camera },
+  { to: '/health', label: 'Health', icon: Activity },
 ]
 
 export function TabBar() {

@@ -9,6 +9,7 @@ import { MediaBoard } from './boards/MediaBoard'
 import { ArtistPage } from './boards/media/ArtistPage'
 import { AlbumPage } from './boards/media/AlbumPage'
 import { CamerasBoard } from './boards/CamerasBoard'
+import { HealthBoard } from './boards/HealthBoard'
 import { AdminLayout } from './admin/AdminLayout'
 import { SettingsAdmin } from './admin/SettingsAdmin'
 import { getRuntimeConfig } from './lib/ha-client'
@@ -73,6 +74,7 @@ function AppRoutes() {
         <Route path="media/artist/:uri" element={<ArtistPage />} />
         <Route path="media/album/:uri" element={<AlbumPage />} />
         <Route path="cameras" element={<CamerasBoard />} />
+        <Route path="health" element={<HealthBoard />} />
       </Route>
       <Route path="admin" element={<AdminLayout />}>
         <Route index element={<SettingsAdmin />} />
