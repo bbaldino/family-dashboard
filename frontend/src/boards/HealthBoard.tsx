@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { HealthDetailModal } from './HealthDetailModal'
 
 type Status = 'ok' | 'degraded' | 'critical' | 'unknown' | null
 
@@ -90,10 +92,19 @@ function ComponentRow({ c }: { c: Component }) {
   )
 }
 
-function ServiceCard({ service }: { service: Service }) {
+function ServiceCard({
+  service,
+  onOpen,
+}: {
+  service: Service
+  onOpen: () => void
+}) {
   const tone = statusTone(service.status)
   return (
-    <div className="bg-bg-card border border-border rounded-lg p-4">
+    <button
+      onClick={onOpen}
+      className="w-full text-left bg-bg-card border border-border rounded-lg p-4 hover:bg-bg-card-hover active:scale-[0.995] transition-transform"
+    >
       <div className="flex items-baseline gap-3 mb-1">
         <Dot tone={tone.dot} />
         <div className="text-sm font-semibold text-text-primary flex-1 truncate">
@@ -118,11 +129,12 @@ function ServiceCard({ service }: { service: Service }) {
           ))}
         </div>
       )}
-    </div>
+    </button>
   )
 }
 
 export function HealthBoard() {
+  const [selected, setSelected] = useState<Service | null>(null)
   const { data, isLoading, error } = useQuery({
     queryKey: ['health', 'status'],
     queryFn: () => fetch('/api/health/status').then((r) => r.json() as Promise<Service[]>),
@@ -158,10 +170,17 @@ export function HealthBoard() {
   )
 
   return (
-    <div className="h-full overflow-auto p-4 flex flex-col gap-3">
-      {sorted.map((s) => (
-        <ServiceCard key={s.id} service={s} />
-      ))}
-    </div>
+    <>
+      <div className="h-full overflow-auto p-4 flex flex-col gap-3">
+        {sorted.map((s) => (
+          <ServiceCard key={s.id} service={s} onOpen={() => setSelected(s)} />
+        ))}
+      </div>
+      <HealthDetailModal
+        serviceId={selected?.id ?? null}
+        serviceName={selected?.name ?? null}
+        onClose={() => setSelected(null)}
+      />
+    </>
   )
 }

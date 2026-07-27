@@ -1,11 +1,35 @@
 use axum::Json;
-use axum::extract::State;
+use axum::extract::{Path, Query, State};
+use serde::Deserialize;
 use sqlx::SqlitePool;
 
 use crate::error::AppError;
 use crate::integrations::IntegrationConfig;
 
 use super::INTEGRATION_ID;
+
+async fn base_url(pool: &SqlitePool) -> Result<String, AppError> {
+    let config = IntegrationConfig::new(pool, INTEGRATION_ID);
+    let raw = config.get_or("base_url", "http://health.home").await?;
+    Ok(raw.trim_end_matches('/').to_string())
+}
+
+async fn proxy_get(url: &str) -> Result<serde_json::Value, AppError> {
+    let resp = reqwest::Client::new()
+        .get(url)
+        .send()
+        .await
+        .map_err(|e| AppError::Internal(format!("health request failed: {}", e)))?;
+    if !resp.status().is_success() {
+        return Err(AppError::Internal(format!(
+            "health returned {}",
+            resp.status()
+        )));
+    }
+    resp.json()
+        .await
+        .map_err(|e| AppError::Internal(format!("health parse failed: {}", e)))
+}
 
 /// Proxy the homelab-health `/api/v1/status` array through to the frontend.
 /// The dashboard is served over HTTPS while the health service runs HTTP on
@@ -15,30 +39,50 @@ use super::INTEGRATION_ID;
 pub async fn get_status(
     State(pool): State<SqlitePool>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let config = IntegrationConfig::new(&pool, INTEGRATION_ID);
-    let base_url = config.get_or("base_url", "http://health.home").await?;
-
-    let url = format!("{}/api/v1/status", base_url.trim_end_matches('/'));
-    let resp = reqwest::Client::new()
-        .get(&url)
-        .send()
-        .await
-        .map_err(|e| AppError::Internal(format!("health request failed: {}", e)))?;
-
-    if !resp.status().is_success() {
-        return Err(AppError::Internal(format!(
-            "health returned {}",
-            resp.status()
-        )));
-    }
-
-    let mut body: serde_json::Value = resp
-        .json()
-        .await
-        .map_err(|e| AppError::Internal(format!("health parse failed: {}", e)))?;
-
+    let url = format!("{}/api/v1/status", base_url(&pool).await?);
+    let mut body = proxy_get(&url).await?;
     strip_config(&mut body);
     Ok(Json(body))
+}
+
+#[derive(Deserialize)]
+pub struct UptimeQuery {
+    pub window: Option<u64>,
+}
+
+pub async fn get_uptime(
+    State(pool): State<SqlitePool>,
+    Path(id): Path<i64>,
+    Query(params): Query<UptimeQuery>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let window = params.window.unwrap_or(86400);
+    let url = format!(
+        "{}/api/v1/monitors/{}/uptime?window={}",
+        base_url(&pool).await?,
+        id,
+        window
+    );
+    Ok(Json(proxy_get(&url).await?))
+}
+
+#[derive(Deserialize)]
+pub struct HistoryQuery {
+    pub limit: Option<u64>,
+}
+
+pub async fn get_history(
+    State(pool): State<SqlitePool>,
+    Path(id): Path<i64>,
+    Query(params): Query<HistoryQuery>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let limit = params.limit.unwrap_or(50);
+    let url = format!(
+        "{}/api/v1/monitors/{}/history?limit={}",
+        base_url(&pool).await?,
+        id,
+        limit
+    );
+    Ok(Json(proxy_get(&url).await?))
 }
 
 fn strip_config(value: &mut serde_json::Value) {
