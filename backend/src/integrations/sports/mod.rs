@@ -1,4 +1,5 @@
 pub mod cache;
+pub mod enrichment;
 pub mod espn;
 pub mod preview;
 pub mod recap;
