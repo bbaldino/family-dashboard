@@ -1,6 +1,9 @@
 import { Modal } from '@/ui/Modal'
 import type { Game } from './types'
 import { MlbSituation } from './MlbSituation'
+import { GameHeadline } from './GameHeadline'
+import { AiFinalRecap } from './AiFinalRecap'
+import { AiPreview } from './AiPreview'
 
 function formatGameTime(startTime: string): string {
   const d = new Date(startTime)
@@ -129,6 +132,13 @@ export function GameDetailModal({ game, onClose }: { game: Game | null; onClose:
             </div>
           </div>
         )}
+
+        {/* Final: ESPN recap headline if published, else LLM-generated fallback */}
+        {isFinal && game.headline && <GameHeadline text={game.headline} />}
+        {isFinal && !game.headline && <AiFinalRecap gameId={game.id} />}
+
+        {/* Upcoming: AI preview */}
+        {game.state === 'upcoming' && <AiPreview gameId={game.id} />}
 
         {/* Game info */}
         <div className="text-[11px] text-text-muted space-y-0.5 pt-1 border-t border-border">
