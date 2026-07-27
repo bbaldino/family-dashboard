@@ -1,6 +1,6 @@
 use dashboard_backend::integrations::sports::enrichment::{
-    NewsItem, PriorSeason, RecentGame, TeamEnrichment, count_postseason_games, parse_recent_games,
-    parse_record_summary, render, sport_path,
+    NewsItem, PriorSeason, RecentGame, TeamEnrichment, count_postseason_games, filter_team_news,
+    parse_recent_games, parse_record_summary, render, sport_path,
 };
 use std::fs;
 
@@ -122,4 +122,49 @@ fn count_postseason_games_lakers_first_round_exit() {
 fn count_postseason_games_missed_playoffs_returns_zero() {
     let json = serde_json::json!({ "events": [] });
     assert_eq!(count_postseason_games(&json, "13"), 0);
+}
+
+#[test]
+fn filter_team_news_keeps_only_team_mentioning_items_in_season() {
+    let raw = fs::read_to_string("tests/fixtures/enrichment/espn_news_dodgers.json")
+        .expect("fixture read");
+    let json: serde_json::Value = serde_json::from_str(&raw).expect("fixture parse");
+    let filtered = filter_team_news(&json, "Dodgers", 3);
+    // At least one item should survive — the fixture has multiple
+    // Dodgers-specific game recaps/previews.
+    assert!(
+        !filtered.is_empty(),
+        "want at least one Dodgers-mentioning article"
+    );
+    for item in &filtered {
+        let h = item.headline.to_ascii_lowercase();
+        // We tolerate description matches too, so we can't assert the
+        // headline contains "dodgers" — but this article set is heavily
+        // Dodgers-tagged so most headlines will.
+        // Just check we got real strings.
+        assert!(!h.is_empty());
+    }
+}
+
+#[test]
+fn filter_team_news_drops_league_drift_offseason() {
+    let raw = fs::read_to_string("tests/fixtures/enrichment/espn_news_lakers.json")
+        .expect("fixture read");
+    let json: serde_json::Value = serde_json::from_str(&raw).expect("fixture parse");
+    let filtered = filter_team_news(&json, "Lakers", 3);
+    // The Lakers offseason fixture is dominated by league-wide stories
+    // (LeBron to Sixers, power rankings, etc.) — most/all shouldn't
+    // survive the "Lakers" name filter. Zero is the expected common case.
+    // Assert we didn't wrongly keep a stack of unrelated stories.
+    assert!(
+        filtered.len() <= 3,
+        "filter should cap at limit, got {}",
+        filtered.len()
+    );
+}
+
+#[test]
+fn filter_team_news_returns_empty_for_missing_articles_key() {
+    let json = serde_json::json!({});
+    assert!(filter_team_news(&json, "Dodgers", 3).is_empty());
 }

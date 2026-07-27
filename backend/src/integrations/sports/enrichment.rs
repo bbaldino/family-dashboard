@@ -286,3 +286,51 @@ async fn fetch_json(client: &reqwest::Client, url: &str) -> Option<serde_json::V
         }
     }
 }
+
+pub fn filter_team_news(
+    news_json: &serde_json::Value,
+    team_name: &str,
+    limit: usize,
+) -> Vec<NewsItem> {
+    let needle = team_name.to_ascii_lowercase();
+    news_json
+        .get("articles")
+        .and_then(|a| a.as_array())
+        .into_iter()
+        .flatten()
+        .filter_map(|article| {
+            let headline = article.get("headline")?.as_str()?;
+            let description = article
+                .get("description")
+                .and_then(|d| d.as_str())
+                .unwrap_or("");
+            let hit = headline.to_ascii_lowercase().contains(&needle)
+                || description.to_ascii_lowercase().contains(&needle);
+            if !hit {
+                return None;
+            }
+            Some(NewsItem {
+                headline: headline.to_string(),
+            })
+        })
+        .take(limit)
+        .collect()
+}
+
+pub async fn fetch_team_news(
+    client: &reqwest::Client,
+    sport: &str,
+    league: &str,
+    team_id: &str,
+    team_name: &str,
+    limit: usize,
+) -> Vec<NewsItem> {
+    let url = format!(
+        "https://site.web.api.espn.com/apis/site/v2/sports/{}/{}/news?limit=10&team={}",
+        sport, league, team_id
+    );
+    match fetch_json(client, &url).await {
+        Some(json) => filter_team_news(&json, team_name, limit),
+        None => Vec::new(),
+    }
+}
