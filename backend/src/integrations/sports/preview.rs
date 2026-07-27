@@ -54,21 +54,19 @@ pub async fn generate_preview(pool: &SqlitePool, game_context: &str) -> Result<S
     // preview:" and drop bold/heading formatting; the constraints below plus
     // the post-processor in `clean_preview` keep the wall display clean.
     let prompt = format!(
-        "Write a 2-3 sentence game preview for a wall-mounted kitchen dashboard.\n\n\
-         Rules:\n\
+        "You're a casual sports fan telling a friend what's fun about tonight's game. \
+         Write 3-4 sentences for a wall-mounted kitchen dashboard.\n\n\
+         Open with a specific hook — a name, a streak, a storyline, a stakes-line — \
+         not a generic setup. Weave in the strongest angles from the recent-form, \
+         prior-season, and news blocks below; two threads is fine when they earn it. \
+         Use vivid, plainspoken language. Family-friendly.\n\n\
+         Format rules (strict):\n\
          - Output ONLY the preview text. No preamble, no headers, no bullet points, \
          no markdown formatting (no **, no ##, no ---), no \"Sources:\" section, \
          no meta-commentary about the game or your process.\n\
          - Do not start with phrases like \"Here's...\", \"This preview...\", \
          \"Let me...\", or explain what you're doing.\n\
-         - You will see recent-form, prior-season, and news blocks below. Pick ONE \
-         storyline from them if any grabs you (a hot streak, a rivalry return, a \
-         standout headline). Do not dump multiple stats or facts. If nothing stands \
-         out, write a plain matchup line and stop.\n\
-         - Conversational, family-friendly. Cover matchup context, recent form, or \
-         one notable storyline. No stat dumps.\n\
-         - Plain prose only. If you can't say something interesting, say something \
-         short.\n\n\
+         - Plain prose only.\n\n\
          Game information:\n{}",
         game_context
     );
