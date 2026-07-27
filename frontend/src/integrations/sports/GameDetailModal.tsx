@@ -4,6 +4,7 @@ import { MlbSituation } from './MlbSituation'
 import { GameHeadline } from './GameHeadline'
 import { AiFinalRecap } from './AiFinalRecap'
 import { AiPreview } from './AiPreview'
+import { ScoringSummary } from './ScoringSummary'
 
 function formatGameTime(startTime: string): string {
   const d = new Date(startTime)
@@ -132,6 +133,19 @@ export function GameDetailModal({ game, onClose }: { game: Game | null; onClose:
             </div>
           </div>
         )}
+
+        {/* Final MLB: scoring plays list, above the headline/recap */}
+        {isFinal &&
+          game.liveDetail?.sport === 'mlb' &&
+          game.liveDetail.scoringPlays.length > 0 && (
+            <ScoringSummary
+              allPlays={game.liveDetail.scoringPlays}
+              inProgressPlays={[]}
+              recap={null}
+              home={game.home}
+              away={game.away}
+            />
+          )}
 
         {/* Final: ESPN recap headline if published, else LLM-generated fallback */}
         {isFinal && game.headline && <GameHeadline text={game.headline} />}

@@ -220,14 +220,19 @@ pub async fn get_games(State(state): State<SportsState>) -> Result<Json<GamesRes
             transform::transform_scoreboard(&scoreboard, league_id, &tracked_ids, window_hours);
 
         for game in games.iter_mut() {
-            if game.state != GameState::Live {
+            let is_live = game.state == GameState::Live;
+            let is_final = game.state == GameState::Final;
+            if !(is_live || is_final) {
                 continue;
             }
-            any_live = true;
+            if is_live {
+                any_live = true;
+            }
 
-            // 5s TTL cache for per-game summary
+            // 5s cache for live (needs freshness), 6h for finals (immutable).
+            let ttl = if is_live { 5 } else { 21600 };
             let summary_key = format!("summary:{}", game.id);
-            let summary_json = match state.cache.get(&summary_key, 5).await {
+            let summary_json = match state.cache.get(&summary_key, ttl).await {
                 Some(cached) => Some(cached),
                 None => match espn::fetch_summary(&state.client, sport, league, &game.id).await {
                     Ok(data) => {
@@ -242,9 +247,12 @@ pub async fn get_games(State(state): State<SportsState>) -> Result<Json<GamesRes
             };
 
             if let Some(summary) = summary_json {
-                let detail = transform::parse_summary_to_live_detail(&summary);
-                if let Some(mut detail) = detail {
-                    attach_scoring_recap(&state, game, &mut detail);
+                if let Some(mut detail) = transform::parse_summary_to_live_detail(&summary) {
+                    if is_live {
+                        // Live-only: LLM narrates in-progress scoring. Finals get
+                        // the raw scoring-play list plus (separately) the AI recap.
+                        attach_scoring_recap(&state, game, &mut detail);
+                    }
                     game.live_detail = Some(detail);
                 }
             }
