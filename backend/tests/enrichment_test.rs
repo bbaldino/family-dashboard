@@ -49,14 +49,11 @@ fn parse_recent_games_extracts_last_completed_games() {
     let json: serde_json::Value = serde_json::from_str(&raw).expect("fixture parse");
     let games = parse_recent_games(&json, "19", 5);
     assert_eq!(games.len(), 5, "want 5 recent completed games");
-    // All fixture games are completed; newest should sort first — verify
-    // the first game's opponent abbreviation is a real 2-3 char code.
     assert!(
         !games[0].opp_abbr.is_empty() && games[0].opp_abbr != "?",
         "want a real opponent abbreviation, got: {:?}",
         games[0].opp_abbr,
     );
-    // Scores are non-negative integers
     for g in &games {
         assert!(g.team_score >= 0);
         assert!(g.opp_score >= 0);
@@ -68,15 +65,20 @@ fn parse_recent_games_skips_incomplete_events() {
     let raw = fs::read_to_string("tests/fixtures/enrichment/espn_schedule_dodgers_2026.json")
         .expect("fixture read");
     let json: serde_json::Value = serde_json::from_str(&raw).expect("fixture parse");
-    let games = parse_recent_games(&json, "19", 100);
-    // 2026 fixture has some completed + some upcoming; every returned game
-    // must be from a completed event.
-    // We can't easily assert count without checking the fixture, but we
-    // can assert the parser doesn't panic and returns *some* results.
-    // If the fixture had 0 completed, this would return 0 — acceptable.
-    for g in &games {
-        assert!(g.team_score >= 0);
-    }
+
+    let expected_completed = json["events"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .filter(|e| {
+            e["competitions"][0]["status"]["type"]["completed"]
+                .as_bool()
+                .unwrap_or(false)
+        })
+        .count();
+
+    let games = parse_recent_games(&json, "19", 10_000);
+    assert_eq!(games.len(), expected_completed);
 }
 
 #[test]
