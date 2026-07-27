@@ -1,6 +1,7 @@
 pub mod cache;
 pub mod enrichment;
 pub mod espn;
+pub mod final_recap;
 pub mod preview;
 pub mod recap;
 pub mod replay;
@@ -22,6 +23,7 @@ pub fn router(pool: SqlitePool) -> Router {
         cache: cache::EspnCache::new(),
         client: reqwest::Client::new(),
         preview_cache: Arc::new(preview::PreviewCache::new()),
+        final_recap_cache: Arc::new(final_recap::FinalRecapCache::new()),
         enrichment_cache: Arc::new(enrichment::EnrichmentCache::new()),
         recap_cache: Arc::new(recap::RecapCache::new()),
         replayer: replay::Replayer::from_env().map(Arc::new),
@@ -34,6 +36,7 @@ pub fn router(pool: SqlitePool) -> Router {
         .route("/teams", axum::routing::get(routes::get_teams))
         .route("/teams/search", axum::routing::get(routes::search_teams))
         .route("/preview", axum::routing::get(routes::get_preview))
+        .route("/final-recap", axum::routing::get(routes::get_final_recap))
         .route("/events", axum::routing::get(routes::events))
         .with_state(state)
 }

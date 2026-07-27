@@ -1,5 +1,6 @@
 import type { Game, GameAthlete, Leader } from './types'
 import { AiPreview } from './AiPreview'
+import { AiFinalRecap } from './AiFinalRecap'
 import { MlbSituation } from './MlbSituation'
 import { MlbLinescore } from './MlbLinescore'
 import { NbaLinescore } from './NbaLinescore'
@@ -197,8 +198,9 @@ export function GameCardExpanded({ game, allGames, onClick }: GameCardExpandedPr
       {/* Live + Final: leaders */}
       {(isLive || isFinal) && !hasMlbLiveCard && <LeadersList leaders={game.allLeaders ?? game.leaders} />}
 
-      {/* Final: ESPN recap headline */}
+      {/* Final: ESPN recap headline if published, else LLM-generated fallback */}
       {isFinal && game.headline && <GameHeadline text={game.headline} />}
+      {isFinal && !game.headline && <AiFinalRecap gameId={game.id} />}
 
       {/* Upcoming: athletes (probable pitchers, etc) */}
       {isUpcoming && game.athletes.length > 0 && (

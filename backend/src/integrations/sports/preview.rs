@@ -88,7 +88,7 @@ pub async fn generate_preview(pool: &SqlitePool, game_context: &str) -> Result<S
 
 /// Strip common chat-model wrappers: leading assistant preamble, markdown
 /// separators / bold / headers, and a trailing "Sources:" block.
-fn clean_preview(raw: &str) -> String {
+pub(super) fn clean_preview(raw: &str) -> String {
     let mut text = raw.trim().to_string();
 
     // Chop off a trailing sources / references block if the model added one.

@@ -9,6 +9,7 @@ use crate::integrations::IntegrationConfig;
 
 use super::cache::EspnCache;
 use super::enrichment;
+use super::final_recap::FinalRecapCache;
 use super::preview::PreviewCache;
 use super::recap::RecapCache;
 use super::replay::Replayer;
@@ -29,6 +30,7 @@ pub struct SportsState {
     pub cache: EspnCache,
     pub client: reqwest::Client,
     pub preview_cache: Arc<PreviewCache>,
+    pub final_recap_cache: Arc<FinalRecapCache>,
     pub enrichment_cache: Arc<super::enrichment::EnrichmentCache>,
     pub recap_cache: Arc<RecapCache>,
     pub replayer: Option<Arc<Replayer>>,
@@ -428,17 +430,46 @@ pub async fn get_preview(
     State(state): State<SportsState>,
     Query(params): Query<PreviewQuery>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    // Check cache first
     if let Some(summary) = state.preview_cache.get(&params.game_id) {
         return Ok(Json(serde_json::json!({ "summary": summary })));
     }
 
-    // Build game context from cached ESPN data across all leagues
-    let mut game_context = format!("Game ID: {}", params.game_id);
+    let game_context = build_matchup_context(&state, &params.game_id)
+        .await
+        .unwrap_or_else(|| format!("Game ID: {}", params.game_id));
+
+    let summary = super::preview::generate_preview(&state.pool, &game_context).await?;
+    state.preview_cache.set(&params.game_id, summary.clone());
+    Ok(Json(serde_json::json!({ "summary": summary })))
+}
+
+pub async fn get_final_recap(
+    State(state): State<SportsState>,
+    Query(params): Query<PreviewQuery>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    if let Some(summary) = state.final_recap_cache.get(&params.game_id) {
+        return Ok(Json(serde_json::json!({ "summary": summary })));
+    }
+
+    let game_context = build_matchup_context(&state, &params.game_id)
+        .await
+        .unwrap_or_else(|| format!("Game ID: {}", params.game_id));
+
+    let summary = super::final_recap::generate_final_recap(&state.pool, &game_context).await?;
+    state
+        .final_recap_cache
+        .set(&params.game_id, summary.clone());
+    Ok(Json(serde_json::json!({ "summary": summary })))
+}
+
+/// Assemble the shared matchup context string used by both /preview and
+/// /final-recap. Includes final scores + winner when the game is completed,
+/// so the LLM has enough to write past-tense.
+async fn build_matchup_context(state: &SportsState, game_id: &str) -> Option<String> {
     for &(league_id, _, _) in LEAGUES {
         if let Some(data) = state.cache.get_stale(league_id).await {
             let games = transform::transform_scoreboard(&data, league_id, &[], 24.0);
-            if let Some(game) = games.iter().find(|g| g.id == params.game_id) {
+            if let Some(game) = games.iter().find(|g| g.id == game_id) {
                 let mut context = format!(
                     "Game: {} vs {}\nHome record: {}\nAway record: {}\nLeague: {}\nStart: {}",
                     game.away.name,
@@ -470,10 +501,7 @@ pub async fn get_preview(
                 // Enrich with raw ESPN data (headlines, odds, team stats, leaders)
                 let empty_events = vec![];
                 let events = data["events"].as_array().unwrap_or(&empty_events);
-                if let Some(event) = events
-                    .iter()
-                    .find(|e| e["id"].as_str() == Some(&params.game_id))
-                {
+                if let Some(event) = events.iter().find(|e| e["id"].as_str() == Some(game_id)) {
                     let comp = &event["competitions"][0];
 
                     // ESPN preview headline (e.g., "Rays play the Cubs in first of 3-game series")
@@ -620,18 +648,33 @@ pub async fn get_preview(
                     }
                 }
 
-                game_context = context;
-                break;
+                // Final games: give the LLM the score + winner so the recap can be
+                // written past-tense. Harmless for previews since the preview handler
+                // is only wired to upcoming-game cards on the frontend.
+                if game.state == GameState::Final {
+                    let hs = game.home.score.map(|v| v.to_string()).unwrap_or_default();
+                    let as_ = game.away.score.map(|v| v.to_string()).unwrap_or_default();
+                    let winner = if game.home.winner == Some(true) {
+                        Some(game.home.name.as_str())
+                    } else if game.away.winner == Some(true) {
+                        Some(game.away.name.as_str())
+                    } else {
+                        None
+                    };
+                    context.push_str(&format!(
+                        "\nFinal: {} {} - {} {}",
+                        game.away.name, as_, hs, game.home.name
+                    ));
+                    if let Some(w) = winner {
+                        context.push_str(&format!("\nWinner: {}", w));
+                    }
+                }
+
+                return Some(context);
             }
         }
     }
-
-    let summary = super::preview::generate_preview(&state.pool, &game_context).await?;
-
-    // Cache the result
-    state.preview_cache.set(&params.game_id, summary.clone());
-
-    Ok(Json(serde_json::json!({ "summary": summary })))
+    None
 }
 
 async fn fetch_cached_teams(
