@@ -112,14 +112,12 @@ pub async fn get_artist(
 
     let mut top_tracks_raw: serde_json::Value = client
         .command(TOP_TRACKS_CMD, serde_json::json!({ "item_uri": q.uri }))
-        .await
-        .unwrap_or(serde_json::json!([]));
+        .await?;
     rewrite_image_urls(&mut top_tracks_raw);
 
     let mut albums_raw: serde_json::Value = client
         .command(ALBUMS_CMD, serde_json::json!({ "item_uri": q.uri }))
-        .await
-        .unwrap_or(serde_json::json!([]));
+        .await?;
     rewrite_image_urls(&mut albums_raw);
 
     let top_tracks: Vec<Track> = top_tracks_raw
@@ -181,8 +179,7 @@ pub async fn get_album(
 
     let mut tracks_raw: serde_json::Value = client
         .command(TRACKS_CMD, serde_json::json!({ "item_uri": q.uri }))
-        .await
-        .unwrap_or(serde_json::json!([]));
+        .await?;
     rewrite_image_urls(&mut tracks_raw);
 
     let tracks: Vec<Track> = tracks_raw
