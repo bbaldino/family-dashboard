@@ -334,3 +334,98 @@ pub async fn fetch_team_news(
         None => Vec::new(),
     }
 }
+
+use std::collections::HashMap;
+use std::sync::RwLock;
+
+const CACHE_TTL: chrono::Duration = chrono::Duration::hours(12);
+const RECENT_GAMES_LIMIT: usize = 5;
+const NEWS_LIMIT: usize = 3;
+
+type CacheKey = (String, String, String, String); // sport, league, team_id, YYYY-MM-DD
+
+struct CacheEntry {
+    enrichment: TeamEnrichment,
+    stored_at: chrono::DateTime<chrono::Utc>,
+}
+
+pub struct EnrichmentCache {
+    entries: RwLock<HashMap<CacheKey, CacheEntry>>,
+}
+
+impl EnrichmentCache {
+    pub fn new() -> Self {
+        Self {
+            entries: RwLock::new(HashMap::new()),
+        }
+    }
+
+    fn get(&self, key: &CacheKey) -> Option<TeamEnrichment> {
+        let entries = self.entries.read().ok()?;
+        let entry = entries.get(key)?;
+        if chrono::Utc::now() - entry.stored_at > CACHE_TTL {
+            return None;
+        }
+        Some(entry.enrichment.clone())
+    }
+
+    fn set(&self, key: CacheKey, enrichment: TeamEnrichment) {
+        if let Ok(mut entries) = self.entries.write() {
+            entries.insert(
+                key,
+                CacheEntry {
+                    enrichment,
+                    stored_at: chrono::Utc::now(),
+                },
+            );
+        }
+    }
+}
+
+impl Default for EnrichmentCache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+pub async fn enrich_team(
+    client: &reqwest::Client,
+    cache: &EnrichmentCache,
+    sport: &str,
+    league: &str,
+    team_id: &str,
+    team_name: &str,
+    current_year: i32,
+) -> TeamEnrichment {
+    let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
+    let key = (
+        sport.to_string(),
+        league.to_string(),
+        team_id.to_string(),
+        today,
+    );
+
+    if let Some(hit) = cache.get(&key) {
+        return hit;
+    }
+
+    let recent_fut = fetch_recent_games(
+        client,
+        sport,
+        league,
+        team_id,
+        current_year,
+        RECENT_GAMES_LIMIT,
+    );
+    let prior_fut = fetch_prior_season(client, sport, league, team_id, current_year);
+    let news_fut = fetch_team_news(client, sport, league, team_id, team_name, NEWS_LIMIT);
+    let (recent_games, prior_season, news) = tokio::join!(recent_fut, prior_fut, news_fut);
+
+    let enrichment = TeamEnrichment {
+        recent_games,
+        prior_season,
+        news,
+    };
+    cache.set(key, enrichment.clone());
+    enrichment
+}
