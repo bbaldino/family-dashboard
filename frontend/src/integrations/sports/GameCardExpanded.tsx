@@ -138,6 +138,13 @@ export function GameCardExpanded({ game, allGames, onClick }: GameCardExpandedPr
 
   return (
     <div className="cursor-pointer" onClick={onClick}>
+      {/* Upcoming: date/time above the matchup so it doesn't crush the center block */}
+      {isUpcoming && (
+        <div className="text-center text-xs text-text-secondary mb-1">
+          {formatUpcomingTime(game.startTime)}
+        </div>
+      )}
+
       {/* Main matchup header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -161,11 +168,6 @@ export function GameCardExpanded({ game, allGames, onClick }: GameCardExpandedPr
           )}
           {isFinal && (
             <div className="text-xs text-text-secondary">Final</div>
-          )}
-          {isUpcoming && (
-            <div className="text-xs text-text-secondary">
-              {formatUpcomingTime(game.startTime)}
-            </div>
           )}
         </div>
 
