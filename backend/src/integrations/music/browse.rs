@@ -39,6 +39,24 @@ pub struct ArtistDetail {
     pub albums: Vec<AlbumSummary>,
 }
 
+/// Parse an MA URI like `spotify--yC8brUbw://track/2Xhd1kYKj2aee7JR3nIlRe`
+/// into `(provider, media_type, item_id)`. Returns None if the URI shape
+/// doesn't match. MA's per-item commands take `item_id` +
+/// `provider_instance_id_or_domain`, not the composite URI.
+fn parse_ma_uri(uri: &str) -> Option<(&str, &str, &str)> {
+    let (provider, rest) = uri.split_once("://")?;
+    let (media_type, item_id) = rest.split_once('/')?;
+    Some((provider, media_type, item_id))
+}
+
+fn ma_item_args(uri: &str) -> Option<serde_json::Value> {
+    let (provider, _media_type, item_id) = parse_ma_uri(uri)?;
+    Some(serde_json::json!({
+        "item_id": item_id,
+        "provider_instance_id_or_domain": provider,
+    }))
+}
+
 fn first_image_path(item: &serde_json::Value) -> Option<String> {
     item.get("metadata")
         .and_then(|m| m.get("images"))
@@ -110,14 +128,14 @@ pub async fn get_artist(
     const TOP_TRACKS_CMD: &str = "music/artists/artist_toptracks";
     const ALBUMS_CMD: &str = "music/artists/artist_albums";
 
-    let mut top_tracks_raw: serde_json::Value = client
-        .command(TOP_TRACKS_CMD, serde_json::json!({ "item_uri": q.uri }))
-        .await?;
+    let args = ma_item_args(&q.uri)
+        .ok_or_else(|| AppError::Internal(format!("invalid MA URI: {}", q.uri)))?;
+
+    let mut top_tracks_raw: serde_json::Value =
+        client.command(TOP_TRACKS_CMD, args.clone()).await?;
     rewrite_image_urls(&mut top_tracks_raw);
 
-    let mut albums_raw: serde_json::Value = client
-        .command(ALBUMS_CMD, serde_json::json!({ "item_uri": q.uri }))
-        .await?;
+    let mut albums_raw: serde_json::Value = client.command(ALBUMS_CMD, args).await?;
     rewrite_image_urls(&mut albums_raw);
 
     let top_tracks: Vec<Track> = top_tracks_raw
@@ -177,9 +195,10 @@ pub async fn get_album(
 
     const TRACKS_CMD: &str = "music/albums/album_tracks";
 
-    let mut tracks_raw: serde_json::Value = client
-        .command(TRACKS_CMD, serde_json::json!({ "item_uri": q.uri }))
-        .await?;
+    let args = ma_item_args(&q.uri)
+        .ok_or_else(|| AppError::Internal(format!("invalid MA URI: {}", q.uri)))?;
+
+    let mut tracks_raw: serde_json::Value = client.command(TRACKS_CMD, args).await?;
     rewrite_image_urls(&mut tracks_raw);
 
     let tracks: Vec<Track> = tracks_raw
@@ -244,9 +263,15 @@ pub async fn backfill_uris(
             _ => continue,
         };
 
-        let response: Result<serde_json::Value, _> = client
-            .command(cmd, serde_json::json!({ "item_uri": uri }))
-            .await;
+        let args = match ma_item_args(uri) {
+            Some(a) => a,
+            None => {
+                failed.push(uri.clone());
+                continue;
+            }
+        };
+
+        let response: Result<serde_json::Value, _> = client.command(cmd, args).await;
         let item = match response {
             Ok(v) => v,
             Err(e) => {
@@ -310,6 +335,36 @@ fn extract_uris_from_album(item: &serde_json::Value) -> (Option<String>, Option<
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parse_ma_uri_splits_provider_type_id() {
+        let (provider, media_type, id) =
+            parse_ma_uri("spotify--yC8brUbw://track/2Xhd1kYKj2aee7JR3nIlRe").unwrap();
+        assert_eq!(provider, "spotify--yC8brUbw");
+        assert_eq!(media_type, "track");
+        assert_eq!(id, "2Xhd1kYKj2aee7JR3nIlRe");
+    }
+
+    #[test]
+    fn parse_ma_uri_handles_library() {
+        let (provider, media_type, id) = parse_ma_uri("library://track/654").unwrap();
+        assert_eq!(provider, "library");
+        assert_eq!(media_type, "track");
+        assert_eq!(id, "654");
+    }
+
+    #[test]
+    fn parse_ma_uri_rejects_malformed() {
+        assert!(parse_ma_uri("not-a-uri").is_none());
+        assert!(parse_ma_uri("spotify://").is_none());
+    }
+
+    #[test]
+    fn ma_item_args_uses_provider_and_item_id() {
+        let args = ma_item_args("spotify--yC8brUbw://track/abc123").unwrap();
+        assert_eq!(args["item_id"], "abc123");
+        assert_eq!(args["provider_instance_id_or_domain"], "spotify--yC8brUbw");
+    }
 
     #[test]
     fn track_from_extracts_artist_and_album_uris() {
