@@ -149,6 +149,7 @@
     /* Semantic aliases (kept — widely used via Tailwind utilities) */
     --color-info: var(--color-role-info);
     --color-success: var(--color-role-success);
+    --color-warning: var(--color-role-warning);
     --color-error: var(--color-role-error);
     --color-separator: rgba(0, 0, 0, 0.08);
     --radius-card: 14px;

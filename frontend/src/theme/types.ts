@@ -123,6 +123,7 @@ export function themeToVariables(colors: ThemeColors): Record<string, string> {
   vars['--color-role-error'] = colors.roles.error
   vars['--color-role-info'] = colors.roles.info
   vars['--color-success'] = colors.roles.success
+  vars['--color-warning'] = colors.roles.warning
   vars['--color-error'] = colors.roles.error
   vars['--color-info'] = colors.roles.info
 
