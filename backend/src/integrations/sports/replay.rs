@@ -94,10 +94,7 @@ impl Replayer {
         }
 
         if snapshots.is_empty() {
-            return Err(format!(
-                "No paired snapshots found in {}",
-                dir.display()
-            ));
+            return Err(format!("No paired snapshots found in {}", dir.display()));
         }
 
         Ok(Self {

@@ -273,9 +273,7 @@ pub async fn get_events(
     );
 
     let integration_config = IntegrationConfig::new(&state.pool, INTEGRATION_ID);
-    let model = integration_config
-        .get_or("model", "llama3.2:3b")
-        .await?;
+    let model = integration_config.get_or("model", "llama3.2:3b").await?;
 
     tracing::info!(
         "On This Day: filtering {} events via LLM with model '{}'",

@@ -22,9 +22,7 @@ pub struct ModelsResponse {
     pub models: Vec<ModelInfo>,
 }
 
-async fn list_models(
-    State(pool): State<SqlitePool>,
-) -> Result<Json<ModelsResponse>, AppError> {
+async fn list_models(State(pool): State<SqlitePool>) -> Result<Json<ModelsResponse>, AppError> {
     let llm = IntegrationConfig::new(&pool, "llm");
     let provider = llm.get_or("provider", "ollama").await?;
 
@@ -142,11 +140,7 @@ pub async fn generate(pool: &SqlitePool, model: &str, prompt: &str) -> Result<St
     }
 }
 
-async fn generate_ollama(
-    pool: &SqlitePool,
-    model: &str,
-    prompt: &str,
-) -> Result<String, AppError> {
+async fn generate_ollama(pool: &SqlitePool, model: &str, prompt: &str) -> Result<String, AppError> {
     let ollama = IntegrationConfig::new(pool, "ollama");
     let url = ollama.get_or("url", "http://localhost:11434").await?;
     let token = ollama.get("token").await.ok();
@@ -182,11 +176,7 @@ async fn generate_ollama(
         .await
         .map_err(|e| AppError::Internal(format!("Ollama parse failed: {}", e)))?;
 
-    Ok(data["response"]
-        .as_str()
-        .unwrap_or("")
-        .trim()
-        .to_string())
+    Ok(data["response"].as_str().unwrap_or("").trim().to_string())
 }
 
 async fn generate_openai_compat(
@@ -201,10 +191,7 @@ async fn generate_openai_compat(
 
     let client = reqwest::Client::new();
     let resp = client
-        .post(format!(
-            "{}/v1/chat/completions",
-            url.trim_end_matches('/')
-        ))
+        .post(format!("{}/v1/chat/completions", url.trim_end_matches('/')))
         .json(&serde_json::json!({
             "model": model,
             "messages": [{ "role": "user", "content": prompt }],
