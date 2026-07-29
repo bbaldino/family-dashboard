@@ -22,7 +22,9 @@ function bucketStatuses(report: UptimeReport, buckets: number): Status[] {
       Math.floor((segEnd - windowStart) / bucketSize),
     )
     for (let b = startBucket; b <= endBucket; b++) {
-      if (severity(seg.status) > severity(out[b])) {
+      // null means "no data yet" for this bucket — always yield to real data.
+      // Otherwise, worst status wins (critical > unknown > degraded > ok).
+      if (out[b] === null || severity(seg.status) > severity(out[b])) {
         out[b] = seg.status
       }
     }
