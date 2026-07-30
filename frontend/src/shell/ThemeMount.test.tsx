@@ -98,4 +98,24 @@ describe('ThemeMount', () => {
     await waitFor(() => expect(screen.getByTestId('grid-home')).toBeInTheDocument())
     expect(screen.queryByTestId('theme-canvas')).not.toBeInTheDocument()
   })
+
+  it('names the specific missing screen when a theme omits it, instead of "unknown"', async () => {
+    const homeOnlyStub: ThemeModule = {
+      id: 'grid',
+      name: 'Grid',
+      canvas: { model: 'fluid' },
+      screens: { home: () => <div data-testid="grid-home">grid-home</div> },
+      overlays: [],
+    }
+    _resetRegistry()
+    registerTheme(homeOnlyStub)
+    mockConfig('grid')
+    render(
+      <MemoryRouter initialEntries={['/calendar']}>
+        <ThemeMount />
+      </MemoryRouter>,
+    )
+    await waitFor(() => expect(screen.getByText(/calendar/i)).toBeInTheDocument())
+    expect(screen.queryByText(/unknown/i)).not.toBeInTheDocument()
+  })
 })

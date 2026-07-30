@@ -1,7 +1,7 @@
-import { useEffect, useState, Fragment, type ComponentType } from 'react'
+import { useEffect, useState, Fragment } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { getTheme } from './ThemeRegistry'
-import type { ThemeModule } from './types'
+import type { ScreenKey, ThemeModule } from './types'
 import { ROUTE_PATHS } from './routes'
 import { ScreenShell } from './canvas/ScreenShell'
 import { ScreenErrorBoundary } from './errors/ScreenErrorBoundary'
@@ -44,19 +44,24 @@ export function ThemeMount() {
   const theme = resolveTheme(activeId)
   const Layout = theme.layout
 
-  const screenRoutes = (Object.entries(theme.screens) as [keyof typeof ROUTE_PATHS, ComponentType][])
-    .filter(([, Component]) => Component != null)
-    .map(([key, Component]) => (
+  const screenRoutes = (Object.entries(ROUTE_PATHS) as [ScreenKey, string][]).map(([key, path]) => {
+    const Component = theme.screens[key]
+    return (
       <Route
         key={key}
-        path={ROUTE_PATHS[key]}
+        path={path}
         element={
-          <ScreenErrorBoundary>
-            <Component />
-          </ScreenErrorBoundary>
+          Component ? (
+            <ScreenErrorBoundary>
+              <Component />
+            </ScreenErrorBoundary>
+          ) : (
+            <ScreenNotAvailable screenKey={key} />
+          )
         }
       />
-    ))
+    )
+  })
 
   const routes = (
     <Routes>

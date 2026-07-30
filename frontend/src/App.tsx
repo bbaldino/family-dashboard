@@ -10,7 +10,7 @@ import { getRuntimeConfig } from './lib/ha-client'
 import { useTheme } from './palettes/useTheme'
 import { DoorbellRingListener } from './integrations/doorbell'
 
-function ThemeApplicator() {
+function PaletteApplicator() {
   useTheme()
   return null
 }
@@ -89,7 +89,7 @@ export function App() {
 
   const content = (
     <QueryClientProvider client={queryClient}>
-      <ThemeApplicator />
+      <PaletteApplicator />
       <AppRoutes />
     </QueryClientProvider>
   )
