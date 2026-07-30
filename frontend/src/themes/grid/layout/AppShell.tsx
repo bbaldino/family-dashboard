@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import { TabBar } from '@/themes/grid/ui/TabBar'
 import { EventOverlay } from '@/themes/grid/ui/EventOverlay'
-import { EventBusProvider } from '../lib/event-bus'
+import { EventBusProvider } from '@/lib/event-bus'
 import { MusicProvider, MiniPlayer } from '@/integrations/music'
 
 export function AppShell() {

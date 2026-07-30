@@ -1,6 +1,6 @@
 import type { ThemeModule } from '@/shell/types'
 import { registerTheme } from '@/shell/ThemeRegistry'
-import { AppShell } from '@/app/AppShell'
+import { AppShell } from '@/themes/grid/layout/AppShell'
 import { HomeBoard } from '@/boards/HomeBoard'
 import { CalendarBoard } from '@/boards/calendar/CalendarBoard'
 import { MediaBoard } from '@/boards/MediaBoard'
