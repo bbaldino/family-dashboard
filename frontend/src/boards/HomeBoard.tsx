@@ -24,8 +24,8 @@ import { useCountdownsWidgetMeta } from '@/integrations/countdowns/useWidgetMeta
 import { useLunchWidgetMeta } from '@/integrations/nutrislice/useWidgetMeta'
 import { useOnThisDayWidgetMeta } from '@/integrations/on-this-day/useWidgetMeta'
 import { MetaFillerWidget } from '@/themes/grid/ui/MetaFillerWidget'
-import { CellGridLayout } from './layouts/CellGridLayout'
-import type { CellGridWidget } from './layouts/CellGridLayout'
+import { CellGridLayout } from '@/themes/grid/layout/CellGridLayout'
+import type { CellGridWidget } from '@/themes/grid/layout/CellGridLayout'
 import { useCalendarWidgetMeta } from '@/integrations/google-calendar/useWidgetMeta'
 
 function useGridConfig(): { columns: number; rows: number } {
