@@ -1,6 +1,6 @@
-import { lazy } from 'react'
 import type { ThemeModule } from '@/shell/types'
 import { registerTheme } from '@/shell/ThemeRegistry'
+import { DoorbellRingListener } from '@/integrations/doorbell'
 import { AppShell } from '@/themes/grid/layout/AppShell'
 import { HomeBoard } from '@/themes/grid/screens/HomeBoard'
 import { CalendarBoard } from '@/themes/grid/screens/calendar/CalendarBoard'
@@ -10,10 +10,6 @@ import { AlbumPage } from '@/themes/grid/screens/media/AlbumPage'
 import { CamerasBoard } from '@/themes/grid/screens/CamerasBoard'
 import { HealthBoard } from '@/themes/grid/screens/HealthBoard'
 import { gridCanvas } from './canvas'
-
-const DoorbellRingListener = lazy(() =>
-  import('@/integrations/doorbell').then((m) => ({ default: m.DoorbellRingListener })),
-)
 
 export const gridTheme: ThemeModule = {
   id: 'grid',

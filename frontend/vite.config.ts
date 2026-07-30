@@ -25,5 +25,13 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
     globals: true,
+    server: {
+      deps: {
+        // @hakit/core imports { clamp } from 'lodash' (CJS); vitest's default
+        // ESM loader can't destructure named exports off a CJS module, so we
+        // ask vitest to process @hakit/core through its own resolver.
+        inline: ['@hakit/core'],
+      },
+    },
   },
 })
