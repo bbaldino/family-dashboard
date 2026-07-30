@@ -2,14 +2,8 @@ import { Routes, Route } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HassConnect } from '@hakit/core'
-import { AppShell } from './app/AppShell'
-import { HomeBoard } from './boards/HomeBoard'
-import { CalendarBoard } from './boards/calendar/CalendarBoard'
-import { MediaBoard } from './boards/MediaBoard'
-import { ArtistPage } from './boards/media/ArtistPage'
-import { AlbumPage } from './boards/media/AlbumPage'
-import { CamerasBoard } from './boards/CamerasBoard'
-import { HealthBoard } from './boards/HealthBoard'
+import { ThemeMount } from './shell/ThemeMount'
+import '@/themes/grid' // side-effect: registers gridTheme
 import { AdminLayout } from './admin/AdminLayout'
 import { SettingsAdmin } from './admin/SettingsAdmin'
 import { getRuntimeConfig } from './lib/ha-client'
@@ -67,19 +61,11 @@ function useHaReachable(url: string | undefined): boolean {
 function AppRoutes() {
   return (
     <Routes>
-      <Route element={<AppShell />}>
-        <Route index element={<HomeBoard />} />
-        <Route path="calendar" element={<CalendarBoard />} />
-        <Route path="media" element={<MediaBoard />} />
-        <Route path="media/artist/:uri" element={<ArtistPage />} />
-        <Route path="media/album/:uri" element={<AlbumPage />} />
-        <Route path="cameras" element={<CamerasBoard />} />
-        <Route path="health" element={<HealthBoard />} />
-      </Route>
-      <Route path="admin" element={<AdminLayout />}>
+      <Route path="/admin/*" element={<AdminLayout />}>
         <Route index element={<SettingsAdmin />} />
         <Route path="settings" element={<SettingsAdmin />} />
       </Route>
+      <Route path="/*" element={<ThemeMount />} />
     </Routes>
   )
 }
