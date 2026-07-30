@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
 import { themeToVariables } from './types'
 import type { ThemeColors } from './types'
-import { HomeBoard } from '@/boards/HomeBoard'
+import { HomeBoard } from '@/themes/grid/screens/HomeBoard'
 
 interface ThemePreviewProps {
   colors: ThemeColors
