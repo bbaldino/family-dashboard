@@ -1,6 +1,6 @@
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
 import { ErrorDisplay } from '@/ui/ErrorDisplay'
-import { WidgetCard } from '@/ui/WidgetCard'
+import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
 import { useLunchMenu, type LunchMenuDay, type MenuEntry } from './useLunchMenu'
 type WidgetSize = 'compact' | 'standard' | 'expanded'
 

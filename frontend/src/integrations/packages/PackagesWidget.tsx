@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { WidgetCard } from '@/ui/WidgetCard'
+import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
 import { usePackages } from './usePackages'
 import { ShipmentRow } from './ShipmentRow'

@@ -1,5 +1,5 @@
 import { type ReactNode, useState, useCallback } from 'react'
-import { BottomSheet } from './BottomSheet'
+import { BottomSheet } from '@/ui/BottomSheet'
 
 type CardCategory = 'calendar' | 'chores' | 'info' | 'food' | 'grocery' | 'sports'
 

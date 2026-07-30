@@ -1,7 +1,7 @@
 import type { CalendarEvent } from './types'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
 import { ErrorDisplay } from '@/ui/ErrorDisplay'
-import { WidgetCard } from '@/ui/WidgetCard'
+import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
 import type { CalendarDay } from './useGoogleCalendar'
 import { useDrivingTime, DriveTag } from '@/integrations/driving-time'
 

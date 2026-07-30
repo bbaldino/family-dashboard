@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { WidgetCard } from '@/ui/WidgetCard'
+import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
 import { useTrivia } from './useTrivia'
 
 const LETTERS = ['A', 'B', 'C', 'D']

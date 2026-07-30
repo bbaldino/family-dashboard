@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { WidgetCard } from '@/ui/WidgetCard'
+import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
 import { useJoke } from './useJoke'
 
 export function JokeWidget() {

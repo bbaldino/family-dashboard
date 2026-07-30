@@ -1,4 +1,4 @@
-import { WidgetCard } from '@/ui/WidgetCard'
+import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
 import { usePolling } from '@/hooks/usePolling'
 import { WeatherDetail } from './WeatherDetail'
 import { weatherIntegration } from './config'

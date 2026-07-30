@@ -1,4 +1,4 @@
-import { WidgetCard } from '@/ui/WidgetCard'
+import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
 import { useDailyQuote } from './useDailyQuote'
 
 export function DailyQuoteWidget() {

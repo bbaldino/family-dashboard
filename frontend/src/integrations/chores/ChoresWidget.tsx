@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
 import { ErrorDisplay } from '@/ui/ErrorDisplay'
-import { WidgetCard } from '@/ui/WidgetCard'
+import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
 import { useChores } from './useChores'
 import { MetaChorePicker } from './MetaChorePicker'
 import type { TodayAssignment, PersonAssignments } from './types'
