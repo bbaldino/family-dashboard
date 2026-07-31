@@ -55,4 +55,15 @@ describe('buildStandfirst', () => {
       expect(text.trimEnd()).toMatch(/[.!?]$/)
     }
   })
+
+  it('uses correct singular/plural form when eventCount is 1 with no title', () => {
+    const text = buildStandfirst({
+      eventCount: 1,
+      nextEventTitle: null,
+      sportsState: 'none',
+      lunchAvailable: false,
+    })
+    expect(text).toContain('1 thing')
+    expect(text).not.toContain('1 things')
+  })
 })

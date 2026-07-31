@@ -11,6 +11,7 @@ function scheduleClause({ eventCount, nextEventTitle }: StandfirstInput): string
   if (eventCount === 0) return 'Nothing on the calendar — the day is yours'
   if (eventCount === 1 && nextEventTitle) return `One thing today: ${nextEventTitle}`
   if (nextEventTitle) return `${eventCount} things today, starting with ${nextEventTitle}`
+  if (eventCount === 1) return '1 thing on the calendar today'
   return `${eventCount} things on the calendar today`
 }
 
