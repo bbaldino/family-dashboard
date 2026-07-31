@@ -55,4 +55,25 @@ describe('broadsheet Home', () => {
     expect(root.className).toContain('w-[1600px]')
     expect(root.className).toContain('h-[900px]')
   })
+
+  it('clips the two-column body instead of letting it spill onto the glance strip', () => {
+    // Regression test for the Task 11 hardware finding: with real data the
+    // schedule column ran taller than its allotted space and, absent any
+    // overflow handling, painted over the glance strip below it. jsdom
+    // doesn't compute real layout, so this can't measure pixels — it
+    // asserts the structural guarantee instead: the body row must clip
+    // (`overflow-hidden`) and must be allowed to shrink to fit
+    // (`min-h-0`), both on the row itself and — since it's a grid item's
+    // default `min-height: auto` that lets content escape a fixed-height
+    // parent in the first place — on the row too as the flex item that
+    // sizes it.
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    )
+    const body = screen.getByTestId('broadsheet-home-body')
+    expect(body.className).toContain('overflow-hidden')
+    expect(body.className).toContain('min-h-0')
+  })
 })

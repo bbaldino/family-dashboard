@@ -59,9 +59,26 @@ export function Home() {
   return (
     <div data-testid="broadsheet-home" className="broadsheet-root w-[1600px] h-[900px] flex flex-col">
       <Masthead standfirst={standfirst} />
-      <div className="flex-1 min-h-0 grid gap-10 px-14" style={{ gridTemplateColumns: '1.5fr 1fr' }}>
-        <ScheduleColumn />
-        <SportsColumn />
+      {/*
+       * This is a fixed 900px canvas with no scrolling — content that runs
+       * long must clip, never spill onto the glance strip below it.
+       * `overflow-hidden` here is the structural guarantee; `min-h-0` on
+       * both the row and each column lets them actually shrink to fit
+       * instead of growing to their content's min-content size (a grid/flex
+       * item's default). `ScheduleColumn` also budgets its own day count so
+       * the common case clips nothing at all — see its source for why.
+       */}
+      <div
+        data-testid="broadsheet-home-body"
+        className="flex-1 min-h-0 overflow-hidden grid gap-10 px-14"
+        style={{ gridTemplateColumns: '1.5fr 1fr' }}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <ScheduleColumn />
+        </div>
+        <div className="min-h-0 overflow-hidden">
+          <SportsColumn />
+        </div>
       </div>
       <div className="px-14 pb-16">
         <DoubleRule />

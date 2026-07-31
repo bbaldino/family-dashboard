@@ -51,4 +51,22 @@ describe('ScheduleColumn', () => {
     useGoogleCalendar.mockReturnValue({ data: undefined, isLoading: true })
     expect(() => render(<ScheduleColumn />)).not.toThrow()
   })
+
+  it('renders no more than the day budget even when the calendar returns a full week', () => {
+    // Regression test: the calendar hook returns ~7 days, and each one —
+    // even an empty one — costs a heading, a rule, and a prose line. Seven
+    // of those overflowed the column's allotted height on a real 1600x900
+    // render and printed on top of the glance strip below it. The column
+    // caps itself at 4 days so the common case never reaches that point;
+    // jsdom can't measure real layout, so this asserts the day count
+    // directly instead.
+    const week = Array.from({ length: 7 }, (_, i) => day(`DAY${i}`, i === 0, []))
+    useGoogleCalendar.mockReturnValue({ data: week, isLoading: false })
+    render(<ScheduleColumn />)
+    expect(screen.getByText('DAY0')).toBeInTheDocument()
+    expect(screen.getByText('DAY3')).toBeInTheDocument()
+    expect(screen.queryByText('DAY4')).not.toBeInTheDocument()
+    expect(screen.queryByText('DAY5')).not.toBeInTheDocument()
+    expect(screen.queryByText('DAY6')).not.toBeInTheDocument()
+  })
 })

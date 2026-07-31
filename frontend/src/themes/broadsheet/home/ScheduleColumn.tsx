@@ -74,22 +74,37 @@ function DayGroup({ day, driveInfo }: { day: CalendarDay; driveInfo: Record<stri
 }
 
 /**
+ * How many days this column ever renders, regardless of how many the
+ * calendar hook returns (it returns a full week). This is a fixed-canvas
+ * page with no scrolling: a day heading, rule, and "nothing on the books"
+ * line cost real vertical space even when the day is empty, and a typical
+ * week of mostly-empty days was tall enough to overflow the column's
+ * budget and print over the glance strip below it. Four complete days
+ * (today plus the next three — `days` already arrives sorted starting
+ * from today) reads as intentional; clipping mid-week never does. The
+ * parent also clips defensively (`overflow-hidden`) in case a day this
+ * short still runs long, but that's the safety net, not the plan.
+ */
+const MAX_VISIBLE_DAYS = 4
+
+/**
  * The left column of the Home screen: the week's calendar, grouped by day.
  * Every hook can boot with no data on a cold cache — guard `days` throughout,
  * and an empty day gets a written line rather than a gap.
  */
 export function ScheduleColumn() {
   const { data: days, isLoading } = useGoogleCalendar()
+  const visibleDays = useMemo(() => (days ?? []).slice(0, MAX_VISIBLE_DAYS), [days])
 
-  const allEvents = useMemo(() => (days ?? []).flatMap((d) => d.events ?? []), [days])
+  const allEvents = useMemo(() => visibleDays.flatMap((d) => d.events ?? []), [visibleDays])
   const driveInfo = useDrivingTime(allEvents)
 
   return (
     <div>
       <Kicker>Schedule</Kicker>
       <Hairline className="mt-1" />
-      {days && days.length > 0 ? (
-        days.map((day) => <DayGroup key={day.label} day={day} driveInfo={driveInfo} />)
+      {visibleDays.length > 0 ? (
+        visibleDays.map((day) => <DayGroup key={day.label} day={day} driveInfo={driveInfo} />)
       ) : (
         <p className="m-0 py-2" style={proseStyle}>
           {isLoading ? 'Fetching the week ahead…' : 'Nothing on the books this week.'}
