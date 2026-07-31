@@ -23,6 +23,10 @@ export default defineConfig([
   },
   {
     files: ['src/**/*.{ts,tsx}'],
+    // Boundaries govern the shipped dependency structure. Tests legitimately
+    // reach across layers — the shell's contract test imports every theme on
+    // purpose, to check each one satisfies the contract.
+    ignores: ['src/**/*.test.{ts,tsx}'],
     plugins: { boundaries },
     settings: {
       // Lets boundaries resolve extensionless imports and the `@/*` tsconfig alias.
@@ -55,6 +59,17 @@ export default defineConfig([
             // Admin stays theme-neutral.
             {
               from: { element: { type: 'admin' } },
+              disallow: { to: { element: { type: 'theme' } } },
+            },
+            // Shared UI atoms stay generic — no integration awareness.
+            {
+              from: { element: { type: 'ui' } },
+              disallow: { to: { element: { type: 'data' } } },
+            },
+            // The shell must not favour a concrete theme; themes register
+            // themselves (see the side-effect import in src/App.tsx).
+            {
+              from: { element: { type: 'shell' } },
               disallow: { to: { element: { type: 'theme' } } },
             },
             // Themes can't cross-import each other.
