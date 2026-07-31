@@ -61,17 +61,35 @@ function TodayEventRow({ event, driveInfo, first }: { event: CalendarEvent; driv
   )
 }
 
-/** The lead block: today's date, headline, and every event today — or a
+/**
+ * How many of today's events the hero ever renders in full.
+ *
+ * Every other list in this column was budgeted; this one wasn't, on the
+ * reasoning that today's events are the point of the screen. But the hero
+ * and the week-ahead strip share one fixed-height column, so an uncapped
+ * hero doesn't overflow itself — it pushes the week off the bottom. Loading
+ * `?scenario=packed` (six events today) clipped 30px off the week-ahead.
+ *
+ * Four keeps the hero comfortably inside the column at the row heights
+ * these events actually render at (42-59px each, depending on whether a
+ * location and drive time are present), with the remainder named rather
+ * than silently dropped.
+ */
+const MAX_HERO_EVENTS = 4
+
+/** The lead block: today's date, headline, and today's events — or a
  *  written blank-docket line. Mock: `broadsheet-v2.jsx:146-188`. */
 function TodayHero({ today, driveInfo }: { today: CalendarDay | undefined; driveInfo: Record<string, EventDriveInfo> }) {
-  const events = today?.events ?? []
+  const allEvents = today?.events ?? []
+  const events = allEvents.slice(0, MAX_HERO_EVENTS)
+  const hiddenCount = allEvents.length - events.length
 
   return (
     <div style={{ marginBottom: 14 }}>
       <div className="flex items-baseline justify-between" style={{ marginBottom: 4 }}>
         <Kicker>Today{today ? ` · ${TODAY_KICKER_DATE.format(today.date)}` : ''}</Kicker>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-muted)', letterSpacing: '0.12em' }}>
-          {events.length} {events.length === 1 ? 'event' : 'events'}
+          {allEvents.length} {allEvents.length === 1 ? 'event' : 'events'}
         </span>
       </div>
       <h2
@@ -92,6 +110,19 @@ function TodayHero({ today, driveInfo }: { today: CalendarDay | undefined; drive
           {events.map((event, i) => (
             <TodayEventRow key={event.id} event={event} driveInfo={driveInfo[event.id]} first={i === 0} />
           ))}
+          {hiddenCount > 0 && (
+            <div
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                fontStyle: 'italic',
+                color: 'var(--ink-muted)',
+                paddingTop: 6,
+              }}
+            >
+              +{hiddenCount} more today
+            </div>
+          )}
         </div>
       ) : (
         <div style={{ padding: '14px 0', borderTop: '2px solid var(--ink)' }}>

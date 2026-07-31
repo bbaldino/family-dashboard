@@ -103,4 +103,28 @@ describe('ScheduleColumn', () => {
     expect(screen.queryByText('Second')).not.toBeInTheDocument()
     expect(screen.getByText('+2 more')).toBeInTheDocument()
   })
+
+  it('caps the today hero at 4 events so it cannot push the week off the page', () => {
+    // The hero and the week-ahead strip share one fixed-height column, so an
+    // uncapped hero doesn't overflow itself — it clips the week below it.
+    // `?scenario=packed` (six events today) did exactly that: 30px cut off
+    // the bottom of the week-ahead strip.
+    useGoogleCalendar.mockReturnValue({
+      data: [
+        day('2026-05-22T00:00:00', true, ['One', 'Two', 'Three', 'Four', 'Five', 'Six']),
+        day('2026-05-23T00:00:00', false, ['Tomorrow thing']),
+      ],
+      isLoading: false,
+    })
+
+    render(<ScheduleColumn />)
+    expect(screen.getByText('Four')).toBeInTheDocument()
+    expect(screen.queryByText('Five')).not.toBeInTheDocument()
+    expect(screen.getByText('+2 more today')).toBeInTheDocument()
+    // The count above the headline still reports the real total, not the
+    // capped one — "4 events" when there are six would be a lie.
+    expect(screen.getByText('6 events')).toBeInTheDocument()
+    // And the week-ahead still renders, which is the point of the cap.
+    expect(screen.getByText('Tomorrow thing')).toBeInTheDocument()
+  })
 })
