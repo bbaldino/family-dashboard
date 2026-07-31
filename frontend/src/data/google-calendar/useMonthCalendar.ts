@@ -1,5 +1,7 @@
 import { usePolling } from '@/hooks/usePolling'
+import { activeScenario } from '@/data/scenario'
 import { fetchCalendarIds, googleCalendarIntegration } from './config'
+import { monthFixtureFor } from './fixtures'
 import type { CalendarEvent } from './types'
 import { eventLocalDateStr, parseLocalDate, toLocalDateStr } from '@/utils/date'
 
@@ -75,7 +77,10 @@ async function fetchMonthEvents(year: number, month: number): Promise<MonthEvent
 export function useMonthCalendar(year: number, month: number) {
   return usePolling<MonthEvents>({
     queryKey: ['google-calendar', 'month', String(year), String(month)],
-    fetcher: () => fetchMonthEvents(year, month),
+    fetcher: () => {
+      const fixture = monthFixtureFor(activeScenario, year, month)
+      return fixture ? Promise.resolve(fixture) : fetchMonthEvents(year, month)
+    },
     intervalMs: 5 * 60 * 1000,
   })
 }

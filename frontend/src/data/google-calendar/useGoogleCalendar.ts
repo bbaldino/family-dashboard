@@ -1,5 +1,7 @@
 import { usePolling, type UsePollingResult } from '@/hooks/usePolling'
+import { activeScenario } from '@/data/scenario'
 import { fetchCalendarIds, googleCalendarIntegration } from './config'
+import { weekFixtureFor } from './fixtures'
 import type { CalendarEvent } from './types'
 import { eventLocalDateStr, parseLocalDate, toLocalDateStr } from '@/utils/date'
 
@@ -85,7 +87,10 @@ async function fetchCalendarEvents(): Promise<CalendarDay[]> {
 export function useGoogleCalendar(): CalendarData {
   return usePolling<CalendarDay[]>({
     queryKey: ['google-calendar', 'events'],
-    fetcher: fetchCalendarEvents,
+    fetcher: () => {
+      const fixture = weekFixtureFor(activeScenario)
+      return fixture ? Promise.resolve(fixture) : fetchCalendarEvents()
+    },
     intervalMs: 5 * 60 * 1000,
   })
 }
