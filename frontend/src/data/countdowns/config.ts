@@ -1,6 +1,5 @@
 import { z } from 'zod'
-import { defineIntegration } from '../define-integration'
-import { CountdownsSettings } from './CountdownsSettings'
+import { defineIntegration } from '@/integrations/define-integration'
 
 export const countdownsIntegration = defineIntegration({
   id: 'countdowns',
@@ -14,5 +13,4 @@ export const countdownsIntegration = defineIntegration({
     calendar_id: { label: 'Google Calendar ID' },
     horizon_days: { label: 'Days ahead' },
   },
-  settingsComponent: CountdownsSettings,
 })

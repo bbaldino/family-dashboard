@@ -1,6 +1,6 @@
 import type { Integration } from './define-integration'
 import { choresIntegration } from './chores/config'
-import { countdownsIntegration } from './countdowns/config'
+import { countdownsIntegration } from '@/data/countdowns'
 import { doorbellIntegration } from './doorbell/config'
 import { nutrisliceIntegration } from '@/data/nutrislice'
 import { weatherIntegration } from '@/data/weather'
