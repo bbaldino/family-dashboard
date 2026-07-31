@@ -211,7 +211,20 @@ function ComingUpSection({ items }: { items: CountdownItem[] }) {
  * it happen to end — the column reads as a designed page rather than a
  * stack that stops early. It only has room to work because `HouseholdColumn`
  * itself fills the height of its grid cell (`h-full`) — margin-top: auto
- * has nothing to push against in a container sized to its content. */
+ * has nothing to push against in a container sized to its content.
+ *
+ * The mock puts the blurb inline beside the 22px year, sharing what's left
+ * of the row after a fixed-width label — that reads fine for the mock's
+ * one-line sample text, but the real feed's blurbs run a full sentence or
+ * two, and wrapping that beside the year in the narrowest column on the
+ * page (household, off-day) read as cramped (found live against the
+ * running dashboard). Label and year now share their own line; the blurb
+ * drops beneath at the column's full width instead of the leftover sliver.
+ * `line-clamp-3` bounds it the same way `grid`'s own on-this-day widget
+ * already caps this exact field (`OnThisDayWidget.tsx`) — the real feed
+ * has no length guarantee, and this is the column's bottom-pinned section,
+ * so an unbounded blurb could push its own top edge past what's visible
+ * when the sections above it are full. */
 
 function OnThisDaySection({ event }: { event: { year: number | null; text: string } }) {
   return (
@@ -230,13 +243,20 @@ function OnThisDaySection({ event }: { event: { year: number | null; text: strin
             {event.year}
           </span>
         )}
-        <p
-          className="flex-1 m-0"
-          style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 11.5, lineHeight: 1.35, color: 'var(--ink)' }}
-        >
-          {event.text}
-        </p>
       </div>
+      <p
+        className="m-0 line-clamp-3"
+        style={{
+          marginTop: 4,
+          fontFamily: 'var(--font-display)',
+          fontStyle: 'italic',
+          fontSize: 11.5,
+          lineHeight: 1.35,
+          color: 'var(--ink)',
+        }}
+      >
+        {event.text}
+      </p>
     </div>
   )
 }

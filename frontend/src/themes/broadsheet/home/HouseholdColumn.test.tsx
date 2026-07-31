@@ -78,4 +78,112 @@ describe('HouseholdColumn', () => {
     render(<HouseholdColumn />)
     expect(screen.queryByText(/now playing/i)).toBeNull()
   })
+
+  it('gives the on-this-day blurb the column\'s full width instead of squeezing it beside the year', () => {
+    // Regression, found live: the mock puts the blurb inline beside the
+    // 22px year, which read fine for the mock's one-line sample text but
+    // wrapped to 4-5 cramped lines for the real feed's full-sentence
+    // blurbs. Label and year now share one line; the blurb is a sibling
+    // block beneath, not a flex child squeezed into what's left of that
+    // row — this asserts the structural split, since jsdom can't measure
+    // the wrap itself.
+    useOnThisDay.mockReturnValue({
+      data: { events: [{ year: 2012, text: 'Michael Phelps breaks the record.' }] },
+      isLoading: false,
+    })
+    render(<HouseholdColumn />)
+    const year = screen.getByText('2012')
+    const blurb = screen.getByText('Michael Phelps breaks the record.')
+    // The year sits in the label row; the blurb is a sibling of that row,
+    // not a flex child squeezed inside it alongside the year.
+    expect(year.parentElement).not.toBe(blurb.parentElement)
+    expect(blurb.parentElement).toBe(year.parentElement?.parentElement)
+  })
+
+  it('bounds the on-this-day blurb so an unusually long one cannot grow unchecked', () => {
+    // The real feed has no length guarantee on this field, and it's the
+    // column's bottom-pinned section — an unbounded blurb could push its
+    // own top edge past what's visible when the sections above it are
+    // full (jsdom can't measure that overflow directly, so this asserts
+    // the clamp that bounds it — the same mechanism grid's own
+    // on-this-day widget already uses for this field).
+    useOnThisDay.mockReturnValue({
+      data: {
+        events: [
+          {
+            year: 1969,
+            text: 'Apollo 11 astronauts Neil Armstrong and Buzz Aldrin become the first humans to walk on the Moon, an achievement watched live by an estimated 650 million people around the world.',
+          },
+        ],
+      },
+      isLoading: false,
+    })
+    render(<HouseholdColumn />)
+    const blurb = screen.getByText(/Apollo 11/)
+    expect(blurb.className).toContain('line-clamp-3')
+  })
+
+  it('renders every section fully populated without throwing (the column at its fullest)', () => {
+    // This state — lunch, chores past the visible cap, coming up at its
+    // cap, and a long on-this-day blurb — has never been rendered against
+    // real data at once. Not a layout assertion (jsdom can't measure
+    // overflow); this exists so the fullest realistic combination is at
+    // least known not to crash, and the "+more" caps are honoured
+    // together rather than only individually.
+    useLunchMenu.mockReturnValue({
+      data: { today: { entries: [{ name: 'Chicken tenders', withItems: ['Mashed potatoes'] }], extras: [] } },
+      isLoading: false,
+    })
+    useChores.mockReturnValue({
+      data: {
+        completed_count: 2,
+        total_count: 7,
+        persons: [
+          {
+            person: { id: 1, name: 'Ben', color: '#000', avatar: null },
+            assignments: Array.from({ length: 4 }, (_, i) => ({
+              id: i,
+              chore: { id: i, name: `Chore ${i}`, chore_type: 'regular', tags: [] },
+              picked_chore: null,
+              completed: i === 0,
+            })),
+          },
+          {
+            person: { id: 2, name: 'Mia', color: '#000', avatar: null },
+            assignments: Array.from({ length: 3 }, (_, i) => ({
+              id: 10 + i,
+              chore: { id: 10 + i, name: `Other chore ${i}`, chore_type: 'regular', tags: [] },
+              picked_chore: null,
+              completed: false,
+            })),
+          },
+        ],
+      },
+      isLoading: false,
+    })
+    useCountdowns.mockReturnValue({
+      data: [
+        { id: '1', name: 'Hawaii', date: new Date('2026-08-17'), daysUntil: 18 },
+        { id: '2', name: 'Back to school', date: new Date('2026-08-25'), daysUntil: 26 },
+        { id: '3', name: 'Concert', date: new Date('2026-11-01'), daysUntil: 94 },
+      ],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    })
+    useOnThisDay.mockReturnValue({
+      data: {
+        events: [
+          {
+            year: 1969,
+            text: 'Apollo 11 astronauts Neil Armstrong and Buzz Aldrin become the first humans to walk on the Moon, an achievement watched live by an estimated 650 million people around the world.',
+          },
+        ],
+      },
+      isLoading: false,
+    })
+    expect(() => render(<HouseholdColumn />)).not.toThrow()
+    expect(screen.getByText('2/7')).toBeInTheDocument()
+    expect(screen.getByText('+1 more')).toBeInTheDocument()
+  })
 })
