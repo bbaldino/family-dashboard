@@ -45,11 +45,14 @@ describe('HouseholdColumn', () => {
   })
 
   it('stacks sections lunch, chores, coming up, on this day in that order', () => {
+    // Kicker text changed to match the design mock (`broadsheet-v2.jsx:229`)
+    // — "Cafeteria · today" rather than the old bare "Lunch" — so this
+    // asserts on the new label, not just the old regex.
     useLunchMenu.mockReturnValue({
-      data: { today: { entries: [{ name: 'Pizza' }], extras: [] } },
+      data: { today: { entries: [{ name: 'Pizza', withItems: [] }], extras: [] } },
       isLoading: false,
     })
-    useChores.mockReturnValue({ data: { completed_count: 1, total_count: 3 }, isLoading: false })
+    useChores.mockReturnValue({ data: { completed_count: 1, total_count: 3, persons: [] }, isLoading: false })
     useCountdowns.mockReturnValue({
       data: [{ id: '1', name: 'Hawaii', date: new Date('2026-08-17'), daysUntil: 18 }],
       isLoading: false,
@@ -61,8 +64,10 @@ describe('HouseholdColumn', () => {
       isLoading: false,
     })
     render(<HouseholdColumn />)
-    const labels = screen.getAllByText(/^(Lunch|Chores today|Coming up|On this day)$/).map((el) => el.textContent)
-    expect(labels).toEqual(['Lunch', 'Chores today', 'Coming up', 'On this day'])
+    const labels = screen
+      .getAllByText(/^(Cafeteria · today|Chores today|Coming up|On this day)$/)
+      .map((el) => el.textContent)
+    expect(labels).toEqual(['Cafeteria · today', 'Chores today', 'Coming up', 'On this day'])
   })
 
   it('does not render a now-playing section — that moved to the footer', () => {
