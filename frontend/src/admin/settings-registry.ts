@@ -12,9 +12,9 @@ import { ThemeSettings } from '@/palettes/ThemeSettings'
 
 /**
  * Maps an integration id (e.g. 'sports', 'chores') to its admin settings
- * form component. Admin uses this instead of pulling a `settingsComponent`
- * off the integration definition — the data layer must not reference React
- * components.
+ * form component. Integration definitions deliberately carry no reference to
+ * a settings component: they live in the data layer, which must not reference
+ * React components. Admin owns that association, here.
  */
 export const settingsRegistry: Record<string, ComponentType<Record<string, never>>> = {
   sports: SportsSettings,
