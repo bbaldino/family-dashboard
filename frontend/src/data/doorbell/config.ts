@@ -1,6 +1,5 @@
 import { z } from 'zod'
-import { defineIntegration } from '../define-integration'
-import { DoorbellSettings } from './DoorbellSettings'
+import { defineIntegration } from '@/integrations/define-integration'
 
 export const doorbellIntegration = defineIntegration({
   id: 'doorbell',
@@ -48,5 +47,4 @@ export const doorbellIntegration = defineIntegration({
       description: 'Selected chime from the built-in sound catalog.',
     },
   },
-  settingsComponent: DoorbellSettings,
 })

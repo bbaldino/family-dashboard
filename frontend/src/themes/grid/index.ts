@@ -1,6 +1,6 @@
 import type { ThemeModule } from '@/shell/types'
 import { registerTheme } from '@/shell/ThemeRegistry'
-import { DoorbellRingListener } from '@/integrations/doorbell'
+import { DoorbellRingListener } from '@/themes/grid/overlays/doorbell/DoorbellRingListener'
 import { AppShell } from '@/themes/grid/layout/AppShell'
 import { HomeBoard } from '@/themes/grid/screens/HomeBoard'
 import { CalendarBoard } from '@/themes/grid/screens/calendar/CalendarBoard'

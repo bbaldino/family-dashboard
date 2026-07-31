@@ -1,7 +1,7 @@
 import type { Integration } from './define-integration'
 import { choresIntegration } from '@/data/chores'
 import { countdownsIntegration } from '@/data/countdowns'
-import { doorbellIntegration } from './doorbell/config'
+import { doorbellIntegration } from '@/data/doorbell'
 import { nutrisliceIntegration } from '@/data/nutrislice'
 import { weatherIntegration } from '@/data/weather'
 import { googleCloudIntegration } from './google-cloud/config'
