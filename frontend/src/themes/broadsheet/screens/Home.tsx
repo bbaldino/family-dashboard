@@ -2,14 +2,21 @@ import { useGoogleCalendar } from '@/data/google-calendar'
 import type { CalendarDay, CalendarEvent } from '@/data/google-calendar'
 import { useSportsGames } from '@/data/sports'
 import { useLunchMenu } from '@/data/nutrislice'
-import { DoubleRule } from '@/themes/broadsheet/ui/DoubleRule'
 import { Masthead } from '@/themes/broadsheet/home/Masthead'
 import { ScheduleColumn } from '@/themes/broadsheet/home/ScheduleColumn'
 import { SportsColumn } from '@/themes/broadsheet/home/SportsColumn'
-import { GlanceStrip } from '@/themes/broadsheet/home/GlanceStrip'
+import { pickFeaturedGame } from '@/themes/broadsheet/home/featured-game'
+import { HouseholdColumn } from '@/themes/broadsheet/home/HouseholdColumn'
 import { buildStandfirst } from '@/themes/broadsheet/home/standfirst'
 import { useNow } from '@/themes/broadsheet/home/useNow'
 import { isAllDay } from '@/themes/broadsheet/home/event-format'
+
+/** Off-day/pregame vs. live column ratios for the three-column body — the
+ *  sports column widens and the schedule column narrows once a game goes
+ *  live, so the page re-proportions around it. Values from the design mock
+ *  (`broadsheet-v2.jsx:139`). */
+const BODY_COLUMNS_OFFDAY = '1.5fr 1fr 0.9fr'
+const BODY_COLUMNS_LIVE = '0.85fr 1.6fr 0.78fr'
 
 /** Today's events that haven't started yet — all-day events always count. */
 function upcomingTodayEvents(today: CalendarDay | undefined, now: Date): CalendarEvent[] {
@@ -21,10 +28,10 @@ function upcomingTodayEvents(today: CalendarDay | undefined, now: Date): Calenda
 }
 
 /**
- * The broadsheet front page: masthead over a two-column body (schedule,
- * sports) over the glance strip, filling the 1600x900 canvas the shell
- * scales to the viewport. The footer nav is part of `BroadsheetLayout`, not
- * this screen.
+ * The broadsheet front page: masthead over a three-column body — schedule,
+ * sports, and the household rundown — filling the 1600x900 canvas the shell
+ * scales to the viewport. The footer nav (and now-playing) is part of
+ * `BroadsheetLayout`, not this screen.
  *
  * Every hook here can boot with no data on a cold cache — the tablet's
  * first second after power-on — so nothing below assumes data has arrived.
@@ -45,12 +52,13 @@ export function Home() {
   const upcoming = upcomingTodayEvents(today, now)
   const nextEvent = upcoming[0]
 
+  // The same featured-game pick `SportsColumn` dispatches on, so the body's
+  // column ratios and the standfirst's sports mention can never disagree
+  // with what the sports column actually renders underneath them.
   const games = sportsData?.games ?? []
-  const sportsState: 'live' | 'pregame' | 'none' = games.some((game) => game.state === 'live')
-    ? 'live'
-    : games.some((game) => game.state === 'upcoming')
-      ? 'pregame'
-      : 'none'
+  const featuredGame = pickFeaturedGame(games)
+  const sportsState: 'live' | 'pregame' | 'none' =
+    featuredGame?.state === 'live' ? 'live' : featuredGame ? 'pregame' : 'none'
 
   const lunchToday = lunch?.today
   const lunchAvailable = !!lunchToday && (lunchToday.entries.length > 0 || lunchToday.extras.length > 0)
@@ -67,28 +75,47 @@ export function Home() {
       <Masthead standfirst={standfirst} />
       {/*
        * This is a fixed 900px canvas with no scrolling — content that runs
-       * long must clip, never spill onto the glance strip below it.
-       * `overflow-hidden` here is the structural guarantee; `min-h-0` on
-       * both the row and each column lets them actually shrink to fit
-       * instead of growing to their content's min-content size (a grid/flex
-       * item's default). `ScheduleColumn` also budgets its own day count so
-       * the common case clips nothing at all — see its source for why.
+       * long must clip, never spill under the footer. `overflow-hidden` here
+       * is the structural guarantee; `min-h-0` on both the row and each
+       * column lets them actually shrink to fit instead of growing to their
+       * content's min-content size (a grid/flex item's default).
+       * `ScheduleColumn` and `LiveGame` also budget their own item counts so
+       * the common case clips nothing at all — see their source for why.
+       *
+       * `pb-16` reserves the 64px the footer occupies (see
+       * `BroadsheetLayout`) — the footer is pinned there absolutely, outside
+       * this flex column's own height accounting, so nothing here paints
+       * underneath it.
+       *
+       * Column ratios come straight from the design mock
+       * (`broadsheet-v2.jsx:139`): off-day/pregame favours the schedule;
+       * live, sports blooms into the wider slot and the schedule narrows to
+       * make room, which is why its rows must keep fitting a tighter column.
        */}
       <div
         data-testid="broadsheet-home-body"
-        className="flex-1 min-h-0 overflow-hidden grid gap-10 px-14"
-        style={{ gridTemplateColumns: '1.5fr 1fr' }}
+        className="flex-1 min-h-0 overflow-hidden grid pb-16"
+        style={{
+          gridTemplateColumns: sportsState === 'live' ? BODY_COLUMNS_LIVE : BODY_COLUMNS_OFFDAY,
+          gap: 0,
+          paddingTop: 12,
+        }}
       >
-        <div className="min-h-0 overflow-hidden">
+        <div
+          className="min-h-0 overflow-hidden"
+          style={{ padding: '0 24px 0 56px', borderRight: '1px solid var(--rule)' }}
+        >
           <ScheduleColumn />
         </div>
-        <div className="min-h-0 overflow-hidden">
+        <div
+          className="min-h-0 overflow-hidden"
+          style={{ padding: '0 24px', borderRight: '1px solid var(--rule)' }}
+        >
           <SportsColumn data={sportsData} isLoading={sportsLoading} />
         </div>
-      </div>
-      <div className="px-14 pb-16">
-        <DoubleRule />
-        <GlanceStrip />
+        <div className="min-h-0 overflow-hidden" style={{ padding: '0 56px 0 24px' }}>
+          <HouseholdColumn />
+        </div>
       </div>
     </div>
   )

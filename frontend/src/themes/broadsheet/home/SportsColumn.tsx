@@ -1,14 +1,8 @@
-import type { Game, GamesResponse } from '@/data/sports'
+import type { GamesResponse } from '@/data/sports'
 import { OffdayBlock } from './OffdayBlock'
 import { PregameBlock } from './PregameBlock'
 import { LiveGame } from './LiveGame'
-
-/** Prefer a live game; otherwise the next upcoming one. Finals/postponed
- *  games don't get a dedicated treatment here, so the column falls back to
- *  the off-day block for them too. */
-function pickFeaturedGame(games: Game[]): Game | undefined {
-  return games.find((g) => g.state === 'live') ?? games.find((g) => g.state === 'upcoming')
-}
+import { pickFeaturedGame } from './featured-game'
 
 /**
  * The right column of the Home screen: dispatches on game state. A live
