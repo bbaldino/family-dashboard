@@ -1,12 +1,6 @@
-import type { Game, GameTeam, LinescoreEntry, MlbSituationData } from '@/data/sports'
+import type { Game, GameTeam, LinescoreEntry, MlbSituationData, Play } from '@/data/sports'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { TeamCap } from '@/themes/broadsheet/ui/TeamCap'
-
-/** ESPN's team colours arrive without a leading '#'; be forgiving either way. */
-function toHex(color: string | null): string | null {
-  if (!color) return null
-  return color.startsWith('#') ? color : `#${color}`
-}
 
 /** Diamond of three bases, lit in rust when occupied. MLB-only situation data. */
 function BasesDiamond({ situation, size = 44 }: { situation: MlbSituationData; size?: number }) {
@@ -58,7 +52,7 @@ function ScoreLine({ home, away }: { home: GameTeam; away: GameTeam }) {
       style={{ gridTemplateColumns: '1fr auto 1fr', borderTop: '2px solid var(--ink)', borderBottom: '2px solid var(--ink)' }}
     >
       <div className="flex items-center gap-3.5">
-        <TeamCap short={away.abbreviation} primary={toHex(away.color)} secondary={toHex(away.altColor)} size={48} />
+        <TeamCap short={away.abbreviation} primary={away.color} secondary={away.altColor} size={48} />
         <div>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.18em', color: 'var(--ink-muted)' }}>
             AWAY{away.record ? ` · ${away.record}` : ''}
@@ -81,7 +75,7 @@ function ScoreLine({ home, away }: { home: GameTeam; away: GameTeam }) {
           </div>
           <div style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 600 }}>{home.name}</div>
         </div>
-        <TeamCap short={home.abbreviation} primary={toHex(home.color)} secondary={toHex(home.altColor)} size={48} />
+        <TeamCap short={home.abbreviation} primary={home.color} secondary={home.altColor} size={48} />
       </div>
     </div>
   )
@@ -148,6 +142,49 @@ function LineScoreTable({ game }: { game: Game }) {
 }
 
 /**
+ * How many leader lines and scoring/recent-play lines this block ever
+ * renders, regardless of how many the feed returns. The body row is a
+ * fixed 521px with `overflow-hidden` as the safety net (see Home's body
+ * row) — score line, situation, matchup, win-probability bar, and line
+ * score above already spend ~335px, leaving ~186px for leaders and plays
+ * combined. Leaders run ~137px at their observed length; the real feed's
+ * play text (~70 chars) wraps to two lines at 12px in this column's
+ * ~265px width, so each play line costs ~40px. A high-scoring game — six
+ * runs is unremarkable — blew through the remaining budget by ~300px and
+ * got clipped mid-sentence. These caps make the cut land between items
+ * instead of through one, the same treatment `ScheduleColumn` gives its
+ * day list.
+ */
+const MAX_VISIBLE_LEADERS = 3
+const MAX_VISIBLE_SCORING_PLAYS = 3
+const MAX_VISIBLE_RECENT_PLAYS = 3
+
+/** One play line: inning marker plus the feed's play text. */
+function PlayLine({ play, accent }: { play: Play; accent?: boolean }) {
+  return (
+    <li
+      className="flex gap-2"
+      style={{ fontFamily: 'var(--font-display)', fontSize: 12, lineHeight: 1.4, color: accent ? undefined : 'var(--ink-muted)' }}
+    >
+      <span
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 10,
+          color: accent ? 'var(--rust)' : undefined,
+          fontWeight: 700,
+          width: accent ? 22 : 28,
+          flexShrink: 0,
+        }}
+      >
+        {play.inningHalf ?? ''}
+        {play.inningNumber ?? ''}
+      </span>
+      <span>{play.text}</span>
+    </li>
+  )
+}
+
+/**
  * The full takeover: score, count/bases, matchup, win probability, line
  * score, and plays. Nearly every field here is nullable on the real ESPN
  * feed (`situation`, `liveDetail`, `linescores`, `hits`/`errors`) — each
@@ -158,9 +195,22 @@ export function LiveGame({ game }: { game: Game }) {
   const detail = game.liveDetail
   const matchup = detail?.matchup
   const winProbability = detail?.winProbability
-  const scoringPlays = detail?.scoringPlays ?? []
-  const recentPlays = detail?.recentPlays ?? []
   const leaders = detail?.leaders
+  const scoringRecap = detail?.scoringRecap ?? null
+
+  // The recap already collapses every completed inning into a sentence or
+  // two — far cheaper on space than a line per play — so prefer it once
+  // the backend has cached one. Only the still-in-progress half-inning's
+  // plays (which the recap can't describe yet) render as a list alongside
+  // it. Before a recap exists (first poll or so of a fresh live game), fall
+  // back to the raw scoring list, capped the same way.
+  const visibleScoringPlays = (scoringRecap ? (detail?.inProgressScoring ?? []) : (detail?.scoringPlays ?? [])).slice(
+    0,
+    MAX_VISIBLE_SCORING_PLAYS,
+  )
+  const visibleRecentPlays = (detail?.recentPlays ?? []).slice(0, MAX_VISIBLE_RECENT_PLAYS)
+  const visibleLeadersAway = (leaders?.away ?? []).slice(0, MAX_VISIBLE_LEADERS)
+  const visibleLeadersHome = (leaders?.home ?? []).slice(0, MAX_VISIBLE_LEADERS)
 
   return (
     <div>
@@ -263,12 +313,12 @@ export function LiveGame({ game }: { game: Game }) {
 
       <LineScoreTable game={game} />
 
-      {(leaders?.home.length || leaders?.away.length) ? (
+      {(visibleLeadersAway.length > 0 || visibleLeadersHome.length > 0) && (
         <div className="grid grid-cols-2 gap-4 mt-3 pt-2.5" style={{ borderTop: '1px solid var(--rule)' }}>
           <div>
             <Kicker>Leaders · {game.away.abbreviation}</Kicker>
             <ul className="m-0 mt-1.5 p-0 flex flex-col gap-1" style={{ listStyle: 'none' }}>
-              {(leaders?.away ?? []).map((l, i) => (
+              {visibleLeadersAway.map((l, i) => (
                 <li key={i} className="flex justify-between" style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>
                   <span>{l.playerName}</span>
                   <span style={{ color: 'var(--ink-muted)' }}>{l.displayValue}</span>
@@ -279,7 +329,7 @@ export function LiveGame({ game }: { game: Game }) {
           <div>
             <Kicker>Leaders · {game.home.abbreviation}</Kicker>
             <ul className="m-0 mt-1.5 p-0 flex flex-col gap-1" style={{ listStyle: 'none' }}>
-              {(leaders?.home ?? []).map((l, i) => (
+              {visibleLeadersHome.map((l, i) => (
                 <li key={i} className="flex justify-between" style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>
                   <span>{l.playerName}</span>
                   <span style={{ color: 'var(--ink-muted)' }}>{l.displayValue}</span>
@@ -288,42 +338,36 @@ export function LiveGame({ game }: { game: Game }) {
             </ul>
           </div>
         </div>
-      ) : null}
+      )}
 
-      {(scoringPlays.length > 0 || recentPlays.length > 0) && (
+      {(scoringRecap || visibleScoringPlays.length > 0 || visibleRecentPlays.length > 0) && (
         <div className="grid grid-cols-2 gap-4 mt-3 pt-2.5" style={{ borderTop: '1px solid var(--rule)' }}>
-          {scoringPlays.length > 0 && (
+          {(scoringRecap || visibleScoringPlays.length > 0) && (
             <div>
               <Kicker>Scoring</Kicker>
-              <ul className="m-0 mt-1.5 p-0 flex flex-col gap-1" style={{ listStyle: 'none' }}>
-                {scoringPlays.map((play) => (
-                  <li key={play.id} className="flex gap-2" style={{ fontFamily: 'var(--font-display)', fontSize: 12, lineHeight: 1.4 }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--rust)', fontWeight: 700, width: 22, flexShrink: 0 }}>
-                      {play.inningHalf ?? ''}
-                      {play.inningNumber ?? ''}
-                    </span>
-                    <span>{play.text}</span>
-                  </li>
-                ))}
-              </ul>
+              {scoringRecap && (
+                <p
+                  className="m-0 mt-1.5"
+                  style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 12, lineHeight: 1.4 }}
+                >
+                  {scoringRecap.text}
+                </p>
+              )}
+              {visibleScoringPlays.length > 0 && (
+                <ul className="m-0 mt-1.5 p-0 flex flex-col gap-1" style={{ listStyle: 'none' }}>
+                  {visibleScoringPlays.map((play) => (
+                    <PlayLine key={play.id} play={play} accent />
+                  ))}
+                </ul>
+              )}
             </div>
           )}
-          {recentPlays.length > 0 && (
+          {visibleRecentPlays.length > 0 && (
             <div>
               <Kicker>Recent</Kicker>
               <ul className="m-0 mt-1.5 p-0 flex flex-col gap-1" style={{ listStyle: 'none' }}>
-                {recentPlays.map((play) => (
-                  <li
-                    key={play.id}
-                    className="flex gap-2"
-                    style={{ fontFamily: 'var(--font-display)', fontSize: 12, lineHeight: 1.4, color: 'var(--ink-muted)' }}
-                  >
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, width: 28, flexShrink: 0 }}>
-                      {play.inningHalf ?? ''}
-                      {play.inningNumber ?? ''}
-                    </span>
-                    <span>{play.text}</span>
-                  </li>
+                {visibleRecentPlays.map((play) => (
+                  <PlayLine key={play.id} play={play} />
                 ))}
               </ul>
             </div>

@@ -3,12 +3,6 @@ import type { Game, GameAthlete } from '@/data/sports'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { TeamCap } from '@/themes/broadsheet/ui/TeamCap'
 
-/** ESPN's team colours arrive without a leading '#'; be forgiving either way. */
-function toHex(color: string | null): string | null {
-  if (!color) return null
-  return color.startsWith('#') ? color : `#${color}`
-}
-
 function probablePitcher(athletes: GameAthlete[], side: 'home' | 'away'): GameAthlete | undefined {
   return athletes.find((a) => a.role === 'probable' && a.team === side)
 }
@@ -17,7 +11,7 @@ function probablePitcher(athletes: GameAthlete[], side: 'home' | 'away'): GameAt
 function TeamSide({ side, team, pitcher }: { side: 'Away' | 'Home'; team: Game['home']; pitcher?: GameAthlete }) {
   return (
     <div className="flex gap-3 items-start">
-      <TeamCap short={team.abbreviation} primary={toHex(team.color)} secondary={toHex(team.altColor)} size={42} />
+      <TeamCap short={team.abbreviation} primary={team.color} secondary={team.altColor} size={42} />
       <div className="min-w-0 flex-1">
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.18em', color: 'var(--ink-muted)' }}>
           {side.toUpperCase()}
