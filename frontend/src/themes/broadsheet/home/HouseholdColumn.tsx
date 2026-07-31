@@ -250,8 +250,11 @@ function OnThisDaySection({ event }: { event: { year: number | null; text: strin
           marginTop: 4,
           fontFamily: 'var(--font-display)',
           fontStyle: 'italic',
-          fontSize: 11.5,
-          lineHeight: 1.35,
+          // The mock sets 11.5px, but its sample blurb was one short line. Real
+          // entries run to three, and at wall-viewing distance 11.5px is too
+          // small to be worth reading — sized up to sit with the lunch list.
+          fontSize: 13.5,
+          lineHeight: 1.4,
           color: 'var(--ink)',
         }}
       >
