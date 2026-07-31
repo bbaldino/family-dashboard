@@ -1,5 +1,5 @@
 import { usePolling, type UsePollingResult } from '@/hooks/usePolling'
-import { useIntegrationConfig } from '@/integrations/use-integration-config'
+import { useIntegrationConfig } from '@/data/use-integration-config'
 import { planIntegration } from './config'
 
 export interface UpcomingPlan {

@@ -1,5 +1,5 @@
 import { usePolling, type UsePollingResult } from '@/hooks/usePolling'
-import { useIntegrationConfig } from '@/integrations/use-integration-config'
+import { useIntegrationConfig } from '@/data/use-integration-config'
 import { countdownsIntegration } from './config'
 // Use the google-calendar integration's API to fetch events
 import { googleCalendarIntegration } from '@/integrations/google-calendar/config'

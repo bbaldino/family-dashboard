@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { z } from 'zod'
-import type { Integration } from './define-integration'
+import type { Integration } from '../integrations/define-integration'
 
 export function useIntegrationConfig<T extends z.ZodObject<z.ZodRawShape>>(
   integration: Integration<T>,
