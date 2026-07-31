@@ -1,7 +1,31 @@
 import { useHeroWeather, useWeatherData } from '@/data/weather'
+import type { WeatherData } from '@/data/weather'
 import { DoubleRule } from '@/themes/broadsheet/ui/DoubleRule'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { useNow } from './useNow'
+
+/** Rounds a numeric weather reading, or null when the field wasn't a finite
+ *  number. `WeatherData`'s fields are typed as `number`, but this is an
+ *  external feed — a missing reading has shown up as `null` on the wire
+ *  despite the type, and `Math.round(null as unknown as number)` prints
+ *  "NaN" straight onto the wall display. */
+function safeRound(value: number | null | undefined): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : null
+}
+
+/** The "feels like / humidity / wind" suffix, omitting whichever readings
+ *  aren't available rather than printing "NaN" for them. */
+function formatConditionsDetail(weatherData: WeatherData | null | undefined): string {
+  if (!weatherData) return ''
+  const parts: string[] = []
+  const feelsLike = safeRound(weatherData.feels_like)
+  if (feelsLike !== null) parts.push(`feels ${feelsLike}°`)
+  const humidity = safeRound(weatherData.humidity)
+  if (humidity !== null) parts.push(`${humidity}% humidity`)
+  const wind = safeRound(weatherData.wind_speed)
+  if (wind !== null) parts.push(`wind ${wind} mph`)
+  return parts.length > 0 ? ` · ${parts.join(' · ')}` : ''
+}
 
 /** "h:mm" with no leading zero, plus a separate upper-case AM/PM. */
 function formatClock(now: Date): { time: string; ampm: string } {
@@ -108,9 +132,7 @@ export function Masthead({ standfirst }: { standfirst: string }) {
               </div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-muted)' }}>
                 H {heroWeather.high}&deg; &middot; L {heroWeather.low}&deg;
-                {weatherData
-                  ? ` · feels ${Math.round(weatherData.feels_like)}° · ${Math.round(weatherData.humidity)}% humidity · wind ${Math.round(weatherData.wind_speed)} mph`
-                  : ''}
+                {formatConditionsDetail(weatherData)}
               </div>
             </>
           ) : (

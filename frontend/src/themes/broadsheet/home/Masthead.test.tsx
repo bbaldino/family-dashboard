@@ -35,4 +35,21 @@ describe('Masthead', () => {
     render(<Masthead standfirst="A quiet day." />)
     expect(screen.getByText('A quiet day.')).toBeInTheDocument()
   })
+
+  it('omits a missing numeric reading instead of printing NaN', () => {
+    // WeatherData types feels_like/humidity/wind_speed as `number`, but this
+    // is an external feed — a field has shown up `null` on the wire despite
+    // the type, and Math.round(null) used to print "feels NaN°" straight
+    // onto the wall display. Only the readings that are actually numbers
+    // should show up.
+    useWeatherData.mockReturnValue({
+      data: { feels_like: null, humidity: 41, wind_speed: 6 },
+      isLoading: false,
+    })
+    render(<Masthead standfirst="A quiet day." />)
+    expect(screen.queryByText(/NaN/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/feels/)).not.toBeInTheDocument()
+    expect(screen.getByText(/41% humidity/)).toBeInTheDocument()
+    expect(screen.getByText(/wind 6 mph/)).toBeInTheDocument()
+  })
 })
