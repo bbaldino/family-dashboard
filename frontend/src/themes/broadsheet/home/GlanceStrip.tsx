@@ -29,7 +29,7 @@ function VerticalRule() {
 
 function Section({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col justify-center gap-1 py-2" style={{ minWidth: 0 }}>
+    <div className="flex flex-col justify-center gap-1 py-2">
       <Kicker>{label}</Kicker>
       <Hairline className="mb-1" />
       {children}
@@ -142,7 +142,9 @@ export function GlanceStrip() {
     <div className="flex items-stretch" style={{ gap: 28 }}>
       {sections.flatMap(({ key, node }, i) => [
         ...(i > 0 ? [<VerticalRule key={`rule-${key}`} />] : []),
-        <div key={key}>{node}</div>,
+        <div key={key} style={{ minWidth: 0 }}>
+          {node}
+        </div>,
       ])}
     </div>
   )
