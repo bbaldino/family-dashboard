@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { HassConnect } from '@hakit/core'
 import { ThemeMount } from './shell/ThemeMount'
 import '@/themes/grid' // side-effect: registers gridTheme
+import '@/themes/broadsheet' // side-effect: registers broadsheetTheme
 import { AdminLayout } from './admin/AdminLayout'
 import { SettingsAdmin } from './admin/SettingsAdmin'
 import { getRuntimeConfig } from './lib/ha-client'
