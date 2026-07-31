@@ -233,7 +233,29 @@ function ComingUpSection({ items }: { items: CountdownItem[] }) {
  * also now matches `grid`'s own on-this-day widget for this exact field
  * (`OnThisDayWidget.tsx`), coincidentally already 2. */
 
-function OnThisDaySection({ event }: { event: { year: number | null; text: string } }) {
+/**
+ * How many lines of the blurb to show. Real entries run 80–165 characters —
+ * two lines holds roughly 90, so a fixed two-line clamp truncates most of
+ * them, and on a quiet day it does so with a screenful of empty column
+ * sitting above. But the clamp can't simply be raised: when Lunch and Chores
+ * are both populated (i.e. a school day) the column is full, and the extra
+ * lines are exactly what would push this block past the canvas.
+ *
+ * So the clamp follows the column's own occupancy — which we already know
+ * here, without measuring anything. A crowded column keeps the tight
+ * two-line setting; a sparse one spends the space it actually has.
+ */
+function blurbLineClamp(crowded: boolean): 'line-clamp-2' | 'line-clamp-4' {
+  return crowded ? 'line-clamp-2' : 'line-clamp-4'
+}
+
+function OnThisDaySection({
+  event,
+  crowded,
+}: {
+  event: { year: number | null; text: string }
+  crowded: boolean
+}) {
   return (
     <div style={{ marginTop: 'auto', paddingTop: 8, borderTop: '1px solid var(--rule)' }}>
       <div className="flex items-baseline" style={{ gap: 10 }}>
@@ -252,7 +274,7 @@ function OnThisDaySection({ event }: { event: { year: number | null; text: strin
         )}
       </div>
       <p
-        className="m-0 line-clamp-2"
+        className={`m-0 ${blurbLineClamp(crowded)}`}
         style={{
           marginTop: 4,
           fontFamily: 'var(--font-display)',
@@ -299,12 +321,16 @@ export function HouseholdColumn() {
   const hasAnything = !!lunch || hasChores || nextCountdowns.length > 0 || !!onThisDayEvent
   if (!hasAnything) return null
 
+  // A lunch menu with actual items and a chore list are what fill this column;
+  // with both present there is no slack left for a longer blurb below.
+  const crowded = !!lunch?.today && hasChores
+
   return (
     <div className="h-full min-h-0 flex flex-col overflow-hidden">
       {lunch && <LunchSection lunch={lunch} />}
       {hasChores && chores && <ChoresSection chores={chores} />}
       {nextCountdowns.length > 0 && <ComingUpSection items={nextCountdowns} />}
-      {onThisDayEvent && <OnThisDaySection event={onThisDayEvent} />}
+      {onThisDayEvent && <OnThisDaySection event={onThisDayEvent} crowded={crowded} />}
     </div>
   )
 }

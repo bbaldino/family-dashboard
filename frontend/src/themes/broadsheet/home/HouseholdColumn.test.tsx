@@ -100,29 +100,54 @@ describe('HouseholdColumn', () => {
     expect(blurb.parentElement).toBe(year.parentElement?.parentElement)
   })
 
-  it('bounds the on-this-day blurb so an unusually long one cannot grow unchecked', () => {
-    // The real feed has no length guarantee on this field, and it's the
-    // column's bottom-pinned section — an unbounded blurb could push its
-    // own top edge past what's visible when the sections above it are
-    // full (jsdom can't measure that overflow directly, so this asserts
-    // the clamp that bounds it). 2 lines, not 3 — WeatherStrip's addition
-    // left the fullest state fitting 3 lines with zero pixels of
-    // clearance when measured live; trimmed for real headroom (see
-    // `HouseholdColumn`'s `OnThisDaySection` doc comment).
-    useOnThisDay.mockReturnValue({
-      data: {
-        events: [
-          {
-            year: 1969,
-            text: 'Apollo 11 astronauts Neil Armstrong and Buzz Aldrin become the first humans to walk on the Moon, an achievement watched live by an estimated 650 million people around the world.',
-          },
-        ],
-      },
+  // The real feed has no length guarantee on this field (entries run 80–165
+  // characters), and it's the column's bottom-pinned section — an unbounded
+  // blurb could push its own top edge past what's visible. So it is always
+  // clamped; how tightly depends on whether the sections above it are
+  // occupying the column. jsdom can't measure the overflow, so these assert
+  // the clamp that bounds it. See `blurbLineClamp`.
+  const longEvent = {
+    data: {
+      events: [
+        {
+          year: 1969,
+          text: 'Apollo 11 astronauts Neil Armstrong and Buzz Aldrin become the first humans to walk on the Moon, an achievement watched live by an estimated 650 million people around the world.',
+        },
+      ],
+    },
+    isLoading: false,
+  }
+
+  it('clamps the on-this-day blurb tightly when lunch and chores fill the column', () => {
+    useLunchMenu.mockReturnValue({
+      data: { today: { entries: [{ name: 'Pizza', withItems: [] }], extras: [] } },
       isLoading: false,
     })
+    useChores.mockReturnValue({ data: { completed_count: 1, total_count: 3, persons: [] }, isLoading: false })
+    useOnThisDay.mockReturnValue(longEvent)
+
     render(<HouseholdColumn />)
-    const blurb = screen.getByText(/Apollo 11/)
-    expect(blurb.className).toContain('line-clamp-2')
+    expect(screen.getByText(/Apollo 11/).className).toContain('line-clamp-2')
+  })
+
+  it('lets the blurb run longer when the column is sparse', () => {
+    // Summer: no school lunch, no chores assigned. The column has room, so
+    // truncating to two lines would cut the text with empty space beneath.
+    useOnThisDay.mockReturnValue(longEvent)
+
+    render(<HouseholdColumn />)
+    expect(screen.getByText(/Apollo 11/).className).toContain('line-clamp-4')
+  })
+
+  it('keeps the tight clamp on a no-school day that still has chores', () => {
+    // `lunch.today` null is a confirmed no-school day — the heading renders
+    // but no item list, so the column is not crowded by lunch alone.
+    useLunchMenu.mockReturnValue({ data: { today: null }, isLoading: false })
+    useChores.mockReturnValue({ data: { completed_count: 0, total_count: 2, persons: [] }, isLoading: false })
+    useOnThisDay.mockReturnValue(longEvent)
+
+    render(<HouseholdColumn />)
+    expect(screen.getByText(/Apollo 11/).className).toContain('line-clamp-4')
   })
 
   it('renders every section fully populated without throwing (the column at its fullest)', () => {
