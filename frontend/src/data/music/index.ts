@@ -1,6 +1,6 @@
 export { musicIntegration } from './config'
 export { MusicProvider } from './MusicProvider'
-export type { EnqueueMode, PlayOptions } from './music-context'
+export type { EnqueueMode, PlayOptions, MusicContextValue } from './music-context'
 export { useMusic } from './useMusic'
 export { useQueue } from './useQueue'
 export type { QueueItem } from './useQueue'
