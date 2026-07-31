@@ -1,5 +1,5 @@
 import { useDraggable } from '@dnd-kit/core'
-import type { Chore } from '@/integrations/chores/types'
+import type { Chore } from '@/data/chores'
 
 interface DraggableChoreChipProps {
   chore: Chore
