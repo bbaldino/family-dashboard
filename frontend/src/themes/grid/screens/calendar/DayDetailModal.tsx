@@ -1,5 +1,5 @@
 import { Modal } from '@/ui/Modal'
-import type { CalendarEvent } from '@/integrations/google-calendar/types'
+import type { CalendarEvent } from '@/data/google-calendar'
 import { formatEventTimeFull } from './formatEventTime'
 
 interface DayDetailModalProps {

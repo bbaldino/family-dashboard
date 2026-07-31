@@ -1,4 +1,4 @@
-import type { CalendarEvent } from '@/integrations/google-calendar/types'
+import type { CalendarEvent } from '@/data/google-calendar'
 
 /** Compact time for day cell pills (e.g. "5p", "10:30a") */
 export function formatEventTimeCompact(event: CalendarEvent): string | null {

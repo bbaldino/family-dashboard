@@ -1,6 +1,5 @@
 import { z } from 'zod'
-import { defineIntegration } from '../define-integration'
-import { GoogleCalendarSettings } from './GoogleCalendarSettings'
+import { defineIntegration } from '@/integrations/define-integration'
 
 export const googleCalendarIntegration = defineIntegration({
   id: 'google-calendar',
@@ -14,5 +13,4 @@ export const googleCalendarIntegration = defineIntegration({
       description: 'Managed via calendar picker below',
     },
   },
-  settingsComponent: GoogleCalendarSettings,
 })

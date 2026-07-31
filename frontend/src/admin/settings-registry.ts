@@ -1,5 +1,6 @@
 import type { ComponentType } from 'react'
 import { SportsSettings } from '@/admin/settings/sports/SportsSettings'
+import { GoogleCalendarSettings } from '@/admin/settings/google-calendar/GoogleCalendarSettings'
 
 /**
  * Maps an integration id (e.g. 'sports', 'chores') to its admin settings
@@ -14,4 +15,5 @@ import { SportsSettings } from '@/admin/settings/sports/SportsSettings'
  */
 export const settingsRegistry: Record<string, ComponentType<Record<string, never>>> = {
   sports: SportsSettings,
+  'google-calendar': GoogleCalendarSettings,
 }

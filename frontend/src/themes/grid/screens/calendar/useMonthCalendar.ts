@@ -1,6 +1,5 @@
 import { usePolling } from '@/hooks/usePolling'
-import { googleCalendarIntegration } from '@/integrations/google-calendar/config'
-import type { CalendarEvent } from '@/integrations/google-calendar/types'
+import { googleCalendarIntegration, type CalendarEvent } from '@/data/google-calendar'
 import { eventLocalDateStr, parseLocalDate, toLocalDateStr } from '@/utils/date'
 
 export interface MonthEvents {

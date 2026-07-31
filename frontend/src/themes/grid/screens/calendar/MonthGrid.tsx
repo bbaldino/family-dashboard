@@ -1,4 +1,4 @@
-import type { CalendarEvent } from '@/integrations/google-calendar/types'
+import type { CalendarEvent } from '@/data/google-calendar'
 import { DayCell } from './DayCell'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
