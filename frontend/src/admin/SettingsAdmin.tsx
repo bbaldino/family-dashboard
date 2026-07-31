@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/ui/Button'
 import { integrations } from '@/integrations/registry'
 import { ModelSelect } from '@/integrations/llm/ModelSelect'
+import { settingsRegistry } from './settings-registry'
 
 /** Get default values from all integrations' Zod schemas, prefixed with integration ID */
 function getSchemaDefaults(): Record<string, string> {
@@ -54,13 +55,17 @@ export function SettingsAdmin() {
 
   const selectedIntegration = integrations.find((i) => i.id === selectedId)
 
+  const SettingsComponent = selectedIntegration
+    ? (settingsRegistry[selectedIntegration.id] ?? selectedIntegration.settingsComponent)
+    : undefined
+
   const handleSave = async () => {
     if (!selectedIntegration) return
     try {
       setError(null)
 
       // Validate this integration's config via its Zod schema
-      if (!selectedIntegration.settingsComponent) {
+      if (!SettingsComponent) {
         const prefix = selectedIntegration.id + '.'
         const scoped: Record<string, string> = {}
         for (const [key, value] of Object.entries(localConfig)) {
@@ -141,9 +146,9 @@ export function SettingsAdmin() {
               {selectedIntegration.name}
             </h3>
 
-            {selectedIntegration.settingsComponent ? (
+            {SettingsComponent ? (
               <div className="flex-1 min-h-0">
-                <selectedIntegration.settingsComponent />
+                <SettingsComponent />
               </div>
             ) : (
               <div className="max-w-2xl">
