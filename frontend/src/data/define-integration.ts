@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import type { ComponentType } from 'react'
 
 export interface FieldMeta {
   label: string
@@ -12,7 +11,6 @@ interface IntegrationDefBase<T extends z.ZodObject<z.ZodRawShape>> {
   name: string
   schema: T
   fields: Record<keyof z.infer<T>, FieldMeta>
-  settingsComponent?: ComponentType
 }
 
 export interface BackendIntegrationDef<T extends z.ZodObject<z.ZodRawShape>>

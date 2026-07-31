@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { defineIntegration } from '@/integrations/define-integration'
+import { defineIntegration } from '@/data/define-integration'
 
 export const sportsIntegration = defineIntegration({
   id: 'sports',

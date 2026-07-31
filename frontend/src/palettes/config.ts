@@ -1,6 +1,5 @@
 import { z } from 'zod'
-import { defineIntegration } from '@/integrations/define-integration'
-import { ThemeSettings } from './ThemeSettings'
+import { defineIntegration } from '@/data/define-integration'
 
 export const themeIntegration = defineIntegration({
   id: 'theme',
@@ -8,5 +7,4 @@ export const themeIntegration = defineIntegration({
   hasBackend: false,
   schema: z.object({}),
   fields: {},
-  settingsComponent: ThemeSettings,
 })

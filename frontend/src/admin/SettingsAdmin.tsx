@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/ui/Button'
-import { integrations } from '@/integrations/registry'
+import { integrations } from '@/data/integrations-registry'
 import { ModelSelect } from '@/admin/settings/llm/ModelSelect'
 import { settingsRegistry } from './settings-registry'
 
@@ -56,7 +56,7 @@ export function SettingsAdmin() {
   const selectedIntegration = integrations.find((i) => i.id === selectedId)
 
   const SettingsComponent = selectedIntegration
-    ? (settingsRegistry[selectedIntegration.id] ?? selectedIntegration.settingsComponent)
+    ? settingsRegistry[selectedIntegration.id]
     : undefined
 
   const handleSave = async () => {
