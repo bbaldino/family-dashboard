@@ -234,7 +234,7 @@ function ChoresSection({ chores }: { chores: TodayResponse }) {
                 </ul>
                 {group.hiddenTaskCount > 0 && (
                   <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fontStyle: 'italic', color: 'var(--ink-muted)', marginTop: 2 }}>
-                    +{group.hiddenTaskCount} more
+                    +{group.hiddenTaskCount} more for {group.personName}
                   </div>
                 )}
               </div>
@@ -242,9 +242,25 @@ function ChoresSection({ chores }: { chores: TodayResponse }) {
           })}
         </div>
       )}
+      {/* Distinct from the per-person overflow above: that one hides tasks
+       *  belonging to a person who IS shown, this one hides whole people.
+       *  Rendered identically they read as the same thing — and the people
+       *  line sits directly beneath the last person's task list, so it looks
+       *  like more of *their* tasks. Name what is hidden in each. */}
       {hiddenPeopleCount > 0 && (
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fontStyle: 'italic', color: 'var(--ink-muted)', marginTop: 4 }}>
-          +{hiddenPeopleCount} more
+        <div
+          className="uppercase"
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 9,
+            letterSpacing: '0.12em',
+            color: 'var(--ink-muted)',
+            marginTop: 6,
+            paddingTop: 4,
+            borderTop: '1px dotted var(--rule)',
+          }}
+        >
+          +{hiddenPeopleCount} {hiddenPeopleCount === 1 ? 'person' : 'people'} not shown
         </div>
       )}
     </div>

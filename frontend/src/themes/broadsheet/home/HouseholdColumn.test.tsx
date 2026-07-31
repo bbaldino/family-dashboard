@@ -239,14 +239,16 @@ describe('HouseholdColumn', () => {
     // Ben's own heading count is also uncapped...
     expect(screen.getByText('2/6')).toBeInTheDocument()
     // ...but only 2 of his 6 tasks render, with the rest folded into a
-    // per-person "+more" line.
-    expect(screen.getByText('+4 more')).toBeInTheDocument()
+    // per-person "+more" line that names whose tasks are hidden — the
+    // column-level people overflow below uses different wording, so the two
+    // can't be mistaken for each other.
+    expect(screen.getByText('+4 more for Ben')).toBeInTheDocument()
     expect(screen.queryByText('Chore 2')).not.toBeInTheDocument()
     expect(screen.getByText('Chore 1')).toBeInTheDocument()
     // Mia is also past the per-person cap — same treatment, her own
     // "+more" line with a different count.
     expect(screen.getByText('0/3')).toBeInTheDocument()
-    expect(screen.getByText('+1 more')).toBeInTheDocument()
+    expect(screen.getByText('+1 more for Mia')).toBeInTheDocument()
     expect(screen.getByText('Mia chore 0')).toBeInTheDocument()
     expect(screen.queryByText('Mia chore 2')).not.toBeInTheDocument()
     // Zoe, Sam, and Ana are the 3rd–5th people, past MAX_VISIBLE_PEOPLE —
@@ -255,7 +257,50 @@ describe('HouseholdColumn', () => {
     expect(screen.queryByText('Zoe')).not.toBeInTheDocument()
     expect(screen.queryByText('Sam')).not.toBeInTheDocument()
     expect(screen.queryByText('Ana')).not.toBeInTheDocument()
-    expect(screen.getByText('+3 more')).toBeInTheDocument()
+    expect(screen.getByText('+3 people not shown')).toBeInTheDocument()
+  })
+
+  it('distinguishes hidden tasks from hidden people', () => {
+    // Both overflows can render at once, and the people line sits directly
+    // beneath the last person's task list — so identical wording reads as
+    // "more of that person's tasks". One names the person, the other says
+    // what it is counting.
+    useChores.mockReturnValue({
+      data: {
+        completed_count: 0,
+        total_count: 6,
+        persons: [
+          {
+            person: { id: 1, name: 'Ben', color: '#000', avatar: null },
+            assignments: [0, 1, 2].map((i) => ({
+              id: i,
+              completed: false,
+              chore: { name: `Ben chore ${i}` },
+              picked_chore: null,
+            })),
+          },
+          {
+            person: { id: 2, name: 'Joey', color: '#000', avatar: null },
+            assignments: [
+              { id: 10, completed: false, chore: { name: 'Joey chore' }, picked_chore: null },
+            ],
+          },
+          {
+            person: { id: 3, name: 'Sam', color: '#000', avatar: null },
+            assignments: [
+              { id: 20, completed: false, chore: { name: 'Sam chore' }, picked_chore: null },
+            ],
+          },
+        ],
+      },
+      isLoading: false,
+    })
+
+    render(<HouseholdColumn />)
+    expect(screen.getByText('+1 more for Ben')).toBeInTheDocument()
+    expect(screen.getByText('+1 person not shown')).toBeInTheDocument()
+    // The bare wording that made the two indistinguishable is gone.
+    expect(screen.queryByText('+1 more')).not.toBeInTheDocument()
   })
 
   it('groups chores under a person heading rather than a flat list with per-row assignees', () => {
