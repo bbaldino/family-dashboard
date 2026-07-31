@@ -226,6 +226,22 @@ export function LiveGame({ game }: { game: Game }) {
         <span className="flex-1" style={{ height: 1, background: 'var(--rule)' }} />
       </div>
 
+      {game.headline && (
+        <h2
+          className="m-0"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 28,
+            fontWeight: 600,
+            letterSpacing: '-0.01em',
+            lineHeight: 1,
+            marginBottom: 12,
+          }}
+        >
+          {game.headline}
+        </h2>
+      )}
+
       <ScoreLine home={game.home} away={game.away} />
 
       {mlbSituation && (
@@ -364,7 +380,7 @@ export function LiveGame({ game }: { game: Game }) {
           )}
           {visibleRecentPlays.length > 0 && (
             <div>
-              <Kicker>Recent</Kicker>
+              <Kicker color="var(--ink-muted)">Recent</Kicker>
               <ul className="m-0 mt-1.5 p-0 flex flex-col gap-1" style={{ listStyle: 'none' }}>
                 {visibleRecentPlays.map((play) => (
                   <PlayLine key={play.id} play={play} />

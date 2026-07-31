@@ -23,7 +23,7 @@ export function OffdayBlock({ data, isLoading }: { data: GamesResponse | undefin
 
   return (
     <div>
-      <Kicker>Sports</Kicker>
+      <Kicker color="var(--ink-muted)">Sports · Off-day</Kicker>
       <h2
         className="m-0"
         style={{
@@ -44,7 +44,7 @@ export function OffdayBlock({ data, isLoading }: { data: GamesResponse | undefin
       </p>
       {upcoming.length > 0 && (
         <div className="pt-2.5" style={{ borderTop: '1px solid var(--rule)' }}>
-          <Kicker>Next on the schedule</Kicker>
+          <Kicker color="var(--ink-muted)">Next on the schedule</Kicker>
           <div className="mt-2">
             {upcoming.map((g, i) => (
               <div

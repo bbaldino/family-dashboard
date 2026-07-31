@@ -59,10 +59,10 @@ export function PregameBlock({ game }: { game: Game }) {
         className="m-0"
         style={{
           fontFamily: 'var(--font-display)',
-          fontSize: 30,
+          fontSize: 32,
           fontWeight: 600,
           letterSpacing: '-0.01em',
-          lineHeight: 1.05,
+          lineHeight: 1,
           marginBottom: 14,
         }}
       >
