@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/ui/Button'
 import { ModelSelect } from '@/integrations/llm/ModelSelect'
-import { sportsIntegration } from '@/data/sports/config'
-import type { TeamInfo, TrackedTeam } from '@/data/sports/types'
+import { sportsIntegration, type TeamInfo, type TrackedTeam } from '@/data/sports'
 
 const LEAGUES = [
   { id: 'nba', name: 'NBA' },

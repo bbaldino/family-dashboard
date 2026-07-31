@@ -1,18 +1,11 @@
-import { useQuery } from '@tanstack/react-query'
-import { sportsIntegration } from '@/data/sports/config'
+import { useSportsPreview } from '@/data/sports'
 
 interface AiPreviewProps {
   gameId: string
 }
 
 export function AiPreview({ gameId }: AiPreviewProps) {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['sports', 'preview', gameId],
-    queryFn: () =>
-      sportsIntegration.api.get<{ summary: string }>(`/preview?game_id=${encodeURIComponent(gameId)}`),
-    staleTime: 60 * 60 * 1000, // 1 hour
-    retry: 1,
-  })
+  const { data, isLoading, error } = useSportsPreview(gameId)
 
   if (isLoading) {
     return (

@@ -1,4 +1,4 @@
-import type { GameTeam, Play, ScoringRecap } from '@/data/sports/types'
+import type { GameTeam, Play, ScoringRecap } from '@/data/sports'
 import { TeamDot, teamFor } from './PlayByPlayLog'
 
 interface ScoringSummaryProps {

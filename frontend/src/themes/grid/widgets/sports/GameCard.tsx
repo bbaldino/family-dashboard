@@ -1,5 +1,4 @@
-import type { Game } from '@/data/sports/types'
-import { formatUpcomingTime } from '@/data/sports/formatTime'
+import { formatUpcomingTime, type Game } from '@/data/sports'
 
 function formatRelativeTime(startTime: string): string {
   const start = new Date(startTime)

@@ -1,4 +1,4 @@
-import type { Game, GameLiveDetail } from '@/data/sports/types'
+import type { Game, GameLiveDetail } from '@/data/sports'
 import { BaseDiamond } from './BaseDiamond'
 import { CountIndicator } from './CountIndicator'
 import { WinProbabilityBar } from './WinProbabilityBar'

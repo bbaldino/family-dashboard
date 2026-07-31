@@ -1,4 +1,4 @@
-import type { GameTeam, Play } from '@/data/sports/types'
+import type { GameTeam, Play } from '@/data/sports'
 
 interface PlayByPlayLogProps {
   plays: Play[]

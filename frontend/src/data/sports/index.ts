@@ -1,4 +1,6 @@
 export { sportsIntegration } from './config'
 export { useSportsGames } from './useSportsGames'
+export { useSportsPreview } from './useSportsPreview'
+export { useSportsFinalRecap } from './useSportsFinalRecap'
 export { formatUpcomingTime } from './formatTime'
 export type * from './types'

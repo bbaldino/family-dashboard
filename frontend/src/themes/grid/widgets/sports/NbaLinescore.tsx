@@ -1,4 +1,4 @@
-import type { Game } from '@/data/sports/types'
+import type { Game } from '@/data/sports'
 
 interface NbaLinescoreProps {
   game: Game

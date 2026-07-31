@@ -1,20 +1,11 @@
-import { useQuery } from '@tanstack/react-query'
-import { sportsIntegration } from '@/data/sports/config'
+import { useSportsFinalRecap } from '@/data/sports'
 
 interface AiFinalRecapProps {
   gameId: string
 }
 
 export function AiFinalRecap({ gameId }: AiFinalRecapProps) {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['sports', 'final-recap', gameId],
-    queryFn: () =>
-      sportsIntegration.api.get<{ summary: string }>(
-        `/final-recap?game_id=${encodeURIComponent(gameId)}`,
-      ),
-    staleTime: 24 * 60 * 60 * 1000,
-    retry: 1,
-  })
+  const { data, isLoading, error } = useSportsFinalRecap(gameId)
 
   if (isLoading) {
     return (
