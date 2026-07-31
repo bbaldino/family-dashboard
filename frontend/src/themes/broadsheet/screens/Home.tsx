@@ -78,12 +78,7 @@ export function Home() {
 
   return (
     <div data-testid="broadsheet-home" className="broadsheet-root w-[1600px] h-[900px] flex flex-col">
-      <Masthead
-        standfirst={standfirst}
-        isLive={sportsState === 'live'}
-        nextEventSummary={nextEventSummary}
-        totalEvents={totalEvents}
-      />
+      <Masthead standfirst={standfirst} nextEventSummary={nextEventSummary} totalEvents={totalEvents} />
       {/*
        * This is a fixed 900px canvas with no scrolling — content that runs
        * long must clip, never spill under the footer. `overflow-hidden` here

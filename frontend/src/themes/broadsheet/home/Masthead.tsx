@@ -79,19 +79,20 @@ const standfirstSummaryStyle = {
  * from the house, and a compact "what's next" summary. Mock:
  * `broadsheet-v2.jsx:97-134`.
  *
- * `isLive` and the standfirst's next-event/total-event summary are threaded
- * down from `Home` rather than computed here — `Home` already owns the
- * single `useSportsGames()` call and the calendar data those numbers come
- * from, so this stays a straightforward render of what it's given.
+ * The standfirst's next-event/total-event summary is threaded down from
+ * `Home` rather than computed here — `Home` already owns the calendar data
+ * those numbers come from, so this stays a straightforward render of what
+ * it's given. There is no live-game indicator here any more — the mock
+ * dropped the weather cell's kicker entirely (`broadsheet-v2.jsx:115-117`),
+ * which was the only place live-game state surfaced in the masthead; the
+ * sports column still shows it.
  */
 export function Masthead({
   standfirst,
-  isLive,
   nextEventSummary,
   totalEvents,
 }: {
   standfirst: string
-  isLive: boolean
   nextEventSummary: string
   totalEvents: number
 }) {
@@ -111,14 +112,17 @@ export function Masthead({
           borderBottom: '3px double var(--ink)',
         }}
       >
-        {/* All three cells are kicker + 72px numeral only, and nothing
-         *  else, so `align-items: end` bottom-aligns their numerals onto
-         *  one shared baseline. The weather cell's H/L detail line is
-         *  deliberately rendered *outside* this grid, below it — adding a
-         *  fourth line to just one cell would make that cell taller than
-         *  its siblings, and align-items: end would then anchor its extra
-         *  height at the *top*, pushing its kicker and numeral out of line
-         *  with the other two. */}
+        {/* Clock and date are kicker + 72px numeral; weather is the 72px
+         *  numeral row alone (its kicker was removed, not hidden — see
+         *  below). `align-items: end` bottom-aligns all three cells'
+         *  numerals onto one shared baseline regardless of that height
+         *  difference, because it anchors each cell's *bottom* edge, and
+         *  the numeral is the last (and, for weather, only) line in every
+         *  cell. The weather cell's H/L detail line is deliberately
+         *  rendered *outside* this grid, below it — adding a line to just
+         *  one cell in-grid would make that cell taller than its siblings,
+         *  and align-items: end would then anchor its extra height at the
+         *  *top*, pushing its numeral out of line with the other two. */}
         <div className="grid items-end" style={{ gridTemplateColumns: '0.85fr 1.5fr 0.85fr', gap: 24 }}>
           {/* left: clock */}
           <div>
@@ -140,12 +144,15 @@ export function Masthead({
             </h1>
           </div>
 
-          {/* right: weather */}
+          {/* right: weather. No kicker line here any more — the mock
+           *  removed the "Outside" label (and the live-game indicator that
+           *  rode along with it) entirely rather than hiding it, so unlike
+           *  the clock/date cells this one's first line is the numeral row
+           *  itself. `align-items: end` still bottom-aligns the three
+           *  cells' numerals onto a shared baseline regardless — verified
+           *  live, not just by inspection: a previous change to this exact
+           *  cell broke that alignment in a way no test caught. */}
           <div style={{ textAlign: 'right' }}>
-            <div style={{ ...mastheadKickerStyle, textAlign: 'right' }}>
-              Outside
-              {isLive && <span style={{ color: 'var(--rust)', marginLeft: 6 }}>● LIVE GAME</span>}
-            </div>
             {heroWeather ? (
               <div className="flex items-baseline justify-end" style={{ gap: 10 }}>
                 {/* Condition-aware icon (mapped from the current condition

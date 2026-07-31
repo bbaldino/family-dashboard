@@ -10,7 +10,6 @@ function renderMasthead(overrides: Partial<Parameters<typeof Masthead>[0]> = {})
   return render(
     <Masthead
       standfirst="Nothing on the calendar — the day is yours."
-      isLive={false}
       nextEventSummary="Tomorrow first"
       totalEvents={0}
       {...overrides}
@@ -69,18 +68,12 @@ describe('Masthead', () => {
     expect(heading.textContent).toContain(`${day}${suffix}`)
   })
 
-  it('shows the live-game indicator only when a game is live', () => {
-    const { rerender } = renderMasthead({ isLive: false })
+  it('does not render a live-game indicator — the mock removed the weather kicker that carried it', () => {
+    // The masthead's "Outside" kicker (and the "● LIVE GAME" indicator that
+    // lived inside it) was removed entirely, not hidden. Live-game state
+    // still surfaces elsewhere on Home — the sports column — just not here.
+    renderMasthead()
     expect(screen.queryByText(/LIVE GAME/)).not.toBeInTheDocument()
-
-    rerender(
-      <Masthead
-        standfirst="Nothing on the calendar — the day is yours."
-        isLive={true}
-        nextEventSummary="Tomorrow first"
-        totalEvents={0}
-      />,
-    )
-    expect(screen.getByText(/LIVE GAME/)).toBeInTheDocument()
+    expect(screen.queryByText(/Outside/)).not.toBeInTheDocument()
   })
 })
