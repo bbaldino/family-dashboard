@@ -60,7 +60,11 @@ export function Masthead({ standfirst }: { standfirst: string }) {
       <div className="grid gap-6 items-end" style={{ gridTemplateColumns: '0.85fr 1.5fr 0.85fr' }}>
         {/* left: time + date */}
         <div>
-          <Kicker>Now</Kicker>
+          {/* The mock hand-rolls these three labels rather than reusing its
+           * shared `Kicker` (`broadsheet-v2.jsx:100,107,114`) — muted, not
+           * bold. `Kicker`'s default is bold rust for section bylines
+           * elsewhere on the page; overridden here to match. */}
+          <Kicker color="var(--ink-muted)">Now</Kicker>
           <div
             style={{
               fontFamily: 'var(--font-display)',
@@ -104,7 +108,9 @@ export function Masthead({ standfirst }: { standfirst: string }) {
 
         {/* right: weather — only what we actually collect */}
         <div className="text-right">
-          <Kicker className="flex justify-end">Outside</Kicker>
+          <Kicker className="flex justify-end" color="var(--ink-muted)">
+            Outside
+          </Kicker>
           {heroWeather ? (
             <>
               <div className="flex items-baseline justify-end gap-2">
