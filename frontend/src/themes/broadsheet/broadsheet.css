@@ -1,0 +1,26 @@
+/* Newsreader carries the editorial voice — italic is the display face. */
+@import "@fontsource-variable/newsreader";
+@import "@fontsource-variable/newsreader/wght-italic.css";
+@import "@fontsource-variable/geist-mono";
+
+/*
+ * Broadsheet's palette is fixed. It deliberately does NOT read the global
+ * --color-* palette tokens: theme.active (Earth Tones, Ocean, …) styles grid
+ * only. Scoped to .broadsheet-root so nothing leaks into admin or grid.
+ */
+.broadsheet-root {
+  --paper: #f6f1e7;
+  --ink: #191512;
+  --rust: #b43a1a;
+  --forest: #3f5d44;
+  --ink-muted: #6b6259;
+  --rule: #191512;
+
+  --font-display: 'Newsreader Variable', Georgia, serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
+  --font-body: 'Geist Variable', system-ui, sans-serif;
+
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
+}

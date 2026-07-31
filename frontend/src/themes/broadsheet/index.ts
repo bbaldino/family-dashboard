@@ -1,3 +1,4 @@
+import './broadsheet.css'
 import type { ThemeModule } from '@/shell/types'
 import { registerTheme } from '@/shell/ThemeRegistry'
 import { Home } from './screens/Home'
