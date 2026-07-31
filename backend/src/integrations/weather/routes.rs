@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use axum::Json;
 use axum::extract::State;
 use sqlx::SqlitePool;
@@ -6,11 +8,25 @@ use crate::error::AppError;
 use crate::integrations::IntegrationConfig;
 
 use super::INTEGRATION_ID;
+use super::air_quality;
+
+/// Weather's shared state: the pool every integration needs, an outbound
+/// HTTP client with a bounded timeout shared across OpenWeather and
+/// Open-Meteo calls, and the air-quality cache (see `air_quality.rs`) that
+/// lets `/air` survive a slow or dead Open-Meteo without touching
+/// `/current` or `/forecast` at all — they're separate routes, so a hung
+/// Open-Meteo call can't block either.
+#[derive(Clone)]
+pub struct WeatherState {
+    pub pool: SqlitePool,
+    pub client: reqwest::Client,
+    pub air_cache: Arc<air_quality::AirQualityCache>,
+}
 
 pub async fn get_current(
-    State(pool): State<SqlitePool>,
+    State(state): State<WeatherState>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let config = IntegrationConfig::new(&pool, INTEGRATION_ID);
+    let config = IntegrationConfig::new(&state.pool, INTEGRATION_ID);
     let api_key = config.get("api_key").await?;
     let lat = config.get_or("lat", "37.2504").await?;
     let lon = config.get_or("lon", "-121.9000").await?;
@@ -20,8 +36,8 @@ pub async fn get_current(
         lat, lon, api_key
     );
 
-    let client = reqwest::Client::new();
-    let resp = client
+    let resp = state
+        .client
         .get(&url)
         .send()
         .await
@@ -41,6 +57,7 @@ pub async fn get_current(
     let main = &data["main"];
     let weather = &data["weather"][0];
     let wind = &data["wind"];
+    let sys = &data["sys"];
 
     Ok(Json(serde_json::json!({
         "temp": main["temp"],
@@ -53,13 +70,17 @@ pub async fn get_current(
         "icon": weather["icon"],
         "wind_speed": wind["speed"],
         "wind_deg": wind["deg"],
+        // Unix seconds, UTC — same units as `sys.sunrise`/`sunset` in the
+        // raw OpenWeather response, just no longer dropped during reshape.
+        "sunrise": sys["sunrise"],
+        "sunset": sys["sunset"],
     })))
 }
 
 pub async fn get_forecast(
-    State(pool): State<SqlitePool>,
+    State(state): State<WeatherState>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let config = IntegrationConfig::new(&pool, INTEGRATION_ID);
+    let config = IntegrationConfig::new(&state.pool, INTEGRATION_ID);
     let api_key = config.get("api_key").await?;
     let lat = config.get_or("lat", "37.2504").await?;
     let lon = config.get_or("lon", "-121.9000").await?;
@@ -69,8 +90,8 @@ pub async fn get_forecast(
         lat, lon, api_key
     );
 
-    let client = reqwest::Client::new();
-    let resp = client
+    let resp = state
+        .client
         .get(&url)
         .send()
         .await
@@ -176,6 +197,24 @@ pub async fn get_forecast(
         "daily": days,
         "hourly": hourly,
     })))
+}
+
+/// AQI, UV index, and pollen from Open-Meteo — a separate route rather than
+/// folded into `/current` or `/forecast` for two reasons: it's a different
+/// upstream with its own failure mode (see `air_quality::get_air_quality`,
+/// which never errors), and keeping it separate means the frontend can poll
+/// and degrade it independently of the OpenWeather-backed hooks instead of
+/// one slow provider forcing extra error handling onto data it doesn't
+/// actually depend on.
+pub async fn get_air(
+    State(state): State<WeatherState>,
+) -> Result<Json<air_quality::AirQuality>, AppError> {
+    let config = IntegrationConfig::new(&state.pool, INTEGRATION_ID);
+    let lat = config.get_or("lat", "37.2504").await?;
+    let lon = config.get_or("lon", "-121.9000").await?;
+
+    let data = air_quality::get_air_quality(&state.client, &state.air_cache, &lat, &lon).await;
+    Ok(Json(data))
 }
 
 struct DayAccumulator {
