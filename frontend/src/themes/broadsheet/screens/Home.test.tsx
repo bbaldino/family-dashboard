@@ -15,9 +15,13 @@ import type { GamesResponse, GameState } from '@/data/sports'
 //   - useSportsGames() is the react-query shape; GameState is
 //     'live' | 'final' | 'upcoming' | 'postponed', not 'pre'/'in'.
 //   - useCountdowns().data is CountdownItem[] directly, not { items: [...] }.
+//   - useWeatherForecast()/useAirQuality() are also usePolling's
+//     { data, isLoading } shape (WeatherStrip's forecast/air-quality hooks).
 vi.mock('@/data/weather', () => ({
   useHeroWeather: () => null,
   useWeatherData: () => ({ data: undefined, isLoading: true }),
+  useWeatherForecast: () => ({ data: undefined, isLoading: true }),
+  useAirQuality: () => ({ data: undefined, isLoading: true }),
 }))
 vi.mock('@/data/google-calendar', () => ({ useGoogleCalendar: () => ({ data: undefined, isLoading: true }) }))
 vi.mock('@/data/driving-time', () => ({ useDrivingTime: () => ({}) }))

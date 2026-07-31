@@ -7,6 +7,7 @@ import { ScheduleColumn } from '@/themes/broadsheet/home/ScheduleColumn'
 import { SportsColumn } from '@/themes/broadsheet/home/SportsColumn'
 import { pickFeaturedGame } from '@/themes/broadsheet/home/featured-game'
 import { HouseholdColumn } from '@/themes/broadsheet/home/HouseholdColumn'
+import { WeatherStrip } from '@/themes/broadsheet/home/WeatherStrip'
 import { buildStandfirst } from '@/themes/broadsheet/home/standfirst'
 import { useNow } from '@/themes/broadsheet/home/useNow'
 import { isAllDay, nextEventLabel } from '@/themes/broadsheet/home/event-format'
@@ -92,10 +93,12 @@ export function Home() {
        * `ScheduleColumn` and `LiveGame` also budget their own item counts so
        * the common case clips nothing at all — see their source for why.
        *
-       * `pb-16` reserves the 64px the footer occupies (see
-       * `BroadsheetLayout`) — the footer is pinned there absolutely, outside
-       * this flex column's own height accounting, so nothing here paints
-       * underneath it.
+       * The body is the flex column's only `flex-1` item, so it's what
+       * shrinks to make room for `WeatherStrip` below it and the 64px
+       * spacer that follows — the footer itself is pinned absolutely by
+       * `BroadsheetLayout`, outside this flex column's own height
+       * accounting, so the spacer exists purely to keep this column's flow
+       * from painting underneath it.
        *
        * Column ratios come straight from the design mock
        * (`broadsheet-v2.jsx:139`): off-day/pregame favours the schedule;
@@ -104,7 +107,7 @@ export function Home() {
        */}
       <div
         data-testid="broadsheet-home-body"
-        className="flex-1 min-h-0 overflow-hidden grid pb-16"
+        className="flex-1 min-h-0 overflow-hidden grid"
         style={{
           gridTemplateColumns: sportsState === 'live' ? BODY_COLUMNS_LIVE : BODY_COLUMNS_OFFDAY,
           gap: 0,
@@ -127,6 +130,10 @@ export function Home() {
           <HouseholdColumn />
         </div>
       </div>
+      <WeatherStrip />
+      {/* Reserves the 64px the footer occupies (see `BroadsheetLayout`) — see
+       *  the body comment above for why a spacer is needed at all. */}
+      <div style={{ flexShrink: 0, height: 64 }} />
     </div>
   )
 }

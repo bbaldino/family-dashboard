@@ -105,8 +105,10 @@ describe('HouseholdColumn', () => {
     // column's bottom-pinned section — an unbounded blurb could push its
     // own top edge past what's visible when the sections above it are
     // full (jsdom can't measure that overflow directly, so this asserts
-    // the clamp that bounds it — the same mechanism grid's own
-    // on-this-day widget already uses for this field).
+    // the clamp that bounds it). 2 lines, not 3 — WeatherStrip's addition
+    // left the fullest state fitting 3 lines with zero pixels of
+    // clearance when measured live; trimmed for real headroom (see
+    // `HouseholdColumn`'s `OnThisDaySection` doc comment).
     useOnThisDay.mockReturnValue({
       data: {
         events: [
@@ -120,7 +122,7 @@ describe('HouseholdColumn', () => {
     })
     render(<HouseholdColumn />)
     const blurb = screen.getByText(/Apollo 11/)
-    expect(blurb.className).toContain('line-clamp-3')
+    expect(blurb.className).toContain('line-clamp-2')
   })
 
   it('renders every section fully populated without throwing (the column at its fullest)', () => {

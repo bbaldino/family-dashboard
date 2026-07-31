@@ -220,11 +220,18 @@ function ComingUpSection({ items }: { items: CountdownItem[] }) {
  * page (household, off-day) read as cramped (found live against the
  * running dashboard). Label and year now share their own line; the blurb
  * drops beneath at the column's full width instead of the leftover sliver.
- * `line-clamp-3` bounds it the same way `grid`'s own on-this-day widget
- * already caps this exact field (`OnThisDayWidget.tsx`) — the real feed
- * has no length guarantee, and this is the column's bottom-pinned section,
- * so an unbounded blurb could push its own top edge past what's visible
- * when the sections above it are full. */
+ * `line-clamp-2` bounds it — the real feed has no length guarantee, and
+ * this is the column's bottom-pinned section, so an unbounded blurb could
+ * push its own top edge past what's visible when the sections above it are
+ * full. Was `line-clamp-3` until `WeatherStrip` (the full-width band above
+ * the footer) took roughly 70px from every column above it — measured live
+ * against the running dashboard, the column's fullest state (lunch, capped
+ * chores, capped coming-up, and this blurb) still fit at 3 lines with zero
+ * pixels of clearance, which is a hairline to build on rather than a real
+ * margin (webfont metrics before `Newsreader Variable` finishes loading on
+ * a cold boot could tip it). Trimmed to 2 lines for real headroom, which
+ * also now matches `grid`'s own on-this-day widget for this exact field
+ * (`OnThisDayWidget.tsx`), coincidentally already 2. */
 
 function OnThisDaySection({ event }: { event: { year: number | null; text: string } }) {
   return (
@@ -245,7 +252,7 @@ function OnThisDaySection({ event }: { event: { year: number | null; text: strin
         )}
       </div>
       <p
-        className="m-0 line-clamp-3"
+        className="m-0 line-clamp-2"
         style={{
           marginTop: 4,
           fontFamily: 'var(--font-display)',

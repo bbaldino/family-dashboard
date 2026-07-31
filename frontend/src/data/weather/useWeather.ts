@@ -11,6 +11,14 @@ export interface WeatherData {
   description: string
   icon: string
   wind_speed: number
+  /** Degrees, meteorological convention (0 = N) — the backend already
+   *  returns this (`wind_deg`); it just had no consumer before the strip's
+   *  wind/humidity cell needed a compass direction. */
+  wind_deg: number
+  /** Unix seconds, UTC — OpenWeather's `sys.sunrise`/`sys.sunset`, passed
+   *  through by the backend rather than dropped during reshape. */
+  sunrise: number
+  sunset: number
 }
 
 export const conditionIcons: Record<string, string> = {
