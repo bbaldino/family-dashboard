@@ -7,6 +7,7 @@ const DEFAULT_THEME_ID = 'grid'
 export function ThemePicker() {
   const [selected, setSelected] = useState<string>(DEFAULT_THEME_ID)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState(false)
   const themes = getAllThemes()
 
   useEffect(() => {
@@ -23,14 +24,22 @@ export function ThemePicker() {
   }, [])
 
   const choose = async (id: string) => {
+    const previous = selected
     setSelected(id)
     setSaving(true)
+    setError(false)
     try {
-      await fetch(`/api/config/${CONFIG_KEY}`, {
+      const response = await fetch(`/api/config/${CONFIG_KEY}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ value: id }),
       })
+      if (!response.ok) throw new Error(`PUT ${CONFIG_KEY} failed: ${response.status}`)
+    } catch {
+      // The radio was optimistically selected before the request settled —
+      // roll it back so the UI doesn't claim a save that never happened.
+      setSelected(previous)
+      setError(true)
     } finally {
       setSaving(false)
     }
@@ -57,6 +66,7 @@ export function ThemePicker() {
         ))}
       </div>
       {saving && <p className="text-xs text-text-secondary mt-2">Saving…</p>}
+      {error && <p className="text-xs text-error mt-2">Couldn’t save — please try again.</p>}
     </div>
   )
 }

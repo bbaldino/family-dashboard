@@ -69,4 +69,27 @@ describe('ThemePicker', () => {
       }),
     )
   })
+
+  it('rolls back the selection and shows an error when the save fails', async () => {
+    // The PUT had no `catch` — a failed save became an unhandled rejection
+    // while the radio stayed optimistically selected, so the UI claimed a
+    // save that never happened. It must roll back and say so.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url: string) => {
+        if (url === '/api/config') {
+          return Promise.resolve({ ok: true, json: () => Promise.resolve({ 'theme.presentation': 'grid' }) })
+        }
+        return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) })
+      }),
+    )
+    render(<ThemePicker />)
+    await waitFor(() => expect(screen.getByRole('radio', { name: /Cards Grid/ })).toBeChecked())
+
+    fireEvent.click(screen.getByRole('radio', { name: /Broadsheet/ }))
+
+    await waitFor(() => expect(screen.getByText(/couldn.t save/i)).toBeInTheDocument())
+    expect(screen.getByRole('radio', { name: /Cards Grid/ })).toBeChecked()
+    expect(screen.getByRole('radio', { name: /Broadsheet/ })).not.toBeChecked()
+  })
 })
