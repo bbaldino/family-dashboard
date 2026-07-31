@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useTimers } from './useTimers'
+import { useTimers } from '@/data/timers'
 import { TimerCard } from './TimerCard'
 
 export function TimerBanner() {

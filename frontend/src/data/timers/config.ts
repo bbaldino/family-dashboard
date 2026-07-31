@@ -1,6 +1,5 @@
 import { z } from 'zod'
-import { defineIntegration } from '../define-integration'
-import { TimersSettings } from './TimersSettings'
+import { defineIntegration } from '@/integrations/define-integration'
 
 export const timersIntegration = defineIntegration({
   id: 'timers',
@@ -19,5 +18,4 @@ export const timersIntegration = defineIntegration({
       label: 'Alarm Sound',
     },
   },
-  settingsComponent: TimersSettings,
 })

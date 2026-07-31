@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useHaEntity } from '@/hooks/useHaEntity'
-import { getAlarmById } from '@/integrations/timers/alarmSounds'
+import { getAlarmById } from '@/data/timers'
 import { doorbellIntegration, detectRisingEdge } from '@/data/doorbell'
 import { DoorbellRingModal } from './DoorbellRingModal'
 

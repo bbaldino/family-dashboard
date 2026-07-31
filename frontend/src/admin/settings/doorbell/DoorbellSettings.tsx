@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Play } from 'lucide-react'
 import { Button } from '@/ui/Button'
-import { ALARM_SOUNDS, getAlarmById } from '@/integrations/timers/alarmSounds'
+import { ALARM_SOUNDS, getAlarmById } from '@/data/timers'
 import { doorbellIntegration } from '@/data/doorbell'
 
 export function DoorbellSettings() {

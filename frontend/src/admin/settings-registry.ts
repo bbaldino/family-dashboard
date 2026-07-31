@@ -4,6 +4,7 @@ import { GoogleCalendarSettings } from '@/admin/settings/google-calendar/GoogleC
 import { CountdownsSettings } from '@/admin/settings/countdowns/CountdownsSettings'
 import { ChoreAdmin } from '@/admin/ChoreAdmin'
 import { DoorbellSettings } from '@/admin/settings/doorbell/DoorbellSettings'
+import { TimersSettings } from '@/admin/settings/timers/TimersSettings'
 
 /**
  * Maps an integration id (e.g. 'sports', 'chores') to its admin settings
@@ -22,4 +23,5 @@ export const settingsRegistry: Record<string, ComponentType<Record<string, never
   countdowns: CountdownsSettings,
   chores: ChoreAdmin,
   doorbell: DoorbellSettings,
+  timers: TimersSettings,
 }
