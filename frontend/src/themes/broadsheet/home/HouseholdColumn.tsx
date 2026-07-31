@@ -253,7 +253,7 @@ function OnThisDaySection({ event }: { event: { year: number | null; text: strin
           // The mock sets 11.5px, but its sample blurb was one short line. Real
           // entries run to three, and at wall-viewing distance 11.5px is too
           // small to be worth reading — sized up to sit with the lunch list.
-          fontSize: 13.5,
+          fontSize: 15,
           lineHeight: 1.4,
           color: 'var(--ink)',
         }}
