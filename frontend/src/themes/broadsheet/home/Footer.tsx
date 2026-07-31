@@ -136,11 +136,18 @@ export function Footer() {
 
   return (
     <div
-      className="absolute bottom-0 left-0 right-0 px-14 flex flex-col"
+      className="absolute bottom-0 left-0 right-0 flex flex-col"
       style={{ height: 64, background: 'var(--paper)' }}
     >
+      {/* The rule spans the full canvas, edge to edge — the page's horizontal
+       *  padding starts below it. Insetting the rule to match the content
+       *  leaves it visibly shorter than the weather strip's own full-bleed
+       *  rules directly above. */}
       <DoubleRule />
-      <div className="flex-1 min-h-0 grid items-center" style={{ gridTemplateColumns: '1.6fr 1fr', gap: 24 }}>
+      <div
+        className="flex-1 min-h-0 px-14 grid items-center"
+        style={{ gridTemplateColumns: '1.6fr 1fr', gap: 24 }}
+      >
         <NowPlaying />
         <nav className="flex items-center justify-end gap-4">
           {NAV_ITEMS.map((item, i) => {

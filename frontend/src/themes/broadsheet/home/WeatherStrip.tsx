@@ -158,7 +158,11 @@ export function WeatherStrip() {
         alignItems: 'center',
         padding: '8px 56px 10px',
         borderTop: '1px solid var(--rule)',
-        borderBottom: '1px solid var(--rule)',
+        // No bottom border: the footer's double rule sits directly against
+        // this edge, so a hairline here reads as a second, stray rule rather
+        // than a boundary. The mock stacks both, but its footer rule is
+        // full-bleed — ours would need to match for that to read as one.
+
         background: PAPER_DEEP,
         // `Home` stacks this as a flex child between the body and the
         // footer's height-reserving spacer. The body is the only item with
