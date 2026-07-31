@@ -1,4 +1,6 @@
 export { useGoogleCalendar } from './useGoogleCalendar'
 export type { CalendarData, CalendarDay } from './useGoogleCalendar'
+export { useMonthCalendar } from './useMonthCalendar'
+export type { MonthEvents } from './useMonthCalendar'
 export type { CalendarEvent, CalendarListEntry } from './types'
 export { googleCalendarIntegration } from './config'

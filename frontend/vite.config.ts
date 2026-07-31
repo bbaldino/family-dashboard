@@ -25,6 +25,9 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
     globals: true,
+    // Pin the timezone so local-date bucketing (e.g. src/data/google-calendar)
+    // is deterministic regardless of where the suite runs.
+    env: { TZ: 'America/Los_Angeles' },
     server: {
       deps: {
         // @hakit/core imports { clamp } from 'lodash' (CJS); vitest's default

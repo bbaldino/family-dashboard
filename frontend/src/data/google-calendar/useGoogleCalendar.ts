@@ -1,5 +1,5 @@
 import { usePolling, type UsePollingResult } from '@/hooks/usePolling'
-import { googleCalendarIntegration } from './config'
+import { fetchCalendarIds, googleCalendarIntegration } from './config'
 import type { CalendarEvent } from './types'
 import { eventLocalDateStr, parseLocalDate, toLocalDateStr } from '@/utils/date'
 
@@ -23,22 +23,7 @@ function dayLabel(date: Date, today: Date): string {
 }
 
 async function fetchCalendarEvents(): Promise<CalendarDay[]> {
-  let calendarIds: string[] = []
-  try {
-    const allConfig: Record<string, string> = await fetch('/api/config').then(
-      (r) => r.json(),
-    )
-    const saved = allConfig['google-calendar.calendar_ids']
-    if (saved) {
-      calendarIds = JSON.parse(saved)
-    }
-  } catch {
-    // Config not available
-  }
-
-  if (calendarIds.length === 0) {
-    calendarIds = ['primary']
-  }
+  const calendarIds = await fetchCalendarIds()
 
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())

@@ -1,5 +1,6 @@
 import { usePolling } from '@/hooks/usePolling'
-import { googleCalendarIntegration, type CalendarEvent } from '@/data/google-calendar'
+import { fetchCalendarIds, googleCalendarIntegration } from './config'
+import type { CalendarEvent } from './types'
 import { eventLocalDateStr, parseLocalDate, toLocalDateStr } from '@/utils/date'
 
 export interface MonthEvents {
@@ -8,21 +9,7 @@ export interface MonthEvents {
 }
 
 async function fetchMonthEvents(year: number, month: number): Promise<MonthEvents> {
-  let calendarIds: string[] = []
-  try {
-    const allConfig: Record<string, string> = await fetch('/api/config').then(
-      (r) => r.json(),
-    )
-    const saved = allConfig['google-calendar.calendar_ids']
-    if (saved) {
-      calendarIds = JSON.parse(saved)
-    }
-  } catch {
-    // Config not available
-  }
-  if (calendarIds.length === 0) {
-    calendarIds = ['primary']
-  }
+  const calendarIds = await fetchCalendarIds()
 
   // Calculate date range: first Sunday of the grid to last Saturday
   const firstOfMonth = new Date(year, month, 1)
