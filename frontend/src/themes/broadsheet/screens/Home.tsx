@@ -105,7 +105,7 @@ export function Home() {
           className="min-h-0 overflow-hidden"
           style={{ padding: '0 24px 0 56px', borderRight: '1px solid var(--rule)' }}
         >
-          <ScheduleColumn />
+          <ScheduleColumn isLive={sportsState === 'live'} />
         </div>
         <div
           className="min-h-0 overflow-hidden"

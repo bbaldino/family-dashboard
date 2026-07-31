@@ -7,12 +7,12 @@ vi.mock('@/data/google-calendar', () => ({ useGoogleCalendar }))
 const useDrivingTime = vi.hoisted(() => vi.fn())
 vi.mock('@/data/driving-time', () => ({ useDrivingTime }))
 
-const day = (label: string, isToday: boolean, summaries: string[]) => ({
-  date: new Date('2026-05-22T12:00:00-07:00'),
-  label,
+const day = (dateIso: string, isToday: boolean, summaries: string[]) => ({
+  date: new Date(dateIso),
+  label: isToday ? 'Today' : 'Later',
   isToday,
   events: summaries.map((summary, i) => ({
-    id: `${label}-${i}`,
+    id: `${dateIso}-${i}`,
     summary,
     start: { dateTime: '2026-05-22T14:15:00-07:00' },
     end: { dateTime: '2026-05-22T14:30:00-07:00' },
@@ -26,25 +26,38 @@ describe('ScheduleColumn', () => {
     useDrivingTime.mockReturnValue({})
   })
 
-  it('lists events grouped by day', () => {
+  it('renders today as the hero and the rest of the week as the week-ahead strip', () => {
     // useGoogleCalendar wraps usePolling, whose `data` is the CalendarDay[]
     // itself (not `{ days: [...] }`). See src/data/google-calendar/useGoogleCalendar.ts.
+    // Index 0 is always today (see fetchCalendarEvents) — ScheduleColumn
+    // relies on that rather than filtering on `isToday` itself.
     useGoogleCalendar.mockReturnValue({
-      data: [day('TODAY', true, ['Pick up kids']), day('TOMORROW', false, ['Cages'])],
+      data: [day('2026-05-22T00:00:00', true, ['Pick up kids']), day('2026-05-23T00:00:00', false, ['Cages'])],
       isLoading: false,
     })
     render(<ScheduleColumn />)
     expect(screen.getByText('Pick up kids')).toBeInTheDocument()
     expect(screen.getByText('Cages')).toBeInTheDocument()
+    expect(screen.getByText('The week ahead')).toBeInTheDocument()
   })
 
-  it('writes prose for an empty day instead of leaving a gap', () => {
+  it('writes prose for an empty today instead of leaving a gap', () => {
     useGoogleCalendar.mockReturnValue({
-      data: [day('TODAY', true, [])],
+      data: [day('2026-05-22T00:00:00', true, [])],
       isLoading: false,
     })
     render(<ScheduleColumn />)
-    expect(screen.getByText(/nothing|clear|free/i)).toBeInTheDocument()
+    expect(screen.getByText(/blank docket/i)).toBeInTheDocument()
+    expect(screen.getByText(/nothing pencilled in/i)).toBeInTheDocument()
+  })
+
+  it('writes an em dash for a clear day in the week-ahead strip', () => {
+    useGoogleCalendar.mockReturnValue({
+      data: [day('2026-05-22T00:00:00', true, ['Pick up kids']), day('2026-05-23T00:00:00', false, [])],
+      isLoading: false,
+    })
+    render(<ScheduleColumn />)
+    expect(screen.getByText('—')).toBeInTheDocument()
   })
 
   it('renders while the calendar is still loading', () => {
@@ -52,21 +65,42 @@ describe('ScheduleColumn', () => {
     expect(() => render(<ScheduleColumn />)).not.toThrow()
   })
 
-  it('renders no more than the day budget even when the calendar returns a full week', () => {
-    // Regression test: the calendar hook returns ~7 days, and each one —
-    // even an empty one — costs a heading, a rule, and a prose line. Seven
-    // of those overflowed the column's allotted height on a real 1600x900
-    // render and printed on top of the glance strip below it. The column
-    // caps itself at 4 days so the common case never reaches that point;
-    // jsdom can't measure real layout, so this asserts the day count
-    // directly instead.
-    const week = Array.from({ length: 7 }, (_, i) => day(`DAY${i}`, i === 0, []))
+  it('caps the week-ahead strip at 5 days even when the calendar returns a full week', () => {
+    // Regression test: the calendar hook returns 7 days total (today plus
+    // six more). Each week-ahead row is now a single compact line rather
+    // than the old design's full day block, so more days fit safely than
+    // the old MAX_VISIBLE_DAYS budget allowed — capped at 5 to match the
+    // design mock (`broadsheet-v2.jsx:193`, `d.schedule.slice(1, 6)`).
+    const week = Array.from({ length: 7 }, (_, i) =>
+      day(`2026-05-${22 + i}T00:00:00`, i === 0, [`Event on day ${i}`]),
+    )
     useGoogleCalendar.mockReturnValue({ data: week, isLoading: false })
     render(<ScheduleColumn />)
-    expect(screen.getByText('DAY0')).toBeInTheDocument()
-    expect(screen.getByText('DAY3')).toBeInTheDocument()
-    expect(screen.queryByText('DAY4')).not.toBeInTheDocument()
-    expect(screen.queryByText('DAY5')).not.toBeInTheDocument()
-    expect(screen.queryByText('DAY6')).not.toBeInTheDocument()
+    // Day 0 renders as the Today hero.
+    expect(screen.getByText('Event on day 0')).toBeInTheDocument()
+    // Days 1-5 render in the week-ahead strip (5 days).
+    expect(screen.getByText('Event on day 5')).toBeInTheDocument()
+    // Day 6 is past the week-ahead budget.
+    expect(screen.queryByText('Event on day 6')).not.toBeInTheDocument()
+  })
+
+  it('caps each week-ahead day at 2 events, or 1 while a game is live', () => {
+    const busyDay = day('2026-05-23T00:00:00', false, ['First', 'Second', 'Third'])
+    useGoogleCalendar.mockReturnValue({
+      data: [day('2026-05-22T00:00:00', true, []), busyDay],
+      isLoading: false,
+    })
+
+    const { unmount } = render(<ScheduleColumn />)
+    expect(screen.getByText('First')).toBeInTheDocument()
+    expect(screen.getByText('Second')).toBeInTheDocument()
+    expect(screen.queryByText('Third')).not.toBeInTheDocument()
+    expect(screen.getByText('+1 more')).toBeInTheDocument()
+    unmount()
+
+    render(<ScheduleColumn isLive />)
+    expect(screen.getByText('First')).toBeInTheDocument()
+    expect(screen.queryByText('Second')).not.toBeInTheDocument()
+    expect(screen.getByText('+2 more')).toBeInTheDocument()
   })
 })
