@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
-import { useSportsGames } from './useSportsGames'
+import { useSportsGames } from '@/data/sports'
 import { GameCard } from './GameCard'
 import { GameCardExpanded } from './GameCardExpanded'
-import { GameDetailModal } from './GameDetailModal'
-import type { Game } from './types'
+import { GameDetailModal } from '@/themes/grid/overlays/sports/GameDetailModal'
+import type { Game } from '@/data/sports/types'
 
 function pickFeaturedGame(games: Game[]): Game | undefined {
   return (

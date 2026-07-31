@@ -1,5 +1,5 @@
-import type { Game, GameAthlete, Leader } from './types'
-import { formatUpcomingTime } from './formatTime'
+import type { Game, GameAthlete, Leader } from '@/data/sports/types'
+import { formatUpcomingTime } from '@/data/sports/formatTime'
 import { AiPreview } from './AiPreview'
 import { AiFinalRecap } from './AiFinalRecap'
 import { MlbSituation } from './MlbSituation'

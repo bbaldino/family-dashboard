@@ -1,25 +1,23 @@
 import { useQuery } from '@tanstack/react-query'
-import { sportsIntegration } from './config'
+import { sportsIntegration } from '@/data/sports/config'
 
-interface AiFinalRecapProps {
+interface AiPreviewProps {
   gameId: string
 }
 
-export function AiFinalRecap({ gameId }: AiFinalRecapProps) {
+export function AiPreview({ gameId }: AiPreviewProps) {
   const { data, isLoading, error } = useQuery({
-    queryKey: ['sports', 'final-recap', gameId],
+    queryKey: ['sports', 'preview', gameId],
     queryFn: () =>
-      sportsIntegration.api.get<{ summary: string }>(
-        `/final-recap?game_id=${encodeURIComponent(gameId)}`,
-      ),
-    staleTime: 24 * 60 * 60 * 1000,
+      sportsIntegration.api.get<{ summary: string }>(`/preview?game_id=${encodeURIComponent(gameId)}`),
+    staleTime: 60 * 60 * 1000, // 1 hour
     retry: 1,
   })
 
   if (isLoading) {
     return (
       <div className="mt-3 text-xs text-text-muted italic animate-pulse">
-        Generating recap...
+        Generating preview...
       </div>
     )
   }

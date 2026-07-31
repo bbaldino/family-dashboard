@@ -1,4 +1,4 @@
-import type { GameLeaders as Leaders, GameLeader } from './types'
+import type { GameLeaders as Leaders, GameLeader } from '@/data/sports/types'
 
 interface GameLeadersProps {
   leaders: Leaders

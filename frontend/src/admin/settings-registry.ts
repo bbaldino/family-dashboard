@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react'
+import { SportsSettings } from './settings/sports/SportsSettings'
 
 /**
  * Maps an integration id (e.g. 'sports', 'chores') to its admin settings
@@ -11,4 +12,6 @@ import type { ComponentType } from 'react'
  * Backwards-compat lookup on `integration.settingsComponent` remains in
  * SettingsAdmin.tsx until Phase 3b is complete.
  */
-export const settingsRegistry: Record<string, ComponentType> = {}
+export const settingsRegistry: Record<string, ComponentType> = {
+  sports: SportsSettings,
+}

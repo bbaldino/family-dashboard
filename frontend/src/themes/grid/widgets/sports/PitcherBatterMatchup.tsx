@@ -1,4 +1,4 @@
-import type { Matchup } from './types'
+import type { Matchup } from '@/data/sports/types'
 
 interface PitcherBatterMatchupProps {
   matchup: Matchup

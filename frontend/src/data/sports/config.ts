@@ -1,6 +1,5 @@
 import { z } from 'zod'
-import { defineIntegration } from '../define-integration'
-import { SportsSettings } from './SportsSettings'
+import { defineIntegration } from '@/integrations/define-integration'
 
 export const sportsIntegration = defineIntegration({
   id: 'sports',
@@ -19,5 +18,4 @@ export const sportsIntegration = defineIntegration({
     window_hours: { label: 'Time Window (hours)', description: 'How far back/forward to show games' },
     model: { label: 'Model', type: 'model-select', description: 'Model for AI game previews' },
   },
-  settingsComponent: SportsSettings,
 })

@@ -1,10 +1,10 @@
 import { Modal } from '@/ui/Modal'
-import type { Game } from './types'
-import { MlbSituation } from './MlbSituation'
-import { GameHeadline } from './GameHeadline'
-import { AiFinalRecap } from './AiFinalRecap'
-import { AiPreview } from './AiPreview'
-import { ScoringSummary } from './ScoringSummary'
+import type { Game } from '@/data/sports/types'
+import { MlbSituation } from '@/themes/grid/widgets/sports/MlbSituation'
+import { GameHeadline } from '@/themes/grid/widgets/sports/GameHeadline'
+import { AiFinalRecap } from '@/themes/grid/widgets/sports/AiFinalRecap'
+import { AiPreview } from '@/themes/grid/widgets/sports/AiPreview'
+import { ScoringSummary } from '@/themes/grid/widgets/sports/ScoringSummary'
 
 function formatGameTime(startTime: string): string {
   const d = new Date(startTime)
