@@ -154,4 +154,78 @@ describe('LiveGame', () => {
   it('renders nothing for leaders or plays when liveDetail is absent', () => {
     expect(() => render(<LiveGame game={makeGame(null)} />)).not.toThrow()
   })
+
+  it('formats the inning label as a single letter plus the number, not the whole word', () => {
+    // Regression, found live against the replay backend: `inningHalf` on
+    // the real feed is a whole word ("Bottom"), rendered unabbreviated in
+    // a box sized for the compact form — the extra glyphs overflowed onto
+    // the play text next to it ("BottoContreras homered..."). The mock's
+    // compact form (`shared.jsx`'s `scoring` entries, `broadsheet-v2.jsx:456`)
+    // is a single letter plus the inning number.
+    const detail: GameLiveDetail = {
+      sport: 'mlb',
+      matchup: null,
+      recentPlays: [],
+      scoringPlays: [{ id: 'sp-0', text: 'Homered to left.', inningHalf: 'Bottom', inningNumber: 1, scoring: true, teamId: null }],
+      inProgressScoring: [],
+      scoringRecap: null,
+      winProbability: null,
+      leaders: { away: [], home: [] },
+    }
+    render(<LiveGame game={makeGame(detail)} />)
+    expect(screen.getByText('B1')).toBeInTheDocument()
+    expect(screen.queryByText(/Bottom/)).not.toBeInTheDocument()
+  })
+
+  it('formats the inning label regardless of the feed\'s casing', () => {
+    const detail: GameLiveDetail = {
+      sport: 'mlb',
+      matchup: null,
+      recentPlays: [{ id: 'rp-0', text: 'Grounded out.', inningHalf: 'top', inningNumber: 5, scoring: false, teamId: null }],
+      scoringPlays: [],
+      inProgressScoring: [],
+      scoringRecap: null,
+      winProbability: null,
+      leaders: { away: [], home: [] },
+    }
+    render(<LiveGame game={makeGame(detail)} />)
+    expect(screen.getByText('T5')).toBeInTheDocument()
+  })
+
+  it('renders no inning label rather than throwing when the half or number is missing', () => {
+    const detail: GameLiveDetail = {
+      sport: 'mlb',
+      matchup: null,
+      recentPlays: [{ id: 'rp-0', text: 'Grounded out.', inningHalf: null, inningNumber: null, scoring: false, teamId: null }],
+      scoringPlays: [],
+      inProgressScoring: [],
+      scoringRecap: null,
+      winProbability: null,
+      leaders: { away: [], home: [] },
+    }
+    expect(() => render(<LiveGame game={makeGame(detail)} />)).not.toThrow()
+    expect(screen.getByText('Grounded out.')).toBeInTheDocument()
+  })
+
+  it('derives one side of the win-probability split from the other so they always sum to 100', () => {
+    // Regression, found live against the replay backend: rounding each
+    // side independently could sum to 101 (or 99) — 20% and 81%, observed
+    // on screen, is exactly this case (20.0 rounds to 20; 81.0 stays 81,
+    // but the underlying probabilities don't sum to exactly 1 on the real
+    // feed, so the naive computation drifted).
+    const detail: GameLiveDetail = {
+      sport: 'mlb',
+      matchup: null,
+      recentPlays: [],
+      scoringPlays: [],
+      inProgressScoring: [],
+      scoringRecap: null,
+      winProbability: { away: 0.2, home: 0.81 },
+      leaders: { away: [], home: [] },
+    }
+    render(<LiveGame game={makeGame(detail)} />)
+    expect(screen.getByText(/LAD 20%/)).toBeInTheDocument()
+    expect(screen.getByText(/80% MIL/)).toBeInTheDocument()
+    expect(screen.queryByText(/81% MIL/)).not.toBeInTheDocument()
+  })
 })

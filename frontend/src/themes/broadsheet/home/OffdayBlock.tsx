@@ -52,14 +52,19 @@ export function OffdayBlock({ data, isLoading }: { data: GamesResponse | undefin
                 className="flex items-baseline gap-2.5 py-1.5"
                 style={{ borderTop: i === 0 ? 'none' : '1px dotted var(--rule)' }}
               >
+                {/* min-width, not width: formatUpcomingTime()'s longest form
+                 *  ("Wed Oct 5, 9:00 PM") runs past a 90px fixed box — a
+                 *  min-width keeps the column loosely aligned without
+                 *  wrapping or clipping the far end of the string. */}
                 <span
                   style={{
                     fontFamily: 'var(--font-mono)',
                     fontSize: 11,
                     color: 'var(--ink-muted)',
                     letterSpacing: '0.06em',
-                    width: 90,
+                    minWidth: 90,
                     flexShrink: 0,
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   {formatUpcomingTime(g.startTime)}

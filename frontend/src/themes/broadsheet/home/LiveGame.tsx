@@ -159,6 +159,19 @@ const MAX_VISIBLE_LEADERS = 3
 const MAX_VISIBLE_SCORING_PLAYS = 3
 const MAX_VISIBLE_RECENT_PLAYS = 3
 
+/** `T5`, `B7` — a single letter for the half plus the inning number, per the
+ *  mock (`broadsheet-v2.jsx:456`, `shared.jsx`'s `scoring` entries). The real
+ *  feed's `inningHalf` is a whole word ("Top"/"Bottom", and inconsistently
+ *  cased across sources) — this both matches the mock and fixes a real
+ *  overflow bug: the old code rendered the full word in a fixed-width box
+ *  narrower than its content ("Bottom1" in a 22px box), so glyphs spilled
+ *  onto the play text next to it. Empty string (not a placeholder) when
+ *  either half is missing, same as the rest of this file's null guards. */
+function formatInningLabel(play: Play): string {
+  if (!play.inningHalf || play.inningNumber == null) return ''
+  return `${play.inningHalf.charAt(0).toUpperCase()}${play.inningNumber}`
+}
+
 /** One play line: inning marker plus the feed's play text. */
 function PlayLine({ play, accent }: { play: Play; accent?: boolean }) {
   return (
@@ -166,18 +179,21 @@ function PlayLine({ play, accent }: { play: Play; accent?: boolean }) {
       className="flex gap-2"
       style={{ fontFamily: 'var(--font-display)', fontSize: 12, lineHeight: 1.4, color: accent ? undefined : 'var(--ink-muted)' }}
     >
+      {/* `min-width` for column alignment, not `width` — a fixed width
+       *  narrower than the content clips/overlaps instead of just losing
+       *  alignment, which is worse. Double-digit innings (T12) still need
+       *  to be able to grow past it. */}
       <span
         style={{
           fontFamily: 'var(--font-mono)',
           fontSize: 10,
           color: accent ? 'var(--rust)' : undefined,
           fontWeight: 700,
-          width: accent ? 22 : 28,
+          minWidth: 20,
           flexShrink: 0,
         }}
       >
-        {play.inningHalf ?? ''}
-        {play.inningNumber ?? ''}
+        {formatInningLabel(play)}
       </span>
       <span>{play.text}</span>
     </li>
@@ -309,21 +325,31 @@ export function LiveGame({ game }: { game: Game }) {
 
       {winProbability && (
         <div className="py-2.5">
-          <div
-            className="flex justify-between mb-1"
-            style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-muted)', letterSpacing: '0.1em' }}
-          >
-            <span>
-              WIN PROB · {game.away.abbreviation} {Math.round(winProbability.away * 100)}%
-            </span>
-            <span>
-              {Math.round(winProbability.home * 100)}% {game.home.abbreviation}
-            </span>
-          </div>
-          <div className="flex" style={{ height: 6, background: 'var(--rule)' }}>
-            <div style={{ width: `${Math.round(winProbability.away * 100)}%`, background: 'var(--rust)' }} />
-            <div className="flex-1" style={{ background: 'var(--forest)' }} />
-          </div>
+          {/* Round one side and derive the other from it — rounding both
+           *  independently can land on 101 (or 99) together, e.g. 20/81. */}
+          {(() => {
+            const awayPct = Math.round(winProbability.away * 100)
+            const homePct = 100 - awayPct
+            return (
+              <>
+                <div
+                  className="flex justify-between mb-1"
+                  style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-muted)', letterSpacing: '0.1em' }}
+                >
+                  <span>
+                    WIN PROB · {game.away.abbreviation} {awayPct}%
+                  </span>
+                  <span>
+                    {homePct}% {game.home.abbreviation}
+                  </span>
+                </div>
+                <div className="flex" style={{ height: 6, background: 'var(--rule)' }}>
+                  <div style={{ width: `${awayPct}%`, background: 'var(--rust)' }} />
+                  <div className="flex-1" style={{ background: 'var(--forest)' }} />
+                </div>
+              </>
+            )
+          })()}
         </div>
       )}
 
