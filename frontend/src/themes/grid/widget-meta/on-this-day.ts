@@ -1,5 +1,5 @@
 import type { WidgetMeta } from '@/lib/widget-types'
-import { useOnThisDay } from './useOnThisDay'
+import { useOnThisDay } from '@/data/on-this-day'
 
 export function useOnThisDayWidgetMeta(): WidgetMeta {
   const { data } = useOnThisDay()

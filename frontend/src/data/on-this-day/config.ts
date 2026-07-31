@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { defineIntegration } from '../define-integration'
+import { defineIntegration } from '@/integrations/define-integration'
 
 export const onThisDayIntegration = defineIntegration({
   id: 'on-this-day',

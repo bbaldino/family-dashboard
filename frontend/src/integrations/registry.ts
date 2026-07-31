@@ -15,8 +15,8 @@ import { planIntegration } from './plan/config'
 import { musicIntegration } from './music/config'
 import { dashboardIntegration } from './dashboard/config'
 import { llmIntegration } from './llm/config'
-import { onThisDayIntegration } from './on-this-day/config'
-import { wordOfTheDayIntegration } from './word-of-the-day/config'
+import { onThisDayIntegration } from '@/data/on-this-day'
+import { wordOfTheDayIntegration } from '@/data/word-of-the-day'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const integrations: Integration<any>[] = [
