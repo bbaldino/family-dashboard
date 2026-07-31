@@ -5,6 +5,7 @@ import { CountdownsSettings } from '@/admin/settings/countdowns/CountdownsSettin
 import { ChoreAdmin } from '@/admin/ChoreAdmin'
 import { DoorbellSettings } from '@/admin/settings/doorbell/DoorbellSettings'
 import { TimersSettings } from '@/admin/settings/timers/TimersSettings'
+import { MusicSettings } from '@/admin/settings/music/MusicSettings'
 
 /**
  * Maps an integration id (e.g. 'sports', 'chores') to its admin settings
@@ -24,4 +25,5 @@ export const settingsRegistry: Record<string, ComponentType<Record<string, never
   chores: ChoreAdmin,
   doorbell: DoorbellSettings,
   timers: TimersSettings,
+  music: MusicSettings,
 }

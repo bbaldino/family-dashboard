@@ -1,5 +1,5 @@
 import { Music, Play, Pause, SkipBack, SkipForward, Volume2 } from 'lucide-react'
-import { useMusic } from '@/integrations/music'
+import { useMusic } from '@/data/music'
 
 interface NowPlayingProps {
   onOpenFullscreen: () => void

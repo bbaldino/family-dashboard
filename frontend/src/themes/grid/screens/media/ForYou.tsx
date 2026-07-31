@@ -1,8 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Music } from 'lucide-react'
-import { musicIntegration } from '@/integrations/music/config'
-import { useMusic } from '@/integrations/music/useMusic'
-import { getImageUrl } from '@/integrations/music/utils'
+import { musicIntegration, useMusic, getImageUrl } from '@/data/music'
 
 interface CuratedPlaylist {
   name: string

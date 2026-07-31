@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Music, Play, Pause, SkipBack, SkipForward, X, Lock, Unlock } from 'lucide-react'
-import { useMusic } from '@/integrations/music'
+import { useMusic } from '@/data/music'
 
 interface FullscreenNowPlayingProps {
   isOpen: boolean

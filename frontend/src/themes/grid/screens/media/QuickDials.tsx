@@ -1,10 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { Music } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { musicIntegration } from '@/integrations/music/config'
-import { useMusic } from '@/integrations/music/useMusic'
-import type { RecentItem, TopTrack } from '@/integrations/music/types'
-import type { EnqueueMode } from '@/integrations/music/MusicProvider'
+import { musicIntegration, useMusic } from '@/data/music'
+import type { RecentItem, TopTrack, EnqueueMode } from '@/data/music'
 import { TrackActionsMenu } from './TrackActionsMenu'
 import { encodeUriParam } from './track-url'
 

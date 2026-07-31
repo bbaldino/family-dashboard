@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { musicIntegration } from '@/integrations/music/config'
+import { musicIntegration } from '@/data/music'
 
 export interface ArtistTrack {
   uri: string

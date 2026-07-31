@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Music, Play, Pause, SkipBack, SkipForward, Volume2, X } from 'lucide-react'
-import { useMusic } from './useMusic'
+import { useMusic } from '@/data/music'
 
 export function MiniPlayer() {
   const { state, isPlaying, pause, resume, next, previous, setVolume } = useMusic()

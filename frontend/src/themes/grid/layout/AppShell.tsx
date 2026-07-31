@@ -2,7 +2,8 @@ import { Outlet } from 'react-router-dom'
 import { TabBar } from '@/themes/grid/ui/TabBar'
 import { EventOverlay } from '@/themes/grid/ui/EventOverlay'
 import { EventBusProvider } from '@/lib/event-bus'
-import { MusicProvider, MiniPlayer } from '@/integrations/music'
+import { MusicProvider } from '@/data/music'
+import { MiniPlayer } from '@/themes/grid/widgets/music/MiniPlayer'
 
 export function AppShell() {
   return (

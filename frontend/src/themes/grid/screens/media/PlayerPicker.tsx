@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Volume2, Users, Plus, X as XIcon, Loader2 } from 'lucide-react'
-import { musicIntegration } from '@/integrations/music/config'
-import { useMusic } from '@/integrations/music'
-import type { Player } from '@/integrations/music/types'
+import { musicIntegration, useMusic } from '@/data/music'
+import type { Player } from '@/data/music'
 import { Modal } from '@/ui/Modal'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
 
