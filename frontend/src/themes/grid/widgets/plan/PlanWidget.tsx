@@ -1,7 +1,7 @@
 import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
-import { usePlanWidget } from './usePlanWidget'
-import type { UpcomingPlan } from './usePlanWidget'
+import { usePlanWidget } from '@/data/plan'
+import type { UpcomingPlan } from '@/data/plan'
 
 function planTypeIcon(planType: string): string {
   switch (planType.toLowerCase()) {

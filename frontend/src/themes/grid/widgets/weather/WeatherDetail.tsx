@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { weatherIntegration } from './config'
+import { weatherIntegration } from '@/data/weather'
 
 interface ForecastDay {
   date: string
