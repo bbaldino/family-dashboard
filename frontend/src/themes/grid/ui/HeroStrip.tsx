@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Settings } from 'lucide-react'
-import { DriveTag } from '@/integrations/driving-time'
+import { DriveTag } from '@/themes/grid/widgets/driving-time/DriveTag'
 
 export interface HeroEvent {
   name: string

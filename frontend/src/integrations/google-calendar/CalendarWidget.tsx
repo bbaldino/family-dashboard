@@ -3,7 +3,8 @@ import { LoadingSpinner } from '@/ui/LoadingSpinner'
 import { ErrorDisplay } from '@/ui/ErrorDisplay'
 import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
 import type { CalendarDay } from './useGoogleCalendar'
-import { useDrivingTime, DriveTag } from '@/integrations/driving-time'
+import { useDrivingTime } from '@/data/driving-time'
+import { DriveTag } from '@/themes/grid/widgets/driving-time/DriveTag'
 
 function formatEventTime(event: CalendarEvent): string {
   const start = event.start.dateTime ?? event.start.date

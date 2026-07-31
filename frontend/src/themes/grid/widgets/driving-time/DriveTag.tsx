@@ -1,4 +1,4 @@
-import type { DriveUrgency } from './types'
+import type { DriveUrgency } from '@/data/driving-time/types'
 
 const urgencyStyles: Record<DriveUrgency, string> = {
   ok: 'bg-[color-mix(in_srgb,var(--color-role-success)_10%,transparent)] text-success',
