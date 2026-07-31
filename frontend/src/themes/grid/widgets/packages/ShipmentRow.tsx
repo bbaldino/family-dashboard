@@ -1,5 +1,4 @@
-import type { Shipment } from './types'
-import { STATUS_ICONS, STATUS_LABELS } from './types'
+import { STATUS_ICONS, STATUS_LABELS, type Shipment } from '@/data/packages'
 import { parseLocalDate } from '@/utils/date'
 
 function etaColor(deliveryDate: string | null): string {

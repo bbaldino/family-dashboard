@@ -1,11 +1,9 @@
 import { useState } from 'react'
 import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
-import { usePackages } from './usePackages'
+import { usePackages, STATUS_LABELS, type Shipment, type ShipmentStatus } from '@/data/packages'
 import { ShipmentRow } from './ShipmentRow'
-import { PackageDetailModal } from './PackageDetailModal'
-import type { Shipment, ShipmentStatus } from './types'
-import { STATUS_LABELS } from './types'
+import { PackageDetailModal } from '@/themes/grid/overlays/packages/PackageDetailModal'
 type WidgetSize = 'compact' | 'standard' | 'expanded'
 
 const STATUS_ORDER: Record<ShipmentStatus, number> = {

@@ -1,8 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
 import { Modal } from '@/ui/Modal'
-import { packagesIntegration } from './config'
-import type { Shipment, EventsResponse } from './types'
-import { STATUS_ICONS } from './types'
+import { usePackageEvents, STATUS_ICONS, type Shipment } from '@/data/packages'
 
 interface PackageDetailModalProps {
   shipment: Shipment | null
@@ -10,12 +7,7 @@ interface PackageDetailModalProps {
 }
 
 export function PackageDetailModal({ shipment, onClose }: PackageDetailModalProps) {
-  const { data, isLoading } = useQuery({
-    queryKey: ['packages', 'events', shipment?.id],
-    queryFn: () =>
-      packagesIntegration.api.get<EventsResponse>(`/shipments/${shipment!.id}/events`),
-    enabled: !!shipment,
-  })
+  const { data, isLoading } = usePackageEvents(shipment?.id)
 
   if (!shipment) return null
 
