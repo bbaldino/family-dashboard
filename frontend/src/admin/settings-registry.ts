@@ -6,6 +6,8 @@ import { ChoreAdmin } from '@/admin/ChoreAdmin'
 import { DoorbellSettings } from '@/admin/settings/doorbell/DoorbellSettings'
 import { TimersSettings } from '@/admin/settings/timers/TimersSettings'
 import { MusicSettings } from '@/admin/settings/music/MusicSettings'
+import { LlmSettings } from '@/admin/settings/llm/LlmSettings'
+import { DashboardSettings } from '@/admin/settings/dashboard/DashboardSettings'
 
 /**
  * Maps an integration id (e.g. 'sports', 'chores') to its admin settings
@@ -26,4 +28,6 @@ export const settingsRegistry: Record<string, ComponentType<Record<string, never
   doorbell: DoorbellSettings,
   timers: TimersSettings,
   music: MusicSettings,
+  llm: LlmSettings,
+  dashboard: DashboardSettings,
 }

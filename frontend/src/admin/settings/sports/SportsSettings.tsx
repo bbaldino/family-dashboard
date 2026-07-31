@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/ui/Button'
-import { ModelSelect } from '@/integrations/llm/ModelSelect'
+import { ModelSelect } from '@/admin/settings/llm/ModelSelect'
 import { sportsIntegration, type TeamInfo, type TrackedTeam } from '@/data/sports'
 
 const LEAGUES = [

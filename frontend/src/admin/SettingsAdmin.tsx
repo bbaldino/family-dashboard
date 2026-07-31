@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/ui/Button'
 import { integrations } from '@/integrations/registry'
-import { ModelSelect } from '@/integrations/llm/ModelSelect'
+import { ModelSelect } from '@/admin/settings/llm/ModelSelect'
 import { settingsRegistry } from './settings-registry'
 
 /** Get default values from all integrations' Zod schemas, prefixed with integration ID */

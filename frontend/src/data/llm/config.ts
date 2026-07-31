@@ -1,6 +1,5 @@
 import { z } from 'zod'
-import { defineIntegration } from '../define-integration'
-import { LlmSettings } from './LlmSettings'
+import { defineIntegration } from '@/integrations/define-integration'
 
 export const llmIntegration = defineIntegration({
   id: 'llm',
@@ -10,10 +9,9 @@ export const llmIntegration = defineIntegration({
     provider: z.string().optional().default('ollama'),
     url: z.string().optional().default(''),
   }),
-  // Fields are required by the type but not rendered — settingsComponent owns the UI.
+  // Fields are required by the type but not rendered — settings-registry owns the UI.
   fields: {
     provider: { label: 'Provider' },
     url: { label: 'Service URL' },
   },
-  settingsComponent: LlmSettings,
 })

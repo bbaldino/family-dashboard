@@ -1,6 +1,5 @@
 import { z } from 'zod'
-import { defineIntegration } from '../define-integration'
-import { DashboardSettings } from './DashboardSettings'
+import { defineIntegration } from '@/integrations/define-integration'
 
 export const dashboardIntegration = defineIntegration({
   id: 'dashboard',
@@ -8,5 +7,4 @@ export const dashboardIntegration = defineIntegration({
   hasBackend: false,
   schema: z.object({}),
   fields: {},
-  settingsComponent: DashboardSettings,
 })
