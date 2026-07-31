@@ -1,0 +1,62 @@
+import { useEffect, useState } from 'react'
+import { getAllThemes } from '@/shell/ThemeRegistry'
+
+const CONFIG_KEY = 'theme.presentation'
+const DEFAULT_THEME_ID = 'grid'
+
+export function ThemePicker() {
+  const [selected, setSelected] = useState<string>(DEFAULT_THEME_ID)
+  const [saving, setSaving] = useState(false)
+  const themes = getAllThemes()
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/config')
+      .then((r) => r.json())
+      .then((config: Record<string, string>) => {
+        if (!cancelled) setSelected(config[CONFIG_KEY] ?? DEFAULT_THEME_ID)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const choose = async (id: string) => {
+    setSelected(id)
+    setSaving(true)
+    try {
+      await fetch(`/api/config/${CONFIG_KEY}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: id }),
+      })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="mb-8">
+      <h3 className="text-sm font-bold text-text-primary mb-1">Presentation</h3>
+      <p className="text-xs text-text-secondary mb-3">
+        Which layout the dashboard renders. Takes effect on the next reload.
+      </p>
+      <div className="flex flex-col gap-2">
+        {themes.map((theme) => (
+          <label key={theme.id} className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="presentation"
+              value={theme.id}
+              checked={selected === theme.id}
+              onChange={() => choose(theme.id)}
+            />
+            <span className="text-sm text-text-primary">{theme.name}</span>
+          </label>
+        ))}
+      </div>
+      {saving && <p className="text-xs text-text-secondary mt-2">Saving…</p>}
+    </div>
+  )
+}

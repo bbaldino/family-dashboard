@@ -8,7 +8,7 @@ import { TimersSettings } from '@/admin/settings/timers/TimersSettings'
 import { MusicSettings } from '@/admin/settings/music/MusicSettings'
 import { LlmSettings } from '@/admin/settings/llm/LlmSettings'
 import { DashboardSettings } from '@/admin/settings/dashboard/DashboardSettings'
-import { ThemeSettings } from '@/palettes/ThemeSettings'
+import { ThemeAdmin } from '@/admin/settings/theme/ThemeAdmin'
 
 /**
  * Maps an integration id (e.g. 'sports', 'chores') to its admin settings
@@ -26,5 +26,5 @@ export const settingsRegistry: Record<string, ComponentType<Record<string, never
   music: MusicSettings,
   llm: LlmSettings,
   dashboard: DashboardSettings,
-  theme: ThemeSettings,
+  theme: ThemeAdmin,
 }
