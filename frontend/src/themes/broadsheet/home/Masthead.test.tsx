@@ -1,55 +1,86 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { Masthead } from './Masthead'
+import { ordinalSuffix } from './ordinal'
 
 const useHeroWeather = vi.hoisted(() => vi.fn())
-const useWeatherData = vi.hoisted(() => vi.fn())
-vi.mock('@/data/weather', () => ({ useHeroWeather, useWeatherData }))
+vi.mock('@/data/weather', () => ({ useHeroWeather }))
+
+function renderMasthead(overrides: Partial<Parameters<typeof Masthead>[0]> = {}) {
+  return render(
+    <Masthead
+      standfirst="Nothing on the calendar — the day is yours."
+      isLive={false}
+      nextEventSummary="Tomorrow first"
+      totalEvents={0}
+      {...overrides}
+    />,
+  )
+}
 
 describe('Masthead', () => {
   beforeEach(() => {
     // useHeroWeather returns the HeroWeather object directly (or null) —
     // not a react-query result. See src/data/weather/useHeroWeather.ts.
-    useHeroWeather.mockReturnValue({ temperature: '75', high: '78', low: '53', condition: 'Sunny', icon: '01d' })
-    // useWeatherData wraps usePolling, which does return a { data, isLoading } shape.
-    useWeatherData.mockReturnValue({
-      data: { feels_like: 76, humidity: 41, wind_speed: 6 },
-      isLoading: false,
-    })
+    useHeroWeather.mockReturnValue({ temperature: '75', high: '78', low: '53', condition: 'Sunny', icon: '☀️' })
   })
 
   it('shows the temperature and condition', () => {
-    render(<Masthead standfirst="Nothing on the calendar — the day is yours." />)
+    renderMasthead()
     expect(screen.getByText(/75/)).toBeInTheDocument()
-    expect(screen.getByText(/Sunny/)).toBeInTheDocument()
+    expect(screen.getByText(/sunny/)).toBeInTheDocument()
+  })
+
+  it('shows a restrained high/low beneath the temperature', () => {
+    renderMasthead()
+    expect(screen.getByText(/78°/)).toBeInTheDocument()
+    expect(screen.getByText(/53°/)).toBeInTheDocument()
   })
 
   it('renders the standfirst prose', () => {
-    render(<Masthead standfirst="One thing today: Pick up kids." />)
-    expect(screen.getByText('One thing today: Pick up kids.')).toBeInTheDocument()
+    renderMasthead({ standfirst: 'One thing today: Pick up kids.' })
+    expect(screen.getByText(/One thing today: Pick up kids\./)).toBeInTheDocument()
+  })
+
+  it('renders the standfirst summary — next event and total events', () => {
+    renderMasthead({ nextEventSummary: 'Next in 1h 43m', totalEvents: 12 })
+    expect(screen.getByText(/Next in 1h 43m/)).toBeInTheDocument()
+    expect(screen.getByText(/12 events \/ 7 days/)).toBeInTheDocument()
   })
 
   it('renders without weather rather than crashing', () => {
     useHeroWeather.mockReturnValue(null)
-    useWeatherData.mockReturnValue({ data: null, isLoading: true })
-    render(<Masthead standfirst="A quiet day." />)
-    expect(screen.getByText('A quiet day.')).toBeInTheDocument()
+    renderMasthead({ standfirst: 'A quiet day.' })
+    expect(screen.getByText(/A quiet day\./)).toBeInTheDocument()
   })
 
-  it('omits a missing numeric reading instead of printing NaN', () => {
-    // WeatherData types feels_like/humidity/wind_speed as `number`, but this
-    // is an external feed — a field has shown up `null` on the wire despite
-    // the type, and Math.round(null) used to print "feels NaN°" straight
-    // onto the wall display. Only the readings that are actually numbers
-    // should show up.
-    useWeatherData.mockReturnValue({
-      data: { feels_like: null, humidity: 41, wind_speed: 6 },
-      isLoading: false,
-    })
-    render(<Masthead standfirst="A quiet day." />)
-    expect(screen.queryByText(/NaN/)).not.toBeInTheDocument()
-    expect(screen.queryByText(/feels/)).not.toBeInTheDocument()
-    expect(screen.getByText(/41% humidity/)).toBeInTheDocument()
-    expect(screen.getByText(/wind 6 mph/)).toBeInTheDocument()
+  it('does not render a "Kitchen Dashboard" wordmark', () => {
+    // The Phase 4 plan invented a wordmark for the centre cell; the mock
+    // never had one — the date is the centrepiece instead.
+    renderMasthead()
+    expect(screen.queryByText(/Kitchen Dashboard/)).not.toBeInTheDocument()
+  })
+
+  it("renders today's date with a correct ordinal suffix", () => {
+    renderMasthead()
+    const day = new Date().getDate()
+    const suffix = ordinalSuffix(day)
+    const heading = screen.getByRole('heading', { level: 1 })
+    expect(heading.textContent).toContain(`${day}${suffix}`)
+  })
+
+  it('shows the live-game indicator only when a game is live', () => {
+    const { rerender } = renderMasthead({ isLive: false })
+    expect(screen.queryByText(/LIVE GAME/)).not.toBeInTheDocument()
+
+    rerender(
+      <Masthead
+        standfirst="Nothing on the calendar — the day is yours."
+        isLive={true}
+        nextEventSummary="Tomorrow first"
+        totalEvents={0}
+      />,
+    )
+    expect(screen.getByText(/LIVE GAME/)).toBeInTheDocument()
   })
 })

@@ -9,7 +9,7 @@ import { pickFeaturedGame } from '@/themes/broadsheet/home/featured-game'
 import { HouseholdColumn } from '@/themes/broadsheet/home/HouseholdColumn'
 import { buildStandfirst } from '@/themes/broadsheet/home/standfirst'
 import { useNow } from '@/themes/broadsheet/home/useNow'
-import { isAllDay } from '@/themes/broadsheet/home/event-format'
+import { isAllDay, nextEventLabel } from '@/themes/broadsheet/home/event-format'
 
 /** Off-day/pregame vs. live column ratios for the three-column body — the
  *  sports column widens and the schedule column narrows once a game goes
@@ -51,6 +51,11 @@ export function Home() {
   const today = days?.find((day) => day.isToday)
   const upcoming = upcomingTodayEvents(today, now)
   const nextEvent = upcoming[0]
+  // The masthead standfirst's right-hand summary (mock: `broadsheet-v2.jsx:132`)
+  // — total events across the whole week the calendar hook already fetched,
+  // and a compact "time until" for whatever's next.
+  const totalEvents = (days ?? []).reduce((sum, day) => sum + (day.events?.length ?? 0), 0)
+  const nextEventSummary = nextEventLabel(nextEvent, now)
 
   // The same featured-game pick `SportsColumn` dispatches on, so the body's
   // column ratios and the standfirst's sports mention can never disagree
@@ -72,7 +77,12 @@ export function Home() {
 
   return (
     <div data-testid="broadsheet-home" className="broadsheet-root w-[1600px] h-[900px] flex flex-col">
-      <Masthead standfirst={standfirst} />
+      <Masthead
+        standfirst={standfirst}
+        isLive={sportsState === 'live'}
+        nextEventSummary={nextEventSummary}
+        totalEvents={totalEvents}
+      />
       {/*
        * This is a fixed 900px canvas with no scrolling — content that runs
        * long must clip, never spill under the footer. `overflow-hidden` here
