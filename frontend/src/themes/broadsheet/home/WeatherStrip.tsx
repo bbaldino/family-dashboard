@@ -160,6 +160,13 @@ export function WeatherStrip() {
         borderTop: '1px solid var(--rule)',
         borderBottom: '1px solid var(--rule)',
         background: PAPER_DEEP,
+        // `Home` stacks this as a flex child between the body and the
+        // footer's height-reserving spacer. The body is the only item with
+        // `flex-1` and already carries `overflow-hidden`/`min-h-0` to absorb
+        // any real overflow by clipping — `flexShrink: 0` here (matching the
+        // spacer) keeps this strip and its cells un-squeezed even in a
+        // pathological case, so it's always the body that clips, never this.
+        flexShrink: 0,
       }}
     >
       {/* 1: Sun arc */}
