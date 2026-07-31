@@ -151,12 +151,12 @@ describe('HouseholdColumn', () => {
   })
 
   it('renders every section fully populated without throwing (the column at its fullest)', () => {
-    // This state — lunch, chores past the visible cap, coming up at its
-    // cap, and a long on-this-day blurb — has never been rendered against
-    // real data at once. Not a layout assertion (jsdom can't measure
-    // overflow); this exists so the fullest realistic combination is at
-    // least known not to crash, and the "+more" caps are honoured
-    // together rather than only individually.
+    // This state — lunch, chores past both the per-person and per-column
+    // visible caps, coming up at its cap, and a long on-this-day blurb —
+    // has never been rendered against real data at once. Not a layout
+    // assertion (jsdom can't measure overflow); this exists so the fullest
+    // realistic combination is at least known not to crash, and the
+    // "+more" caps are honoured together rather than only individually.
     useLunchMenu.mockReturnValue({
       data: { today: { entries: [{ name: 'Chicken tenders', withItems: ['Mashed potatoes'] }], extras: [] } },
       isLoading: false,
@@ -164,25 +164,49 @@ describe('HouseholdColumn', () => {
     useChores.mockReturnValue({
       data: {
         completed_count: 2,
-        total_count: 7,
+        total_count: 10,
         persons: [
           {
+            // 6 assignments — past MAX_TASKS_PER_PERSON (2), so this
+            // person's own group shows a "+4 more" line.
             person: { id: 1, name: 'Ben', color: '#000', avatar: null },
-            assignments: Array.from({ length: 4 }, (_, i) => ({
+            assignments: Array.from({ length: 6 }, (_, i) => ({
               id: i,
               chore: { id: i, name: `Chore ${i}`, chore_type: 'regular', tags: [] },
               picked_chore: null,
-              completed: i === 0,
+              completed: i < 2,
             })),
           },
           {
+            // 3 assignments — also past the per-person cap, so this group
+            // gets its own "+1 more" line too.
             person: { id: 2, name: 'Mia', color: '#000', avatar: null },
             assignments: Array.from({ length: 3 }, (_, i) => ({
-              id: 10 + i,
-              chore: { id: 10 + i, name: `Other chore ${i}`, chore_type: 'regular', tags: [] },
+              id: 20 + i,
+              chore: { id: 20 + i, name: `Mia chore ${i}`, chore_type: 'regular', tags: [] },
               picked_chore: null,
               completed: false,
             })),
+          },
+          {
+            // 3rd, 4th, 5th people — past MAX_VISIBLE_PEOPLE (2), so all
+            // three groups are hidden behind a column-level "+3 more" line.
+            person: { id: 3, name: 'Zoe', color: '#000', avatar: null },
+            assignments: [
+              { id: 30, chore: { id: 30, name: 'Set the table', chore_type: 'regular', tags: [] }, picked_chore: null, completed: false },
+            ],
+          },
+          {
+            person: { id: 4, name: 'Sam', color: '#000', avatar: null },
+            assignments: [
+              { id: 40, chore: { id: 40, name: 'Take out trash', chore_type: 'regular', tags: [] }, picked_chore: null, completed: false },
+            ],
+          },
+          {
+            person: { id: 5, name: 'Ana', color: '#000', avatar: null },
+            assignments: [
+              { id: 50, chore: { id: 50, name: 'Water plants', chore_type: 'regular', tags: [] }, picked_chore: null, completed: false },
+            ],
           },
         ],
       },
@@ -210,7 +234,80 @@ describe('HouseholdColumn', () => {
       isLoading: false,
     })
     expect(() => render(<HouseholdColumn />)).not.toThrow()
-    expect(screen.getByText('2/7')).toBeInTheDocument()
+    // Section header sums across every person, uncapped.
+    expect(screen.getByText('2/10')).toBeInTheDocument()
+    // Ben's own heading count is also uncapped...
+    expect(screen.getByText('2/6')).toBeInTheDocument()
+    // ...but only 2 of his 6 tasks render, with the rest folded into a
+    // per-person "+more" line.
+    expect(screen.getByText('+4 more')).toBeInTheDocument()
+    expect(screen.queryByText('Chore 2')).not.toBeInTheDocument()
+    expect(screen.getByText('Chore 1')).toBeInTheDocument()
+    // Mia is also past the per-person cap — same treatment, her own
+    // "+more" line with a different count.
+    expect(screen.getByText('0/3')).toBeInTheDocument()
     expect(screen.getByText('+1 more')).toBeInTheDocument()
+    expect(screen.getByText('Mia chore 0')).toBeInTheDocument()
+    expect(screen.queryByText('Mia chore 2')).not.toBeInTheDocument()
+    // Zoe, Sam, and Ana are the 3rd–5th people, past MAX_VISIBLE_PEOPLE —
+    // none of their groups render at all, folded into a column-level
+    // "+3 more" line instead.
+    expect(screen.queryByText('Zoe')).not.toBeInTheDocument()
+    expect(screen.queryByText('Sam')).not.toBeInTheDocument()
+    expect(screen.queryByText('Ana')).not.toBeInTheDocument()
+    expect(screen.getByText('+3 more')).toBeInTheDocument()
+  })
+
+  it('groups chores under a person heading rather than a flat list with per-row assignees', () => {
+    useChores.mockReturnValue({
+      data: {
+        completed_count: 1,
+        total_count: 2,
+        persons: [
+          {
+            person: { id: 1, name: 'Ben', color: '#000', avatar: null },
+            assignments: [
+              { id: 1, chore: { id: 1, name: 'Feed the cat', chore_type: 'regular', tags: [] }, picked_chore: null, completed: true },
+              { id: 2, chore: { id: 2, name: 'Walk the dog', chore_type: 'regular', tags: [] }, picked_chore: null, completed: false },
+            ],
+          },
+        ],
+      },
+      isLoading: false,
+    })
+    render(<HouseholdColumn />)
+    // The person's name appears once, as the group heading, and their own
+    // done/total sits beside it — matching the section header's overall
+    // count here since there's only one person.
+    expect(screen.getByText('Ben')).toBeInTheDocument()
+    expect(screen.getAllByText('1/2')).toHaveLength(2)
+    expect(screen.getByText('Feed the cat')).toBeInTheDocument()
+    expect(screen.getByText('Walk the dog')).toBeInTheDocument()
+  })
+
+  it('honours picked_chore over the base chore name for meta-chores', () => {
+    useChores.mockReturnValue({
+      data: {
+        completed_count: 0,
+        total_count: 1,
+        persons: [
+          {
+            person: { id: 1, name: 'Ben', color: '#000', avatar: null },
+            assignments: [
+              {
+                id: 1,
+                chore: { id: 1, name: 'Pick a chore', chore_type: 'meta', tags: [] },
+                picked_chore: { id: 2, name: 'Vacuum living room', chore_type: 'regular', tags: [] },
+                completed: false,
+              },
+            ],
+          },
+        ],
+      },
+      isLoading: false,
+    })
+    render(<HouseholdColumn />)
+    expect(screen.getByText('Vacuum living room')).toBeInTheDocument()
+    expect(screen.queryByText('Pick a chore')).not.toBeInTheDocument()
   })
 })

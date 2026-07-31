@@ -3,7 +3,7 @@ import { useCountdowns } from '@/data/countdowns'
 import type { CountdownItem } from '@/data/countdowns'
 import { useOnThisDay } from '@/data/on-this-day'
 import { useChores } from '@/data/chores'
-import type { TodayResponse } from '@/data/chores'
+import type { PersonAssignments, TodayResponse } from '@/data/chores'
 import { useLunchMenu } from '@/data/nutrislice'
 import type { LunchMenuData } from '@/data/nutrislice'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
@@ -76,45 +76,86 @@ function LunchSection({ lunch }: { lunch: LunchMenuData }) {
 }
 
 /* ───────────────────────── Chores ─────────────────────────
- * Mock: broadsheet-v2.jsx:251-286. The mock's chores are clickable and show
+ * Mock: broadsheet-v2.jsx:252-297. The mock's chores are clickable and show
  * a per-person streak; ours are read-only (per the brief — no toggling in
  * this task) and the streak has no backing data (`TodayResponse` carries
  * `completed_count`/`total_count`, not a streak), so it's omitted rather
- * than invented. Everything else the mock shows — per-chore name and
- * assignee — the real `useChores()` payload does support: each person in
- * `TodayResponse.persons` carries their own `assignments`, each with a
- * `chore` (and an optional `picked_chore` for meta-chores). */
+ * than invented. Everything else the mock shows — chores grouped under a
+ * person heading, each with their own done/total — the real `useChores()`
+ * payload already returns in that shape: `TodayResponse.persons` is an
+ * array of `{ person, assignments }`, each assignment carrying a `chore`
+ * (and an optional `picked_chore` for meta-chores). No flattening needed. */
 
-interface FlatChore {
-  id: number
-  name: string
+interface VisibleChoreGroup {
+  personId: number
   personName: string
-  completed: boolean
+  tasks: { id: number; name: string; completed: boolean }[]
+  hiddenTaskCount: number
+  doneCount: number
+  totalCount: number
 }
 
-function flattenChores(chores: TodayResponse): FlatChore[] {
-  return (chores.persons ?? []).flatMap((p) =>
-    p.assignments.map((a) => ({
+/** How many person groups this section ever renders, and how many tasks
+ *  each group shows — separate budgets, mirroring `ScheduleColumn`'s
+ *  day/event split (`MAX_WEEK_AHEAD_DAYS`/`MAX_WEEK_AHEAD_EVENTS`). A single
+ *  cap on "rows" — what the old flat `MAX_VISIBLE_CHORES` did — doesn't
+ *  work once a row's cost depends on grouping: a heading costs about as
+ *  much vertical space as a task row (measured live: ~25px each at this
+ *  canvas's logical scale, plus an 8px gap between groups), so total cost
+ *  is `people × (1 + tasksPerPerson)`, not just a task count.
+ *
+ *  These two numbers were tuned by measurement, not guesswork: rendered the
+ *  household column live via Playwright route interception (school-day
+ *  lunch populated + coming-up at its cap + the on-this-day blurb at its
+ *  tight 2-line "crowded" clamp — the fullest realistic combination this
+ *  file's other comments already establish) and checked whether the
+ *  on-this-day *blurb paragraph itself* — not just its heading, which sits
+ *  above it and can fit while the paragraph below still clips — stayed
+ *  inside the body row's bounds. That distinction mattered: an
+ *  `On this day` heading can report a healthy margin while the blurb
+ *  beneath it is entirely clipped (found live, screenshotted, and reverted
+ *  once caught), because `margin-top: auto` pins the *section* to the
+ *  column's foot but doesn't protect the section's own children from being
+ *  pushed past the fold if the section is taller than the space that's
+ *  left. `MAX_VISIBLE_PEOPLE = 2` matches today's actual household size —
+ *  a third member would need to join before it ever engages.
+ *  `MAX_TASKS_PER_PERSON = 2` is the largest value that keeps the blurb
+ *  paragraph fully on-screen at the worst case the caps ever allow (two
+ *  people, each pushed past their cap) — verified both by measuring the
+ *  paragraph's own bounding box and by screenshot. It's tighter than it
+ *  looks: this household's own recorded history has both people
+ *  simultaneously over a cap of 2 on roughly half of sampled days, so the
+ *  "+N more" fallback is a routine sight, not a rare edge case — and the
+ *  fit has zero measured clearance to spare, tight enough that a webfont
+ *  swap on a cold boot is a real (if unconfirmed) risk. If the household
+ *  grows past two people, or this ever clips in practice, re-measure
+ *  against the blurb paragraph rather than raising these blind. */
+const MAX_VISIBLE_PEOPLE = 2
+const MAX_TASKS_PER_PERSON = 2
+
+function capChoreGroups(persons: PersonAssignments[]): { groups: VisibleChoreGroup[]; hiddenPeopleCount: number } {
+  const visiblePersons = persons.slice(0, MAX_VISIBLE_PEOPLE)
+  const groups = visiblePersons.map((p) => {
+    const allTasks = p.assignments.map((a) => ({
       id: a.id,
       name: (a.picked_chore ?? a.chore).name,
-      personName: p.person.name,
       completed: a.completed,
-    })),
-  )
+    }))
+    const visibleTasks = allTasks.slice(0, MAX_TASKS_PER_PERSON)
+    return {
+      personId: p.person.id,
+      personName: p.person.name,
+      tasks: visibleTasks,
+      hiddenTaskCount: allTasks.length - visibleTasks.length,
+      doneCount: allTasks.filter((t) => t.completed).length,
+      totalCount: allTasks.length,
+    }
+  })
+  return { groups, hiddenPeopleCount: persons.length - visiblePersons.length }
 }
 
-/** How many chore rows this section ever renders. The mock's chore list is
- *  a handful of fixed mock entries; the real feed has no such ceiling — a
- *  full house on a busy day could run well past what this column, stacked
- *  beneath Lunch and above Coming Up / On This Day, has room for on the
- *  fixed canvas. Capped the same way `ScheduleColumn` caps its day and
- *  event lists, with a "+N more" line rather than a silent clip. */
-const MAX_VISIBLE_CHORES = 6
-
 function ChoresSection({ chores }: { chores: TodayResponse }) {
-  const flat = flattenChores(chores)
-  const visible = flat.slice(0, MAX_VISIBLE_CHORES)
-  const hidden = flat.length - visible.length
+  const { groups, hiddenPeopleCount } = capChoreGroups(chores.persons ?? [])
 
   return (
     <div style={{ marginTop: 14, paddingTop: 8, borderTop: '1px solid var(--rule)' }}>
@@ -124,54 +165,86 @@ function ChoresSection({ chores }: { chores: TodayResponse }) {
           {chores.completed_count}/{chores.total_count}
         </span>
       </div>
-      {visible.length > 0 && (
-        <ul className="m-0 p-0 flex flex-col" style={{ listStyle: 'none' }}>
-          {visible.map((chore, i) => (
-            <li
-              key={chore.id}
-              className="flex items-center gap-2.5"
-              style={{ padding: '6px 4px', borderTop: i === 0 ? 'none' : '1px dotted var(--rule)' }}
-            >
-              {/* Read-only status mark, not a control — the mock's chores
-               *  are clickable, ours aren't (per the brief). No cursor,
-               *  no hover, no button semantics. */}
-              <span
-                className="flex items-center justify-center flex-shrink-0"
-                style={{
-                  width: 18,
-                  height: 18,
-                  border: `1.5px solid ${chore.completed ? 'var(--forest)' : 'var(--ink)'}`,
-                  background: chore.completed ? 'var(--forest)' : 'transparent',
-                  color: 'var(--paper)',
-                }}
-              >
-                {chore.completed && <Check size={12} strokeWidth={2.5} />}
-              </span>
-              <span
-                className="flex-1 min-w-0"
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontSize: 14,
-                  lineHeight: 1.25,
-                  textDecoration: chore.completed ? 'line-through' : 'none',
-                  color: chore.completed ? 'var(--ink-muted)' : 'var(--ink)',
-                }}
-              >
-                {chore.name}
-              </span>
-              <span
-                className="uppercase flex-shrink-0"
-                style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--ink-muted)', letterSpacing: '0.15em' }}
-              >
-                {chore.personName}
-              </span>
-            </li>
-          ))}
-        </ul>
+      {groups.length > 0 && (
+        <div className="flex flex-col" style={{ gap: 8 }}>
+          {groups.map((group) => {
+            const allDone = group.totalCount > 0 && group.doneCount === group.totalCount
+            return (
+              <div key={group.personId}>
+                {/* person heading — carries the group's name and its own
+                 *  done/total; individual task rows no longer repeat the
+                 *  assignee (the mock moved it here from a per-row label). */}
+                <div
+                  className="flex items-baseline"
+                  style={{ gap: 8, borderBottom: '1px solid var(--ink)', paddingBottom: 2, marginBottom: 3 }}
+                >
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: 14.5,
+                      fontWeight: 600,
+                      letterSpacing: '-0.005em',
+                      color: allDone ? 'var(--forest)' : 'var(--ink)',
+                    }}
+                  >
+                    {group.personName}
+                  </span>
+                  {allDone && <Check size={11} strokeWidth={2.6} style={{ color: 'var(--forest)' }} />}
+                  <span className="flex-1" />
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--ink-muted)', letterSpacing: '0.12em' }}>
+                    {group.doneCount}/{group.totalCount}
+                  </span>
+                </div>
+                <ul className="m-0 p-0 flex flex-col" style={{ listStyle: 'none' }}>
+                  {group.tasks.map((task) => (
+                    <li
+                      key={task.id}
+                      className="flex items-center"
+                      style={{ gap: 9, padding: '4px 0 4px 2px' }}
+                    >
+                      {/* Read-only status mark, not a control — the mock's
+                       *  chores are clickable, ours aren't (per the brief).
+                       *  No cursor, no hover, no button semantics. */}
+                      <span
+                        className="flex items-center justify-center flex-shrink-0"
+                        style={{
+                          width: 16,
+                          height: 16,
+                          border: `1.5px solid ${task.completed ? 'var(--forest)' : 'var(--ink)'}`,
+                          background: task.completed ? 'var(--forest)' : 'transparent',
+                          color: 'var(--paper)',
+                        }}
+                      >
+                        {task.completed && <Check size={11} strokeWidth={2.5} />}
+                      </span>
+                      <span
+                        className="flex-1 min-w-0"
+                        style={{
+                          fontFamily: 'var(--font-display)',
+                          fontSize: 13.5,
+                          lineHeight: 1.25,
+                          textDecoration: task.completed ? 'line-through' : 'none',
+                          color: task.completed ? 'var(--ink-muted)' : 'var(--ink)',
+                        }}
+                      >
+                        {task.name}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {group.hiddenTaskCount > 0 && (
+                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fontStyle: 'italic', color: 'var(--ink-muted)', marginTop: 2 }}>
+                    +{group.hiddenTaskCount} more
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
       )}
-      {hidden > 0 && (
+      {hiddenPeopleCount > 0 && (
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fontStyle: 'italic', color: 'var(--ink-muted)', marginTop: 4 }}>
-          +{hidden} more
+          +{hiddenPeopleCount} more
         </div>
       )}
     </div>
