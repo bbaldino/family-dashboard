@@ -1,4 +1,5 @@
-import { useSportsGames, formatUpcomingTime } from '@/data/sports'
+import { formatUpcomingTime } from '@/data/sports'
+import type { GamesResponse } from '@/data/sports'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 
 const proseStyle = {
@@ -11,11 +12,13 @@ const proseStyle = {
 /**
  * No game today (or the cache hasn't produced one yet): a written line
  * instead of an empty column, plus whatever's next on the schedule for the
- * tracked teams. Takes no props — it reads `useSportsGames` itself so
- * `SportsColumn` can render it before a game is even selected.
+ * tracked teams. Takes sports data as props rather than calling
+ * `useSportsGames()` itself — that hook opens its own SSE connection, and
+ * `Home` already calls it once for the whole page (see `Home`'s doc
+ * comment). `SportsColumn` threads the same data through so it can render
+ * this before a game is even selected.
  */
-export function OffdayBlock() {
-  const { data, isLoading } = useSportsGames()
+export function OffdayBlock({ data, isLoading }: { data: GamesResponse | undefined; isLoading: boolean }) {
   const upcoming = (data?.games ?? []).filter((g) => g.state === 'upcoming').slice(0, 3)
 
   return (
@@ -32,11 +35,11 @@ export function OffdayBlock() {
           margin: '6px 0 10px',
         }}
       >
-        No game today.
+        {isLoading ? 'Checking the schedule…' : 'No game today.'}
       </h2>
       <p className="m-0" style={{ ...proseStyle, marginBottom: 14 }}>
         {isLoading
-          ? 'Checking the schedule…'
+          ? 'The schedule for today hasn’t loaded yet.'
           : 'The column rests until the next first pitch. When a game lands on this date, it flexes back in here.'}
       </p>
       {upcoming.length > 0 && (

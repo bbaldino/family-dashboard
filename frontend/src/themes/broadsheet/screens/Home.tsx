@@ -14,7 +14,7 @@ import { isAllDay } from '@/themes/broadsheet/home/event-format'
 /** Today's events that haven't started yet — all-day events always count. */
 function upcomingTodayEvents(today: CalendarDay | undefined, now: Date): CalendarEvent[] {
   if (!today) return []
-  return today.events.filter((event) => {
+  return (today.events ?? []).filter((event) => {
     if (isAllDay(event) || !event.start.dateTime) return true
     return new Date(event.start.dateTime).getTime() >= now.getTime()
   })
@@ -28,11 +28,17 @@ function upcomingTodayEvents(today: CalendarDay | undefined, now: Date): Calenda
  *
  * Every hook here can boot with no data on a cold cache — the tablet's
  * first second after power-on — so nothing below assumes data has arrived.
+ *
+ * `useSportsGames()` opens its own SSE connection (on top of react-query's
+ * polling), so it's called exactly once here and threaded down as props —
+ * `SportsColumn` and, in turn, `OffdayBlock` don't call it themselves. Three
+ * independent call sites once meant three permanent EventSource connections
+ * to the same endpoint on a tablet that never reloads.
  */
 export function Home() {
   const now = useNow()
   const { data: days } = useGoogleCalendar()
-  const { data: sportsData } = useSportsGames()
+  const { data: sportsData, isLoading: sportsLoading } = useSportsGames()
   const { data: lunch } = useLunchMenu()
 
   const today = days?.find((day) => day.isToday)
@@ -77,7 +83,7 @@ export function Home() {
           <ScheduleColumn />
         </div>
         <div className="min-h-0 overflow-hidden">
-          <SportsColumn />
+          <SportsColumn data={sportsData} isLoading={sportsLoading} />
         </div>
       </div>
       <div className="px-14 pb-16">

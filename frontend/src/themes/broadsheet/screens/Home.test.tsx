@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { Home } from './Home'
@@ -20,8 +20,9 @@ vi.mock('@/data/weather', () => ({
 }))
 vi.mock('@/data/google-calendar', () => ({ useGoogleCalendar: () => ({ data: undefined, isLoading: true }) }))
 vi.mock('@/data/driving-time', () => ({ useDrivingTime: () => ({}) }))
+const useSportsGames = vi.hoisted(() => vi.fn(() => ({ data: undefined, isLoading: true })))
 vi.mock('@/data/sports', () => ({
-  useSportsGames: () => ({ data: undefined, isLoading: true }),
+  useSportsGames,
   useSportsPreview: () => ({ data: undefined }),
   formatUpcomingTime: (s: string) => s,
 }))
@@ -34,6 +35,10 @@ vi.mock('@/data/nutrislice', () => ({ useLunchMenu: () => ({ data: null, isLoadi
 vi.mock('@/data/music', () => ({ useMusic: () => ({ state: { queues: [], activeQueue: null } }) }))
 
 describe('broadsheet Home', () => {
+  beforeEach(() => {
+    useSportsGames.mockClear()
+  })
+
   it('renders the full page with every data source empty', () => {
     // This is the exact state of the tablet for the first second after
     // boot — cold caches everywhere. A crash here means a black wall display.
@@ -75,5 +80,21 @@ describe('broadsheet Home', () => {
     const body = screen.getByTestId('broadsheet-home-body')
     expect(body.className).toContain('overflow-hidden')
     expect(body.className).toContain('min-h-0')
+  })
+
+  it('opens exactly one sports SSE connection for the whole page', () => {
+    // useSportsGames() opens its own EventSource on top of react-query's
+    // polling. Home, SportsColumn, and (when there's no featured game)
+    // OffdayBlock all used to call it independently — three permanent
+    // connections to the same endpoint on a tablet that never reloads. Home
+    // now calls it once and threads the result down as props, so this must
+    // hold regardless of which sports state (off-day, pregame, live)
+    // renders underneath it.
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    )
+    expect(useSportsGames).toHaveBeenCalledTimes(1)
   })
 })

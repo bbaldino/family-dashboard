@@ -1,11 +1,10 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { SportsColumn } from './SportsColumn'
+import type { GamesResponse, GameState } from '@/data/sports'
 
-const useSportsGames = vi.hoisted(() => vi.fn())
 const useSportsPreview = vi.hoisted(() => vi.fn())
 vi.mock('@/data/sports', () => ({
-  useSportsGames,
   useSportsPreview,
   formatUpcomingTime: (s: string) => s,
 }))
@@ -27,7 +26,7 @@ const team = (abbreviation: string, score: number | null) => ({
 // Real GameState values are 'live' | 'final' | 'upcoming' | 'postponed' — the
 // task brief's mock used 'pre'/'in', which don't exist on the wire. Corrected
 // here (see src/data/sports/types.ts).
-const game = (state: string, extra: Record<string, unknown> = {}) => ({
+const game = (state: GameState, extra: Record<string, unknown> = {}) => ({
   id: 'g1',
   league: 'MLB',
   state,
@@ -59,14 +58,14 @@ describe('SportsColumn', () => {
   })
 
   it('shows the off-day block when there is no game', () => {
-    useSportsGames.mockReturnValue({ data: { games: [], hasLive: false }, isLoading: false })
-    render(<SportsColumn />)
+    const data: GamesResponse = { games: [], hasLive: false }
+    render(<SportsColumn data={data} isLoading={false} />)
     expect(screen.getByText(/no game|off day|dark/i)).toBeInTheDocument()
   })
 
   it('shows the pregame block for a scheduled game', () => {
-    useSportsGames.mockReturnValue({ data: { games: [game('upcoming')], hasLive: false }, isLoading: false })
-    render(<SportsColumn />)
+    const data: GamesResponse = { games: [game('upcoming')], hasLive: false }
+    render(<SportsColumn data={data} isLoading={false} />)
     // The fixture's team() helper sets `name === abbreviation`, so "LAD"
     // legitimately appears more than once (the team cap and the full-name
     // label render separately) — real ESPN data never collides like this.
@@ -75,22 +74,18 @@ describe('SportsColumn', () => {
   })
 
   it('shows the score for a live game', () => {
-    useSportsGames.mockReturnValue({ data: { games: [game('live')], hasLive: true }, isLoading: false })
-    render(<SportsColumn />)
+    const data: GamesResponse = { games: [game('live')], hasLive: true }
+    render(<SportsColumn data={data} isLoading={false} />)
     expect(screen.getByText('4')).toBeInTheDocument()
     expect(screen.getByText('3')).toBeInTheDocument()
   })
 
   it('renders a live game with no situation or liveDetail', () => {
-    useSportsGames.mockReturnValue({
-      data: { games: [game('live', { situation: null, liveDetail: null })], hasLive: true },
-      isLoading: false,
-    })
-    expect(() => render(<SportsColumn />)).not.toThrow()
+    const data: GamesResponse = { games: [game('live', { situation: null, liveDetail: null })], hasLive: true }
+    expect(() => render(<SportsColumn data={data} isLoading={false} />)).not.toThrow()
   })
 
   it('renders while sports data is loading', () => {
-    useSportsGames.mockReturnValue({ data: undefined, isLoading: true })
-    expect(() => render(<SportsColumn />)).not.toThrow()
+    expect(() => render(<SportsColumn data={undefined} isLoading={true} />)).not.toThrow()
   })
 })
