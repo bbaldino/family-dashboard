@@ -114,7 +114,7 @@ export function AssignmentsTab() {
       try {
         const allConfig: Record<string, string> = await fetch('/api/config').then((r) => r.json())
         const saved = allConfig['google-calendar.calendar_ids']
-        let calendarIds: string[] = saved ? JSON.parse(saved) : ['primary']
+        const calendarIds: string[] = saved ? JSON.parse(saved) : ['primary']
 
         const startDate = new Date(weekOf)
         const endDate = new Date(weekOf)

@@ -34,7 +34,6 @@ export function useSportsGames() {
       // to do here besides letting it try again — log so we can see it during
       // dev.
       if (source.readyState === EventSource.CLOSED) {
-        // eslint-disable-next-line no-console
         console.warn('Sports SSE closed; relying on polling until reconnect')
       }
     }

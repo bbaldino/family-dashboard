@@ -3,30 +3,21 @@ import { Music, Play, Pause, SkipBack, SkipForward, X, Lock, Unlock } from 'luci
 import { useMusic } from '@/data/music'
 
 interface FullscreenNowPlayingProps {
-  isOpen: boolean
   onClose: () => void
 }
 
-export function FullscreenNowPlaying({ isOpen, onClose }: FullscreenNowPlayingProps) {
+export function FullscreenNowPlaying({ onClose }: FullscreenNowPlayingProps) {
   const { state, isPlaying, pause, resume, next, previous } = useMusic()
   const { activeQueue } = state
   const [locked, setLocked] = useState(false)
 
   useEffect(() => {
-    if (!isOpen) return
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !locked) onClose()
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen, onClose, locked])
-
-  // Reset lock when modal closes
-  useEffect(() => {
-    if (!isOpen) setLocked(false)
-  }, [isOpen])
-
-  if (!isOpen) return null
+  }, [onClose, locked])
 
   const currentItem = activeQueue?.currentItem ?? null
 

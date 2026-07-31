@@ -91,10 +91,9 @@ export function MediaBoard() {
 
       {/* Overlays */}
       <PlayerPicker isOpen={pickerOpen} onClose={() => setPickerOpen(false)} />
-      <FullscreenNowPlaying
-        isOpen={fullscreen}
-        onClose={() => setFullscreen(false)}
-      />
+      {fullscreen && (
+        <FullscreenNowPlaying onClose={() => setFullscreen(false)} />
+      )}
     </div>
   )
 }

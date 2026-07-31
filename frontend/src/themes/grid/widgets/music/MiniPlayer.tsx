@@ -9,13 +9,20 @@ export function MiniPlayer() {
   const [dismissed, setDismissed] = useState(false)
 
   const { activeQueue } = state
+  const playState = activeQueue?.state
 
-  // Auto-show when playback starts
-  useEffect(() => {
-    if (activeQueue?.state === 'playing') {
+  // Auto-show when playback starts. `dismissed` isn't purely derived from
+  // activeQueue — it also has independent manual (dismiss button) and timer
+  // (5-minute idle) transitions below — so instead of deriving it, we reset it
+  // on the "playback just started" edge, the way React documents adjusting
+  // state during render.
+  const [prevPlayState, setPrevPlayState] = useState(playState)
+  if (playState !== prevPlayState) {
+    setPrevPlayState(playState)
+    if (playState === 'playing') {
       setDismissed(false)
     }
-  }, [activeQueue?.state])
+  }
 
   // Auto-dismiss after 5 minutes of not playing
   useEffect(() => {

@@ -27,6 +27,12 @@ export function useTimers(serviceUrl: string | undefined, alarmSoundId?: string)
   const [firedTimers, setFiredTimers] = useState<Timer[]>([])
   const eventSourceRef = useRef<EventSource | null>(null)
   const stopAlarmRef = useRef<(() => void) | null>(null)
+  // Kept in a ref so the long-lived SSE handler always reaches the latest sound
+  // without tearing down and rebuilding the EventSource on every settings change.
+  const alarmSoundIdRef = useRef(alarmSoundId)
+  useEffect(() => {
+    alarmSoundIdRef.current = alarmSoundId
+  }, [alarmSoundId])
 
   // SSE connection
   useEffect(() => {
@@ -71,7 +77,7 @@ export function useTimers(serviceUrl: string | undefined, alarmSoundId?: string)
               if (stopAlarmRef.current) {
                 stopAlarmRef.current()
               }
-              stopAlarmRef.current = startRepeatingAlarm(alarmSoundId ?? 'gentle-chime')
+              stopAlarmRef.current = startRepeatingAlarm(alarmSoundIdRef.current ?? 'gentle-chime')
             }
             break
           case 'cancelled':

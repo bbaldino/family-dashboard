@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useEventBus } from '@/lib/event-bus'
+import { useEventBus } from '@/lib/useEventBus'
 
 export function EventOverlay() {
   const { currentOverlay, dismissOverlay } = useEventBus()

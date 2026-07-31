@@ -2,67 +2,16 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, type NavigateFunction } from 'react-router-dom'
 import { Music, Loader2 } from 'lucide-react'
-import { musicIntegration, useMusic } from '@/data/music'
+import { musicIntegration, useMusic, parseSearchResponse } from '@/data/music'
 import type { EnqueueMode, SearchItem } from '@/data/music'
 import { TrackActionsMenu } from './TrackActionsMenu'
 import { encodeUriParam } from './track-url'
-
-interface SearchResultsType {
-  tracks: SearchItem[]
-  artists: SearchItem[]
-  albums: SearchItem[]
-  playlists: SearchItem[]
-}
 
 interface SearchResultsProps {
   /** What the user has typed right now — used to detect "still settling" state. */
   rawQuery: string
   /** Debounced query that's actually sent to the backend. */
   debouncedQuery: string
-}
-
-// Raw shape returned by the Music Assistant search endpoint
-interface RawSearchItem {
-  name?: string
-  uri?: string
-  image?: { path?: string } | null
-  metadata?: { images?: Array<{ path?: string }> }
-  media_type?: string
-  artists?: Array<{ name?: string; uri?: string }>
-  album?: { name?: string; uri?: string } | null
-}
-
-function getItemImage(raw: RawSearchItem): string | null {
-  if (raw.image?.path) return raw.image.path
-  if (raw.metadata?.images?.[0]?.path) return raw.metadata.images[0].path
-  return null
-}
-
-function normalizeItem(raw: RawSearchItem): SearchItem {
-  return {
-    name: raw.name ?? '',
-    uri: raw.uri ?? '',
-    image: getItemImage(raw),
-    media_type: raw.media_type ?? '',
-    artist: raw.artists?.[0]?.name,
-    artist_uri: raw.artists?.[0]?.uri ?? null,
-    album: raw.album?.name ?? null,
-    album_uri: raw.album?.uri ?? null,
-  }
-}
-
-function parseSearchResponse(data: unknown): SearchResultsType {
-  const obj = (data ?? {}) as Record<string, unknown>
-  const extract = (key: string): SearchItem[] => {
-    const raw = Array.isArray(obj[key]) ? (obj[key] as RawSearchItem[]) : []
-    return raw.map(normalizeItem)
-  }
-  return {
-    tracks: extract('tracks'),
-    artists: extract('artists'),
-    albums: extract('albums'),
-    playlists: extract('playlists'),
-  }
 }
 
 function Thumbnail({ imageUrl, name }: { imageUrl: string | null; name: string }) {

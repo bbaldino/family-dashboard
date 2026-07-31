@@ -1,4 +1,5 @@
 import type { GameTeam, Play } from '@/data/sports'
+import { teamFor } from './team-utils'
 
 interface PlayByPlayLogProps {
   plays: Play[]
@@ -21,16 +22,6 @@ export function TeamDot({ team }: { team: GameTeam | null }) {
       style={{ backgroundColor: `#${hex}` }}
     />
   )
-}
-
-export function teamFor(
-  teamId: string | null,
-  home: GameTeam,
-  away: GameTeam,
-): GameTeam | null {
-  if (teamId === home.id) return home
-  if (teamId === away.id) return away
-  return null
 }
 
 export function PlayByPlayLog({ plays, home, away }: PlayByPlayLogProps) {

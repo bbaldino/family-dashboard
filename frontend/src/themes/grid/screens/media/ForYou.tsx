@@ -1,6 +1,11 @@
 import { useQuery } from '@tanstack/react-query'
 import { Music } from 'lucide-react'
-import { musicIntegration, useMusic, getImageUrl } from '@/data/music'
+import {
+  musicIntegration,
+  useMusic,
+  getImageUrl,
+  parseSearchResponse,
+} from '@/data/music'
 
 interface CuratedPlaylist {
   name: string
@@ -24,24 +29,20 @@ async function fetchCuratedPlaylists(): Promise<CuratedPlaylist[]> {
 
   for (const { name, query } of CURATED_PLAYLISTS) {
     try {
-      const data = await musicIntegration.api.get<any>(
+      const data = await musicIntegration.api.get<unknown>(
         `/search?q=${encodeURIComponent(query)}`,
       )
-      const playlists = data?.playlists as any[] | undefined
-      if (playlists && playlists.length > 0) {
+      const { playlists } = parseSearchResponse(data)
+      if (playlists.length > 0) {
         // Find the best match — exact name match preferred
         const match =
-          playlists.find(
-            (p: any) => p.name?.toLowerCase() === name.toLowerCase(),
-          ) ?? playlists[0]
-        const imgPath =
-          match.metadata?.images?.[0]?.path ??
-          (typeof match.image === 'object' ? match.image?.path : match.image)
+          playlists.find((p) => p.name.toLowerCase() === name.toLowerCase()) ??
+          playlists[0]
         results.push({
-          name: match.name ?? name,
+          name: match.name || name,
           description: name,
           uri: match.uri,
-          image: imgPath ? { path: imgPath } : null,
+          image: match.image ?? null,
         })
       }
     } catch {

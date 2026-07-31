@@ -37,14 +37,6 @@ function ComponentRow({ c }: { c: HealthComponent }) {
   )
 }
 
-function relativeTime(unixSecs: number): string {
-  const secs = Math.max(0, Math.floor(Date.now() / 1000 - unixSecs))
-  if (secs < 60) return `${secs}s`
-  if (secs < 3600) return `${Math.floor(secs / 60)}m`
-  if (secs < 86400) return `${Math.floor(secs / 3600)}h`
-  return `${Math.floor(secs / 86400)}d`
-}
-
 function formatTimestamp(unixSecs: number): string {
   return new Date(unixSecs * 1000).toLocaleString([], {
     month: 'numeric',
@@ -173,5 +165,3 @@ export function ServiceCard({ service }: { service: Service }) {
     </div>
   )
 }
-
-export { relativeTime }

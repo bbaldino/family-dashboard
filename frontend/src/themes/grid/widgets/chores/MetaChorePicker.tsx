@@ -26,7 +26,11 @@ export function MetaChorePicker({
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
+    // loading already defaults to true on mount, and pickFromTags is fixed
+    // for the lifetime of a single picker mount (the parent remounts this
+    // component via `{picker && <MetaChorePicker ... />}` rather than
+    // changing pickFromTags on an already-open picker), so there's no case
+    // where this effect re-runs and needs to reset loading back to true.
     choresIntegration
       .api!.get<ChoreRef[]>('/chores/by-tags?tags=' + pickFromTags.join(','))
       .then((data) => {

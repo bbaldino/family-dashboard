@@ -1,5 +1,6 @@
 import type { GameTeam, Play, ScoringRecap } from '@/data/sports'
-import { TeamDot, teamFor } from './PlayByPlayLog'
+import { TeamDot } from './PlayByPlayLog'
+import { teamFor } from './team-utils'
 
 interface ScoringSummaryProps {
   /** All scoring plays — used as the raw fallback when no recap is available. */

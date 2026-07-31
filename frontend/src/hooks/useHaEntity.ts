@@ -4,5 +4,6 @@ import { useEntity } from '@hakit/core'
 // We cast to any since we don't have type generation set up.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function useHaEntity(entityId: string): any {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return useEntity(entityId as any)
 }

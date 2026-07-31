@@ -19,8 +19,8 @@ export function ModelSelect({ value, onChange, label, description }: ModelSelect
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
-    setError(null)
+    // loading/error already default to true/null on mount; this effect only
+    // ever runs once (empty deps), so there's no need to reset them here.
     fetch('/api/llm/models')
       .then(async (r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status}`)

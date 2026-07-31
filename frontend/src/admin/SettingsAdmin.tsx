@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/ui/Button'
 import { integrations } from '@/data/integrations-registry'
 import { ModelSelect } from '@/admin/settings/llm/ModelSelect'
@@ -31,23 +31,25 @@ export function SettingsAdmin() {
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const loadConfig = useCallback(async () => {
-    try {
-      const resp = await fetch('/api/config')
-      const data = await resp.json()
-      // Merge schema defaults under saved values so unsaved fields show their defaults
-      const defaults = getSchemaDefaults()
-      const merged = { ...defaults, ...data }
-      setAllConfig(merged)
-      setLocalConfig(merged)
-    } catch {
-      setError('Failed to load settings')
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/config')
+      .then((resp) => resp.json())
+      .then((data) => {
+        if (cancelled) return
+        // Merge schema defaults under saved values so unsaved fields show their defaults
+        const defaults = getSchemaDefaults()
+        const merged = { ...defaults, ...data }
+        setAllConfig(merged)
+        setLocalConfig(merged)
+      })
+      .catch(() => {
+        if (!cancelled) setError('Failed to load settings')
+      })
+    return () => {
+      cancelled = true
     }
   }, [])
-
-  useEffect(() => {
-    loadConfig()
-  }, [loadConfig])
 
   const handleChange = (fullKey: string, value: string) => {
     setLocalConfig((prev) => ({ ...prev, [fullKey]: value }))
