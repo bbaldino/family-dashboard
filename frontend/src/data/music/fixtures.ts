@@ -77,6 +77,10 @@ function packedQueues(): QueueState[] {
         duration: 238,
         elapsed: 71,
         uri: PLAYING_TRACK_URI,
+        year: 2023,
+        label: 'Harbor Sound Records',
+        trackNumber: 1,
+        source: 'spotify--yC8brUbw',
       },
       volumeLevel: 45,
     },
@@ -92,6 +96,12 @@ function packedQueues(): QueueState[] {
         duration: 194,
         elapsed: 52,
         uri: PAUSED_TRACK_URI,
+        // A local-library-style item: MA doesn't always carry these, so this
+        // track is the fixture's example of that ordinary absence.
+        year: null,
+        label: null,
+        trackNumber: 4,
+        source: 'library',
       },
       volumeLevel: 20,
     },
@@ -114,10 +124,10 @@ export function musicStateFixtureFor(scenario: string | null): QueueState[] | un
 
 function packedQueueItems(): QueueItem[] {
   return [
-    { queue_item_id: 'qi-1', position: 0, media_item: { name: 'Amber Hours', uri: PLAYING_TRACK_URI, media_type: 'track', artists: [{ name: 'The Night Shift' }] } },
-    { queue_item_id: 'qi-2', position: 1, media_item: { name: 'Low Tide', uri: 'fixture://track/low-tide', media_type: 'track', artists: [{ name: 'The Night Shift' }] } },
-    { queue_item_id: 'qi-3', position: 2, media_item: { name: 'Porch Light', uri: 'fixture://track/porch-light', media_type: 'track', artists: [{ name: 'The Night Shift' }] } },
-    { queue_item_id: 'qi-4', position: 3, media_item: { name: 'Static Bloom', uri: 'fixture://track/static-bloom', media_type: 'track', artists: [{ name: 'Bellwether Coast' }] } },
+    { queue_item_id: 'qi-1', position: 0, duration: 238, media_item: { name: 'Amber Hours', uri: PLAYING_TRACK_URI, media_type: 'track', artists: [{ name: 'The Night Shift' }] } },
+    { queue_item_id: 'qi-2', position: 1, duration: 201, media_item: { name: 'Low Tide', uri: 'fixture://track/low-tide', media_type: 'track', artists: [{ name: 'The Night Shift' }] } },
+    { queue_item_id: 'qi-3', position: 2, duration: 176, media_item: { name: 'Porch Light', uri: 'fixture://track/porch-light', media_type: 'track', artists: [{ name: 'The Night Shift' }] } },
+    { queue_item_id: 'qi-4', position: 3, duration: 220, media_item: { name: 'Static Bloom', uri: 'fixture://track/static-bloom', media_type: 'track', artists: [{ name: 'Bellwether Coast' }] } },
   ]
 }
 

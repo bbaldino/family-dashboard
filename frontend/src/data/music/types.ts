@@ -6,6 +6,19 @@ export interface TrackInfo {
   duration: number | null // seconds
   elapsed: number | null // seconds
   uri: string | null
+  // The backend always sends year/label/trackNumber/source (as `null` when
+  // MA didn't have them), but they're typed optional here — rather than
+  // `| null` like the fields above — so existing call sites that predate
+  // these fields (test fixtures constructing a bare-bones TrackInfo) don't
+  // need updating just to add `null`s for fields they don't care about.
+  /** Release year, from MA's `album.year`. Absent for providers that don't carry it. */
+  year?: number | null
+  /** Record label, from MA's `metadata.label`. Frequently absent — only some providers/items carry it. */
+  label?: string | null
+  /** 1-based track position on its album/disc, from MA's `track_number`. */
+  trackNumber?: number | null
+  /** MA provider id (e.g. `spotify--yC8brUbw`), raw — not a display name. */
+  source?: string | null
 }
 
 export interface TopTrack {

@@ -8,6 +8,8 @@ import { musicQueueItemsFixtureFor } from './fixtures'
 export interface QueueItem {
   queue_item_id?: string
   position?: number
+  /** Seconds. Confirmed present on the live queue passthrough (both here and on media_item). */
+  duration?: number
   media_item: {
     name: string
     uri: string
