@@ -32,7 +32,6 @@ function createWrapper(queryClient: QueryClient) {
 describe('useGroupMutations', () => {
   afterEach(() => {
     post.mockReset()
-    vi.useRealTimers()
   })
 
   it('addToGroup posts /group and optimistically adds the leader + follower to group_members', async () => {
