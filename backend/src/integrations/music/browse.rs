@@ -51,12 +51,15 @@ pub struct ArtistDetail {
     pub name: String,
     pub image_url: Option<String>,
     /// From `metadata.genres` on `music/artists/get_artist`. Absent-tolerant:
-    /// empty when MA hasn't populated genres for this artist/provider.
+    /// empty when MA hasn't populated genres for this artist/provider, and
+    /// also empty (rather than failing the page) if the best-effort
+    /// `get_artist` fetch itself fails.
     pub genres: Vec<String>,
     /// From `metadata.description` on `music/artists/get_artist`. Null today
     /// for this household (MA only enriches library items, and this library
     /// is empty) — carried through so the artist page's bio section
-    /// populates itself if that ever changes.
+    /// populates itself if that ever changes. Also null if the best-effort
+    /// `get_artist` fetch itself fails.
     pub description: Option<String>,
     pub top_tracks: Vec<Track>,
     pub albums: Vec<AlbumSummary>,
@@ -152,6 +155,48 @@ fn metadata_genres(item: &serde_json::Value) -> Vec<String> {
         .collect()
 }
 
+/// Run an MA command best-effort: on failure, log a warning and return
+/// `None` instead of propagating the error. For enrichment calls layered on
+/// top of a page's primary list (label/description/genres alongside the
+/// track list) — this runs against a LAN service that has been unreachable
+/// for stretches of this project, and a decorative field failing to load
+/// must not blank a page that could otherwise render its tracks fine. The
+/// primary track/album list calls stay fail-closed; only these do not.
+async fn best_effort_command(
+    client: &MaClient,
+    command: &str,
+    args: serde_json::Value,
+    context: &str,
+) -> Option<serde_json::Value> {
+    match client.command(command, args).await {
+        Ok(v) => Some(v),
+        Err(e) => {
+            tracing::warn!("{} failed, continuing without it: {}", context, e);
+            None
+        }
+    }
+}
+
+/// Label + description derived from a best-effort `get_album` fetch.
+/// `fetched` is `None` when the fetch itself failed — that degrades to
+/// "absent", same as if MA had returned null for both fields.
+fn album_metadata_from(fetched: Option<&serde_json::Value>) -> (Option<String>, Option<String>) {
+    match fetched {
+        Some(album) => (metadata_label(album), metadata_description(album)),
+        None => (None, None),
+    }
+}
+
+/// Genres + description derived from a best-effort `get_artist` fetch.
+/// `fetched` is `None` when the fetch itself failed — that degrades to
+/// "absent", same as if MA had returned null/empty for both fields.
+fn artist_metadata_from(fetched: Option<&serde_json::Value>) -> (Vec<String>, Option<String>) {
+    match fetched {
+        Some(artist) => (metadata_genres(artist), metadata_description(artist)),
+        None => (Vec::new(), None),
+    }
+}
+
 fn album_summary(item: &serde_json::Value) -> Option<AlbumSummary> {
     let uri = item.get("uri")?.as_str()?.to_string();
     let name = item.get("name")?.as_str()?.to_string();
@@ -216,9 +261,12 @@ pub async fn get_artist(
     // top_tracks/artist_albums responses don't embed richly (the artist
     // object nested in artist_albums carries a null genres list even when
     // get_artist returns real ones) — verified live against music.home:8095.
-    let artist_raw: serde_json::Value = client.command(ARTIST_CMD, args).await?;
-    let genres = metadata_genres(&artist_raw);
-    let description = metadata_description(&artist_raw);
+    // Best-effort: this is enrichment on top of the tracks/albums above, so
+    // a failure here degrades to absent genres/description rather than
+    // failing the whole artist page.
+    let artist_raw =
+        best_effort_command(&client, ARTIST_CMD, args, "music/artists/get_artist").await;
+    let (genres, description) = artist_metadata_from(artist_raw.as_ref());
 
     let top_tracks: Vec<Track> = top_tracks_raw
         .as_array()
@@ -270,12 +318,15 @@ pub struct AlbumDetail {
     pub image_url: Option<String>,
     pub year: Option<i64>,
     /// From `metadata.label` on `music/albums/get_album`. Absent for
-    /// providers/items MA hasn't populated a label for.
+    /// providers/items MA hasn't populated a label for, and also absent
+    /// (rather than failing the page) if the best-effort `get_album` fetch
+    /// itself fails.
     pub label: Option<String>,
     /// From `metadata.description` on `music/albums/get_album`. Null today
     /// for this household (MA only enriches library items, and this library
     /// is empty) — carried through so the album page's description section
-    /// populates itself if that ever changes.
+    /// populates itself if that ever changes. Also null if the best-effort
+    /// `get_album` fetch itself fails.
     pub description: Option<String>,
     pub tracks: Vec<Track>,
 }
@@ -297,10 +348,11 @@ pub async fn get_album(
 
     // Label/description live on the album's own metadata, which
     // album_tracks's embedded album block doesn't carry at all — verified
-    // live against music.home:8095.
-    let album_raw: serde_json::Value = client.command(ALBUM_CMD, args).await?;
-    let label = metadata_label(&album_raw);
-    let description = metadata_description(&album_raw);
+    // live against music.home:8095. Best-effort: this is enrichment on top
+    // of the track list above, so a failure here degrades to absent label/
+    // description rather than failing the whole album page.
+    let album_raw = best_effort_command(&client, ALBUM_CMD, args, "music/albums/get_album").await;
+    let (label, description) = album_metadata_from(album_raw.as_ref());
 
     let tracks: Vec<Track> = tracks_raw
         .as_array()
@@ -593,5 +645,43 @@ mod tests {
         assert_eq!(metadata_label(&raw), None);
         assert_eq!(metadata_description(&raw), None);
         assert!(metadata_genres(&raw).is_empty());
+    }
+
+    #[test]
+    fn album_metadata_from_real_payload_when_fetch_succeeded() {
+        let album: serde_json::Value = serde_json::from_str(REAL_GET_ALBUM_FIXTURE).unwrap();
+        let (label, description) = album_metadata_from(Some(&album));
+        assert_eq!(label.as_deref(), Some("Virgin Records"));
+        assert_eq!(description, None);
+    }
+
+    /// The degraded path: `get_album` is a best-effort enrichment call
+    /// layered on top of the album's (separately, fail-closed) track list —
+    /// a failed fetch degrades to absent label/description, exactly as if
+    /// MA had returned null for both, rather than failing the whole page.
+    #[test]
+    fn album_metadata_is_absent_when_the_best_effort_fetch_failed() {
+        assert_eq!(album_metadata_from(None), (None, None));
+    }
+
+    #[test]
+    fn artist_metadata_from_real_payload_when_fetch_succeeded() {
+        let artist: serde_json::Value = serde_json::from_str(REAL_GET_ARTIST_FIXTURE).unwrap();
+        let (genres, description) = artist_metadata_from(Some(&artist));
+        assert_eq!(
+            genres,
+            vec!["breakbeat", "big beat", "electronic", "alternative dance"]
+        );
+        assert_eq!(description, None);
+    }
+
+    /// The degraded path: `get_artist` is a best-effort enrichment call
+    /// layered on top of the artist's (separately, fail-closed) top-tracks/
+    /// albums lists — a failed fetch degrades to absent genres/description,
+    /// exactly as if MA had returned null/empty for both, rather than
+    /// failing the whole page.
+    #[test]
+    fn artist_metadata_is_absent_when_the_best_effort_fetch_failed() {
+        assert_eq!(artist_metadata_from(None), (Vec::new(), None));
     }
 }
