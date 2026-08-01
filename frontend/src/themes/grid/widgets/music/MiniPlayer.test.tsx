@@ -31,6 +31,8 @@ function mockMusic(activeQueue: QueueState | null) {
     state: { queues: activeQueue ? [activeQueue] : [], activeQueue },
     isPlaying: activeQueue?.state === 'playing',
     isConnected: true,
+    actionError: null,
+    dismissError: vi.fn(),
     play: vi.fn(),
     pause: vi.fn(),
     resume: vi.fn(),

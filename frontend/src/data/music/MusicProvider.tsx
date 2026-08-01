@@ -5,7 +5,7 @@ import { activeScenario } from '@/data/scenario'
 import { musicIntegration } from './config'
 import type { MusicState, QueueState } from './types'
 import { MusicContext, defaultContextValue } from './music-context'
-import type { MusicContextValue, PlayOptions } from './music-context'
+import type { MusicActionError, MusicContextValue, PlayOptions } from './music-context'
 import { musicStateFixtureFor } from './fixtures'
 
 /**
@@ -57,8 +57,11 @@ export function MusicProvider({ children }: MusicProviderProps) {
   // below (which would just be replaying the initializer synchronously).
   const [isConnected, setIsConnected] = useState(() => fixtureQueues !== undefined)
   const [optimisticPlaying, setOptimisticPlaying] = useState<boolean | null>(null)
+  const [actionError, setActionError] = useState<MusicActionError | null>(null)
   const esRef = useRef<EventSource | null>(null)
   const volumeLockUntilRef = useRef<number>(0)
+
+  const dismissError = useCallback(() => setActionError(null), [])
 
   useEffect(() => {
     if (!isConfigured) return
@@ -154,51 +157,86 @@ export function MusicProvider({ children }: MusicProviderProps) {
     return () => clearInterval(id)
   }, [isConfigured])
 
-  const play = useCallback(async (uri: string, options?: PlayOptions) => {
-    await musicIntegration.api.post('/play', {
-      uri,
-      radio: options?.radio,
-      enqueue_mode: options?.enqueueMode,
-      media_type: options?.mediaType,
-      name: options?.name,
-      artist: options?.artist,
-      artist_uri: options?.artistUri,
-      album: options?.album,
-      album_uri: options?.albumUri,
-      image_url: options?.imageUrl,
-    })
+  /**
+   * Runs a transport action and records a failure instead of letting the
+   * rejection escape. No call site awaits these — `onTap={() => play(...)}` and
+   * friends — so a rejection previously became an unhandled promise rejection
+   * and the screen showed nothing at all: a failed tap and an ignored tap were
+   * indistinguishable. A track that Music Assistant returned 500 for on every
+   * attempt therefore just looked dead.
+   *
+   * Swallowing rather than rethrowing is deliberate: nothing upstream is in a
+   * position to handle it, and rethrowing only restores the unhandled
+   * rejection. The error becomes visible UI state, which is the thing that was
+   * missing.
+   */
+  const runAction = useCallback(async (describe: string, action: () => Promise<unknown>) => {
+    try {
+      await action()
+    } catch (err) {
+      console.error(`music: ${describe} failed`, err)
+      setActionError({ message: describe, at: Date.now() })
+    }
   }, [])
+
+  const play = useCallback(
+    async (uri: string, options?: PlayOptions) => {
+      // The item's own name when we have it — "Couldn’t play “Go”." tells you
+      // which tap died, which matters on a shelf where every card looks alike.
+      const what = options?.name ? `“${options.name}”` : 'that'
+      await runAction(`Couldn’t play ${what}`, () =>
+        musicIntegration.api.post('/play', {
+          uri,
+          radio: options?.radio,
+          enqueue_mode: options?.enqueueMode,
+          media_type: options?.mediaType,
+          name: options?.name,
+          artist: options?.artist,
+          artist_uri: options?.artistUri,
+          album: options?.album,
+          album_uri: options?.albumUri,
+          image_url: options?.imageUrl,
+        }),
+      )
+    },
+    [runAction],
+  )
 
   const pause = useCallback(async () => {
     setOptimisticPlaying(false)
-    await musicIntegration.api.post('/pause', {})
-  }, [])
+    await runAction("Couldn’t pause", () => musicIntegration.api.post('/pause', {}))
+  }, [runAction])
 
   const resume = useCallback(async () => {
     setOptimisticPlaying(true)
-    await musicIntegration.api.post('/resume', {})
-  }, [])
+    await runAction("Couldn’t resume", () => musicIntegration.api.post('/resume', {}))
+  }, [runAction])
 
   const stop = useCallback(async () => {
-    await musicIntegration.api.post('/stop', {})
-  }, [])
+    await runAction("Couldn’t stop", () => musicIntegration.api.post('/stop', {}))
+  }, [runAction])
 
   const next = useCallback(async () => {
-    await musicIntegration.api.post('/next', {})
-  }, [])
+    await runAction("Couldn’t skip forward", () => musicIntegration.api.post('/next', {}))
+  }, [runAction])
 
   const previous = useCallback(async () => {
-    await musicIntegration.api.post('/previous', {})
-  }, [])
+    await runAction("Couldn’t skip back", () => musicIntegration.api.post('/previous', {}))
+  }, [runAction])
 
-  const setVolume = useCallback(async (playerId: string, level: number) => {
-    // Optimistic update + lock: prevent SSE from overwriting for 2 seconds
-    volumeLockUntilRef.current = Date.now() + 2000
-    setQueues((prev) =>
-      prev.map((q) => (q.queueId === playerId ? { ...q, volumeLevel: level } : q)),
-    )
-    await musicIntegration.api.post('/volume', { player_id: playerId, level })
-  }, [])
+  const setVolume = useCallback(
+    async (playerId: string, level: number) => {
+      // Optimistic update + lock: prevent SSE from overwriting for 2 seconds
+      volumeLockUntilRef.current = Date.now() + 2000
+      setQueues((prev) =>
+        prev.map((q) => (q.queueId === playerId ? { ...q, volumeLevel: level } : q)),
+      )
+      await runAction("Couldn’t change the volume", () =>
+        musicIntegration.api.post('/volume', { player_id: playerId, level }),
+      )
+    },
+    [runAction],
+  )
 
   if (!isConfigured) {
     return (
@@ -216,6 +254,8 @@ export function MusicProvider({ children }: MusicProviderProps) {
     state,
     isPlaying,
     isConnected,
+    actionError,
+    dismissError,
     play,
     pause,
     resume,

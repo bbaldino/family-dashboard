@@ -20,10 +20,26 @@ export interface PlayOptions {
   imageUrl?: string
 }
 
+/** A transport action that failed, for a theme to surface. Actions used to
+ *  reject into nothing — no caller awaited them, so a failure became an
+ *  unhandled rejection and the UI was identical to a tap that was ignored.
+ *  That cost real debugging time: a track whose radio station Music Assistant
+ *  couldn't build returned 500 on every tap and looked simply dead. */
+export interface MusicActionError {
+  /** Written for the wall, not the console: "Couldn't play “Go”." */
+  message: string
+  /** Distinguishes two consecutive identical failures, so a re-tap that fails
+   *  the same way still reads as a fresh event rather than a stuck notice. */
+  at: number
+}
+
 export interface MusicContextValue {
   state: MusicState
   isPlaying: boolean
   isConnected: boolean
+  /** The most recent failed action, or null. Cleared by `dismissError`. */
+  actionError: MusicActionError | null
+  dismissError: () => void
   play: (uri: string, options?: PlayOptions) => Promise<void>
   pause: () => Promise<void>
   resume: () => Promise<void>
@@ -41,6 +57,8 @@ export const defaultContextValue: MusicContextValue = {
   state: emptyState,
   isPlaying: false,
   isConnected: false,
+  actionError: null,
+  dismissError: () => {},
   play: noOp,
   pause: noOp,
   resume: noOp,

@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import { MusicProvider } from '@/data/music'
 import { Footer } from '@/themes/broadsheet/ui/Footer'
+import { ActionErrorNotice } from '@/themes/broadsheet/ui/ActionErrorNotice'
 
 /**
  * The theme's persistent chrome: the 1600x900 editorial canvas that
@@ -19,6 +20,10 @@ export function BroadsheetLayout() {
       <div className="broadsheet-root relative w-[1600px] h-[900px] overflow-hidden">
         <Outlet />
         <Footer />
+        {/* Layout-level, not on the Media screen: transport can be driven from
+            the footer's own now-playing controls on every screen, so a failure
+            has to be reportable from every screen too. */}
+        <ActionErrorNotice />
       </div>
     </MusicProvider>
   )

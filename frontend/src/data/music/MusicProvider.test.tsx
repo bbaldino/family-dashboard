@@ -118,3 +118,76 @@ describe('MusicProvider scenario wiring', () => {
     await waitFor(() => expect(openedUrls).toEqual(['/api/music/events']))
   })
 })
+
+/**
+ * Transport actions used to reject into nothing: no call site awaits them, so
+ * a failure became an unhandled promise rejection and the screen was identical
+ * to a tap that was ignored. A track Music Assistant returned 500 for on every
+ * attempt looked simply dead, and finding out why meant reading server logs.
+ */
+describe('MusicProvider action failures', () => {
+  function ErrorProbe({
+    useMusic,
+  }: {
+    useMusic: () => {
+      actionError: { message: string } | null
+      play: (uri: string, options?: { name?: string }) => Promise<void>
+    }
+  }) {
+    const { actionError, play } = useMusic()
+    return (
+      <div>
+        <button type="button" onClick={() => play('spotify://track/x', { name: 'Go' })}>
+          play
+        </button>
+        <span data-testid="error">{actionError?.message ?? ''}</span>
+      </div>
+    )
+  }
+
+  beforeEach(() => {
+    musicStateFixtureFor.mockReturnValue([])
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    musicStateFixtureFor.mockReset()
+    vi.resetModules()
+  })
+
+  it('records a failed play, naming the item, instead of dropping the rejection', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url: string) =>
+        String(url).includes('/api/music/play')
+          ? Promise.resolve({ ok: false, status: 500, text: () => Promise.resolve('boom') })
+          : Promise.resolve({ ok: true, json: () => Promise.resolve({}) }),
+      ),
+    )
+    const { MusicProvider, useMusic } = await freshMusicModules()
+    render(
+      <MusicProvider>
+        <ErrorProbe useMusic={useMusic as never} />
+      </MusicProvider>,
+    )
+
+    screen.getByText('play').click()
+    await waitFor(() => expect(screen.getByTestId('error')).toHaveTextContent('Couldn’t play “Go”'))
+  })
+
+  it('leaves actionError null when the action succeeds', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) }),
+    )
+    const { MusicProvider, useMusic } = await freshMusicModules()
+    render(
+      <MusicProvider>
+        <ErrorProbe useMusic={useMusic as never} />
+      </MusicProvider>,
+    )
+
+    screen.getByText('play').click()
+    await waitFor(() => expect(screen.getByTestId('error')).toHaveTextContent(''))
+  })
+})
