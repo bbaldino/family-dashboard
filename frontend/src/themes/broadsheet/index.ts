@@ -3,6 +3,7 @@ import type { ThemeModule } from '@/shell/types'
 import { registerTheme } from '@/shell/ThemeRegistry'
 import { Home } from './screens/Home'
 import { Calendar } from './screens/Calendar'
+import { Media } from './screens/Media'
 import { broadsheetCanvas } from './canvas'
 import { BroadsheetLayout } from './layout/BroadsheetLayout'
 
@@ -14,6 +15,7 @@ export const broadsheetTheme: ThemeModule = {
   screens: {
     home: Home,
     calendar: Calendar,
+    media: Media,
   },
   overlays: [],
 }
