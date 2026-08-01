@@ -7,17 +7,22 @@ import type { Player } from './types'
 const PLAYERS_QUERY_KEY = ['music', 'players']
 
 // How long to keep confirming after a group/ungroup/group-volume POST
-// resolves, and how often. Measured against the real service: the POST
-// itself returns in 0.26–0.46s, but Music Assistant's own `players/all`
-// still reports the PRE-mutation state a full second later and only
-// converges around t+2s. Polling every 500ms catches that convergence
-// within 4–5 attempts in the common case — a wide margin over the measured
-// 2s — while a 6s ceiling (12 attempts) caps the worst case: a slower
-// network or a busier MA gets up to 3x the measured convergence time before
-// this gives up and defers to the next real refetch instead of holding an
-// unconfirmed optimistic write forever.
+// resolves, and how often. Measured repeatedly against the real service, and
+// the headline is the *variance*: the POST itself returned anywhere from
+// 0.03s to 2.2s, and Music Assistant's `players/all` caught up somewhere
+// between ~1s and ~12s — on the same pair of speakers, minutes apart.
+//
+// The ceiling is therefore set well past the slowest convergence seen rather
+// than snugly around the typical one. Giving up early is not free: the
+// reconciling refetch then writes MA's stale pre-mutation state over a
+// correct optimistic one, which flips the pill back — and because a pill is a
+// toggle, the next tap reads that wrong state and sends the wrong command.
+// That exact sequence was observed live, sending two /group commands where
+// the second should have been /ungroup. A generous bound just means holding a
+// correct optimistic value a little longer; a tight one means acting on a
+// wrong one.
 export const CONFIRM_POLL_INTERVAL_MS = 500
-export const CONFIRM_POLL_TIMEOUT_MS = 6000
+export const CONFIRM_POLL_TIMEOUT_MS = 15_000
 
 const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
