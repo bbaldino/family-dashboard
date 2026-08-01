@@ -10,6 +10,13 @@ export interface AlbumDetail {
   artist_uri: string | null
   image_url: string | null
   year: number | null
+  /** From MA's `metadata.label`. Absent for providers/items MA hasn't
+   *  populated a label for. */
+  label: string | null
+  /** From MA's `metadata.description`. Null today for most albums — MA only
+   *  enriches metadata for library items. Falls back to nothing in the UI
+   *  when absent. */
+  description: string | null
   tracks: ArtistTrack[]
 }
 

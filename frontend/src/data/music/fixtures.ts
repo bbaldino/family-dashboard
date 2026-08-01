@@ -382,14 +382,36 @@ export function musicPlayersFixtureFor(scenario: string | null): RawPlayer[] | u
 
 // ─── artist / album detail ─────────────────────────────────────────
 
+// A featured-artist credit on the fixture's opening track — exercises the
+// "feat. X" rendering the screens derive from `artists` beyond the first.
+const FEATURED_ARTIST_URI = 'fixture://artist/sable-ko'
+
 function nightShiftArtist(): ArtistDetail {
   return {
     name: 'The Night Shift',
     image_url: null,
+    // Populated case: MA does carry genres for plenty of real artists.
+    genres: ['synthwave', 'dream pop', 'electronic'],
+    // Realistic null case: MA only enriches metadata for library items, and
+    // this household's library is empty — every artist bio is null today.
+    description: null,
     top_tracks: [
-      { uri: PLAYING_TRACK_URI, name: 'Amber Hours', artist: 'The Night Shift', artist_uri: ARTIST_URI, album: 'Late Bloom', album_uri: ALBUM_URI, image_url: null, duration: 238 },
-      { uri: 'fixture://track/low-tide', name: 'Low Tide', artist: 'The Night Shift', artist_uri: ARTIST_URI, album: 'Late Bloom', album_uri: ALBUM_URI, image_url: null, duration: 201 },
-      { uri: 'fixture://track/porch-light', name: 'Porch Light', artist: 'The Night Shift', artist_uri: ARTIST_URI, album: 'Late Bloom', album_uri: ALBUM_URI, image_url: null, duration: 176 },
+      {
+        uri: PLAYING_TRACK_URI,
+        name: 'Amber Hours',
+        artist: 'The Night Shift',
+        artist_uri: ARTIST_URI,
+        artists: [
+          { name: 'The Night Shift', uri: ARTIST_URI },
+          { name: 'Sable Ko', uri: FEATURED_ARTIST_URI },
+        ],
+        album: 'Late Bloom',
+        album_uri: ALBUM_URI,
+        image_url: null,
+        duration: 238,
+      },
+      { uri: 'fixture://track/low-tide', name: 'Low Tide', artist: 'The Night Shift', artist_uri: ARTIST_URI, artists: [{ name: 'The Night Shift', uri: ARTIST_URI }], album: 'Late Bloom', album_uri: ALBUM_URI, image_url: null, duration: 201 },
+      { uri: 'fixture://track/porch-light', name: 'Porch Light', artist: 'The Night Shift', artist_uri: ARTIST_URI, artists: [{ name: 'The Night Shift', uri: ARTIST_URI }], album: 'Late Bloom', album_uri: ALBUM_URI, image_url: null, duration: 176 },
     ],
     albums: [
       { uri: ALBUM_URI, name: 'Late Bloom', image_url: null, year: 2023 },
@@ -405,11 +427,30 @@ function lateBloomAlbum(): AlbumDetail {
     artist_uri: ARTIST_URI,
     image_url: null,
     year: 2023,
+    // Populated case: matches the label already used for this same track in
+    // packedQueues (fixture://track/amber-hours) — same fixture identity.
+    label: 'Harbor Sound Records',
+    // Realistic null case: MA only enriches metadata for library items, and
+    // this household's library is empty — every album description is null today.
+    description: null,
     tracks: [
-      { uri: PLAYING_TRACK_URI, name: 'Amber Hours', artist: 'The Night Shift', artist_uri: ARTIST_URI, album: 'Late Bloom', album_uri: ALBUM_URI, image_url: null, duration: 238 },
-      { uri: 'fixture://track/low-tide', name: 'Low Tide', artist: 'The Night Shift', artist_uri: ARTIST_URI, album: 'Late Bloom', album_uri: ALBUM_URI, image_url: null, duration: 201 },
-      { uri: 'fixture://track/porch-light', name: 'Porch Light', artist: 'The Night Shift', artist_uri: ARTIST_URI, album: 'Late Bloom', album_uri: ALBUM_URI, image_url: null, duration: 176 },
-      { uri: 'fixture://track/static-bloom', name: 'Static Bloom', artist: 'The Night Shift', artist_uri: ARTIST_URI, album: 'Late Bloom', album_uri: ALBUM_URI, image_url: null, duration: 220 },
+      {
+        uri: PLAYING_TRACK_URI,
+        name: 'Amber Hours',
+        artist: 'The Night Shift',
+        artist_uri: ARTIST_URI,
+        artists: [
+          { name: 'The Night Shift', uri: ARTIST_URI },
+          { name: 'Sable Ko', uri: FEATURED_ARTIST_URI },
+        ],
+        album: 'Late Bloom',
+        album_uri: ALBUM_URI,
+        image_url: null,
+        duration: 238,
+      },
+      { uri: 'fixture://track/low-tide', name: 'Low Tide', artist: 'The Night Shift', artist_uri: ARTIST_URI, artists: [{ name: 'The Night Shift', uri: ARTIST_URI }], album: 'Late Bloom', album_uri: ALBUM_URI, image_url: null, duration: 201 },
+      { uri: 'fixture://track/porch-light', name: 'Porch Light', artist: 'The Night Shift', artist_uri: ARTIST_URI, artists: [{ name: 'The Night Shift', uri: ARTIST_URI }], album: 'Late Bloom', album_uri: ALBUM_URI, image_url: null, duration: 176 },
+      { uri: 'fixture://track/static-bloom', name: 'Static Bloom', artist: 'The Night Shift', artist_uri: ARTIST_URI, artists: [{ name: 'The Night Shift', uri: ARTIST_URI }], album: 'Late Bloom', album_uri: ALBUM_URI, image_url: null, duration: 220 },
     ],
   }
 }

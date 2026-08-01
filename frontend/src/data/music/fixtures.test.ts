@@ -159,4 +159,24 @@ describe('musicArtistDetailFixtureFor / musicAlbumDetailFixtureFor', () => {
     expect(album.tracks.length).toBeGreaterThan(0)
     expect(album.tracks.every((t) => t.artist_uri === 'fixture://artist/the-night-shift')).toBe(true)
   })
+
+  it('packed artist has genres populated but no bio, the realistic case for this household', () => {
+    const artist = musicArtistDetailFixtureFor('packed', 'fixture://artist/the-night-shift')!
+    expect(artist.genres.length).toBeGreaterThan(0)
+    expect(artist.description).toBeNull()
+  })
+
+  it('packed album has a label but no description, the realistic case for this household', () => {
+    const album = musicAlbumDetailFixtureFor('packed', 'fixture://album/late-bloom')!
+    expect(album.label).not.toBeNull()
+    expect(album.description).toBeNull()
+  })
+
+  it('packed album/artist opening track carries a featured artist beyond the first', () => {
+    const album = musicAlbumDetailFixtureFor('packed', 'fixture://album/late-bloom')!
+    const opener = album.tracks[0]
+    expect(opener.artists.length).toBeGreaterThan(1)
+    expect(opener.artists[0].name).toBe(opener.artist)
+    expect(opener.artists.slice(1).map((a) => a.name)).toEqual(['Sable Ko'])
+  })
 })
