@@ -69,53 +69,9 @@ fn build_queue_states(players: &serde_json::Value, queues: &serde_json::Value) -
             let display_name = q["display_name"].as_str().unwrap_or("Unknown").to_string();
             let state = q["state"].as_str().unwrap_or("idle").to_string();
 
-            let current_item = q.get("current_item").and_then(|item| {
-                if item.is_null() {
-                    return None;
-                }
-                let media_item = if item.get("media_item").is_some() {
-                    &item["media_item"]
-                } else {
-                    item
-                };
-                Some(TrackInfo {
-                    name: media_item["name"].as_str().unwrap_or("").to_string(),
-                    artist: media_item["artists"]
-                        .as_array()
-                        .and_then(|a| a.first())
-                        .and_then(|a| a["name"].as_str())
-                        .or_else(|| media_item["artist"].as_str())
-                        .unwrap_or("")
-                        .to_string(),
-                    album: media_item["album"]
-                        .as_object()
-                        .and_then(|a| a.get("name"))
-                        .and_then(|n| n.as_str())
-                        .or_else(|| media_item["album"].as_str())
-                        .map(String::from),
-                    image_url: media_item["metadata"]["images"]
-                        .as_array()
-                        .and_then(|imgs| imgs.first())
-                        .and_then(|img| img["path"].as_str())
-                        .or_else(|| {
-                            media_item["image"]
-                                .as_object()
-                                .and_then(|img| img.get("path").or_else(|| img.get("url")))
-                                .and_then(|u| u.as_str())
-                        })
-                        .or_else(|| media_item["image"].as_str())
-                        .map(String::from),
-                    duration: item["duration"]
-                        .as_f64()
-                        .or_else(|| media_item["duration"].as_f64())
-                        .map(|d| d as i64),
-                    elapsed: item["elapsed_time"]
-                        .as_f64()
-                        .or_else(|| q["elapsed_time"].as_f64())
-                        .map(|d| d as i64),
-                    uri: media_item["uri"].as_str().map(String::from),
-                })
-            });
+            let current_item = q
+                .get("current_item")
+                .and_then(|item| track_info_from_current_item(item, q));
 
             // Try to find volume from the player associated with this queue.
             let volume_level = find_player_volume(players, &queue_id);
@@ -129,6 +85,68 @@ fn build_queue_states(players: &serde_json::Value, queues: &serde_json::Value) -
             }
         })
         .collect()
+}
+
+/// Build a `TrackInfo` from a queue's raw `current_item` JSON (and its
+/// parent queue object, for the `elapsed_time` fallback). Returns `None` if
+/// `current_item` is null/absent — an idle queue has no current track.
+///
+/// Every field beyond name/artist is absent-tolerant: MA's payload shape
+/// varies by provider, so a local file may carry none of year/label/
+/// track_number/source while a Spotify track carries all of them.
+fn track_info_from_current_item(
+    item: &serde_json::Value,
+    q: &serde_json::Value,
+) -> Option<TrackInfo> {
+    if item.is_null() {
+        return None;
+    }
+    let media_item = if item.get("media_item").is_some() {
+        &item["media_item"]
+    } else {
+        item
+    };
+    Some(TrackInfo {
+        name: media_item["name"].as_str().unwrap_or("").to_string(),
+        artist: media_item["artists"]
+            .as_array()
+            .and_then(|a| a.first())
+            .and_then(|a| a["name"].as_str())
+            .or_else(|| media_item["artist"].as_str())
+            .unwrap_or("")
+            .to_string(),
+        album: media_item["album"]
+            .as_object()
+            .and_then(|a| a.get("name"))
+            .and_then(|n| n.as_str())
+            .or_else(|| media_item["album"].as_str())
+            .map(String::from),
+        image_url: media_item["metadata"]["images"]
+            .as_array()
+            .and_then(|imgs| imgs.first())
+            .and_then(|img| img["path"].as_str())
+            .or_else(|| {
+                media_item["image"]
+                    .as_object()
+                    .and_then(|img| img.get("path").or_else(|| img.get("url")))
+                    .and_then(|u| u.as_str())
+            })
+            .or_else(|| media_item["image"].as_str())
+            .map(String::from),
+        duration: item["duration"]
+            .as_f64()
+            .or_else(|| media_item["duration"].as_f64())
+            .map(|d| d as i64),
+        elapsed: item["elapsed_time"]
+            .as_f64()
+            .or_else(|| q["elapsed_time"].as_f64())
+            .map(|d| d as i64),
+        uri: media_item["uri"].as_str().map(String::from),
+        year: media_item["album"]["year"].as_i64(),
+        label: media_item["metadata"]["label"].as_str().map(String::from),
+        track_number: media_item["track_number"].as_i64(),
+        source: media_item["provider"].as_str().map(String::from),
+    })
 }
 
 /// Look up the volume level for a player queue from the players list.
@@ -360,5 +378,90 @@ async fn ws_relay_loop(pool: SqlitePool, ws_url: String, token: String, tx: mpsc
         tracing::info!("Reconnecting to MA WebSocket in {:?}...", backoff);
         tokio::time::sleep(backoff).await;
         backoff = (backoff * 2).min(max_backoff);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Trimmed capture of a real `player_queues/all` entry from
+    /// `music.home:8095` — see the fixture file's own `_comment` for what
+    /// was dropped and why. `metadata.label` is genuinely `null` here; that
+    /// is the common real-world case, not a stand-in for a missing test.
+    const REAL_QUEUE_FIXTURE: &str =
+        include_str!("../../../tests/fixtures/music_queue_current_item.json");
+
+    #[test]
+    fn track_info_from_real_captured_payload() {
+        let q: serde_json::Value = serde_json::from_str(REAL_QUEUE_FIXTURE).unwrap();
+        let info = track_info_from_current_item(&q["current_item"], &q)
+            .expect("fixture has a current_item");
+
+        assert_eq!(info.name, "Knee Socks");
+        assert_eq!(info.artist, "Arctic Monkeys");
+        assert_eq!(info.album.as_deref(), Some("AM"));
+        assert_eq!(
+            info.uri.as_deref(),
+            Some("spotify--yC8brUbw://track/2LGdO5MtFdyphi2EihANZG")
+        );
+        assert_eq!(info.duration, Some(257));
+        assert_eq!(info.year, Some(2013));
+        assert_eq!(info.track_number, Some(11));
+        assert_eq!(info.source.as_deref(), Some("spotify--yC8brUbw"));
+        // Real, common case: MA hadn't populated a label for this track.
+        assert_eq!(info.label, None);
+    }
+
+    #[test]
+    fn track_info_is_absent_tolerant_when_new_fields_are_missing() {
+        // Shaped like a bare-bones provider payload (e.g. some local files)
+        // that carries none of the new fields.
+        let q = serde_json::json!({
+            "current_item": {
+                "media_item": {
+                    "name": "Some Track",
+                    "artists": [{ "name": "Some Artist" }],
+                }
+            }
+        });
+        let info =
+            track_info_from_current_item(&q["current_item"], &q).expect("current_item present");
+
+        assert_eq!(info.name, "Some Track");
+        assert_eq!(info.artist, "Some Artist");
+        assert_eq!(info.year, None);
+        assert_eq!(info.label, None);
+        assert_eq!(info.track_number, None);
+        assert_eq!(info.source, None);
+    }
+
+    #[test]
+    fn track_info_picks_up_label_when_present() {
+        // Synthetic: every current_item reachable live during this session
+        // had a null label (see the real-payload test above), so this
+        // exercises the extraction path with a populated value instead —
+        // MA does populate metadata.label for some providers/items (verified
+        // via a direct music/albums/get_album call, which returned
+        // "Warner Records" for a Muse album).
+        let q = serde_json::json!({
+            "current_item": {
+                "media_item": {
+                    "name": "Track",
+                    "artists": [{ "name": "Artist" }],
+                    "metadata": { "label": "Warner Records" },
+                }
+            }
+        });
+        let info =
+            track_info_from_current_item(&q["current_item"], &q).expect("current_item present");
+
+        assert_eq!(info.label.as_deref(), Some("Warner Records"));
+    }
+
+    #[test]
+    fn track_info_from_current_item_returns_none_when_null() {
+        let q = serde_json::json!({ "current_item": null });
+        assert!(track_info_from_current_item(&q["current_item"], &q).is_none());
     }
 }

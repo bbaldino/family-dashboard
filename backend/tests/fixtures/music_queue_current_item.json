@@ -1,0 +1,48 @@
+{
+  "_comment": "Trimmed capture of a real player_queues/all queue entry from music.home:8095 (2026-08-01). Values are copied verbatim from the live response; only fields build_queue_states/track_info_from_current_item don't read were dropped (provider_mappings, next_item, radio_source, etc). metadata.label is genuinely null on this Spotify track — that's the real, common case, not a stand-in.",
+  "queue_id": "dfc8f612-1019-c90e-9a62-f60ba3a63720",
+  "display_name": "Office display",
+  "state": "idle",
+  "elapsed_time": 39.973971334035184,
+  "current_item": {
+    "queue_id": "dfc8f612-1019-c90e-9a62-f60ba3a63720",
+    "queue_item_id": "f6391e60f02743ea8a101a33220009a5",
+    "name": "Arctic Monkeys - Knee Socks",
+    "duration": 257,
+    "media_item": {
+      "item_id": "2LGdO5MtFdyphi2EihANZG",
+      "provider": "spotify--yC8brUbw",
+      "name": "Knee Socks",
+      "uri": "spotify--yC8brUbw://track/2LGdO5MtFdyphi2EihANZG",
+      "media_type": "track",
+      "metadata": {
+        "label": null,
+        "images": [
+          {
+            "type": "thumb",
+            "path": "https://i.scdn.co/image/ab67616d0000b2734ae1c4c5c45aabe565499163",
+            "provider": "spotify--yC8brUbw"
+          }
+        ]
+      },
+      "duration": 257,
+      "artists": [
+        {
+          "name": "Arctic Monkeys",
+          "uri": "spotify--yC8brUbw://artist/7Ln80lUS6He07XvHI8qqHH"
+        }
+      ],
+      "album": {
+        "name": "AM",
+        "uri": "spotify--yC8brUbw://album/78bpIziExqiI9qztvNFlQu",
+        "year": 2013
+      },
+      "disc_number": 1,
+      "track_number": 11
+    },
+    "image": {
+      "type": "thumb",
+      "path": "https://i.scdn.co/image/ab67616d0000b2734ae1c4c5c45aabe565499163"
+    }
+  }
+}

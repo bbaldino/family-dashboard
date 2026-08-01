@@ -90,6 +90,17 @@ pub struct TrackInfo {
     pub duration: Option<i64>,
     pub elapsed: Option<i64>,
     pub uri: Option<String>,
+    /// Release year, from `media_item.album.year`. Absent for providers that
+    /// don't carry it (e.g. some local files).
+    pub year: Option<i64>,
+    /// Record label, from `media_item.metadata.label`. Frequently absent —
+    /// MA only populates it for a subset of providers/items.
+    pub label: Option<String>,
+    /// 1-based track position on its album/disc, from `media_item.track_number`.
+    pub track_number: Option<i64>,
+    /// MA provider id (e.g. `spotify--yC8brUbw`), from `media_item.provider`.
+    /// Raw provider id, not a display name — the frontend prettifies it.
+    pub source: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
