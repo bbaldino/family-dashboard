@@ -61,15 +61,28 @@ describe('QuickDialsShelves', () => {
       data: [{ uri: 'u1', name: 'Amber Hours', artist: 'The Night Shift', album: 'Late Bloom', image_url: null, play_count: 1, last_played: 0 }],
     })
     useRecentlyPlayed.mockReturnValue({ data: [] })
-    renderShelves({ openMenuUri: 'u1' })
+    renderShelves({ openMenuUri: 'frequently:u1' })
     expect(screen.getByLabelText('Track actions')).toBeInTheDocument()
-    // Open, since openMenuUri matches this card's uri — its four track play
-    // actions (top tracks are always tracks) are visible.
+    // Open, since the id matches this card's shelf-scoped id — its four track
+    // play actions (top tracks are always tracks) are visible.
     expect(screen.getByText('Play just this track')).toBeInTheDocument()
     expect(screen.getByText('Play radio from this')).toBeInTheDocument()
   })
 
-  it('calls onToggleMenu with the tapped card\'s uri', () => {
+  it('scopes a card\'s menu id to its shelf, so the same track in two shelves opens independently', () => {
+    const track = { uri: 'u1', name: 'Amber Hours', artist: 'The Night Shift', album: 'Late Bloom', image_url: null, play_count: 1, last_played: 0 }
+    useTopTracks.mockReturnValue({ data: [track] })
+    useRecentlyPlayed.mockReturnValue({
+      data: [{ uri: 'u1', name: 'Amber Hours', artist: 'The Night Shift', album: 'Late Bloom', image_url: null, media_type: 'track' }],
+    })
+    // The same track sits in both shelves — a bare uri as the card id opened
+    // both menus at once, and the second rendered clipped inside its shelf.
+    renderShelves({ openMenuUri: 'frequently:u1' })
+    expect(screen.getAllByLabelText('Track actions')).toHaveLength(2)
+    expect(screen.getAllByText('Play just this track')).toHaveLength(1)
+  })
+
+  it('calls onToggleMenu with the tapped card\'s shelf-scoped id', () => {
     useTopTracks.mockReturnValue({
       data: [{ uri: 'u1', name: 'Amber Hours', artist: 'The Night Shift', album: 'Late Bloom', image_url: null, play_count: 1, last_played: 0 }],
     })
@@ -77,6 +90,6 @@ describe('QuickDialsShelves', () => {
     const onToggleMenu = vi.fn()
     renderShelves({ onToggleMenu })
     fireEvent.click(screen.getByLabelText('Track actions'))
-    expect(onToggleMenu).toHaveBeenCalledWith('u1')
+    expect(onToggleMenu).toHaveBeenCalledWith('frequently:u1')
   })
 })

@@ -34,23 +34,34 @@ export function QuickDialsShelves({
   const { data: topTracks } = useTopTracks()
   const { data: recent } = useRecentlyPlayed()
 
-  const toCardItem = (playable: PlayableItem, secondary: string): ShelfCardItem => ({
-    key: playable.uri,
-    name: playable.name,
-    secondary,
-    imageUrl: playable.imageUrl ?? null,
-    onTap: () => play(playable.uri, playOptionsFor(playable)),
-    menu: {
-      isOpen: openMenuUri === playable.uri,
-      onToggle: () => onToggleMenu(playable.uri),
-      kicker: typeLabel(playable.mediaType),
-      title: playable.name,
-      groups: buildShelfActionGroups({ item: playable, play, navigate, onClose: onCloseMenu }),
-    },
-  })
+  /**
+   * The card's identity has to include which shelf it is in, not just the
+   * item's URI. The same track routinely appears in both Frequently and
+   * Recently played — with a bare URI as the key, both cards share one
+   * identity, so opening the menu on one opened it on the other too, and the
+   * second copy rendered clipped inside its own shelf.
+   */
+  const toCardItem = (shelf: string, playable: PlayableItem, secondary: string): ShelfCardItem => {
+    const cardId = `${shelf}:${playable.uri}`
+    return {
+      key: cardId,
+      name: playable.name,
+      secondary,
+      imageUrl: playable.imageUrl ?? null,
+      onTap: () => play(playable.uri, playOptionsFor(playable)),
+      menu: {
+        isOpen: openMenuUri === cardId,
+        onToggle: () => onToggleMenu(cardId),
+        kicker: typeLabel(playable.mediaType),
+        title: playable.name,
+        groups: buildShelfActionGroups({ item: playable, play, navigate, onClose: onCloseMenu }),
+      },
+    }
+  }
 
   const frequentlyItems: ShelfCardItem[] = (topTracks ?? []).map((track: TopTrack) =>
     toCardItem(
+      'frequently',
       {
         uri: track.uri,
         mediaType: 'track',
@@ -67,6 +78,7 @@ export function QuickDialsShelves({
 
   const recentlyItems: ShelfCardItem[] = (recent ?? []).map((item: RecentItem) =>
     toCardItem(
+      'recently',
       {
         uri: item.uri,
         mediaType: item.media_type,
