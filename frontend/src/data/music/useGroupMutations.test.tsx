@@ -380,6 +380,27 @@ describe('useGroupMutations', () => {
     expect(invalidateSpy).toHaveBeenCalledTimes(1)
   })
 
+  it('setGroupVolume never confirmation-polls, so a drag cannot fan out into hundreds of reads', async () => {
+    // The group-volume control is an `<input type="range">` whose onChange
+    // fires on every drag step. Confirming each intermediate level against
+    // `/players` would poll every 500ms for the full 6s bound per step — the
+    // levels are superseded before they can ever match — so one drag would
+    // issue hundreds of reads with polling paused throughout.
+    post.mockResolvedValue({})
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    queryClient.setQueryData(RAW_PLAYERS_KEY, rawPlayers())
+    const { result } = renderHook(() => useGroupMutations(), { wrapper: createWrapper(queryClient) })
+
+    await act(async () => {
+      await Promise.all([20, 25, 30, 35, 40].map((level) => result.current.setGroupVolume('kitchen', level)))
+      await vi.advanceTimersByTimeAsync(CONFIRM_POLL_TIMEOUT_MS * 2)
+    })
+
+    expect(post).toHaveBeenCalledTimes(5)
+    expect(get).not.toHaveBeenCalled()
+    expect(result.current.pollingPaused).toBe(false)
+  })
+
   it('setGroupVolume rolls back to the previous volume when the POST rejects', async () => {
     post.mockRejectedValue(new Error('boom'))
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })

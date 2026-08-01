@@ -164,8 +164,10 @@ export function useGroupMutations() {
     /** Inverse of `apply`, applied to the *current* cache if the POST rejects. */
     rollback: () => void
     apiCall: () => Promise<unknown>
-    /** Does a real /players response show this mutation has landed? */
-    isConfirmed: (players: RawPlayer[]) => boolean
+    /** Does a real /players response show this mutation has landed? Omit to
+     *  skip confirmation polling entirely — appropriate for a value that is
+     *  superseded faster than it can be confirmed (see `setGroupVolume`). */
+    isConfirmed?: (players: RawPlayer[]) => boolean
   }
 
   const runMutation = async ({ pendingIds: ids, apply, rollback, apiCall, isConfirmed }: MutationSpec) => {
@@ -182,7 +184,7 @@ export function useGroupMutations() {
 
     try {
       await apiCall()
-      await waitForConvergence(isConfirmed)
+      if (isConfirmed) await waitForConvergence(isConfirmed)
     } catch (err) {
       rollback()
       throw err
@@ -273,7 +275,16 @@ export function useGroupMutations() {
       apply: () => applyToLeader(leaderId, (p) => ({ ...p, group_volume: level })),
       rollback: () => applyToLeader(leaderId, (p) => ({ ...p, group_volume: previousVolume })),
       apiCall: () => musicIntegration.api.post('/group-volume', { player_id: leaderId, level }),
-      isConfirmed: (players) => players.find((p) => p.player_id === leaderId)?.group_volume === level,
+      // Deliberately no confirmation polling. The group-volume control is an
+      // `<input type="range">` whose `onChange` fires on every drag step, so
+      // one drag emits dozens of these. Waiting for `group_volume === level`
+      // would have each intermediate value — already superseded by the next
+      // drag step — poll `/players` every 500ms for the full 6s bound before
+      // giving up: hundreds of requests per drag, with polling paused
+      // throughout. A volume is a continuous value that the next event
+      // replaces, not a discrete state transition worth confirming; the
+      // optimistic apply and the rollback-on-failure above are the parts
+      // that matter here.
     })
   }
 
