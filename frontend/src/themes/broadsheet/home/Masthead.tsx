@@ -1,5 +1,7 @@
 import { useHeroWeather } from '@/data/weather'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
+import { MastheadFrame } from '@/themes/broadsheet/ui/MastheadFrame'
+import { mastheadKickerStyle, mastheadNumeralStyle as numeralStyle } from '@/themes/broadsheet/ui/masthead-styles'
 import { ordinalSuffix } from './ordinal'
 import { useNow } from './useNow'
 
@@ -18,32 +20,6 @@ function formatClock(now: Date): { time: string; ampm: string } {
 // than the mock's "Friday, May 22" (`broadsheet-v2.jsx:109`).
 const WEEKDAY_FORMAT = new Intl.DateTimeFormat('en-US', { weekday: 'long' })
 const MONTH_FORMAT = new Intl.DateTimeFormat('en-US', { month: 'long' })
-
-/** The mock hand-rolls these labels (`broadsheet-v2.jsx:100,107,114`) rather
- *  than reusing the shared `Kicker` component: 0.28em letter-spacing and no
- *  bold, versus `Kicker`'s 0.26em + bold default used everywhere else on
- *  the page. The masthead's follow-up brief re-specified these values
- *  exactly, so they're hand-rolled to match rather than approximated. */
-const mastheadKickerStyle = {
-  fontFamily: 'var(--font-mono)',
-  fontSize: 10,
-  letterSpacing: '0.28em',
-  textTransform: 'uppercase' as const,
-  color: 'var(--ink-muted)',
-  marginBottom: 4,
-}
-
-/** The one type treatment all three masthead cells share: 72px italic
- *  serif. Mock: `broadsheet-v2.jsx:101,108,119`. */
-const numeralStyle = {
-  fontFamily: 'var(--font-display)',
-  fontStyle: 'italic' as const,
-  fontWeight: 400,
-  fontSize: 72,
-  letterSpacing: '-0.03em',
-  lineHeight: 0.9,
-  color: 'var(--ink)',
-}
 
 /** The date's ordinal suffix, raised and shrunk. `position: relative` is
  *  added to make the mock's literal `top: '-0.65em'` (`broadsheet-v2.jsx:109`)
@@ -106,89 +82,85 @@ export function Masthead({
 
   return (
     <div>
-      <div
-        style={{
-          padding: '22px 56px 18px',
-          borderBottom: '3px double var(--ink)',
-        }}
-      >
-        {/* Clock and date are kicker + 72px numeral; weather is the 72px
-         *  numeral row alone (its kicker was removed, not hidden — see
-         *  below). `align-items: end` bottom-aligns all three cells'
-         *  numerals onto one shared baseline regardless of that height
-         *  difference, because it anchors each cell's *bottom* edge, and
-         *  the numeral is the last (and, for weather, only) line in every
-         *  cell. The weather cell's H/L detail line is deliberately
-         *  rendered *outside* this grid, below it — adding a line to just
-         *  one cell in-grid would make that cell taller than its siblings,
-         *  and align-items: end would then anchor its extra height at the
-         *  *top*, pushing its numeral out of line with the other two. */}
-        <div className="grid items-end" style={{ gridTemplateColumns: '0.85fr 1.5fr 0.85fr', gap: 24 }}>
-          {/* left: clock */}
-          <div>
+      {/* Clock and date are kicker + 72px numeral; weather is the 72px
+       *  numeral row alone (its kicker was removed, not hidden — see
+       *  below). `align-items: end` (on `MastheadFrame`'s inner grid)
+       *  bottom-aligns all three cells' numerals onto one shared baseline
+       *  regardless of that height difference, because it anchors each
+       *  cell's *bottom* edge, and the numeral is the last (and, for
+       *  weather, only) line in every cell. The weather cell's H/L detail
+       *  line is deliberately passed as `footer`, rendered *outside* the
+       *  grid — adding a line to just one cell in-grid would make that
+       *  cell taller than its siblings, and align-items: end would then
+       *  anchor its extra height at the *top*, pushing its numeral out of
+       *  line with the other two. */}
+      <MastheadFrame
+        left={
+          <>
             <div style={mastheadKickerStyle}>Now</div>
             <div style={numeralStyle}>
               {time}
               <span style={{ fontSize: 32, color: 'var(--ink-muted)', marginLeft: 8 }}>{ampm.toLowerCase()}</span>
             </div>
-          </div>
-
-          {/* centre: the date is the masthead's centrepiece — see the
-           *  follow-up brief. The plan's "Kitchen Dashboard" wordmark was a
-           *  planning invention; the mock never had one. */}
-          <div style={{ textAlign: 'center' }}>
+          </>
+        }
+        center={
+          // the date is the masthead's centrepiece — see the follow-up
+          // brief. The plan's "Kitchen Dashboard" wordmark was a planning
+          // invention; the mock never had one.
+          <>
             <div style={{ ...mastheadKickerStyle, textAlign: 'center' }}>Today</div>
             <h1 className="m-0" style={numeralStyle}>
               {weekday}, {month} {dayOfMonth}
               <sup style={ordinalStyle}>{ordinalSuffix(dayOfMonth)}</sup>
             </h1>
-          </div>
-
-          {/* right: weather. No kicker line here any more — the mock
-           *  removed the "Outside" label (and the live-game indicator that
-           *  rode along with it) entirely rather than hiding it, so unlike
-           *  the clock/date cells this one's first line is the numeral row
-           *  itself. `align-items: end` still bottom-aligns the three
-           *  cells' numerals onto a shared baseline regardless — verified
-           *  live, not just by inspection: a previous change to this exact
-           *  cell broke that alignment in a way no test caught. */}
-          <div style={{ textAlign: 'right' }}>
-            {heroWeather ? (
-              <div className="flex items-baseline justify-end" style={{ gap: 10 }}>
-                {/* Condition-aware icon (mapped from the current condition
-                 *  in `useHeroWeather`), not the mock's hard-coded sun. */}
-                <span style={{ fontSize: 30, alignSelf: 'center', color: 'var(--forest)' }}>{heroWeather.icon}</span>
-                <span style={numeralStyle}>{heroWeather.temperature}°</span>
-                <span
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontStyle: 'italic',
-                    fontSize: 28,
-                    color: 'var(--ink-muted)',
-                    lineHeight: 1,
-                  }}
-                >
-                  {heroWeather.condition.toLowerCase()}
-                </span>
-              </div>
-            ) : (
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-muted)' }}>—</div>
-            )}
-          </div>
-        </div>
-
-        {/* The mock drops the old detail line entirely, but losing the
-         *  high/low would be a real loss on a kitchen wall — kept,
-         *  restrained to a small muted line so it doesn't compete with the
-         *  72px numerals above it. Feels-like/humidity/wind are dropped:
-         *  they made the old line the longest thing in the header for the
-         *  least essential information at a glance. */}
-        {heroWeather && (
-          <div style={{ textAlign: 'right', marginTop: 4, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-muted)' }}>
-            H {heroWeather.high}° · L {heroWeather.low}°
-          </div>
-        )}
-      </div>
+          </>
+        }
+        right={
+          // No kicker line here any more — the mock removed the "Outside"
+          // label (and the live-game indicator that rode along with it)
+          // entirely rather than hiding it, so unlike the clock/date cells
+          // this one's first line is the numeral row itself. `align-items:
+          // end` still bottom-aligns the three cells' numerals onto a
+          // shared baseline regardless — verified live, not just by
+          // inspection: a previous change to this exact cell broke that
+          // alignment in a way no test caught.
+          heroWeather ? (
+            <div className="flex items-baseline justify-end" style={{ gap: 10 }}>
+              {/* Condition-aware icon (mapped from the current condition
+               *  in `useHeroWeather`), not the mock's hard-coded sun. */}
+              <span style={{ fontSize: 30, alignSelf: 'center', color: 'var(--forest)' }}>{heroWeather.icon}</span>
+              <span style={numeralStyle}>{heroWeather.temperature}°</span>
+              <span
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontStyle: 'italic',
+                  fontSize: 28,
+                  color: 'var(--ink-muted)',
+                  lineHeight: 1,
+                }}
+              >
+                {heroWeather.condition.toLowerCase()}
+              </span>
+            </div>
+          ) : (
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-muted)' }}>—</div>
+          )
+        }
+        footer={
+          // The mock drops the old detail line entirely, but losing the
+          // high/low would be a real loss on a kitchen wall — kept,
+          // restrained to a small muted line so it doesn't compete with
+          // the 72px numerals above it. Feels-like/humidity/wind are
+          // dropped: they made the old line the longest thing in the
+          // header for the least essential information at a glance.
+          heroWeather && (
+            <div style={{ textAlign: 'right', marginTop: 4, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-muted)' }}>
+              H {heroWeather.high}° · L {heroWeather.low}°
+            </div>
+          )
+        }
+      />
 
       <div
         className="grid items-baseline"

@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router-dom'
 import { MusicProvider } from '@/data/music'
-import { Footer } from '@/themes/broadsheet/home/Footer'
+import { Footer } from '@/themes/broadsheet/ui/Footer'
 
 /**
  * The theme's persistent chrome: the 1600x900 editorial canvas that
