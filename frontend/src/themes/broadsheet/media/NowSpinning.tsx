@@ -3,6 +3,7 @@ import { useMusic } from '@/data/music'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { NowSpinningCover } from './NowSpinningCover'
 import { VolumeSlider } from './VolumeSlider'
+import { MeterBar } from './MeterBar'
 import { INK2 } from './colors'
 
 /** `m:ss`, floored — matches `Footer.tsx`'s `formatDuration` (not shared:
@@ -93,9 +94,7 @@ export function NowSpinning({ onOpenCentreSpread }: { onOpenCentreSpread?: () =>
       </div>
 
       <div style={{ marginTop: 10 }}>
-        <div style={{ height: 3, background: 'var(--rule)', position: 'relative' }}>
-          <div style={{ position: 'absolute', inset: 0, width: `${progressPct}%`, background: 'var(--rust)' }} />
-        </div>
+        <MeterBar percent={progressPct} fill="var(--rust)" />
         <div
           className="flex justify-between"
           style={{ marginTop: 4, fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-muted)', letterSpacing: '0.08em' }}

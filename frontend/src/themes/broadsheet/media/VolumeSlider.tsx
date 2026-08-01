@@ -1,4 +1,5 @@
 import { useRef, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { MeterBar } from './MeterBar'
 
 /**
  * The volume bar shared by `NowSpinning`'s and `CentreSpreadCredits`' VOL
@@ -68,23 +69,7 @@ export function VolumeSlider({ volume, onChange }: { volume: number; onChange: (
       onPointerMove={handlePointerMove}
       style={{ flex: 1, display: 'flex', alignItems: 'center', height: 40, cursor: 'pointer', touchAction: 'none' }}
     >
-      <div style={{ width: '100%', height: 3, background: 'var(--rule)', position: 'relative' }}>
-        {/* Anchored left/top/bottom, never `inset: 0`. Setting both `left` and
-            `right` over-constrains the box, so the `width` below is ignored
-            and the fill spans the whole rule — the bar read as 100% black at
-            every volume, which is exactly the "you can't see the percentage"
-            report. */}
-        <div
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: `${Math.min(100, Math.max(0, volume))}%`,
-            background: 'var(--ink)',
-          }}
-        />
-      </div>
+      <MeterBar percent={volume} fill="var(--ink)" />
     </div>
   )
 }

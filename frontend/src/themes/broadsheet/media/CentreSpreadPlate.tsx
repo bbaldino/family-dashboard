@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Pause, Play, SkipBack, SkipForward } from 'lucide-react'
 import type { TrackInfo } from '@/data/music'
 import { Cover } from './Cover'
+import { MeterBar } from './MeterBar'
 import { INK2 } from './colors'
 
 /** `m:ss`, floored — matches `NowSpinning.tsx`'s own `formatDuration` (not
@@ -135,9 +136,7 @@ export function CentreSpreadPlate({
       </div>
 
       <div style={{ width: '100%', maxWidth: 560, marginTop: 18 }}>
-        <div data-testid="centre-spread-progress-track" style={{ height: 3, background: 'var(--rule)', position: 'relative' }}>
-          <div style={{ position: 'absolute', inset: 0, width: `${progressPct}%`, background: 'var(--rust)' }} />
-        </div>
+        <MeterBar percent={progressPct} fill="var(--rust)" testId="centre-spread-progress-track" />
         <div
           className="flex justify-between"
           style={{ marginTop: 6, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-muted)', letterSpacing: '0.08em' }}

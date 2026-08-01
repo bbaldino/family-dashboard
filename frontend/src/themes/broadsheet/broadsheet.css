@@ -15,6 +15,10 @@
   --forest: #3f5d44;
   --ink-muted: #6b6259;
   --rule: #191512;
+  /* The unfilled half of a meter (progress, volume). `--rule` is the hairline
+     separator colour and is deliberately the same as --ink, so a bar drawn on
+     it shows no fill level at all — this is ink laid over paper at ~18%. */
+  --rule-faint: #cec9c1;
 
   --font-display: 'Newsreader Variable', Georgia, serif;
   --font-mono: 'Geist Mono Variable', ui-monospace, monospace;
