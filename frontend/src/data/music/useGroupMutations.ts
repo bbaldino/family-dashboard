@@ -1,8 +1,25 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { musicIntegration } from './config'
 import type { RawPlayer } from './usePlayers'
 import type { Player } from './types'
+
+const PLAYERS_QUERY_KEY = ['music', 'players']
+
+// How long to keep confirming after a group/ungroup/group-volume POST
+// resolves, and how often. Measured against the real service: the POST
+// itself returns in 0.26–0.46s, but Music Assistant's own `players/all`
+// still reports the PRE-mutation state a full second later and only
+// converges around t+2s. Polling every 500ms catches that convergence
+// within 4–5 attempts in the common case — a wide margin over the measured
+// 2s — while a 6s ceiling (12 attempts) caps the worst case: a slower
+// network or a busier MA gets up to 3x the measured convergence time before
+// this gives up and defers to the next real refetch instead of holding an
+// unconfirmed optimistic write forever.
+export const CONFIRM_POLL_INTERVAL_MS = 500
+export const CONFIRM_POLL_TIMEOUT_MS = 6000
+
+const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms))
 
 /**
  * Group/ungroup/group-volume mutations against `/api/music`, lifted out of
@@ -11,44 +28,95 @@ import type { Player } from './types'
  * `boundaries/dependencies` rule forbids a theme-to-theme import — see
  * `eslint.config.js`).
  *
- * This is a move, not a redesign: every piece of `PlayerPicker`'s optimistic
- * handling — the pending-id bookkeeping, the polling pause, the
- * cancel-then-mutate-then-resume sequencing around each POST — is unchanged,
- * just parameterized so a caller supplies which player is the "leader" for
- * a given call instead of the hook assuming one. `PlayerPicker` derives its
- * leader from the active queue; broadsheet's room pills derive theirs from
- * the configured anchor (`useRoomPills`) — same mutations, two different
- * notions of "who's the leader" supplied by the caller.
+ * The optimistic handling here is stricter than what was first lifted out of
+ * `PlayerPicker` — that version patched the cache *after* the POST resolved
+ * (not actually optimistic: every tap looked dead for the first ~0.3–0.5s)
+ * and resumed polling on a fixed 1500ms guess. Measured against the real
+ * service, that guess was wrong: MA doesn't converge until ~2s, so the
+ * resume-timer's refetch landed inside MA's stale window and clobbered the
+ * pill right back to its pre-tap state — worse, a *second* overlapping
+ * mutation got its own polling pause cancelled early by the *first*
+ * mutation's independent timer, since both shared one boolean. Three fixes,
+ * all in this file so both themes benefit:
+ *
+ *  1. Apply the optimistic patch immediately, before the POST — see
+ *     `runMutation` below — and roll it back (not just leave it in place)
+ *     if the POST rejects.
+ *  2. Replace the fixed delay with bounded confirmation polling
+ *     (`waitForConvergence`): after the POST resolves, poll the real
+ *     `/players` endpoint until it actually agrees with what was
+ *     optimistically written, rather than assuming a delay was long enough.
+ *  3. Refcount in-flight mutations (`inFlightCountRef`) instead of one
+ *     shared boolean with one independent resume-timer per call, so
+ *     `usePlayers`'s polling only resumes once every overlapping mutation
+ *     has actually settled.
+ *
+ * Every mutator here only ever touches its own leader row's `group_members`
+ * or `group_volume` field, and both apply and rollback read the cache's
+ * *current* value at call time (via `mutatePlayersCache`/`applyToLeader`)
+ * rather than restoring a snapshot captured back at the start of the call.
+ * That's what lets two overlapping mutations against the same leader (e.g.
+ * joining the Patio, then the Deck, before the first has confirmed) each
+ * compose and roll back correctly without one clobbering the other — a
+ * snapshot-based rollback would restore the array as it was *before* the
+ * first mutation started, silently erasing whatever the second one had
+ * since added.
+ *
+ * This is otherwise the same lift described before: parameterized so a
+ * caller supplies which player is the "leader" for a given call instead of
+ * the hook assuming one. `PlayerPicker` derives its leader from the active
+ * queue; broadsheet's room pills derive theirs from the configured anchor
+ * (`useRoomPills`) — same mutations, two different notions of "who's the
+ * leader" supplied by the caller.
  */
 export function useGroupMutations() {
   const queryClient = useQueryClient()
 
   // Player IDs with an in-flight group/ungroup so a caller can show a
   // spinner and dim/disable the action button until MA confirms the change.
+  // Stays populated for the whole confirm-polling window now, not just the
+  // POST round trip — see the header comment on why that's now a real
+  // (if short) window instead of ~0.3s.
   const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
-  // True for ~1.5s after a mutation. MA's `players/all` response lags a few
-  // hundred ms behind a group/ungroup command landing, so callers should
-  // suppress both the polling refetch and any explicit refresh during that
-  // window — otherwise the stale response would clobber the optimistic
-  // update. Feed this straight into `usePlayers`'s `pollingPaused` option.
+
+  // Refcounts overlapping mutations so `usePlayers`'s polling only resumes
+  // once every one of them has actually settled — not the moment any single
+  // one's own resume-timer fires (the bug: a second tap's pause getting
+  // cancelled early by the first tap's independent timer). The count itself
+  // lives in a ref, not state, because it's read/written imperatively from
+  // async mutation lifecycles; `pollingPaused` is the bit of state derived
+  // from it that actually needs to trigger a re-render.
+  const inFlightCountRef = useRef(0)
   const [pollingPaused, setPollingPaused] = useState(false)
 
-  const refreshPlayers = () =>
-    queryClient.invalidateQueries({ queryKey: ['music', 'players'] })
+  const beginMutation = () => {
+    inFlightCountRef.current += 1
+    setPollingPaused(true)
+  }
+  const endMutation = () => {
+    inFlightCountRef.current = Math.max(0, inFlightCountRef.current - 1)
+    if (inFlightCountRef.current === 0) {
+      // The last of any overlapping mutations to finish — safe to resume
+      // normal polling and reconcile once via a real refetch.
+      setPollingPaused(false)
+      queryClient.invalidateQueries({ queryKey: PLAYERS_QUERY_KEY })
+    }
+  }
 
-  // Apply an optimistic mutation to the cached /players response so the UI
-  // reflects the group change instantly. The real refetch (kicked by
-  // refreshPlayers below) reconciles within a second.
+  // Apply a mutation to the cached /players response so the UI reflects a
+  // change instantly — called both for the optimistic apply (before the
+  // POST) and for a rollback (after a rejected POST), always against
+  // whatever the cache currently holds, never a stale captured copy.
   const mutatePlayersCache = (fn: (p: RawPlayer) => RawPlayer) =>
-    queryClient.setQueryData<RawPlayer[]>(['music', 'players'], (prev) =>
-      prev ? prev.map(fn) : prev,
-    )
+    queryClient.setQueryData<RawPlayer[]>(PLAYERS_QUERY_KEY, (prev) => (prev ? prev.map(fn) : prev))
+
+  const applyToLeader = (leaderId: string, transform: (p: RawPlayer) => RawPlayer) =>
+    mutatePlayersCache((p) => (p.player_id === leaderId ? transform(p) : p))
 
   // Abort any in-flight /players refetch (e.g. one kicked by the 5s polling
-  // interval moments before the user tapped) so it doesn't return with
-  // stale pre-mutation data and overwrite our optimistic update.
-  const cancelInFlightPlayersFetches = () =>
-    queryClient.cancelQueries({ queryKey: ['music', 'players'] })
+  // interval moments before the user tapped) so it doesn't land after our
+  // optimistic apply and overwrite it with stale pre-mutation data.
+  const cancelInFlightPlayersFetches = () => queryClient.cancelQueries({ queryKey: PLAYERS_QUERY_KEY })
 
   const markPending = (ids: string[]) =>
     setPendingIds((prev) => {
@@ -63,97 +131,150 @@ export function useGroupMutations() {
       return next
     })
 
-  // Lifecycle of a group/ungroup action:
-  //   1. Mark pending + pause polling (spinner appears on the ORIGINAL
-  //      branch's button — "Adding…" on a +Add row, "Removing…" on a
-  //      Remove row).
-  //   2. Cancel any in-flight /players fetch.
-  //   3. Fire the POST. Wait for it to return (~100ms).
-  //   4. Apply the optimistic cache mutation AND clear pending in the same
-  //      pass — the row transitions to its new branch with no spinner left
-  //      behind on the wrong-labeled button.
-  //   5. After MA's propagation window, resume polling + refetch.
-  const withOptimistic = async (
-    pendingPlayerIds: string[],
-    mutator: (p: RawPlayer) => RawPlayer,
-    apiCall: () => Promise<unknown>,
-  ) => {
-    markPending(pendingPlayerIds)
-    setPollingPaused(true)
+  // Poll the real /players endpoint (not the react-query cache — this is a
+  // truth check, not a write) until `isConfirmed` reports the mutation has
+  // actually landed, or until CONFIRM_POLL_TIMEOUT_MS runs out. Same
+  // real-service caveat as the POST itself: this only ever fires once a
+  // mutation's own POST has resolved, i.e. only when a tap for real runs
+  // against the real service — never during this file's own tests or a
+  // `?scenario=` browser check where no mutation is actually invoked.
+  const waitForConvergence = async (isConfirmed: (players: RawPlayer[]) => boolean) => {
+    const deadline = Date.now() + CONFIRM_POLL_TIMEOUT_MS
+    while (Date.now() < deadline) {
+      await delay(CONFIRM_POLL_INTERVAL_MS)
+      try {
+        const players = await musicIntegration.api.get<RawPlayer[]>('/players')
+        if (isConfirmed(players)) return
+      } catch {
+        // Transient fetch error — this is a confirmation check, not the
+        // mutation itself, so keep polling until the deadline rather than
+        // treating it as failure.
+      }
+    }
+    // Gave up: MA hasn't visibly converged within the bound. Don't hold the
+    // optimistic write hostage waiting forever — `endMutation`'s refetch
+    // (once every overlapping mutation finishes) will show whatever's real.
+  }
+
+  interface MutationSpec {
+    /** Player ids to mark pending for the duration of this call. */
+    pendingIds: string[]
+    /** Optimistic cache write, applied immediately, before the POST fires. */
+    apply: () => void
+    /** Inverse of `apply`, applied to the *current* cache if the POST rejects. */
+    rollback: () => void
+    apiCall: () => Promise<unknown>
+    /** Does a real /players response show this mutation has landed? */
+    isConfirmed: (players: RawPlayer[]) => boolean
+  }
+
+  const runMutation = async ({ pendingIds: ids, apply, rollback, apiCall, isConfirmed }: MutationSpec) => {
+    markPending(ids)
+    beginMutation()
+    // Apply synchronously, before anything else — including the
+    // cancel-in-flight-fetches call just below, which itself returns a
+    // promise. Awaiting that first would push the optimistic write behind a
+    // microtask, which is small but real: the whole point is that a tap
+    // reflects instantly, not "instantly, modulo whatever else happens to
+    // be queued first."
+    apply()
     await cancelInFlightPlayersFetches()
+
     try {
       await apiCall()
-      mutatePlayersCache(mutator)
-      clearPending(pendingPlayerIds)
+      await waitForConvergence(isConfirmed)
     } catch (err) {
-      // POST failed — drop pending so the spinner doesn't get stuck.
-      clearPending(pendingPlayerIds)
+      rollback()
       throw err
     } finally {
-      // Resume polling + reconcile from MA once it's converged.
-      setTimeout(() => {
-        setPollingPaused(false)
-        refreshPlayers()
-      }, 1500)
+      clearPending(ids)
+      endMutation()
     }
   }
 
   const addToGroup = (playerId: string, leaderId: string | null) => {
     if (!leaderId) return
-    return withOptimistic(
-      [playerId],
-      (p) => {
-        if (p.player_id !== leaderId) return p
-        const current = p.group_members ?? []
-        const next =
-          current.length === 0 ? [leaderId, playerId] : [...current, playerId]
-        return { ...p, group_members: next }
-      },
-      () =>
-        musicIntegration.api.post('/group', {
-          player_id: playerId,
-          target_player: leaderId,
+    return runMutation({
+      pendingIds: [playerId],
+      apply: () =>
+        applyToLeader(leaderId, (p) => {
+          const members = new Set(p.group_members?.length ? p.group_members : [leaderId])
+          members.add(playerId)
+          return { ...p, group_members: [...members] }
         }),
-    )
+      rollback: () =>
+        applyToLeader(leaderId, (p) => {
+          const members = new Set(p.group_members ?? [])
+          members.delete(playerId)
+          // Collapse to [] once only the leader itself remains, matching the
+          // "no group" resting state everywhere else in this file.
+          return { ...p, group_members: members.size <= 1 ? [] : [...members] }
+        }),
+      apiCall: () => musicIntegration.api.post('/group', { player_id: playerId, target_player: leaderId }),
+      isConfirmed: (players) => {
+        const leader = players.find((p) => p.player_id === leaderId)
+        return !!leader && (leader.group_members ?? []).includes(playerId)
+      },
+    })
   }
 
   const removeFromGroup = (playerId: string, leaderId: string | null) =>
-    withOptimistic(
-      [playerId],
-      (p) => {
-        if (p.player_id !== leaderId) return p
-        const remaining = (p.group_members ?? []).filter((id) => id !== playerId)
-        // If only the leader itself remains, collapse to [] so the UI returns
-        // to the "no group" state.
-        const cleared = remaining.length <= 1 ? [] : remaining
-        return { ...p, group_members: cleared }
+    runMutation({
+      pendingIds: [playerId],
+      apply: () =>
+        mutatePlayersCache((p) => {
+          if (p.player_id !== leaderId) return p
+          const remaining = (p.group_members ?? []).filter((id) => id !== playerId)
+          const cleared = remaining.length <= 1 ? [] : remaining
+          return { ...p, group_members: cleared }
+        }),
+      rollback: () =>
+        mutatePlayersCache((p) => {
+          if (p.player_id !== leaderId) return p
+          const members = new Set(p.group_members ?? [])
+          if (leaderId) members.add(leaderId)
+          members.add(playerId)
+          return { ...p, group_members: [...members] }
+        }),
+      apiCall: () => musicIntegration.api.post('/ungroup', { player_id: playerId }),
+      isConfirmed: (players) => {
+        if (!leaderId) return true
+        const leader = players.find((p) => p.player_id === leaderId)
+        return !leader || !(leader.group_members ?? []).includes(playerId)
       },
-      () => musicIntegration.api.post('/ungroup', { player_id: playerId }),
-    )
+    })
 
   const ungroupAll = (leader: Player | null) => {
     if (!leader) return
     const followers = leader.groupMembers.filter((id) => id !== leader.playerId)
-    return withOptimistic(
-      followers,
-      (p) =>
-        p.player_id === leader.playerId ? { ...p, group_members: [] } : p,
-      () =>
-        Promise.all(
-          followers.map((id) =>
-            musicIntegration.api.post('/ungroup', { player_id: id }),
-          ),
-        ),
-    )
+    const previousMembers = leader.groupMembers
+    return runMutation({
+      pendingIds: followers,
+      apply: () => applyToLeader(leader.playerId, (p) => ({ ...p, group_members: [] })),
+      rollback: () => applyToLeader(leader.playerId, (p) => ({ ...p, group_members: previousMembers })),
+      apiCall: () =>
+        Promise.all(followers.map((id) => musicIntegration.api.post('/ungroup', { player_id: id }))),
+      isConfirmed: (players) => {
+        const current = players.find((p) => p.player_id === leader.playerId)
+        return !current || (current.group_members ?? []).length <= 1
+      },
+    })
   }
 
-  const setGroupVolume = async (leaderId: string | null, level: number) => {
+  const setGroupVolume = (leaderId: string | null, level: number) => {
     if (!leaderId) return
-    await musicIntegration.api.post('/group-volume', {
-      player_id: leaderId,
-      level,
+    const previousVolume =
+      queryClient.getQueryData<RawPlayer[]>(PLAYERS_QUERY_KEY)?.find((p) => p.player_id === leaderId)
+        ?.group_volume ?? null
+    return runMutation({
+      // No visual pending state for a volume drag — unchanged from before
+      // this file's rollback/refcount treatment was extended to cover it.
+      pendingIds: [],
+      apply: () => applyToLeader(leaderId, (p) => ({ ...p, group_volume: level })),
+      rollback: () => applyToLeader(leaderId, (p) => ({ ...p, group_volume: previousVolume })),
+      apiCall: () => musicIntegration.api.post('/group-volume', { player_id: leaderId, level }),
+      isConfirmed: (players) => players.find((p) => p.player_id === leaderId)?.group_volume === level,
     })
-    refreshPlayers()
   }
 
   return {

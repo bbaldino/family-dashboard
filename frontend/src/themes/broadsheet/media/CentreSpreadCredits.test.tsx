@@ -90,6 +90,22 @@ describe('CentreSpreadCredits', () => {
     expect(toggle).toHaveBeenCalledWith('living')
   })
 
+  it('renders a pending room as a disabled, dimmed button — consistent with the masthead', () => {
+    useRoomPills.mockReturnValue({
+      pills: [
+        { player: kitchen, isAnchor: true, joined: true, pending: false },
+        { player: living, isAnchor: false, joined: false, pending: true },
+      ],
+      toggle,
+    })
+    render(<CentreSpreadCredits track={fullTrack} activeQueue={activeQueue} onSetVolume={onSetVolume} />)
+    const pendingPill = screen.getByRole('button', { name: 'Living Room' })
+    expect(pendingPill).toBeDisabled()
+    expect(pendingPill.style.opacity).toBe('0.55')
+    fireEvent.click(pendingPill)
+    expect(toggle).not.toHaveBeenCalled()
+  })
+
   it('shows a dash when there are no pills — no anchor configured, no players yet, or the anchor is absent from the players list', () => {
     render(<CentreSpreadCredits track={fullTrack} activeQueue={activeQueue} onSetVolume={onSetVolume} />)
     expect(screen.getByText('—')).toBeInTheDocument()

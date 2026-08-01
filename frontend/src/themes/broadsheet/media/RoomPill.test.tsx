@@ -37,4 +37,36 @@ describe('RoomPill', () => {
     expect(pill.style.background).toBe('var(--ink)')
     expect(pill.style.color).toBe('var(--paper)')
   })
+
+  it('stays a button while pending — disabled and dimmed, not silently swapped for a span', () => {
+    const onToggle = vi.fn()
+    render(<RoomPill label="Living Room" active={false} pending onToggle={onToggle} />)
+    const pill = screen.getByRole('button', { name: 'Living Room' })
+    expect(pill).toBeDisabled()
+    expect(pill.style.opacity).toBe('0.55')
+    fireEvent.click(pill)
+    expect(onToggle).not.toHaveBeenCalled()
+  })
+
+  it('does not change box dimensions between idle and pending — only opacity differs', () => {
+    const onToggle = vi.fn()
+    const { rerender } = render(<RoomPill label="Living Room" active={false} pending={false} onToggle={onToggle} />)
+    const idle = screen.getByRole('button', { name: 'Living Room' })
+    // Captured before the rerender below — React reuses the same DOM node
+    // for this update, so reading these live afterward would just compare
+    // the pending style against itself.
+    const idleBox = { padding: idle.style.padding, border: idle.style.border }
+    const idleOpacity = idle.style.opacity
+
+    rerender(<RoomPill label="Living Room" active={false} pending onToggle={onToggle} />)
+    const pending = screen.getByRole('button', { name: 'Living Room' })
+    expect({ padding: pending.style.padding, border: pending.style.border }).toEqual(idleBox)
+    expect(pending.style.opacity).not.toBe(idleOpacity)
+  })
+
+  it('the anchor pill (no onToggle) ignores a pending prop — it was never tappable to begin with', () => {
+    render(<RoomPill label="Kitchen" active pending />)
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(screen.getByText('Kitchen').tagName).toBe('SPAN')
+  })
 })

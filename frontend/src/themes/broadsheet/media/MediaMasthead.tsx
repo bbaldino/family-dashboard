@@ -82,7 +82,8 @@ export function MediaMasthead() {
                   key={pill.player.playerId}
                   label={pill.player.displayName}
                   active={pill.joined}
-                  onToggle={pill.isAnchor || pill.pending ? undefined : () => toggle(pill.player.playerId)}
+                  pending={pill.pending}
+                  onToggle={pill.isAnchor ? undefined : () => toggle(pill.player.playerId)}
                 />
               ))}
             </div>

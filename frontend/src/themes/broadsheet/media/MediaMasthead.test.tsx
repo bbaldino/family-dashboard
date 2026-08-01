@@ -71,7 +71,7 @@ describe('MediaMasthead', () => {
     expect(toggle).toHaveBeenCalledWith('bedroom')
   })
 
-  it('does not make a pending room tappable', () => {
+  it('renders a pending room as a disabled, dimmed button — not a silently inert span', () => {
     useMusic.mockReturnValue({ state: { queues: [], activeQueue: null } })
     useRoomPills.mockReturnValue({
       pills: [
@@ -81,8 +81,11 @@ describe('MediaMasthead', () => {
       toggle,
     })
     render(<MediaMasthead />)
-    expect(screen.queryByRole('button', { name: 'Living Room' })).not.toBeInTheDocument()
-    expect(screen.getByText('Living Room').tagName).toBe('SPAN')
+    const pendingPill = screen.getByRole('button', { name: 'Living Room' })
+    expect(pendingPill).toBeDisabled()
+    expect(pendingPill.style.opacity).toBe('0.55')
+    fireEvent.click(pendingPill)
+    expect(toggle).not.toHaveBeenCalled()
   })
 
   it('shows a dash when there are no pills — no anchor configured, no players yet, or the anchor is absent from the players list', () => {
