@@ -1,7 +1,9 @@
 import { useIntegrationConfig } from '@/data/use-integration-config'
+import { activeScenario } from '@/data/scenario'
 import { musicIntegration } from './config'
 import { usePlayers, normalizePlayer } from './usePlayers'
 import { useGroupMutations } from './useGroupMutations'
+import { musicAnchorFixtureFor } from './fixtures'
 import type { Player } from './types'
 
 /**
@@ -19,6 +21,19 @@ import type { Player } from './types'
  * the anchor's own `can_group_with` — a room MA reports as incompatible
  * (e.g. a Chromecast display) is never offered, rather than offered and
  * silently failing.
+ *
+ * Under an active `?scenario=`, the anchor comes from `musicAnchorFixtureFor`
+ * instead of that config fetch. `useIntegrationConfig` always hits the real,
+ * live `/api/config` — the scenario mechanism only short-circuits the music
+ * *hooks*, not that fetch — so under a scenario it would keep reporting the
+ * household's real Sonos id, which no `fixture-*` player id in
+ * `fixtures.ts` can ever match. Left unhandled, that mismatch makes
+ * `resolveAnchorAndRooms` correctly (but uselessly) resolve to no anchor,
+ * and the fixtures become unable to exercise the pills at all — a real
+ * defect this hook shipped with once, caught by loading a scenario in an
+ * actual browser rather than trusting mocked-id unit tests. With no
+ * scenario active, `musicAnchorFixtureFor` returns `undefined` and the
+ * config value is used exactly as before.
  *
  * Reuses the same `useGroupMutations` PlayerPicker calls (see that hook's
  * own header comment on the lift) — a joining room adopts whatever the
@@ -77,7 +92,8 @@ export function resolveAnchorAndRooms(
 
 export function useRoomPills(): RoomPillsState {
   const config = useIntegrationConfig(musicIntegration)
-  const anchorId = config?.default_player ?? null
+  const fixtureAnchorId = musicAnchorFixtureFor(activeScenario)
+  const anchorId = fixtureAnchorId !== undefined ? fixtureAnchorId : (config?.default_player ?? null)
 
   const { pendingIds, pollingPaused, addToGroup, removeFromGroup } = useGroupMutations()
   const { data: rawPlayers } = usePlayers({ isOpen: true, pollingPaused })

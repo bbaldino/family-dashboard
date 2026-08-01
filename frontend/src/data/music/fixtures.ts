@@ -422,6 +422,32 @@ export function musicPlayersFixtureFor(scenario: string | null): RawPlayer[] | u
   return musicPlayersFixtures[scenario]()
 }
 
+// The room-pill anchor id for each scenario. `useRoomPills` otherwise reads
+// the anchor from a *live* `/api/config` fetch (`music.default_player`) —
+// the scenario mechanism doesn't touch that fetch at all, so under a
+// scenario it would keep returning the household's real Sonos id, which
+// never matches any of this file's `fixture-*` player ids. Without this,
+// the pills silently render nothing (`resolveAnchorAndRooms` correctly
+// finds no matching player) under every `?scenario=` — the fixture becomes
+// unable to exercise the one thing it exists to test. `null` for `empty`:
+// there's genuinely no anchor to offer when there are no players either.
+const musicAnchorFixtures: Record<MusicScenario, () => string | null> = {
+  empty: () => null,
+  packed: () => KITCHEN_QUEUE_ID,
+}
+
+/** The room-pill anchor player id for `scenario`, or `undefined` if no
+ *  scenario is active or it isn't one this integration defines — in which
+ *  case `useRoomPills` should read the anchor from the real (live) config
+ *  fetch exactly as it does today. Always a player id also present in
+ *  `musicPlayersFixtureFor(scenario)`'s own list, so the two fixtures can
+ *  never fall out of agreement the way the real config value and the
+ *  fixture players did. */
+export function musicAnchorFixtureFor(scenario: string | null): string | null | undefined {
+  if (!scenario || !isMusicScenario(scenario)) return undefined
+  return musicAnchorFixtures[scenario]()
+}
+
 // ─── artist / album detail ─────────────────────────────────────────
 
 // A featured-artist credit on the fixture's opening track — exercises the

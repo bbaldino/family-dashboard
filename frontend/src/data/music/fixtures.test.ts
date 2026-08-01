@@ -7,6 +7,7 @@ import {
   musicRecentFixtureFor,
   musicForYouFixtureFor,
   musicPlayersFixtureFor,
+  musicAnchorFixtureFor,
   musicArtistDetailFixtureFor,
   musicAlbumDetailFixtureFor,
 } from './fixtures'
@@ -166,6 +167,37 @@ describe('musicPlayersFixtureFor', () => {
     const officeDisplay = players.find((p) => p.display_name === 'Office Display')!
     expect(officeDisplay.can_group_with).toEqual([])
     expect(kitchen.can_group_with).not.toContain(officeDisplay.player_id)
+  })
+})
+
+describe('musicAnchorFixtureFor', () => {
+  it('returns undefined when no scenario is active or is not defined', () => {
+    expect(musicAnchorFixtureFor(null)).toBeUndefined()
+    expect(musicAnchorFixtureFor('live-game')).toBeUndefined()
+  })
+
+  it('empty scenario has no anchor — there are no players to anchor against', () => {
+    expect(musicAnchorFixtureFor('empty')).toBeNull()
+  })
+
+  // Regression coverage for the defect a browser check caught: useRoomPills
+  // resolves its anchor from a *live* config fetch that the scenario
+  // mechanism never touches, so under a scenario that fetch keeps returning
+  // the real household Sonos id — which no `fixture-*` player id could ever
+  // match. Asserting the returned id is *contained in* the players fixture
+  // (rather than merely equal to some string this test hardcodes) is what
+  // would have caught that: it fails the same way useRoomPills's own
+  // resolution would fail if the two fixtures ever drifted apart again.
+  it('packed scenario anchor id is one of the players packedPlayers() actually defines', () => {
+    const anchorId = musicAnchorFixtureFor('packed')
+    const playerIds = musicPlayersFixtureFor('packed')!.map((p) => p.player_id)
+    expect(playerIds).toContain(anchorId)
+  })
+
+  it('packed scenario anchor is the Kitchen', () => {
+    const anchorId = musicAnchorFixtureFor('packed')
+    const anchor = musicPlayersFixtureFor('packed')!.find((p) => p.player_id === anchorId)
+    expect(anchor?.display_name).toBe('Kitchen')
   })
 })
 
