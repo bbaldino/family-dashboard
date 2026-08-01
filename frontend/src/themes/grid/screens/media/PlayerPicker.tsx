@@ -1,42 +1,14 @@
 import { useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { Volume2, Users, Plus, X as XIcon, Loader2 } from 'lucide-react'
-import { musicIntegration, useMusic } from '@/data/music'
-import type { Player } from '@/data/music'
+import { musicIntegration, useMusic, usePlayers, normalizePlayer } from '@/data/music'
+import type { Player, RawPlayer } from '@/data/music'
 import { Modal } from '@/ui/Modal'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
 
 interface PlayerPickerProps {
   isOpen: boolean
   onClose: () => void
-}
-
-// Raw shape returned by MA via the /players proxy (snake_case fields).
-interface RawPlayer {
-  player_id?: string
-  display_name?: string
-  name?: string
-  state?: string
-  available?: boolean
-  volume_level?: number | null
-  group_members?: string[] | null
-  synced_to?: string | null
-  can_group_with?: string[] | null
-  group_volume?: number | null
-}
-
-function normalizePlayer(raw: RawPlayer): Player {
-  return {
-    playerId: raw.player_id ?? '',
-    displayName: raw.display_name ?? raw.name ?? raw.player_id ?? '',
-    state: raw.state ?? 'idle',
-    available: raw.available ?? true,
-    volumeLevel: raw.volume_level ?? null,
-    groupMembers: raw.group_members ?? [],
-    syncedTo: raw.synced_to ?? null,
-    canGroupWith: raw.can_group_with ?? [],
-    groupVolume: raw.group_volume ?? null,
-  }
 }
 
 function StateDot({ state }: { state: string }) {
@@ -210,13 +182,7 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
   // otherwise the stale response would clobber our optimistic update.
   const [pollingPaused, setPollingPaused] = useState(false)
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['music', 'players'],
-    queryFn: () => musicIntegration.api.get<RawPlayer[]>('/players'),
-    enabled: isOpen,
-    refetchInterval: isOpen && !pollingPaused ? 5_000 : false,
-    refetchOnWindowFocus: false,
-  })
+  const { data, isLoading } = usePlayers({ isOpen, pollingPaused })
 
   const players: Player[] = Array.isArray(data) ? data.map(normalizePlayer) : []
   const leader = players.find((p) => p.playerId === activeQueueId) ?? null

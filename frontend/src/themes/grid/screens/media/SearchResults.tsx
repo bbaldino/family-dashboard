@@ -1,8 +1,7 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { useNavigate, type NavigateFunction } from 'react-router-dom'
 import { Music, Loader2 } from 'lucide-react'
-import { musicIntegration, useMusic, parseSearchResponse } from '@/data/music'
+import { useMusic, useSearch } from '@/data/music'
 import type { EnqueueMode, SearchItem } from '@/data/music'
 import { TrackActionsMenu } from './TrackActionsMenu'
 import { encodeUriParam } from './track-url'
@@ -148,12 +147,7 @@ export function SearchResults({ rawQuery, debouncedQuery }: SearchResultsProps) 
   // True while the debounce window is still open (user is still typing).
   const settling = rawQuery !== debouncedQuery
 
-  const { data, isFetching } = useQuery({
-    queryKey: ['music', 'search', debouncedQuery],
-    queryFn: () =>
-      musicIntegration.api.get<unknown>(`/search?q=${encodeURIComponent(debouncedQuery)}`),
-    enabled: debouncedQuery.length >= 2,
-  })
+  const { data: results, isFetching } = useSearch(debouncedQuery)
 
   const playItem = async (
     item: SearchItem,
@@ -186,12 +180,11 @@ export function SearchResults({ rawQuery, debouncedQuery }: SearchResultsProps) 
 
   // Settling or fetching the current debounced query → show the indicator
   // before any results are rendered, even if older results are still cached.
-  const showFullPageLoading = (settling || isFetching) && !data
+  const showFullPageLoading = (settling || isFetching) && !results
   if (showFullPageLoading) {
     return <StatusRow label={settling ? 'Searching…' : `Searching for "${debouncedQuery}"…`} />
   }
 
-  const results = data ? parseSearchResponse(data) : null
   const hasResults =
     results &&
     (results.tracks.length > 0 ||

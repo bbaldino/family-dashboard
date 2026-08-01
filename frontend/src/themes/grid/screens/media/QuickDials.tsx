@@ -1,7 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
 import { Music } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { musicIntegration, useMusic } from '@/data/music'
+import { useMusic, useTopTracks, useRecentlyPlayed } from '@/data/music'
 import type { RecentItem, TopTrack, EnqueueMode } from '@/data/music'
 import { TrackActionsMenu } from './TrackActionsMenu'
 import { encodeUriParam } from './track-url'
@@ -155,17 +154,8 @@ export function QuickDials() {
   const { play } = useMusic()
   const navigate = useNavigate()
 
-  const { data: topTracks, isLoading: topLoading } = useQuery({
-    queryKey: ['music', 'top-tracks'],
-    queryFn: () => musicIntegration.api.get<TopTrack[]>('/top-tracks?limit=12'),
-    refetchInterval: 5 * 60 * 1000,
-  })
-
-  const { data: recent, isLoading: recentLoading } = useQuery({
-    queryKey: ['music', 'recent'],
-    queryFn: () => musicIntegration.api.get<RecentItem[]>('/recent'),
-    refetchInterval: 5 * 60 * 1000,
-  })
+  const { data: topTracks, isLoading: topLoading } = useTopTracks()
+  const { data: recent, isLoading: recentLoading } = useRecentlyPlayed()
 
   const isLoading = topLoading && recentLoading
 

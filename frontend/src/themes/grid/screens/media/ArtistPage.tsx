@@ -1,10 +1,9 @@
 import { ArrowLeft, Music, Radio } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useMusic } from '@/data/music'
+import { useMusic, useArtistDetail } from '@/data/music'
 import type { EnqueueMode } from '@/data/music'
 import { TrackActionsMenu } from './TrackActionsMenu'
 import { decodeUriParam, encodeUriParam } from './track-url'
-import { useArtistDetail } from './useArtistDetail'
 
 function formatDuration(seconds: number | null): string {
   if (seconds == null || seconds <= 0) return ''
