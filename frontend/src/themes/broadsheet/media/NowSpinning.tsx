@@ -1,8 +1,8 @@
-import type { MouseEvent } from 'react'
 import { Pause, Play, SkipBack, SkipForward } from 'lucide-react'
 import { useMusic } from '@/data/music'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { NowSpinningCover } from './NowSpinningCover'
+import { VolumeSlider } from './VolumeSlider'
 import { INK2 } from './colors'
 
 /** `m:ss`, floored — matches `Footer.tsx`'s `formatDuration` (not shared:
@@ -24,10 +24,9 @@ function formatDuration(seconds: number): string {
  * Transport (play/pause/next/previous) and volume are wired to the real
  * `useMusic` actions per the design brief — they will fail against the
  * unreachable Music Assistant instance, which is expected; nothing here
- * stubs them out. The volume control is tap-to-set (there's no drag
- * gesture) — the mock draws a static bar with no slider affordance to
- * follow, so this is the simplest touchscreen-appropriate interpretation of
- * "wire it to the real action".
+ * stubs them out. The volume control is `VolumeSlider` — tap-to-set and
+ * drag, both wrapped in a real ~40px hit target around the mock's hairline
+ * rule; see that component's own header comment for why.
  *
  * Mirrors grid's `NowPlaying` guard (`src/themes/grid/screens/media/NowPlaying.tsx`,
  * read for reference only): no active queue, or an active queue with
@@ -68,14 +67,6 @@ export function NowSpinning({ onOpenCentreSpread }: { onOpenCentreSpread?: () =>
   const duration = currentItem.duration ?? 0
   const progressPct = duration > 0 ? Math.min(100, Math.max(0, (elapsed / duration) * 100)) : 0
   const volume = activeQueue?.volumeLevel ?? 0
-
-  const handleVolumeClick = (event: MouseEvent<HTMLDivElement>) => {
-    if (!activeQueue) return
-    const rect = event.currentTarget.getBoundingClientRect()
-    const fraction = rect.width > 0 ? (event.clientX - rect.left) / rect.width : 0
-    const level = Math.round(Math.min(1, Math.max(0, fraction)) * 100)
-    setVolume(activeQueue.queueId, level)
-  }
 
   return (
     <div className="flex flex-col" style={{ gap: 10 }}>
@@ -147,17 +138,7 @@ export function NowSpinning({ onOpenCentreSpread }: { onOpenCentreSpread?: () =>
 
       <div className="flex items-center" style={{ gap: 10, marginTop: 8 }}>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-muted)', letterSpacing: '0.15em' }}>VOL</span>
-        <div
-          role="slider"
-          aria-label="Volume"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={volume}
-          onClick={handleVolumeClick}
-          style={{ flex: 1, height: 3, background: 'var(--rule)', position: 'relative', cursor: 'pointer' }}
-        >
-          <div style={{ position: 'absolute', inset: 0, width: `${volume}%`, background: 'var(--ink)' }} />
-        </div>
+        <VolumeSlider volume={volume} onChange={(level) => activeQueue && setVolume(activeQueue.queueId, level)} />
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink)', letterSpacing: '0.08em' }}>{volume}</span>
       </div>
     </div>

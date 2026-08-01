@@ -1,8 +1,8 @@
-import type { MouseEvent } from 'react'
 import { usePlayers, normalizePlayer } from '@/data/music'
 import type { Player, QueueState, TrackInfo } from '@/data/music'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { RoomPill } from './RoomPill'
+import { VolumeSlider } from './VolumeSlider'
 import { sourceLabel } from './labels'
 
 /** No value for this row — a missing `year`/`album`/`source` isn't dropped
@@ -70,13 +70,6 @@ export function CentreSpreadCredits({
     ['Source', sourceLabel(track.source) ?? EMPTY],
   ]
 
-  const handleVolumeClick = (event: MouseEvent<HTMLDivElement>) => {
-    const rect = event.currentTarget.getBoundingClientRect()
-    const fraction = rect.width > 0 ? (event.clientX - rect.left) / rect.width : 0
-    const level = Math.round(Math.min(1, Math.max(0, fraction)) * 100)
-    onSetVolume(activeQueue.queueId, level)
-  }
-
   return (
     <aside className="min-h-0 overflow-hidden flex flex-col" style={{ padding: '18px 24px 18px 56px' }}>
       <Kicker color="var(--ink-muted)">Credits</Kicker>
@@ -116,17 +109,7 @@ export function CentreSpreadCredits({
         )}
         <div className="flex items-center" style={{ gap: 10 }}>
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--ink-muted)', letterSpacing: '0.18em' }}>VOL</span>
-          <div
-            role="slider"
-            aria-label="Volume"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={volume}
-            onClick={handleVolumeClick}
-            style={{ flex: 1, height: 3, background: 'var(--rule)', position: 'relative', cursor: 'pointer' }}
-          >
-            <div style={{ position: 'absolute', inset: 0, width: `${volume}%`, background: 'var(--ink)' }} />
-          </div>
+          <VolumeSlider volume={volume} onChange={(level) => onSetVolume(activeQueue.queueId, level)} />
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink)', letterSpacing: '0.06em' }}>{volume}</span>
         </div>
       </div>
