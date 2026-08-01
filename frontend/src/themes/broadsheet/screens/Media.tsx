@@ -7,6 +7,7 @@ import { QuickDialsShelves } from '@/themes/broadsheet/media/QuickDialsShelves'
 import { ForYouShelf } from '@/themes/broadsheet/media/ForYouShelf'
 import { SearchResultsPanel } from '@/themes/broadsheet/media/SearchResultsPanel'
 import { NowSpinning } from '@/themes/broadsheet/media/NowSpinning'
+import { CentreSpread } from '@/themes/broadsheet/media/CentreSpread'
 
 /** `useSearch` only enables its query once it's at least 2 characters
  *  (`src/data/music/useSearch.ts`) — matched here so "searching" (which
@@ -37,12 +38,21 @@ const MIN_SEARCH_LENGTH = 2
  * results — as local state `SearchTabsRow` drives; none of that state is
  * shared with the URL or any other screen, the same way the Datebook owns
  * its displayed month locally (`Calendar.tsx`'s own comment on why).
+ *
+ * `showCentreSpread` is this screen's own third piece of local state: when
+ * set, `Media` renders `CentreSpread` — broadsheet's full-page now-playing
+ * view — in place of its usual masthead/search/body entirely, the way
+ * grid's `MediaBoard` holds its own `fullscreen` boolean (read for the
+ * pattern only; nothing imported from grid). This is deliberately not a
+ * `ScreenKey` on the shell — see `CentreSpread.tsx`'s own header comment for
+ * why that trade is the right one here.
  */
 export function Media() {
   const [query, setQuery] = useState('')
   const [tab, setTab] = useState<MediaTab>('quick-dials')
   const [debouncedQuery] = useDebounce(query.trim(), 250)
   const searching = debouncedQuery.length >= MIN_SEARCH_LENGTH
+  const [showCentreSpread, setShowCentreSpread] = useState(false)
 
   // Tapping a tab while a search is showing exits search mode too — without
   // this, the tab's own `active` styling would need this component's
@@ -51,6 +61,10 @@ export function Media() {
   const handleTabChange = (nextTab: MediaTab) => {
     setTab(nextTab)
     setQuery('')
+  }
+
+  if (showCentreSpread) {
+    return <CentreSpread onClose={() => setShowCentreSpread(false)} />
   }
 
   return (
@@ -72,7 +86,7 @@ export function Media() {
           )}
         </div>
         <aside className="min-h-0" style={{ borderLeft: '1px solid var(--rule)', padding: '12px 56px 16px 28px' }}>
-          <NowSpinning />
+          <NowSpinning onOpenCentreSpread={() => setShowCentreSpread(true)} />
         </aside>
       </div>
       {/* Reserves the 64px the footer occupies (see `BroadsheetLayout`) —

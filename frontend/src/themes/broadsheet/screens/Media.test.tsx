@@ -8,6 +8,7 @@ const useTopTracks = vi.hoisted(() => vi.fn())
 const useRecentlyPlayed = vi.hoisted(() => vi.fn())
 const useForYou = vi.hoisted(() => vi.fn())
 const useSearch = vi.hoisted(() => vi.fn())
+const useQueue = vi.hoisted(() => vi.fn())
 const normalizePlayer = vi.hoisted(() =>
   vi.fn((raw) => ({
     playerId: raw.player_id,
@@ -30,6 +31,7 @@ vi.mock('@/data/music', () => ({
   useRecentlyPlayed,
   useForYou,
   useSearch,
+  useQueue,
   normalizePlayer,
   getImageUrl,
 }))
@@ -53,6 +55,7 @@ describe('broadsheet Media (The Listening Room)', () => {
     useRecentlyPlayed.mockReturnValue({ data: [] })
     useForYou.mockReturnValue({ data: [] })
     useSearch.mockReturnValue({ data: undefined, isFetching: false })
+    useQueue.mockReturnValue({ data: [] })
   })
 
   it('renders the full page with every data source empty (cold cache)', () => {
@@ -98,5 +101,31 @@ describe('broadsheet Media (The Listening Room)', () => {
     fireEvent.change(screen.getByLabelText('Search music'), { target: { value: 'amber' } })
     await waitFor(() => expect(screen.getByText('Results')).toBeInTheDocument())
     expect(screen.queryByText('Frequently played')).not.toBeInTheDocument()
+  })
+
+  it('opens the Centre Spread on tapping the Now Spinning cover, and Close returns to the normal screen', () => {
+    useMusic.mockReturnValue({
+      state: {
+        queues: [],
+        activeQueue: {
+          queueId: 'kitchen',
+          displayName: 'Kitchen',
+          state: 'playing',
+          currentItem: { name: 'Amber Hours', artist: 'The Night Shift', album: 'Late Bloom', imageUrl: null, duration: 238, elapsed: 71, uri: 'u1' },
+          volumeLevel: 45,
+        },
+      },
+      ...musicActions,
+    })
+    render(<Media />)
+    expect(screen.getByTestId('broadsheet-media')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByLabelText('Open now playing'))
+    expect(screen.getByTestId('broadsheet-centre-spread')).toBeInTheDocument()
+    expect(screen.queryByTestId('broadsheet-media')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByText('Close ✕'))
+    expect(screen.getByTestId('broadsheet-media')).toBeInTheDocument()
+    expect(screen.queryByTestId('broadsheet-centre-spread')).not.toBeInTheDocument()
   })
 })
