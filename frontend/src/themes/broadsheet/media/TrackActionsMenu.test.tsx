@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { TrackActionsMenu } from './TrackActionsMenu'
 
@@ -52,5 +52,82 @@ describe('TrackActionsMenu', () => {
     expect(first.style.color).toBe('var(--rust)')
     expect(first.style.fontWeight).toBe('600')
     expect(second.style.color).toBe('var(--ink)')
+  })
+
+  describe('opening upward when it would not fit below', () => {
+    const realGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect
+
+    afterEach(() => {
+      HTMLElement.prototype.getBoundingClientRect = realGetBoundingClientRect
+    })
+
+    /** Stubs every element's rect by its `data-testid`, so the mock is in
+     *  place *before* the component's own `useLayoutEffect` runs on mount —
+     *  patching a specific node's rect only after render is too late, since
+     *  the flip decision is made at mount. */
+    function stubRectsByTestId(byTestId: Record<string, { top: number; bottom: number }>) {
+      HTMLElement.prototype.getBoundingClientRect = function (this: HTMLElement) {
+        const base = { left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => {} }
+        const id = this.dataset.testid
+        const rect = id ? byTestId[id] : undefined
+        return { ...base, top: rect?.top ?? 0, bottom: rect?.bottom ?? 0 } as DOMRect
+      }
+    }
+
+    it('opens downward (top: 100%) when nothing clips it', () => {
+      render(<TrackActionsMenu kicker="Track 01" title="Galvanize" groups={groups()} />)
+      const menu = screen.getByTestId('broadsheet-track-actions-menu')
+      expect(menu.style.top).toBe('100%')
+      expect(menu.style.bottom).toBe('')
+    })
+
+    it('opens downward when the clipping ancestor has enough room below', () => {
+      stubRectsByTestId({
+        clipper: { top: 0, bottom: 900 },
+        'broadsheet-track-actions-menu': { top: 100, bottom: 300 },
+      })
+      render(
+        <div data-testid="clipper" style={{ overflow: 'hidden' }}>
+          <TrackActionsMenu kicker="Track 01" title="Galvanize" groups={groups()} />
+        </div>,
+      )
+      const menu = screen.getByTestId('broadsheet-track-actions-menu')
+      expect(menu.style.top).toBe('100%')
+      expect(menu.style.bottom).toBe('')
+    })
+
+    it('flips to open upward (bottom: 100%) when the nearest clipping ancestor cuts it off', () => {
+      // The same shape verified live: a shelf column clips at 300, but the
+      // menu, opened downward, would extend to 500 — past it.
+      stubRectsByTestId({
+        clipper: { top: 0, bottom: 300 },
+        'broadsheet-track-actions-menu': { top: 250, bottom: 500 },
+      })
+      render(
+        <div data-testid="clipper" style={{ overflow: 'hidden' }}>
+          <TrackActionsMenu kicker="Track 01" title="Galvanize" groups={groups()} />
+        </div>,
+      )
+      const menu = screen.getByTestId('broadsheet-track-actions-menu')
+      expect(menu.style.bottom).toBe('100%')
+      expect(menu.style.top).toBe('')
+    })
+
+    it('only counts an ancestor that actually clips — one with overflow: visible is skipped', () => {
+      stubRectsByTestId({
+        // A visible-overflow ancestor could still report a rect that would
+        // "clip" the menu if it were (wrongly) counted — it must not be.
+        passthrough: { top: 0, bottom: 260 },
+        'broadsheet-track-actions-menu': { top: 250, bottom: 500 },
+      })
+      render(
+        <div data-testid="passthrough" style={{ overflow: 'visible' }}>
+          <TrackActionsMenu kicker="Track 01" title="Galvanize" groups={groups()} />
+        </div>,
+      )
+      const menu = screen.getByTestId('broadsheet-track-actions-menu')
+      expect(menu.style.top).toBe('100%')
+      expect(menu.style.bottom).toBe('')
+    })
   })
 })

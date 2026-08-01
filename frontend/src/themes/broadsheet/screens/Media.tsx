@@ -8,6 +8,7 @@ import { ForYouShelf } from '@/themes/broadsheet/media/ForYouShelf'
 import { SearchResultsPanel } from '@/themes/broadsheet/media/SearchResultsPanel'
 import { NowSpinning } from '@/themes/broadsheet/media/NowSpinning'
 import { CentreSpread } from '@/themes/broadsheet/media/CentreSpread'
+import { MenuScrim } from '@/themes/broadsheet/media/MenuScrim'
 
 /** `useSearch` only enables its query once it's at least 2 characters
  *  (`src/data/music/useSearch.ts`) — matched here so "searching" (which
@@ -46,6 +47,17 @@ const MIN_SEARCH_LENGTH = 2
  * pattern only; nothing imported from grid). This is deliberately not a
  * `ScreenKey` on the shell — see `CentreSpread.tsx`'s own header comment for
  * why that trade is the right one here.
+ *
+ * `openMenuUri` is this screen's fourth piece of local state — the shared
+ * track-actions menu's open item, one URI for the whole screen rather than
+ * one per body, since only one of `QuickDialsShelves`/`ForYouShelf`/`SearchResultsPanel`
+ * is ever mounted at a time. Lifted here rather than into any one of those
+ * three for the same reason `Album.tsx`/`Artist.tsx` each lift theirs to
+ * page level: `MenuScrim` has to size itself against the whole 1600×900
+ * canvas, which only this component's own root actually is. Switching tabs
+ * or starting a new search both close it — `handleTabChange`/`handleQueryChange`
+ * both clear it below — since the item the open menu was anchored to may no
+ * longer even be on screen once the body swaps to a different data set.
  */
 export function Media() {
   const [query, setQuery] = useState('')
@@ -53,6 +65,10 @@ export function Media() {
   const [debouncedQuery] = useDebounce(query.trim(), 250)
   const searching = debouncedQuery.length >= MIN_SEARCH_LENGTH
   const [showCentreSpread, setShowCentreSpread] = useState(false)
+  const [openMenuUri, setOpenMenuUri] = useState<string | null>(null)
+
+  const closeMenu = () => setOpenMenuUri(null)
+  const toggleMenu = (uri: string) => setOpenMenuUri((current) => (current === uri ? null : uri))
 
   // Tapping a tab while a search is showing exits search mode too — without
   // this, the tab's own `active` styling would need this component's
@@ -61,6 +77,12 @@ export function Media() {
   const handleTabChange = (nextTab: MediaTab) => {
     setTab(nextTab)
     setQuery('')
+    closeMenu()
+  }
+
+  const handleQueryChange = (nextQuery: string) => {
+    setQuery(nextQuery)
+    closeMenu()
   }
 
   if (showCentreSpread) {
@@ -68,9 +90,9 @@ export function Media() {
   }
 
   return (
-    <div data-testid="broadsheet-media" className="broadsheet-root w-[1600px] h-[900px] flex flex-col">
+    <div data-testid="broadsheet-media" className="broadsheet-root relative w-[1600px] h-[900px] flex flex-col">
       <MediaMasthead />
-      <SearchTabsRow query={query} onQueryChange={setQuery} activeTab={tab} onTabChange={handleTabChange} searching={searching} />
+      <SearchTabsRow query={query} onQueryChange={handleQueryChange} activeTab={tab} onTabChange={handleTabChange} searching={searching} />
       <div data-testid="broadsheet-media-body" className="flex-1 min-h-0 grid" style={{ gridTemplateColumns: '1fr 380px' }}>
         <div
           data-testid="broadsheet-media-shelves"
@@ -78,11 +100,11 @@ export function Media() {
           style={{ gap: 14, padding: '12px 28px 12px 56px' }}
         >
           {searching ? (
-            <SearchResultsPanel query={debouncedQuery} />
+            <SearchResultsPanel query={debouncedQuery} openMenuUri={openMenuUri} onToggleMenu={toggleMenu} onCloseMenu={closeMenu} />
           ) : tab === 'quick-dials' ? (
-            <QuickDialsShelves />
+            <QuickDialsShelves openMenuUri={openMenuUri} onToggleMenu={toggleMenu} onCloseMenu={closeMenu} />
           ) : (
-            <ForYouShelf />
+            <ForYouShelf openMenuUri={openMenuUri} onToggleMenu={toggleMenu} onCloseMenu={closeMenu} />
           )}
         </div>
         <aside className="min-h-0" style={{ borderLeft: '1px solid var(--rule)', padding: '12px 56px 16px 28px' }}>
@@ -94,6 +116,7 @@ export function Media() {
        *  reason: the footer itself is pinned absolutely, outside this flex
        *  column's own height accounting. */}
       <div style={{ flexShrink: 0, height: 64 }} />
+      {openMenuUri && <MenuScrim onClose={closeMenu} />}
     </div>
   )
 }

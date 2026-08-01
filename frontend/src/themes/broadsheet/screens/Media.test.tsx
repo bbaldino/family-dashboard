@@ -1,6 +1,15 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { Media } from './Media'
+
+function renderMedia() {
+  return render(
+    <MemoryRouter>
+      <Media />
+    </MemoryRouter>,
+  )
+}
 
 const useMusic = vi.hoisted(() => vi.fn())
 const usePlayers = vi.hoisted(() => vi.fn())
@@ -59,12 +68,12 @@ describe('broadsheet Media (The Listening Room)', () => {
   })
 
   it('renders the full page with every data source empty (cold cache)', () => {
-    expect(() => render(<Media />)).not.toThrow()
+    expect(() => renderMedia()).not.toThrow()
     expect(screen.getByTestId('broadsheet-media')).toBeInTheDocument()
   })
 
   it('fills the design canvas exactly', () => {
-    render(<Media />)
+    renderMedia()
     const root = screen.getByTestId('broadsheet-media')
     expect(root.className).toContain('w-[1600px]')
     expect(root.className).toContain('h-[900px]')
@@ -76,18 +85,18 @@ describe('broadsheet Media (The Listening Room)', () => {
     useTopTracks.mockReturnValue({ data: undefined })
     useRecentlyPlayed.mockReturnValue({ data: undefined })
     useForYou.mockReturnValue({ data: undefined })
-    expect(() => render(<Media />)).not.toThrow()
+    expect(() => renderMedia()).not.toThrow()
   })
 
   it('shows the Quick Dials tab by default', () => {
     useTopTracks.mockReturnValue({ data: [{ uri: 'u1', name: 'Amber Hours', artist: 'The Night Shift', album: null, image_url: null, play_count: 1, last_played: 0 }] })
-    render(<Media />)
+    renderMedia()
     expect(screen.getByText('Frequently played')).toBeInTheDocument()
   })
 
   it('switches to the For You tab on tap', () => {
     useForYou.mockReturnValue({ data: [{ name: 'Late Night Drive', description: 'Discover Weekly', uri: 'p1', image: null }] })
-    render(<Media />)
+    renderMedia()
     fireEvent.click(screen.getByText('For You'))
     expect(screen.getByText('Late Night Drive')).toBeInTheDocument()
   })
@@ -97,7 +106,7 @@ describe('broadsheet Media (The Listening Room)', () => {
       data: { tracks: [{ name: 'Amber Hours', uri: 't1', media_type: 'track', artist: 'The Night Shift', image: null }], artists: [], albums: [], playlists: [] },
       isFetching: false,
     })
-    render(<Media />)
+    renderMedia()
     fireEvent.change(screen.getByLabelText('Search music'), { target: { value: 'amber' } })
     await waitFor(() => expect(screen.getByText('Results')).toBeInTheDocument())
     expect(screen.queryByText('Frequently played')).not.toBeInTheDocument()
@@ -117,7 +126,7 @@ describe('broadsheet Media (The Listening Room)', () => {
       },
       ...musicActions,
     })
-    render(<Media />)
+    renderMedia()
     expect(screen.getByTestId('broadsheet-media')).toBeInTheDocument()
 
     fireEvent.click(screen.getByLabelText('Open now playing'))
@@ -127,5 +136,31 @@ describe('broadsheet Media (The Listening Room)', () => {
     fireEvent.click(screen.getByText('Close ✕'))
     expect(screen.getByTestId('broadsheet-media')).toBeInTheDocument()
     expect(screen.queryByTestId('broadsheet-centre-spread')).not.toBeInTheDocument()
+  })
+
+  it('opens a card\'s track-actions menu and dismisses it via the scrim', () => {
+    useTopTracks.mockReturnValue({
+      data: [{ uri: 'u1', name: 'Amber Hours', artist: 'The Night Shift', album: null, image_url: null, play_count: 1, last_played: 0 }],
+    })
+    renderMedia()
+    fireEvent.click(screen.getByLabelText('Track actions'))
+    expect(screen.getByText('Play just this track')).toBeInTheDocument()
+    expect(screen.getByTestId('broadsheet-menu-scrim')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('broadsheet-menu-scrim'))
+    expect(screen.queryByText('Play just this track')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('broadsheet-menu-scrim')).not.toBeInTheDocument()
+  })
+
+  it('closes an open track-actions menu when switching tabs', () => {
+    useTopTracks.mockReturnValue({
+      data: [{ uri: 'u1', name: 'Amber Hours', artist: 'The Night Shift', album: null, image_url: null, play_count: 1, last_played: 0 }],
+    })
+    renderMedia()
+    fireEvent.click(screen.getByLabelText('Track actions'))
+    expect(screen.getByTestId('broadsheet-menu-scrim')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByText('For You'))
+    expect(screen.queryByTestId('broadsheet-menu-scrim')).not.toBeInTheDocument()
   })
 })

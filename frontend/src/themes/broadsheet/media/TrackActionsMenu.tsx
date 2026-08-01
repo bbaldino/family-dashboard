@@ -1,4 +1,6 @@
+import { useCallback, useState } from 'react'
 import { CARD_BG } from './colors'
+import { visibleClipRect } from './visible-clip-rect'
 
 export interface TrackActionsMenuItem {
   label: string
@@ -29,6 +31,23 @@ export interface TrackActionsMenuGroup {
  * The first item of the first non-empty group gets the mock's highlight
  * treatment — rust text, weight 600, a faint rust wash — marking it the
  * default action (mock: `music-pages.jsx:280-323`).
+ *
+ * Opens downward (`top: 100%`) by default, matching the mock, but flips to
+ * open upward (`bottom: 100%`) when it wouldn't fit below — measured live
+ * against a fully packed Quick Dials shelf (`?scenario=packed`, all six
+ * rows), where a bottom-row card's menu opened downward ran well past both
+ * `Media.tsx`'s own shelf column (`overflow: hidden`, sized only for its
+ * capped rows) and the page canvas beneath it, clipped invisible either
+ * way. `visibleClipRect` finds the nearest ancestor that would actually do
+ * that clipping — measured from a callback ref rather than a `useLayoutEffect`
+ * (both run before the browser paints, so neither causes a visible jump,
+ * but a ref callback calling `setState` during commit is the idiomatic
+ * React way to do this; an effect body doing the same is a lint-flagged
+ * anti-pattern — `react-hooks/set-state-in-effect`). `useCallback` with no
+ * dependencies keeps the ref's identity stable across re-renders, so React
+ * only invokes it on mount and unmount, not on every render — this only
+ * ever needs to measure once, since a menu is a fresh mount every time it
+ * opens (`TrackActionsTrigger`'s own `{isOpen && ...}`).
  */
 export function TrackActionsMenu({
   kicker,
@@ -43,13 +62,25 @@ export function TrackActionsMenu({
   groups: TrackActionsMenuGroup[]
 }) {
   const visibleGroups = groups.filter((g) => g.items.length > 0)
+  const [openUpward, setOpenUpward] = useState(false)
+
+  const measureRef = useCallback((el: HTMLDivElement | null) => {
+    if (!el) return
+    const clip = visibleClipRect(el)
+    if (clip && el.getBoundingClientRect().bottom > clip.bottom) {
+      setOpenUpward(true)
+    }
+  }, [])
+
   if (visibleGroups.length === 0) return null
 
   return (
     <div
+      ref={measureRef}
+      data-testid="broadsheet-track-actions-menu"
       style={{
         position: 'absolute',
-        top: '100%',
+        ...(openUpward ? { bottom: '100%' } : { top: '100%' }),
         right: 0,
         width: 268,
         zIndex: 40,
