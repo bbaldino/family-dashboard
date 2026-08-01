@@ -1,10 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useIntegrationConfig } from '@/data/use-integration-config'
+import { activeScenario } from '@/data/scenario'
 import { musicIntegration } from './config'
 import type { MusicState, QueueState } from './types'
 import { MusicContext, defaultContextValue } from './music-context'
 import type { MusicContextValue, PlayOptions } from './music-context'
+import { musicStateFixtureFor } from './fixtures'
+
+/**
+ * Queue-state fixture for the active scenario, computed once at module load
+ * — `activeScenario` itself never changes at runtime (see `@/data/scenario`)
+ * — so every render sees the same reference and the SSE-connection effect
+ * below doesn't need it as a dependency. `undefined` when no scenario is
+ * active or it doesn't define a music fixture, in which case the provider
+ * connects to Music Assistant's real event stream exactly as before.
+ *
+ * This is the one place a fixture reaches `useMusic`: its state normally
+ * arrives over SSE, not a poll, so there's no per-hook queryFn to
+ * short-circuit the way the other music hooks do. Instead, when a fixture
+ * is defined, it seeds `queues` directly and the SSE effect below never
+ * opens a connection — the rest of the provider (the elapsed-time tick,
+ * `deriveActiveQueue`, the context shape) runs unmodified over that seeded
+ * state, so `useMusic` consumers can't tell the difference.
+ */
+const fixtureQueues: QueueState[] | undefined = musicStateFixtureFor(activeScenario)
 
 function deriveActiveQueue(queues: QueueState[], defaultPlayerId?: string): QueueState | null {
   // Playing or paused — unambiguous
@@ -29,16 +49,25 @@ interface MusicProviderProps {
 
 export function MusicProvider({ children }: MusicProviderProps) {
   const config = useIntegrationConfig(musicIntegration)
-  const isConfigured = Boolean(config?.service_url)
+  const isConfigured = Boolean(config?.service_url) || fixtureQueues !== undefined
 
-  const [queues, setQueues] = useState<QueueState[]>([])
-  const [isConnected, setIsConnected] = useState(false)
+  const [queues, setQueues] = useState<QueueState[]>(() => fixtureQueues ?? [])
+  // A fixture is "connected" from the start — there's no handshake to wait
+  // on — so seed this at init rather than setState-ing it inside the effect
+  // below (which would just be replaying the initializer synchronously).
+  const [isConnected, setIsConnected] = useState(() => fixtureQueues !== undefined)
   const [optimisticPlaying, setOptimisticPlaying] = useState<boolean | null>(null)
   const esRef = useRef<EventSource | null>(null)
   const volumeLockUntilRef = useRef<number>(0)
 
   useEffect(() => {
     if (!isConfigured) return
+
+    if (fixtureQueues) {
+      // A scenario fixture supplies queue state directly — no SSE connection.
+      // `queues` and `isConnected` are already seeded from it above.
+      return
+    }
 
     const es = new EventSource('/api/music/events')
     esRef.current = es

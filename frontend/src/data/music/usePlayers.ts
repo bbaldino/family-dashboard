@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
+import { activeScenario } from '@/data/scenario'
 import { musicIntegration } from './config'
+import { musicPlayersFixtureFor } from './fixtures'
 import type { Player } from './types'
 
 /** Raw shape returned by MA via the `/players` proxy (snake_case fields). */
@@ -43,7 +45,10 @@ interface UsePlayersOptions {
 export function usePlayers({ isOpen, pollingPaused }: UsePlayersOptions) {
   return useQuery({
     queryKey: ['music', 'players'],
-    queryFn: () => musicIntegration.api.get<RawPlayer[]>('/players'),
+    queryFn: () => {
+      const fixture = musicPlayersFixtureFor(activeScenario)
+      return fixture ? Promise.resolve(fixture) : musicIntegration.api.get<RawPlayer[]>('/players')
+    },
     enabled: isOpen,
     refetchInterval: isOpen && !pollingPaused ? 5_000 : false,
     refetchOnWindowFocus: false,

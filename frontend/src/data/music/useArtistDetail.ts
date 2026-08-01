@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
+import { activeScenario } from '@/data/scenario'
 import { musicIntegration } from './config'
+import { musicArtistDetailFixtureFor } from './fixtures'
 
 export interface ArtistTrack {
   uri: string
@@ -29,8 +31,12 @@ export interface ArtistDetail {
 export function useArtistDetail(uri: string) {
   return useQuery({
     queryKey: ['music', 'artist', uri],
-    queryFn: () =>
-      musicIntegration.api.get<ArtistDetail>(`/artist?uri=${encodeURIComponent(uri)}`),
+    queryFn: () => {
+      const fixture = musicArtistDetailFixtureFor(activeScenario, uri)
+      return fixture
+        ? Promise.resolve(fixture)
+        : musicIntegration.api.get<ArtistDetail>(`/artist?uri=${encodeURIComponent(uri)}`)
+    },
     staleTime: 10 * 60 * 1000,
     enabled: uri.length > 0,
   })

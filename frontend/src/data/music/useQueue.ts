@@ -1,7 +1,9 @@
 import { useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { activeScenario } from '@/data/scenario'
 import { musicIntegration } from './config'
 import { useMusic } from './useMusic'
+import { musicQueueItemsFixtureFor } from './fixtures'
 
 export interface QueueItem {
   queue_item_id?: string
@@ -28,7 +30,12 @@ export function useQueue(queueId: string | null | undefined) {
 
   const query = useQuery({
     queryKey: ['music', 'queue', queueId],
-    queryFn: () => musicIntegration.api.get<QueueItem[]>(`/queue/${queueId}`),
+    queryFn: () => {
+      const fixture = musicQueueItemsFixtureFor(activeScenario, queueId)
+      return fixture
+        ? Promise.resolve(fixture)
+        : musicIntegration.api.get<QueueItem[]>(`/queue/${queueId}`)
+    },
     enabled: !!queueId,
     refetchInterval: 30 * 1000,
   })

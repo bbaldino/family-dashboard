@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
+import { activeScenario } from '@/data/scenario'
 import { musicIntegration } from './config'
 import { parseSearchResponse } from './search'
+import { musicForYouFixtureFor } from './fixtures'
 
 export interface CuratedPlaylist {
   name: string
@@ -51,7 +53,10 @@ async function fetchCuratedPlaylists(): Promise<CuratedPlaylist[]> {
 export function useForYou() {
   return useQuery({
     queryKey: ['music', 'for-you'],
-    queryFn: fetchCuratedPlaylists,
+    queryFn: () => {
+      const fixture = musicForYouFixtureFor(activeScenario)
+      return fixture ? Promise.resolve(fixture) : fetchCuratedPlaylists()
+    },
     refetchInterval: 30 * 60 * 1000, // refresh every 30 min
     staleTime: 10 * 60 * 1000,
   })
