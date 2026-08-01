@@ -11,7 +11,7 @@ describe('broadsheetTheme', () => {
     })
   })
 
-  it('ships Home, the Datebook (calendar), and Media (The Listening Room) in this phase', () => {
-    expect(Object.keys(broadsheetTheme.screens)).toEqual(['home', 'calendar', 'media'])
+  it('ships Home, the Datebook (calendar), Media (The Listening Room), The Record, and The Profile in this phase', () => {
+    expect(Object.keys(broadsheetTheme.screens)).toEqual(['home', 'calendar', 'media', 'media.album', 'media.artist'])
   })
 })
