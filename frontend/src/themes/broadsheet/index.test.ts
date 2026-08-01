@@ -11,7 +11,7 @@ describe('broadsheetTheme', () => {
     })
   })
 
-  it('ships Home and nothing else in this phase', () => {
-    expect(Object.keys(broadsheetTheme.screens)).toEqual(['home'])
+  it('ships Home and the Datebook (calendar) in this phase', () => {
+    expect(Object.keys(broadsheetTheme.screens)).toEqual(['home', 'calendar'])
   })
 })
