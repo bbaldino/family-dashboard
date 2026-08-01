@@ -400,6 +400,64 @@ pub async fn get_album(
     }))
 }
 
+/// The function shape that pulls `artist_uri`/`album_uri` off an MA item —
+/// `extract_uris_from_track`/`extract_uris_from_album` below.
+type UriExtractor = fn(&serde_json::Value) -> (Option<String>, Option<String>);
+
+/// Which MA command (and payload extractor) resolves `artist_uri`/
+/// `album_uri` for a given play-log `media_type`, if any. Only tracks
+/// (artist + album) and albums (artist only — an album has no `album_uri`
+/// besides its own) are worth a lookup: a playlist has neither, and an
+/// artist has no `artist_uri` pointing elsewhere.
+fn uri_lookup_for(media_type: &str) -> Option<(&'static str, UriExtractor)> {
+    match media_type {
+        "track" => Some(("music/tracks/get_track", extract_uris_from_track)),
+        "album" => Some(("music/albums/get_album", extract_uris_from_album)),
+        _ => None,
+    }
+}
+
+/// Derive `artist_uri`/`album_uri` from a best-effort lookup's result.
+/// `extract` is `None` when the media type has no applicable lookup (see
+/// `uri_lookup_for`); `fetched` is `None` when the lookup itself failed.
+/// Either way this degrades to "neither resolved" — same as if the caller
+/// had supplied nothing.
+fn play_log_uris_from(
+    extract: Option<UriExtractor>,
+    fetched: Option<&serde_json::Value>,
+) -> (Option<String>, Option<String>) {
+    match (extract, fetched) {
+        (Some(extract), Some(item)) => extract(item),
+        _ => (None, None),
+    }
+}
+
+/// Resolve `artist_uri`/`album_uri` for an explicit play the client didn't
+/// already supply them for (see `routes::play`) — typically a quick-dial
+/// replay of a row that itself started with null URIs, which would
+/// otherwise propagate that null forward on every future replay. One MA
+/// round-trip per explicit play (a user action, not a render) is an
+/// acceptable cost. Best-effort: a failed or inapplicable lookup degrades to
+/// `(None, None)`, exactly as if the caller had supplied nothing — logging
+/// an explicit play must never fail because this enrichment did.
+pub(super) async fn resolve_play_log_uris(
+    client: &MaClient,
+    uri: &str,
+    media_type: &str,
+) -> (Option<String>, Option<String>) {
+    let lookup = uri_lookup_for(media_type);
+    let extract = lookup.map(|(_, extract)| extract);
+
+    let fetched = match lookup.and_then(|(cmd, _)| ma_item_args(uri).map(|args| (cmd, args))) {
+        Some((cmd, args)) => {
+            best_effort_command(client, cmd, args, "explicit-play URI enrichment").await
+        }
+        None => None,
+    };
+
+    play_log_uris_from(extract, fetched.as_ref())
+}
+
 /// One-off admin backfill: rows in `music_explicit_play_log` that predate the
 /// artist_uri/album_uri columns have NULL for both. This walks distinct URIs
 /// with missing values, asks MA for the item's full metadata, and updates
@@ -421,13 +479,9 @@ pub async fn backfill_uris(
     let mut failed: Vec<String> = Vec::new();
 
     for (uri, media_type) in &rows {
-        let (cmd, extract): (
-            &str,
-            fn(&serde_json::Value) -> (Option<String>, Option<String>),
-        ) = match media_type.as_str() {
-            "track" => ("music/tracks/get_track", extract_uris_from_track),
-            "album" => ("music/albums/get_album", extract_uris_from_album),
-            _ => continue,
+        let (cmd, extract) = match uri_lookup_for(media_type) {
+            Some(lookup) => lookup,
+            None => continue,
         };
 
         let args = match ma_item_args(uri) {
@@ -683,5 +737,104 @@ mod tests {
     #[test]
     fn artist_metadata_is_absent_when_the_best_effort_fetch_failed() {
         assert_eq!(artist_metadata_from(None), (Vec::new(), None));
+    }
+
+    #[test]
+    fn uri_lookup_for_track_uses_get_track() {
+        let (cmd, _) = uri_lookup_for("track").expect("track is applicable");
+        assert_eq!(cmd, "music/tracks/get_track");
+    }
+
+    #[test]
+    fn uri_lookup_for_album_uses_get_album() {
+        let (cmd, _) = uri_lookup_for("album").expect("album is applicable");
+        assert_eq!(cmd, "music/albums/get_album");
+    }
+
+    /// A playlist has neither an artist_uri nor an album_uri of its own —
+    /// not a gap to fill, so no lookup applies.
+    #[test]
+    fn uri_lookup_for_playlist_is_not_applicable() {
+        assert!(uri_lookup_for("playlist").is_none());
+    }
+
+    /// An artist has no artist_uri pointing elsewhere and no album_uri —
+    /// not a gap to fill, so no lookup applies.
+    #[test]
+    fn uri_lookup_for_artist_is_not_applicable() {
+        assert!(uri_lookup_for("artist").is_none());
+    }
+
+    #[test]
+    fn uri_lookup_for_unknown_media_type_is_not_applicable() {
+        assert!(uri_lookup_for("").is_none());
+        assert!(uri_lookup_for("radio").is_none());
+    }
+
+    /// Trimmed capture of a real `music/tracks/get_track` response — see the
+    /// fixture's own `_comment`. Confirms `artists[].uri`/`album.uri` are
+    /// present at get_track's top level, the same shape `extract_uris_from_track`
+    /// already reads off `album_tracks`/`get_album` entries.
+    const REAL_GET_TRACK_FIXTURE: &str =
+        include_str!("../../../tests/fixtures/music_get_track_sample.json");
+
+    #[test]
+    fn extract_uris_from_track_reads_real_captured_payload() {
+        let track: serde_json::Value = serde_json::from_str(REAL_GET_TRACK_FIXTURE).unwrap();
+        let (artist_uri, album_uri) = extract_uris_from_track(&track);
+        assert_eq!(
+            artist_uri.as_deref(),
+            Some("spotify--yC8brUbw://artist/1GhPHrq36VKCY3ucVaZCfo")
+        );
+        assert_eq!(
+            album_uri.as_deref(),
+            Some("spotify--yC8brUbw://album/3XUVUh6hisN43r2eZAOJRD")
+        );
+    }
+
+    #[test]
+    fn extract_uris_from_album_reads_real_captured_payload() {
+        let album: serde_json::Value = serde_json::from_str(REAL_GET_ALBUM_FIXTURE).unwrap();
+        let (artist_uri, album_uri) = extract_uris_from_album(&album);
+        assert_eq!(
+            artist_uri.as_deref(),
+            Some("spotify--yC8brUbw://artist/1GhPHrq36VKCY3ucVaZCfo")
+        );
+        // An album has no album_uri of its own to resolve.
+        assert_eq!(album_uri, None);
+    }
+
+    /// "Not applicable for this media type" branch: no extractor at all, so
+    /// the lookup is never even attempted.
+    #[test]
+    fn play_log_uris_from_is_absent_when_not_applicable() {
+        let fetched = serde_json::json!({ "artists": [{ "uri": "spotify--x://artist/1" }] });
+        assert_eq!(play_log_uris_from(None, Some(&fetched)), (None, None));
+    }
+
+    /// "Lookup failed" branch: an applicable extractor, but the best-effort
+    /// MA fetch itself returned nothing.
+    #[test]
+    fn play_log_uris_from_is_absent_when_the_lookup_failed() {
+        assert_eq!(
+            play_log_uris_from(Some(extract_uris_from_track), None),
+            (None, None)
+        );
+    }
+
+    /// Success branch: an applicable extractor and a fetched item.
+    #[test]
+    fn play_log_uris_from_extracts_when_lookup_succeeded() {
+        let track: serde_json::Value = serde_json::from_str(REAL_GET_TRACK_FIXTURE).unwrap();
+        let (artist_uri, album_uri) =
+            play_log_uris_from(Some(extract_uris_from_track), Some(&track));
+        assert_eq!(
+            artist_uri.as_deref(),
+            Some("spotify--yC8brUbw://artist/1GhPHrq36VKCY3ucVaZCfo")
+        );
+        assert_eq!(
+            album_uri.as_deref(),
+            Some("spotify--yC8brUbw://album/3XUVUh6hisN43r2eZAOJRD")
+        );
     }
 }

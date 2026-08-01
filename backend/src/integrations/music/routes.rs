@@ -6,11 +6,23 @@ use sqlx::SqlitePool;
 use crate::error::AppError;
 use crate::integrations::IntegrationConfig;
 
+use super::browse;
 use super::proxy::MaClient;
 use super::types::{
     GroupRequest, ImageProxyQuery, PlayRequest, QueueCommand, SearchQuery, UngroupRequest,
     VolumeRequest,
 };
+
+/// Whether an explicit play's request already carries enough to skip the
+/// URI-enrichment lookup. True the moment the client supplied either URI —
+/// a play from search, an artist page, or an album page always does (an
+/// album play only ever has `artist_uri`, since an album has no `album_uri`
+/// of its own — that's still "supplied", not a gap). False only when the
+/// client gave neither, the common case for a quick-dial replay of a row
+/// that itself started null.
+fn client_supplied_uris(artist_uri: &Option<String>, album_uri: &Option<String>) -> bool {
+    artist_uri.is_some() || album_uri.is_some()
+}
 
 #[derive(serde::Deserialize)]
 pub struct TopTracksQuery {
@@ -150,6 +162,21 @@ pub async fn play(
 
     // Log the explicit selection so Recently Played reflects what the user
     // actually chose, not whatever ESPN/MA auto-advanced to next.
+    //
+    // If the client already supplied artist_uri/album_uri, trust those and
+    // skip the lookup. Otherwise this is very often a quick-dial replay of a
+    // row that itself started with null URIs — without resolving them here,
+    // that null just propagates forward through every future replay. One MA
+    // round-trip per explicit play (a user action, not a render) is an
+    // acceptable cost; playback has already been kicked off above, so the
+    // lookup can't delay it.
+    let (artist_uri, album_uri) = if client_supplied_uris(&req.artist_uri, &req.album_uri) {
+        (req.artist_uri.clone(), req.album_uri.clone())
+    } else {
+        let media_type = req.media_type.as_deref().unwrap_or("");
+        browse::resolve_play_log_uris(&client, &req.uri, media_type).await
+    };
+
     let _ = sqlx::query(
         "INSERT INTO music_explicit_play_log \
          (uri, media_type, name, artist, album, image_url, artist_uri, album_uri) \
@@ -161,8 +188,8 @@ pub async fn play(
     .bind(req.artist.as_deref().unwrap_or(""))
     .bind(&req.album)
     .bind(&req.image_url)
-    .bind(&req.artist_uri)
-    .bind(&req.album_uri)
+    .bind(&artist_uri)
+    .bind(&album_uri)
     .execute(&pool)
     .await;
 
@@ -513,4 +540,33 @@ pub async fn proxy_image(
         .map_err(|e| AppError::Internal(format!("Image read failed: {}", e)))?;
 
     Ok(([(axum::http::header::CONTENT_TYPE, content_type)], bytes))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn client_supplied_uris_true_when_artist_uri_present() {
+        assert!(client_supplied_uris(
+            &Some("spotify--x://artist/1".to_string()),
+            &None
+        ));
+    }
+
+    /// Either URI alone counts as "supplied" — e.g. an album play only ever
+    /// carries artist_uri (an album has no album_uri of its own), which is
+    /// still a real value the client gave us, not a gap to fill.
+    #[test]
+    fn client_supplied_uris_true_when_only_album_uri_present() {
+        assert!(client_supplied_uris(
+            &None,
+            &Some("spotify--x://album/1".to_string())
+        ));
+    }
+
+    #[test]
+    fn client_supplied_uris_false_when_neither_present() {
+        assert!(!client_supplied_uris(&None, &None));
+    }
 }

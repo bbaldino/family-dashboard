@@ -1,0 +1,35 @@
+{
+  "_comment": "Trimmed capture of a real music/tracks/get_track response from music.home:8095 (2026-08-01), for 'Go' by The Chemical Brothers (feat. Q-Tip) off Born In The Echoes. Only fields the explicit-play URI enrichment reads were kept (provider_mappings, external_ids, favorite, etc. dropped). Confirms artists[].uri and album.uri are present at get_track's top level, same shape album_tracks/get_album already use.",
+  "item_id": "2Xhd1kYKj2aee7JR3nIlRe",
+  "provider": "spotify--yC8brUbw",
+  "name": "Go",
+  "uri": "spotify--yC8brUbw://track/2Xhd1kYKj2aee7JR3nIlRe",
+  "media_type": "track",
+  "duration": 260,
+  "track_number": 2,
+  "disc_number": 1,
+  "artists": [
+    {
+      "item_id": "1GhPHrq36VKCY3ucVaZCfo",
+      "provider": "spotify--yC8brUbw",
+      "name": "The Chemical Brothers",
+      "uri": "spotify--yC8brUbw://artist/1GhPHrq36VKCY3ucVaZCfo",
+      "media_type": "artist"
+    },
+    {
+      "item_id": "3ZotbHeyVQKxQCPDJuQ4SU",
+      "provider": "spotify--yC8brUbw",
+      "name": "Q-Tip",
+      "uri": "spotify--yC8brUbw://artist/3ZotbHeyVQKxQCPDJuQ4SU",
+      "media_type": "artist"
+    }
+  ],
+  "album": {
+    "item_id": "3XUVUh6hisN43r2eZAOJRD",
+    "provider": "spotify--yC8brUbw",
+    "name": "Born In The Echoes",
+    "uri": "spotify--yC8brUbw://album/3XUVUh6hisN43r2eZAOJRD",
+    "media_type": "album",
+    "year": 2015
+  }
+}
