@@ -1,0 +1,24 @@
+{
+  "_comment": "Trimmed capture of a real music/albums/get_album response from music.home:8095 (2026-08-01), for Push The Button by The Chemical Brothers. Only fields the album reshaping reads were kept (provider_mappings, external_ids, favorite, etc. dropped). metadata.description is genuinely null here — MA only enriches items in the library, and this household's library is empty. metadata.label is genuinely populated (Virgin Records) — verified live, not synthesized.",
+  "item_id": "715rku55lldqdw9WiEuPgi",
+  "provider": "spotify--yC8brUbw",
+  "name": "Push The Button",
+  "uri": "spotify--yC8brUbw://album/715rku55lldqdw9WiEuPgi",
+  "media_type": "album",
+  "metadata": {
+    "description": null,
+    "genres": [],
+    "copyright": "© 2005 Virgin Records Limited",
+    "label": "Virgin Records"
+  },
+  "year": 2005,
+  "artists": [
+    {
+      "item_id": "1GhPHrq36VKCY3ucVaZCfo",
+      "provider": "spotify--yC8brUbw",
+      "name": "The Chemical Brothers",
+      "uri": "spotify--yC8brUbw://artist/1GhPHrq36VKCY3ucVaZCfo",
+      "media_type": "artist"
+    }
+  ]
+}

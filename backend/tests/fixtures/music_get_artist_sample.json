@@ -1,0 +1,13 @@
+{
+  "_comment": "Trimmed capture of a real music/artists/get_artist response from music.home:8095 (2026-08-01), for The Chemical Brothers. Only fields the artist reshaping reads were kept. metadata.genres is genuinely populated (verified live) and metadata.description is genuinely null even with lazy:false, force_refresh:true on the live probe — MA only enriches items in the library, and this household's library is empty.",
+  "item_id": "1GhPHrq36VKCY3ucVaZCfo",
+  "provider": "spotify--yC8brUbw",
+  "name": "The Chemical Brothers",
+  "uri": "spotify--yC8brUbw://artist/1GhPHrq36VKCY3ucVaZCfo",
+  "media_type": "artist",
+  "metadata": {
+    "description": null,
+    "genres": ["breakbeat", "big beat", "electronic", "alternative dance"],
+    "label": null
+  }
+}

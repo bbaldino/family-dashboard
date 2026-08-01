@@ -1,0 +1,64 @@
+{
+  "_comment": "Trimmed capture of the first two entries of a real music/albums/album_tracks response from music.home:8095 (2026-08-01), for Push The Button by The Chemical Brothers. Track 1 (Galvanize) genuinely carries two artists — The Chemical Brothers and Q-Tip — which is what the frontend's 'feat. Q-Tip' line renders; track 2 (The Boxer) carries only the album's primary artist, the ordinary single-artist case. Only fields track_from reads were kept.",
+  "tracks": [
+    {
+      "item_id": "4bz7uB4edifWKJXSDxwHcs",
+      "provider": "spotify--yC8brUbw",
+      "name": "Galvanize",
+      "uri": "spotify--yC8brUbw://track/4bz7uB4edifWKJXSDxwHcs",
+      "media_type": "track",
+      "duration": 393,
+      "track_number": 1,
+      "artists": [
+        {
+          "item_id": "1GhPHrq36VKCY3ucVaZCfo",
+          "provider": "spotify--yC8brUbw",
+          "name": "The Chemical Brothers",
+          "uri": "spotify--yC8brUbw://artist/1GhPHrq36VKCY3ucVaZCfo",
+          "media_type": "artist"
+        },
+        {
+          "item_id": "3ZotbHeyVQKxQCPDJuQ4SU",
+          "provider": "spotify--yC8brUbw",
+          "name": "Q-Tip",
+          "uri": "spotify--yC8brUbw://artist/3ZotbHeyVQKxQCPDJuQ4SU",
+          "media_type": "artist"
+        }
+      ],
+      "album": {
+        "item_id": "715rku55lldqdw9WiEuPgi",
+        "provider": "spotify--yC8brUbw",
+        "name": "Push The Button",
+        "uri": "spotify--yC8brUbw://album/715rku55lldqdw9WiEuPgi",
+        "media_type": "album",
+        "year": 2005
+      }
+    },
+    {
+      "item_id": "1EUeDFq2zNP784GPaRs9aH",
+      "provider": "spotify--yC8brUbw",
+      "name": "The Boxer",
+      "uri": "spotify--yC8brUbw://track/1EUeDFq2zNP784GPaRs9aH",
+      "media_type": "track",
+      "duration": 247,
+      "track_number": 2,
+      "artists": [
+        {
+          "item_id": "1GhPHrq36VKCY3ucVaZCfo",
+          "provider": "spotify--yC8brUbw",
+          "name": "The Chemical Brothers",
+          "uri": "spotify--yC8brUbw://artist/1GhPHrq36VKCY3ucVaZCfo",
+          "media_type": "artist"
+        }
+      ],
+      "album": {
+        "item_id": "715rku55lldqdw9WiEuPgi",
+        "provider": "spotify--yC8brUbw",
+        "name": "Push The Button",
+        "uri": "spotify--yC8brUbw://album/715rku55lldqdw9WiEuPgi",
+        "media_type": "album",
+        "year": 2005
+      }
+    }
+  ]
+}
