@@ -340,20 +340,34 @@ export function musicForYouFixtureFor(scenario: string | null): CuratedPlaylist[
 
 // ─── players ─────────────────────────────────────────────────────
 
+// `fixture-kitchen` doubles as both the packed scenario's playing queue
+// (`packedQueues` above) and the room-pill anchor — the household's real
+// `music.default_player` names the Kitchen Sonos too (see the room-grouping
+// brief), so this is the fixture's own analogue of that same anchor.
+const BEDROOM_ID = 'fixture-bedroom'
+const OFFICE_DISPLAY_ID = 'fixture-office-display'
+
 function packedPlayers(): RawPlayer[] {
   return [
     {
+      // The anchor. Already grouped with the Bedroom (`group_members`
+      // includes both itself and the Bedroom — MA's leader-reported list
+      // always includes the leader's own id, see PlayerPicker.tsx's own
+      // comment on why that list, not `synced_to`, is the reliable
+      // membership signal), and can additionally group with the Living
+      // Room, which hasn't joined.
       player_id: KITCHEN_QUEUE_ID,
       display_name: 'Kitchen',
       state: 'playing',
       available: true,
       volume_level: 45,
-      group_members: [],
+      group_members: [KITCHEN_QUEUE_ID, BEDROOM_ID],
       synced_to: null,
-      can_group_with: [LIVING_ROOM_QUEUE_ID],
-      group_volume: null,
+      can_group_with: [LIVING_ROOM_QUEUE_ID, BEDROOM_ID],
+      group_volume: 38,
     },
     {
+      // A joinable room: can group with the anchor, hasn't yet.
       player_id: LIVING_ROOM_QUEUE_ID,
       display_name: 'Living Room',
       state: 'paused',
@@ -362,6 +376,34 @@ function packedPlayers(): RawPlayer[] {
       group_members: [],
       synced_to: null,
       can_group_with: [KITCHEN_QUEUE_ID],
+      group_volume: null,
+    },
+    {
+      // An already-joined room. `synced_to` is set too (unlike real MA,
+      // which rarely populates it on followers — see PlayerPicker.tsx's
+      // comment again) so this fixture also exercises that signal.
+      player_id: BEDROOM_ID,
+      display_name: 'Bedroom',
+      state: 'playing',
+      available: true,
+      volume_level: 38,
+      group_members: [],
+      synced_to: KITCHEN_QUEUE_ID,
+      can_group_with: [KITCHEN_QUEUE_ID],
+      group_volume: null,
+    },
+    {
+      // Can't group with the anchor at all — the fixture's analogue of the
+      // household's real Chromecast displays, which report no groupable
+      // players (see the room-grouping brief).
+      player_id: OFFICE_DISPLAY_ID,
+      display_name: 'Office Display',
+      state: 'idle',
+      available: true,
+      volume_level: 50,
+      group_members: [],
+      synced_to: null,
+      can_group_with: [],
       group_volume: null,
     },
   ]

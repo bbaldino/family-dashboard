@@ -12,36 +12,22 @@ function renderMedia() {
 }
 
 const useMusic = vi.hoisted(() => vi.fn())
-const usePlayers = vi.hoisted(() => vi.fn())
+const useRoomPills = vi.hoisted(() => vi.fn())
 const useTopTracks = vi.hoisted(() => vi.fn())
 const useRecentlyPlayed = vi.hoisted(() => vi.fn())
 const useForYou = vi.hoisted(() => vi.fn())
 const useSearch = vi.hoisted(() => vi.fn())
 const useQueue = vi.hoisted(() => vi.fn())
-const normalizePlayer = vi.hoisted(() =>
-  vi.fn((raw) => ({
-    playerId: raw.player_id,
-    displayName: raw.display_name,
-    state: raw.state ?? 'idle',
-    available: true,
-    volumeLevel: raw.volume_level ?? null,
-    groupMembers: [],
-    syncedTo: null,
-    canGroupWith: [],
-    groupVolume: null,
-  })),
-)
 const getImageUrl = vi.hoisted(() => vi.fn(() => null))
 
 vi.mock('@/data/music', () => ({
   useMusic,
-  usePlayers,
+  useRoomPills,
   useTopTracks,
   useRecentlyPlayed,
   useForYou,
   useSearch,
   useQueue,
-  normalizePlayer,
   getImageUrl,
 }))
 
@@ -59,7 +45,7 @@ const musicActions = {
 describe('broadsheet Media (The Listening Room)', () => {
   beforeEach(() => {
     useMusic.mockReturnValue({ state: { queues: [], activeQueue: null }, ...musicActions })
-    usePlayers.mockReturnValue({ data: [] })
+    useRoomPills.mockReturnValue({ pills: [], toggle: vi.fn() })
     useTopTracks.mockReturnValue({ data: [] })
     useRecentlyPlayed.mockReturnValue({ data: [] })
     useForYou.mockReturnValue({ data: [] })
@@ -81,7 +67,6 @@ describe('broadsheet Media (The Listening Room)', () => {
 
   it('survives every hook returning undefined on first paint', () => {
     useMusic.mockReturnValue({ state: { queues: [], activeQueue: null }, ...musicActions })
-    usePlayers.mockReturnValue({ data: undefined })
     useTopTracks.mockReturnValue({ data: undefined })
     useRecentlyPlayed.mockReturnValue({ data: undefined })
     useForYou.mockReturnValue({ data: undefined })

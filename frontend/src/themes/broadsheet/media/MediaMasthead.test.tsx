@@ -1,27 +1,20 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { MediaMasthead } from './MediaMasthead'
 
 const useMusic = vi.hoisted(() => vi.fn())
-const usePlayers = vi.hoisted(() => vi.fn())
-const normalizePlayer = vi.hoisted(() =>
-  vi.fn((raw) => ({
-    playerId: raw.player_id,
-    displayName: raw.display_name,
-    state: raw.state ?? 'idle',
-    available: true,
-    volumeLevel: raw.volume_level ?? null,
-    groupMembers: [],
-    syncedTo: null,
-    canGroupWith: [],
-    groupVolume: null,
-  })),
-)
-vi.mock('@/data/music', () => ({ useMusic, usePlayers, normalizePlayer }))
+const useRoomPills = vi.hoisted(() => vi.fn())
+vi.mock('@/data/music', () => ({ useMusic, useRoomPills }))
+
+const kitchen = { playerId: 'kitchen', displayName: 'Kitchen', state: 'playing', available: true, volumeLevel: 45, groupMembers: ['kitchen'], syncedTo: null, canGroupWith: ['living'], groupVolume: null }
+const living = { playerId: 'living', displayName: 'Living Room', state: 'idle', available: true, volumeLevel: 20, groupMembers: [], syncedTo: null, canGroupWith: ['kitchen'], groupVolume: null }
 
 describe('MediaMasthead', () => {
+  const toggle = vi.fn()
+
   beforeEach(() => {
-    usePlayers.mockReturnValue({ data: [] })
+    toggle.mockClear()
+    useRoomPills.mockReturnValue({ pills: [], toggle })
   })
 
   it('shows a written fallback when nothing is playing anywhere', () => {
@@ -40,25 +33,61 @@ describe('MediaMasthead', () => {
     expect(screen.getByText('Now playing in')).toBeInTheDocument()
   })
 
-  it('renders a room pill per player and highlights the active one', () => {
-    useMusic.mockReturnValue({
-      state: { queues: [], activeQueue: { queueId: 'kitchen', displayName: 'Kitchen', state: 'playing', currentItem: null, volumeLevel: 50 } },
-    })
-    usePlayers.mockReturnValue({
-      data: [
-        { player_id: 'kitchen', display_name: 'Kitchen', state: 'playing' },
-        { player_id: 'living', display_name: 'Living Room', state: 'idle' },
+  it('renders the anchor pill active and not tappable, and a joinable room outlined and tappable', () => {
+    useMusic.mockReturnValue({ state: { queues: [], activeQueue: null } })
+    useRoomPills.mockReturnValue({
+      pills: [
+        { player: kitchen, isAnchor: true, joined: true, pending: false },
+        { player: living, isAnchor: false, joined: false, pending: false },
       ],
+      toggle,
     })
     render(<MediaMasthead />)
-    const active = screen.getByText('Kitchen')
-    const inactive = screen.getByText('Living Room')
-    expect(active.style.background).toBe('var(--ink)')
-    expect(inactive.style.background).toBe('')
+
+    const anchorPill = screen.getByText('Kitchen')
+    expect(anchorPill.style.background).toBe('var(--ink)')
+    expect(anchorPill.tagName).toBe('SPAN')
+
+    const roomPill = screen.getByRole('button', { name: 'Living Room' })
+    expect(roomPill.style.background).toBe('')
+    fireEvent.click(roomPill)
+    expect(toggle).toHaveBeenCalledWith('living')
   })
 
-  it('shows a dash when the players list is empty', () => {
+  it('shows the joined room filled and toggling it calls toggle with its id', () => {
     useMusic.mockReturnValue({ state: { queues: [], activeQueue: null } })
+    const bedroom = { ...living, playerId: 'bedroom', displayName: 'Bedroom' }
+    useRoomPills.mockReturnValue({
+      pills: [
+        { player: kitchen, isAnchor: true, joined: true, pending: false },
+        { player: bedroom, isAnchor: false, joined: true, pending: false },
+      ],
+      toggle,
+    })
+    render(<MediaMasthead />)
+    const joinedPill = screen.getByRole('button', { name: 'Bedroom' })
+    expect(joinedPill.style.background).toBe('var(--ink)')
+    fireEvent.click(joinedPill)
+    expect(toggle).toHaveBeenCalledWith('bedroom')
+  })
+
+  it('does not make a pending room tappable', () => {
+    useMusic.mockReturnValue({ state: { queues: [], activeQueue: null } })
+    useRoomPills.mockReturnValue({
+      pills: [
+        { player: kitchen, isAnchor: true, joined: true, pending: false },
+        { player: living, isAnchor: false, joined: false, pending: true },
+      ],
+      toggle,
+    })
+    render(<MediaMasthead />)
+    expect(screen.queryByRole('button', { name: 'Living Room' })).not.toBeInTheDocument()
+    expect(screen.getByText('Living Room').tagName).toBe('SPAN')
+  })
+
+  it('shows a dash when there are no pills — no anchor configured, no players yet, or the anchor is absent from the players list', () => {
+    useMusic.mockReturnValue({ state: { queues: [], activeQueue: null } })
+    useRoomPills.mockReturnValue({ pills: [], toggle })
     render(<MediaMasthead />)
     expect(screen.getByText('—')).toBeInTheDocument()
   })

@@ -3,22 +3,9 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { CentreSpread } from './CentreSpread'
 
 const useMusic = vi.hoisted(() => vi.fn())
-const usePlayers = vi.hoisted(() => vi.fn())
+const useRoomPills = vi.hoisted(() => vi.fn())
 const useQueue = vi.hoisted(() => vi.fn())
-const normalizePlayer = vi.hoisted(() =>
-  vi.fn((raw) => ({
-    playerId: raw.player_id,
-    displayName: raw.display_name,
-    state: raw.state ?? 'idle',
-    available: true,
-    volumeLevel: raw.volume_level ?? null,
-    groupMembers: [],
-    syncedTo: null,
-    canGroupWith: [],
-    groupVolume: null,
-  })),
-)
-vi.mock('@/data/music', () => ({ useMusic, usePlayers, useQueue, normalizePlayer }))
+vi.mock('@/data/music', () => ({ useMusic, useRoomPills, useQueue }))
 
 const pause = vi.fn()
 const resume = vi.fn()
@@ -53,7 +40,7 @@ describe('CentreSpread', () => {
     next.mockClear()
     previous.mockClear()
     setVolume.mockClear()
-    usePlayers.mockReturnValue({ data: [] })
+    useRoomPills.mockReturnValue({ pills: [], toggle: vi.fn() })
     useQueue.mockReturnValue({ data: [] })
   })
 

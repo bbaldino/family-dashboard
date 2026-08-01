@@ -1,5 +1,5 @@
-import { usePlayers, normalizePlayer } from '@/data/music'
-import type { Player, QueueState, TrackInfo } from '@/data/music'
+import { useRoomPills } from '@/data/music'
+import type { QueueState, TrackInfo } from '@/data/music'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { RoomPill } from './RoomPill'
 import { VolumeSlider } from './VolumeSlider'
@@ -10,10 +10,6 @@ import { sourceLabel } from './labels'
  *  these four rows always render, so a missing value gets a dash rather
  *  than making the row disappear and shifting the ones below it. */
 const EMPTY = '—'
-
-function isActiveRoom(player: Player, activeQueue: QueueState): boolean {
-  return player.playerId === activeQueue.queueId || player.displayName === activeQueue.displayName
-}
 
 const dtStyle = {
   fontFamily: 'var(--font-mono)',
@@ -42,13 +38,15 @@ const ddStyle = {
  * four for the next reads as broken, so this ignores the field entirely
  * rather than rendering it only when it happens to be present.
  *
- * Room pills reuse `RoomPill` — the same component `MediaMasthead` renders
- * for the Media screen's own "Rooms" row, per the design brief's "Room
- * pills: display-only, matching the Media screen". Unlike that masthead
- * row, this column has no shared baseline to protect (`MastheadFrame`'s
- * `align-items: end` doesn't reach this far down the page), so the pills
- * wrap onto as many lines as the household's player count needs instead of
- * silently capping at a fixed count.
+ * Room pills reuse `RoomPill` and `useRoomPills` — the same hook
+ * `MediaMasthead` uses for the Media screen's own "Rooms" row, so this
+ * column's join/leave behaviour can't drift from that one (see the
+ * room-grouping brief's explicit call-out that a difference between the two
+ * screens would be a bug). Unlike that masthead row, this column has no
+ * shared baseline to protect (`MastheadFrame`'s `align-items: end` doesn't
+ * reach this far down the page), so the pills wrap onto as many lines as
+ * the household's player count needs instead of silently capping at a
+ * fixed count.
  */
 export function CentreSpreadCredits({
   track,
@@ -59,8 +57,7 @@ export function CentreSpreadCredits({
   activeQueue: QueueState
   onSetVolume: (queueId: string, level: number) => void
 }) {
-  const { data: rawPlayers } = usePlayers({ isOpen: true, pollingPaused: false })
-  const players = (rawPlayers ?? []).map(normalizePlayer)
+  const { pills, toggle } = useRoomPills()
   const volume = activeQueue.volumeLevel ?? 0
 
   const rows: [string, string][] = [
@@ -95,13 +92,18 @@ export function CentreSpreadCredits({
 
       <div style={{ marginTop: 'auto', paddingTop: 14, borderTop: '1px solid var(--rule)' }}>
         <Kicker color="var(--ink-muted)">Playing in</Kicker>
-        {players.length > 0 ? (
+        {pills.length > 0 ? (
           <div
             className="flex flex-wrap uppercase"
             style={{ gap: 5, marginTop: 6, marginBottom: 14, fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.16em' }}
           >
-            {players.map((player) => (
-              <RoomPill key={player.playerId} label={player.displayName} active={isActiveRoom(player, activeQueue)} />
+            {pills.map((pill) => (
+              <RoomPill
+                key={pill.player.playerId}
+                label={pill.player.displayName}
+                active={pill.joined}
+                onToggle={pill.isAnchor || pill.pending ? undefined : () => toggle(pill.player.playerId)}
+              />
             ))}
           </div>
         ) : (

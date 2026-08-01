@@ -128,6 +128,45 @@ describe('musicPlayersFixtureFor', () => {
     expect(players.length).toBeGreaterThanOrEqual(2)
     expect(players.some((p) => p.state === 'playing')).toBe(true)
   })
+
+  // The room-grouping brief's four required roles: an anchor, a joinable
+  // room, an already-joined room, and a room that can't group at all —
+  // otherwise there's no way to exercise every pill state broadsheet's
+  // room pills need to render (see useRoomPills.test.tsx).
+  it('packed scenario has an anchor (Kitchen) grouped with the Bedroom and groupable with the Living Room', () => {
+    const players = musicPlayersFixtureFor('packed')!
+    const kitchen = players.find((p) => p.display_name === 'Kitchen')!
+    expect(kitchen.can_group_with).toContain(
+      players.find((p) => p.display_name === 'Living Room')!.player_id,
+    )
+    expect(kitchen.group_members).toContain(
+      players.find((p) => p.display_name === 'Bedroom')!.player_id,
+    )
+  })
+
+  it('packed scenario has a joinable room (Living Room) that has not joined the anchor', () => {
+    const players = musicPlayersFixtureFor('packed')!
+    const kitchen = players.find((p) => p.display_name === 'Kitchen')!
+    const livingRoom = players.find((p) => p.display_name === 'Living Room')!
+    expect(livingRoom.can_group_with).toContain(kitchen.player_id)
+    expect(kitchen.group_members).not.toContain(livingRoom.player_id)
+  })
+
+  it('packed scenario has an already-joined room (Bedroom) readable via both group_members and synced_to', () => {
+    const players = musicPlayersFixtureFor('packed')!
+    const kitchen = players.find((p) => p.display_name === 'Kitchen')!
+    const bedroom = players.find((p) => p.display_name === 'Bedroom')!
+    expect(kitchen.group_members).toContain(bedroom.player_id)
+    expect(bedroom.synced_to).toBe(kitchen.player_id)
+  })
+
+  it('packed scenario has a room that cannot group with the anchor at all', () => {
+    const players = musicPlayersFixtureFor('packed')!
+    const kitchen = players.find((p) => p.display_name === 'Kitchen')!
+    const officeDisplay = players.find((p) => p.display_name === 'Office Display')!
+    expect(officeDisplay.can_group_with).toEqual([])
+    expect(kitchen.can_group_with).not.toContain(officeDisplay.player_id)
+  })
 })
 
 describe('musicArtistDetailFixtureFor / musicAlbumDetailFixtureFor', () => {

@@ -2,21 +2,11 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { CentreSpreadCredits } from './CentreSpreadCredits'
 
-const usePlayers = vi.hoisted(() => vi.fn())
-const normalizePlayer = vi.hoisted(() =>
-  vi.fn((raw) => ({
-    playerId: raw.player_id,
-    displayName: raw.display_name,
-    state: raw.state ?? 'idle',
-    available: true,
-    volumeLevel: raw.volume_level ?? null,
-    groupMembers: [],
-    syncedTo: null,
-    canGroupWith: [],
-    groupVolume: null,
-  })),
-)
-vi.mock('@/data/music', () => ({ usePlayers, normalizePlayer }))
+const useRoomPills = vi.hoisted(() => vi.fn())
+vi.mock('@/data/music', () => ({ useRoomPills }))
+
+const kitchen = { playerId: 'kitchen', displayName: 'Kitchen', state: 'playing', available: true, volumeLevel: 45, groupMembers: ['kitchen'], syncedTo: null, canGroupWith: ['living'], groupVolume: null }
+const living = { playerId: 'living', displayName: 'Living Room', state: 'idle', available: true, volumeLevel: 20, groupMembers: [], syncedTo: null, canGroupWith: ['kitchen'], groupVolume: null }
 
 const activeQueue = {
   queueId: 'kitchen',
@@ -42,10 +32,12 @@ const fullTrack = {
 
 describe('CentreSpreadCredits', () => {
   const onSetVolume = vi.fn()
+  const toggle = vi.fn()
 
   beforeEach(() => {
     onSetVolume.mockClear()
-    usePlayers.mockReturnValue({ data: [] })
+    toggle.mockClear()
+    useRoomPills.mockReturnValue({ pills: [], toggle })
   })
 
   it('renders exactly four credit rows — Artist, Album, Released, Source — never a fifth Label row', () => {
@@ -68,31 +60,37 @@ describe('CentreSpreadCredits', () => {
 
   it('falls back to a dash for missing album/year/source without dropping the row', () => {
     const sparseTrack = { ...fullTrack, album: null, year: null, source: null }
-    // A player list, so the only dashes are the three credit-row fallbacks —
-    // not also the empty-players "Playing in" fallback this file's other
-    // tests exercise separately.
-    usePlayers.mockReturnValue({ data: [{ player_id: 'kitchen', display_name: 'Kitchen', state: 'playing' }] })
+    // A non-empty pill list, so the only dashes are the three credit-row
+    // fallbacks — not also the empty-pills "Playing in" fallback this
+    // file's other tests exercise separately.
+    useRoomPills.mockReturnValue({ pills: [{ player: kitchen, isAnchor: true, joined: true, pending: false }], toggle })
     render(<CentreSpreadCredits track={sparseTrack} activeQueue={activeQueue} onSetVolume={onSetVolume} />)
     const dashes = screen.getAllByText('—')
     // Album, Released, Source all fall back — three dashes among the four rows.
     expect(dashes.length).toBe(3)
   })
 
-  it('renders a room pill per player and highlights the active room', () => {
-    usePlayers.mockReturnValue({
-      data: [
-        { player_id: 'kitchen', display_name: 'Kitchen', state: 'playing' },
-        { player_id: 'living', display_name: 'Living Room', state: 'idle' },
+  it('renders the anchor pill active and not tappable, and a joinable room outlined and tappable', () => {
+    useRoomPills.mockReturnValue({
+      pills: [
+        { player: kitchen, isAnchor: true, joined: true, pending: false },
+        { player: living, isAnchor: false, joined: false, pending: false },
       ],
+      toggle,
     })
     render(<CentreSpreadCredits track={fullTrack} activeQueue={activeQueue} onSetVolume={onSetVolume} />)
-    const active = screen.getByText('Kitchen')
-    const inactive = screen.getByText('Living Room')
-    expect(active.style.background).toBe('var(--ink)')
-    expect(inactive.style.background).toBe('')
+
+    const anchorPill = screen.getByText('Kitchen')
+    expect(anchorPill.style.background).toBe('var(--ink)')
+    expect(anchorPill.tagName).toBe('SPAN')
+
+    const roomPill = screen.getByRole('button', { name: 'Living Room' })
+    expect(roomPill.style.background).toBe('')
+    fireEvent.click(roomPill)
+    expect(toggle).toHaveBeenCalledWith('living')
   })
 
-  it('shows a dash when there are no players', () => {
+  it('shows a dash when there are no pills — no anchor configured, no players yet, or the anchor is absent from the players list', () => {
     render(<CentreSpreadCredits track={fullTrack} activeQueue={activeQueue} onSetVolume={onSetVolume} />)
     expect(screen.getByText('—')).toBeInTheDocument()
   })

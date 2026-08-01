@@ -17,6 +17,8 @@ export type { CuratedPlaylist } from './useForYou'
 export { usePlayers, normalizePlayer } from './usePlayers'
 export type { RawPlayer } from './usePlayers'
 export { useGroupMutations } from './useGroupMutations'
+export { useRoomPills, resolveAnchorAndRooms, isJoinedToAnchor } from './useRoomPills'
+export type { RoomPillView, RoomPillsState } from './useRoomPills'
 export type {
   TrackInfo,
   TopTrack,

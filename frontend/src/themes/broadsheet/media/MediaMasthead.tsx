@@ -1,5 +1,4 @@
-import { useMusic, usePlayers, normalizePlayer } from '@/data/music'
-import type { Player, QueueState } from '@/data/music'
+import { useMusic, useRoomPills } from '@/data/music'
 import { MastheadFrame } from '@/themes/broadsheet/ui/MastheadFrame'
 import { mastheadKickerStyle, mastheadNumeralStyle } from '@/themes/broadsheet/ui/masthead-styles'
 import { INK2 } from './colors'
@@ -29,32 +28,29 @@ const screenTitleStyle = {
  *  for space in an already-tight kicker-height cell. */
 const MAX_ROOM_PILLS = 6
 
-function isActiveRoom(player: Player, activeQueue: QueueState | null): boolean {
-  if (!activeQueue) return false
-  return player.playerId === activeQueue.queueId || player.displayName === activeQueue.displayName
-}
-
 /**
  * The Listening Room's masthead — the same three-column `MastheadFrame` as
  * Home's and the Datebook's. Mock: `media.jsx:86-105`.
  *
- * `usePlayers({ isOpen: true, ... })`: this hook was written for grid's
- * player-picker overlay, where `isOpen` gates the poll to while the picker
- * is open. Here the Rooms pills are always on screen, so the room list is
- * always wanted — `isOpen: true` for as long as this component (and so this
- * whole screen) is mounted.
+ * The Rooms row is `useRoomPills`'s join/leave list (see that hook's own
+ * header comment): the anchor pill first, always active and not tappable,
+ * then every room it can group with, filled when joined. It's a different
+ * concept from `activeQueue` below — which room's queue is currently
+ * playing — so a room can show filled here (grouped with the anchor)
+ * without being the one `state` reports as active, and vice versa.
  *
  * Every hook here can boot with no data on a cold cache: no active queue
- * (nothing playing anywhere) and no players list (the poll hasn't resolved,
- * or Music Assistant is unreachable — the common case on this machine, see
- * the design brief). Both get a written fallback rather than a blank cell.
+ * (nothing playing anywhere) and no configured anchor / no players yet /
+ * an anchor not present in the players list (all `useRoomPills` collapses
+ * to an empty pill list). Both get a written fallback rather than a blank
+ * cell.
  */
 export function MediaMasthead() {
   const { state } = useMusic()
-  const { data: rawPlayers } = usePlayers({ isOpen: true, pollingPaused: false })
+  const { pills, toggle } = useRoomPills()
   const activeQueue = state.activeQueue
 
-  const players = (rawPlayers ?? []).map(normalizePlayer).slice(0, MAX_ROOM_PILLS)
+  const visiblePills = pills.slice(0, MAX_ROOM_PILLS)
   const roomName = activeQueue?.displayName ?? null
 
   return (
@@ -76,13 +72,18 @@ export function MediaMasthead() {
       right={
         <>
           <div style={{ ...mastheadKickerStyle, textAlign: 'right' }}>Rooms</div>
-          {players.length > 0 ? (
+          {visiblePills.length > 0 ? (
             <div
               className="flex justify-end uppercase"
               style={{ gap: 6, fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.14em' }}
             >
-              {players.map((player) => (
-                <RoomPill key={player.playerId} label={player.displayName} active={isActiveRoom(player, activeQueue)} />
+              {visiblePills.map((pill) => (
+                <RoomPill
+                  key={pill.player.playerId}
+                  label={pill.player.displayName}
+                  active={pill.joined}
+                  onToggle={pill.isAnchor || pill.pending ? undefined : () => toggle(pill.player.playerId)}
+                />
               ))}
             </div>
           ) : (
