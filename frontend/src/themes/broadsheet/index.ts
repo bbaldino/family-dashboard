@@ -6,6 +6,7 @@ import { Calendar } from './screens/Calendar'
 import { Media } from './screens/Media'
 import { Album } from './screens/Album'
 import { Artist } from './screens/Artist'
+import { Cameras } from './screens/Cameras'
 import { broadsheetCanvas } from './canvas'
 import { BroadsheetLayout } from './layout/BroadsheetLayout'
 
@@ -20,6 +21,7 @@ export const broadsheetTheme: ThemeModule = {
     media: Media,
     'media.album': Album,
     'media.artist': Artist,
+    cameras: Cameras,
   },
   overlays: [],
 }
