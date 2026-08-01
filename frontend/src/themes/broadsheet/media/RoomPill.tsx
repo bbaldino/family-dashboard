@@ -29,8 +29,19 @@ export function RoomPill({
   active: boolean
   onToggle?: () => void
 }) {
+  // Both states carry the same 1px border — transparent when filled — so a
+  // pill keeps its exact height as it toggles. Without it the filled state is
+  // 2px shorter than the outlined one, which reads as a visible wobble now
+  // that tapping a pill flips it between the two, and leaves wrapped rows of
+  // pills sitting at mismatched heights.
   const pillStyle = active
-    ? { padding: '4px 10px', background: 'var(--ink)', color: 'var(--paper)', fontWeight: 600 }
+    ? {
+        padding: '4px 10px',
+        border: '1px solid transparent',
+        background: 'var(--ink)',
+        color: 'var(--paper)',
+        fontWeight: 600,
+      }
     : { padding: '4px 10px', border: '1px solid var(--rule)', color: 'var(--ink-muted)' }
 
   if (!onToggle) {
