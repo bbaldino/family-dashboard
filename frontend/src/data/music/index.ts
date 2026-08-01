@@ -16,6 +16,7 @@ export { useForYou } from './useForYou'
 export type { CuratedPlaylist } from './useForYou'
 export { usePlayers, normalizePlayer } from './usePlayers'
 export type { RawPlayer } from './usePlayers'
+export { useGroupMutations } from './useGroupMutations'
 export type {
   TrackInfo,
   TopTrack,

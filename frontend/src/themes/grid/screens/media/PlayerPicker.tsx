@@ -1,8 +1,6 @@
-import { useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
 import { Volume2, Users, Plus, X as XIcon, Loader2 } from 'lucide-react'
-import { musicIntegration, useMusic, usePlayers, normalizePlayer } from '@/data/music'
-import type { Player, RawPlayer } from '@/data/music'
+import { useMusic, usePlayers, normalizePlayer, useGroupMutations } from '@/data/music'
+import type { Player } from '@/data/music'
 import { Modal } from '@/ui/Modal'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
 
@@ -169,18 +167,17 @@ function PlayerRow({
 }
 
 export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
-  const queryClient = useQueryClient()
   const { state, setVolume } = useMusic()
   const activeQueueId = state.activeQueue?.queueId ?? null
 
-  // Player IDs with an in-flight group/ungroup so we can show a spinner and
-  // dim/disable the action button until MA confirms the change.
-  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
-  // True for ~1.5s after a mutation. MA's `players/all` response lags a few
-  // hundred ms behind a group/ungroup command landing, so we suppress both
-  // the polling refetch and any explicit refresh during that window —
-  // otherwise the stale response would clobber our optimistic update.
-  const [pollingPaused, setPollingPaused] = useState(false)
+  const {
+    pendingIds,
+    pollingPaused,
+    addToGroup: addToGroupMutation,
+    removeFromGroup: removeFromGroupMutation,
+    ungroupAll: ungroupAllMutation,
+    setGroupVolume: setGroupVolumeMutation,
+  } = useGroupMutations()
 
   const { data, isLoading } = usePlayers({ isOpen, pollingPaused })
 
@@ -188,126 +185,10 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
   const leader = players.find((p) => p.playerId === activeQueueId) ?? null
   const leaderId = leader?.playerId ?? null
 
-  const refreshPlayers = () =>
-    queryClient.invalidateQueries({ queryKey: ['music', 'players'] })
-
-  // Apply an optimistic mutation to the cached /players response so the UI
-  // reflects the group change instantly. The real refetch (kicked by
-  // refreshPlayers below) reconciles within a second.
-  const mutatePlayersCache = (fn: (p: RawPlayer) => RawPlayer) =>
-    queryClient.setQueryData<RawPlayer[]>(['music', 'players'], (prev) =>
-      prev ? prev.map(fn) : prev,
-    )
-
-  // Abort any in-flight /players refetch (e.g. one kicked by the 5s polling
-  // interval moments before the user clicked) so it doesn't return with
-  // stale pre-mutation data and overwrite our optimistic update.
-  const cancelInFlightPlayersFetches = () =>
-    queryClient.cancelQueries({ queryKey: ['music', 'players'] })
-
-  const markPending = (ids: string[]) =>
-    setPendingIds((prev) => {
-      const next = new Set(prev)
-      for (const id of ids) next.add(id)
-      return next
-    })
-  const clearPending = (ids: string[]) =>
-    setPendingIds((prev) => {
-      const next = new Set(prev)
-      for (const id of ids) next.delete(id)
-      return next
-    })
-
-  // Lifecycle of a group/ungroup action:
-  //   1. Mark pending + pause polling (spinner appears on the ORIGINAL
-  //      branch's button — "Adding…" on a +Add row, "Removing…" on a
-  //      Remove row).
-  //   2. Cancel any in-flight /players fetch.
-  //   3. Fire the POST. Wait for it to return (~100ms).
-  //   4. Apply the optimistic cache mutation AND clear pending in the same
-  //      pass — the row transitions to its new branch with no spinner left
-  //      behind on the wrong-labeled button.
-  //   5. After MA's propagation window, resume polling + refetch.
-  const withOptimistic = async (
-    pendingPlayerIds: string[],
-    mutator: (p: RawPlayer) => RawPlayer,
-    apiCall: () => Promise<unknown>,
-  ) => {
-    markPending(pendingPlayerIds)
-    setPollingPaused(true)
-    await cancelInFlightPlayersFetches()
-    try {
-      await apiCall()
-      mutatePlayersCache(mutator)
-      clearPending(pendingPlayerIds)
-    } catch (err) {
-      // POST failed — drop pending so the spinner doesn't get stuck.
-      clearPending(pendingPlayerIds)
-      throw err
-    } finally {
-      // Resume polling + reconcile from MA once it's converged.
-      setTimeout(() => {
-        setPollingPaused(false)
-        refreshPlayers()
-      }, 1500)
-    }
-  }
-
-  const addToGroup = (playerId: string) => {
-    if (!leaderId) return
-    return withOptimistic(
-      [playerId],
-      (p) => {
-        if (p.player_id !== leaderId) return p
-        const current = p.group_members ?? []
-        const next =
-          current.length === 0 ? [leaderId, playerId] : [...current, playerId]
-        return { ...p, group_members: next }
-      },
-      () =>
-        musicIntegration.api.post('/group', {
-          player_id: playerId,
-          target_player: leaderId,
-        }),
-    )
-  }
-  const removeFromGroup = (playerId: string) =>
-    withOptimistic(
-      [playerId],
-      (p) => {
-        if (p.player_id !== leaderId) return p
-        const remaining = (p.group_members ?? []).filter((id) => id !== playerId)
-        // If only the leader itself remains, collapse to [] so the UI returns
-        // to the "no group" state.
-        const cleared = remaining.length <= 1 ? [] : remaining
-        return { ...p, group_members: cleared }
-      },
-      () => musicIntegration.api.post('/ungroup', { player_id: playerId }),
-    )
-  const ungroupAll = () => {
-    if (!leader) return
-    const followers = leader.groupMembers.filter((id) => id !== leader.playerId)
-    return withOptimistic(
-      followers,
-      (p) =>
-        p.player_id === leader.playerId ? { ...p, group_members: [] } : p,
-      () =>
-        Promise.all(
-          followers.map((id) =>
-            musicIntegration.api.post('/ungroup', { player_id: id }),
-          ),
-        ),
-    )
-  }
-
-  const setGroupVolume = async (level: number) => {
-    if (!leaderId) return
-    await musicIntegration.api.post('/group-volume', {
-      player_id: leaderId,
-      level,
-    })
-    refreshPlayers()
-  }
+  const addToGroup = (playerId: string) => addToGroupMutation(playerId, leaderId)
+  const removeFromGroup = (playerId: string) => removeFromGroupMutation(playerId, leaderId)
+  const ungroupAll = () => ungroupAllMutation(leader)
+  const setGroupVolume = (level: number) => setGroupVolumeMutation(leaderId, level)
 
   // MA reports group state via the LEADER's group_members array (which
   // includes the leader's own id). Followers don't reliably populate
