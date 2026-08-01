@@ -26,6 +26,31 @@ describe('VolumeSlider', () => {
     expect(slider).toHaveAttribute('aria-valuenow', '42')
   })
 
+  it('fills the rule in proportion to the volume, and is not over-constrained', () => {
+    // The fill used `inset: 0`, which sets both left and right — that
+    // over-constrains the box, so `width` was ignored and the bar rendered
+    // fully black at every volume. Assert the width survives *and* that the
+    // right edge is left free, since a passing width alone wouldn't have
+    // caught the original bug.
+    const { container, rerender } = render(<VolumeSlider volume={35} onChange={vi.fn()} />)
+    const fill = container.querySelector('div[style*="position: absolute"]') as HTMLElement
+    expect(fill.style.width).toBe('35%')
+    expect(fill.style.right).toBe('')
+
+    rerender(<VolumeSlider volume={0} onChange={vi.fn()} />)
+    expect(fill.style.width).toBe('0%')
+    rerender(<VolumeSlider volume={100} onChange={vi.fn()} />)
+    expect(fill.style.width).toBe('100%')
+  })
+
+  it('clamps an out-of-range volume rather than overflowing the rule', () => {
+    const { container, rerender } = render(<VolumeSlider volume={140} onChange={vi.fn()} />)
+    const fill = container.querySelector('div[style*="position: absolute"]') as HTMLElement
+    expect(fill.style.width).toBe('100%')
+    rerender(<VolumeSlider volume={-10} onChange={vi.fn()} />)
+    expect(fill.style.width).toBe('0%')
+  })
+
   it('gives the slider a real hit target well beyond the hairline rule it wraps', () => {
     render(<VolumeSlider volume={0} onChange={vi.fn()} />)
     const slider = screen.getByLabelText('Volume')
