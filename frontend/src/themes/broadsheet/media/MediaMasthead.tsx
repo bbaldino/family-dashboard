@@ -3,6 +3,7 @@ import type { Player, QueueState } from '@/data/music'
 import { MastheadFrame } from '@/themes/broadsheet/ui/MastheadFrame'
 import { mastheadKickerStyle, mastheadNumeralStyle } from '@/themes/broadsheet/ui/masthead-styles'
 import { INK2 } from './colors'
+import { RoomPill } from './RoomPill'
 
 /** The screen title's own treatment — 26px italic serif, mock `media.jsx:89`
  *  — deliberately not the masthead's shared 72px numeral style
@@ -31,20 +32,6 @@ const MAX_ROOM_PILLS = 6
 function isActiveRoom(player: Player, activeQueue: QueueState | null): boolean {
   if (!activeQueue) return false
   return player.playerId === activeQueue.queueId || player.displayName === activeQueue.displayName
-}
-
-function RoomPill({ label, active }: { label: string; active: boolean }) {
-  return (
-    <span
-      style={
-        active
-          ? { padding: '4px 10px', background: 'var(--ink)', color: 'var(--paper)', fontWeight: 600 }
-          : { padding: '4px 10px', border: '1px solid var(--rule)', color: 'var(--ink-muted)' }
-      }
-    >
-      {label}
-    </span>
-  )
 }
 
 /**
