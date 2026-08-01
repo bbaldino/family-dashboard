@@ -146,19 +146,48 @@ pub async fn play(
         .filter(|m| matches!(*m, "play" | "replace" | "next" | "replace_next" | "add"))
         .unwrap_or("play");
 
-    let mut args = serde_json::json!({
-        "queue_id": queue_id,
-        "media": req.uri,
-        "option": option,
-    });
+    let args = |radio: bool| {
+        let mut args = serde_json::json!({
+            "queue_id": queue_id,
+            "media": req.uri,
+            "option": option,
+        });
+        if radio {
+            args["radio_mode"] = serde_json::Value::Bool(true);
+        }
+        args
+    };
 
-    if req.radio == Some(true) {
-        args["radio_mode"] = serde_json::Value::Bool(true);
+    let wants_radio = req.radio == Some(true);
+    let result = client
+        .command_void("player_queues/play_media", args(wants_radio))
+        .await;
+
+    // Radio mode asks MA to seed a station from the chosen item, which it can
+    // only do via a provider that supports `similar_tracks`. Spotify is the
+    // only such provider here, it advertises the feature, and the call fails
+    // anyway — verified against this instance (MA 2.9.10): the identical
+    // request returns 200 without `radio_mode` and 500 with it, rejected in
+    // ~45ms. So a plain tap on a track, which always asks for radio, could
+    // never play anything.
+    //
+    // Falling back rather than dropping radio outright: when the station can
+    // be built the user gets it, and when it can't they still get the track
+    // they asked for, instead of silence. If provider support is restored,
+    // this quietly stops firing.
+    match result {
+        Ok(()) => {}
+        Err(err) if wants_radio => {
+            tracing::warn!(
+                "play_media with radio_mode failed ({err}); retrying without radio for {}",
+                req.uri
+            );
+            client
+                .command_void("player_queues/play_media", args(false))
+                .await?;
+        }
+        Err(err) => return Err(err),
     }
-
-    client
-        .command_void("player_queues/play_media", args)
-        .await?;
 
     // Log the explicit selection so Recently Played reflects what the user
     // actually chose, not whatever ESPN/MA auto-advanced to next.
