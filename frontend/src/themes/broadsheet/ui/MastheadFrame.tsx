@@ -15,20 +15,31 @@ import type { ReactNode } from 'react'
  * must sit outside the `align-items: end` grid (a line added to just one
  * cell would throw off the shared baseline the grid otherwise guarantees;
  * see `Masthead.tsx`'s own comment on this).
+ *
+ * `padding` defaults to the `22px 56px 18px` every current consumer
+ * (Home, the Datebook, Media) shares verbatim. The Centre Spread's mock
+ * (`nowplaying.jsx:51`) specifies a tighter `20px 56px 14px` instead — its
+ * masthead carries a 62px title plus a three-column body underneath, so a
+ * few px back from the standard rhythm is this screen's own call, not a
+ * drift to paper over. An overridable prop keeps that one screen's choice
+ * from becoming every screen's, the same way `footer` already lets Home
+ * add content the others don't need.
  */
 export function MastheadFrame({
   left,
   center,
   right,
   footer,
+  padding = '22px 56px 18px',
 }: {
   left: ReactNode
   center: ReactNode
   right: ReactNode
   footer?: ReactNode
+  padding?: string
 }) {
   return (
-    <div style={{ padding: '22px 56px 18px', borderBottom: '3px double var(--ink)' }}>
+    <div style={{ padding, borderBottom: '3px double var(--ink)' }}>
       <div className="grid items-end" style={{ gridTemplateColumns: '0.85fr 1.5fr 0.85fr', gap: 24 }}>
         <div>{left}</div>
         <div style={{ textAlign: 'center' }}>{center}</div>
