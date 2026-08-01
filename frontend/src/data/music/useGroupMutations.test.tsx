@@ -184,7 +184,12 @@ describe('useGroupMutations', () => {
     // to flip it back, because confirmation polling only ever *reads* to
     // decide when to stop, it never writes a fetched snapshot into the cache.
     expect(cacheGroupMembers(queryClient, 'kitchen')).toEqual(['kitchen', 'living'])
-    expect(result.current.pendingIds.has('living')).toBe(true)
+    // Pending is a "command in flight" cue, cleared once the POST is accepted
+    // — not held for the whole convergence wait, which measured anywhere from
+    // ~2s to ~12s on the same speakers. Convergence still governs when
+    // polling resumes.
+    expect(result.current.pendingIds.has('living')).toBe(false)
+    expect(result.current.pollingPaused).toBe(true)
 
     // The third poll converges and the mutation settles.
     await act(async () => {
@@ -273,8 +278,11 @@ describe('useGroupMutations', () => {
     // un-pause polling while a second was still mid-flight.
     expect(result.current.pollingPaused).toBe(true)
     expect(invalidateSpy).not.toHaveBeenCalled()
+    // Both pending cues cleared as soon as their POSTs were accepted; it's
+    // the refcount, not pendingIds, that holds polling paused until the last
+    // mutation actually converges.
     expect(result.current.pendingIds.has('bedroom')).toBe(false)
-    expect(result.current.pendingIds.has('living')).toBe(true)
+    expect(result.current.pendingIds.has('living')).toBe(false)
 
     // Second round: living confirms too.
     await act(async () => {
@@ -378,6 +386,56 @@ describe('useGroupMutations', () => {
     expect(post).toHaveBeenCalledWith('/group-volume', { player_id: 'kitchen', level: 30 })
     expect(result.current.pollingPaused).toBe(false)
     expect(invalidateSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('moves the follower\'s synced_to as well as the leader\'s group_members', async () => {
+    // Membership is read as `leader.group_members.includes(id) || player.synced_to === leaderId`
+    // (useRoomPills.isJoinedToAnchor). Patching only the leader left a removal
+    // still reading as joined off the follower's stale synced_to, so the pill
+    // didn't move until the real refetch landed ~2s later — the exact
+    // "nothing happens for a long while" that was reported on removal.
+    post.mockResolvedValue({})
+    get.mockResolvedValue(rawPlayers())
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    queryClient.setQueryData(
+      RAW_PLAYERS_KEY,
+      kitchenGroupedWith('living').map((p) => (p.player_id === 'living' ? { ...p, synced_to: 'kitchen' } : p)),
+    )
+    const { result } = renderHook(() => useGroupMutations(), { wrapper: createWrapper(queryClient) })
+
+    let mutation!: Promise<unknown>
+    act(() => {
+      mutation = result.current.removeFromGroup('living', 'kitchen')!
+    })
+
+    // Synchronously after the tap — before the POST has resolved — both halves
+    // must already say "not joined".
+    const cached = queryClient.getQueryData<TestPlayer[]>(RAW_PLAYERS_KEY)
+    expect(cached?.find((p) => p.player_id === 'kitchen')?.group_members).not.toContain('living')
+    expect(cached?.find((p) => p.player_id === 'living')?.synced_to).toBeNull()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(CONFIRM_POLL_INTERVAL_MS)
+      await mutation
+    })
+  })
+
+  it('restores the follower\'s synced_to when a removal\'s POST rejects', async () => {
+    post.mockRejectedValue(new Error('boom'))
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    queryClient.setQueryData(
+      RAW_PLAYERS_KEY,
+      kitchenGroupedWith('living').map((p) => (p.player_id === 'living' ? { ...p, synced_to: 'kitchen' } : p)),
+    )
+    const { result } = renderHook(() => useGroupMutations(), { wrapper: createWrapper(queryClient) })
+
+    await act(async () => {
+      await expect(result.current.removeFromGroup('living', 'kitchen')).rejects.toThrow('boom')
+    })
+
+    const cached = queryClient.getQueryData<TestPlayer[]>(RAW_PLAYERS_KEY)
+    expect(cached?.find((p) => p.player_id === 'kitchen')?.group_members).toContain('living')
+    expect(cached?.find((p) => p.player_id === 'living')?.synced_to).toBe('kitchen')
   })
 
   it('setGroupVolume never confirmation-polls, so a drag cannot fan out into hundreds of reads', async () => {

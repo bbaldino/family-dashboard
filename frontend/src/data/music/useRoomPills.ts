@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useIntegrationConfig } from '@/data/use-integration-config'
 import { activeScenario } from '@/data/scenario'
 import { musicIntegration } from './config'
@@ -81,12 +82,28 @@ export function isJoinedToAnchor(anchor: Player, player: Player): boolean {
 export function resolveAnchorAndRooms(
   players: Player[],
   anchorId: string | null | undefined,
+  pendingIds: ReadonlySet<string> = new Set(),
 ): { anchor: Player | null; rooms: Player[] } {
   if (!anchorId) return { anchor: null, rooms: [] }
   const anchor = players.find((p) => p.playerId === anchorId) ?? null
   if (!anchor) return { anchor: null, rooms: [] }
   const groupable = new Set(anchor.canGroupWith)
-  const rooms = players.filter((p) => p.playerId !== anchor.playerId && groupable.has(p.playerId))
+  // `can_group_with` is a moving target: MA recomputes it as grouping changes,
+  // and mid-transition it can briefly stop listing a room that is perfectly
+  // valid either side of the change. Filtering on capability alone therefore
+  // made a pill vanish from the row at the exact moment it was tapped —
+  // observed live, and the cause of a report that a room "disappeared from the
+  // rooms list completely". Worse, a room that vanished while joined left no
+  // way to un-join it.
+  //
+  // So a room stays listed if it is groupable OR currently joined OR has a
+  // mutation in flight. Capability alone decides whether a room is ever
+  // offered; it never yanks one out from under an interaction in progress.
+  const rooms = players.filter(
+    (p) =>
+      p.playerId !== anchor.playerId &&
+      (groupable.has(p.playerId) || isJoinedToAnchor(anchor, p) || pendingIds.has(p.playerId)),
+  )
   return { anchor, rooms }
 }
 
@@ -99,7 +116,35 @@ export function useRoomPills(): RoomPillsState {
   const { data: rawPlayers } = usePlayers({ isOpen: true, pollingPaused })
   const players = (rawPlayers ?? []).map(normalizePlayer)
 
-  const { anchor, rooms } = resolveAnchorAndRooms(players, anchorId)
+  // Rooms this anchor has offered at any point since it was resolved. MA
+  // reports a room as neither groupable nor joined for several seconds in the
+  // middle of a group/ungroup — observed live, with a pill dropping out of the
+  // row for five seconds before reappearing correctly grouped. Widening the
+  // filter isn't enough because during that window every signal says "not a
+  // room": the list has to remember. A room leaves only when it leaves the
+  // players payload entirely, or when the anchor itself changes.
+  const [seen, setSeen] = useState<{ anchorId: string | null; ids: string[] }>({
+    anchorId: null,
+    ids: [],
+  })
+
+  const resolved = resolveAnchorAndRooms(players, anchorId, pendingIds)
+  const anchor = resolved.anchor
+
+  // Adjust the remembered set during render — React's documented pattern for
+  // state derived from changing inputs — rather than in an effect, so the
+  // pills below never render one frame with a room missing before an effect
+  // puts it back.
+  const carried = seen.anchorId === anchorId ? seen.ids : []
+  const nextIds = [...new Set([...carried, ...resolved.rooms.map((r) => r.playerId)])]
+  if (seen.anchorId !== anchorId || nextIds.length !== seen.ids.length) {
+    setSeen({ anchorId: anchorId ?? null, ids: nextIds })
+  }
+
+  const sticky = new Set(nextIds)
+  const rooms = anchor
+    ? players.filter((p) => p.playerId !== anchor.playerId && sticky.has(p.playerId))
+    : resolved.rooms
 
   const pills: RoomPillView[] = anchor
     ? [

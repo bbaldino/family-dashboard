@@ -113,6 +113,16 @@ export function useGroupMutations() {
   const applyToLeader = (leaderId: string, transform: (p: RawPlayer) => RawPlayer) =>
     mutatePlayersCache((p) => (p.player_id === leaderId ? transform(p) : p))
 
+  // Membership reads from two places — the leader's `group_members` and the
+  // follower's own `synced_to` (see `useRoomPills`'s `isJoinedToAnchor`, which
+  // ORs them because MA doesn't populate `synced_to` reliably). An optimistic
+  // write therefore has to move BOTH, or the half it skips keeps reporting the
+  // pre-tap answer: patching only the leader made a *removal* still read as
+  // joined, because the follower's stale `synced_to` kept the OR true until
+  // the real refetch landed seconds later.
+  const setSyncedTo = (playerId: string, leaderId: string | null) =>
+    mutatePlayersCache((p) => (p.player_id === playerId ? { ...p, synced_to: leaderId } : p))
+
   // Abort any in-flight /players refetch (e.g. one kicked by the 5s polling
   // interval moments before the user tapped) so it doesn't land after our
   // optimistic apply and overwrite it with stale pre-mutation data.
@@ -184,6 +194,15 @@ export function useGroupMutations() {
 
     try {
       await apiCall()
+      // Clear the visual pending cue as soon as the command is accepted, not
+      // when MA finally converges. Convergence time is highly variable —
+      // measured between ~2s and ~12s on the same pair of speakers — and the
+      // optimistic write already shows the user the outcome. Holding a pill
+      // dimmed for ten seconds after a change that has visibly taken effect
+      // reads as "still working" when nothing is left to wait for.
+      // `pollingPaused` and the reconciling refetch stay governed by the
+      // convergence check below.
+      clearPending(ids)
       if (isConfirmed) await waitForConvergence(isConfirmed)
     } catch (err) {
       rollback()
@@ -198,20 +217,24 @@ export function useGroupMutations() {
     if (!leaderId) return
     return runMutation({
       pendingIds: [playerId],
-      apply: () =>
+      apply: () => {
         applyToLeader(leaderId, (p) => {
           const members = new Set(p.group_members?.length ? p.group_members : [leaderId])
           members.add(playerId)
           return { ...p, group_members: [...members] }
-        }),
-      rollback: () =>
+        })
+        setSyncedTo(playerId, leaderId)
+      },
+      rollback: () => {
         applyToLeader(leaderId, (p) => {
           const members = new Set(p.group_members ?? [])
           members.delete(playerId)
           // Collapse to [] once only the leader itself remains, matching the
           // "no group" resting state everywhere else in this file.
           return { ...p, group_members: members.size <= 1 ? [] : [...members] }
-        }),
+        })
+        setSyncedTo(playerId, null)
+      },
       apiCall: () => musicIntegration.api.post('/group', { player_id: playerId, target_player: leaderId }),
       isConfirmed: (players) => {
         const leader = players.find((p) => p.player_id === leaderId)
@@ -223,21 +246,25 @@ export function useGroupMutations() {
   const removeFromGroup = (playerId: string, leaderId: string | null) =>
     runMutation({
       pendingIds: [playerId],
-      apply: () =>
+      apply: () => {
         mutatePlayersCache((p) => {
           if (p.player_id !== leaderId) return p
           const remaining = (p.group_members ?? []).filter((id) => id !== playerId)
           const cleared = remaining.length <= 1 ? [] : remaining
           return { ...p, group_members: cleared }
-        }),
-      rollback: () =>
+        })
+        setSyncedTo(playerId, null)
+      },
+      rollback: () => {
         mutatePlayersCache((p) => {
           if (p.player_id !== leaderId) return p
           const members = new Set(p.group_members ?? [])
           if (leaderId) members.add(leaderId)
           members.add(playerId)
           return { ...p, group_members: [...members] }
-        }),
+        })
+        setSyncedTo(playerId, leaderId)
+      },
       apiCall: () => musicIntegration.api.post('/ungroup', { player_id: playerId }),
       isConfirmed: (players) => {
         if (!leaderId) return true
@@ -252,8 +279,14 @@ export function useGroupMutations() {
     const previousMembers = leader.groupMembers
     return runMutation({
       pendingIds: followers,
-      apply: () => applyToLeader(leader.playerId, (p) => ({ ...p, group_members: [] })),
-      rollback: () => applyToLeader(leader.playerId, (p) => ({ ...p, group_members: previousMembers })),
+      apply: () => {
+        applyToLeader(leader.playerId, (p) => ({ ...p, group_members: [] }))
+        for (const id of followers) setSyncedTo(id, null)
+      },
+      rollback: () => {
+        applyToLeader(leader.playerId, (p) => ({ ...p, group_members: previousMembers }))
+        for (const id of followers) setSyncedTo(id, leader.playerId)
+      },
       apiCall: () =>
         Promise.all(followers.map((id) => musicIntegration.api.post('/ungroup', { player_id: id }))),
       isConfirmed: (players) => {

@@ -64,6 +64,32 @@ describe('resolveAnchorAndRooms', () => {
     const { anchor, rooms } = resolveAnchorAndRooms(fixturePlayers(), 'fixture-kitchen')
     expect(rooms.some((r) => r.playerId === anchor?.playerId)).toBe(false)
   })
+
+  it('keeps a joined room listed even when the anchor stops reporting it as groupable', () => {
+    // Observed live: MA recomputes `can_group_with` as grouping changes, and
+    // mid-transition it can briefly stop listing a room. Filtering on
+    // capability alone made the pill vanish at the moment it was tapped, and a
+    // room that vanished while joined could never be un-joined.
+    const players = fixturePlayers().map((p) =>
+      p.playerId === 'fixture-kitchen' ? { ...p, canGroupWith: [] } : p,
+    )
+    const { rooms } = resolveAnchorAndRooms(players, 'fixture-kitchen')
+    // The Bedroom is joined (the fixture's already-joined role), so it stays.
+    expect(rooms.map((r) => r.displayName)).toEqual(['Bedroom'])
+  })
+
+  it('keeps a room with a mutation in flight listed while the anchor omits it', () => {
+    const players = fixturePlayers().map((p) =>
+      p.playerId === 'fixture-kitchen' ? { ...p, canGroupWith: [] } : p,
+    )
+    const { rooms } = resolveAnchorAndRooms(players, 'fixture-kitchen', new Set(['fixture-living-room']))
+    expect(rooms.map((r) => r.displayName).sort()).toEqual(['Bedroom', 'Living Room'])
+  })
+
+  it('still excludes a room that is neither groupable, joined, nor pending', () => {
+    const { rooms } = resolveAnchorAndRooms(fixturePlayers(), 'fixture-kitchen', new Set())
+    expect(rooms.some((r) => r.displayName === 'Office Display')).toBe(false)
+  })
 })
 
 describe('isJoinedToAnchor', () => {
@@ -107,6 +133,46 @@ describe('useRoomPills', () => {
     usePlayers.mockReturnValue({ data: undefined })
     const { result } = renderHook(() => useRoomPills())
     expect(result.current.pills).toEqual([])
+  })
+
+  it('keeps a room listed across a transition where MA reports it as neither groupable nor joined', () => {
+    // The failure this guards: mid-group, MA briefly reported the Deck as
+    // absent from the Kitchen's can_group_with AND absent from its
+    // group_members AND with no synced_to — every signal saying "not a room".
+    // The pill dropped out of the row for five seconds, then reappeared
+    // correctly grouped. A room that vanished while joined also couldn't be
+    // un-joined. Once offered, a room stays until it leaves the payload.
+    useIntegrationConfig.mockReturnValue({ default_player: 'fixture-kitchen' })
+    const players = musicPlayersFixtureFor('packed')!
+    usePlayers.mockReturnValue({ data: players })
+    const { result, rerender } = renderHook(() => useRoomPills())
+    expect(result.current.pills.map((p) => p.player.displayName)).toContain('Living Room')
+
+    // The transition: the anchor stops reporting it, and it reports nothing
+    // about itself either.
+    usePlayers.mockReturnValue({
+      data: players.map((p) =>
+        p.player_id === 'fixture-kitchen'
+          ? { ...p, can_group_with: [], group_members: [] }
+          : p.player_id === 'fixture-living-room'
+            ? { ...p, synced_to: null }
+            : p,
+      ),
+    })
+    rerender()
+    expect(result.current.pills.map((p) => p.player.displayName)).toContain('Living Room')
+  })
+
+  it('drops a room that leaves the players payload entirely', () => {
+    useIntegrationConfig.mockReturnValue({ default_player: 'fixture-kitchen' })
+    const players = musicPlayersFixtureFor('packed')!
+    usePlayers.mockReturnValue({ data: players })
+    const { result, rerender } = renderHook(() => useRoomPills())
+    expect(result.current.pills.map((p) => p.player.displayName)).toContain('Living Room')
+
+    usePlayers.mockReturnValue({ data: players.filter((p) => p.player_id !== 'fixture-living-room') })
+    rerender()
+    expect(result.current.pills.map((p) => p.player.displayName)).not.toContain('Living Room')
   })
 
   it('renders no pills when the configured anchor is not in the players list', () => {
