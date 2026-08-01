@@ -48,12 +48,28 @@ function LpDisc() {
 
 /** The Now Spinning rail's 280px cover with the LP disc overlapping its
  *  right edge (`media.jsx:175-189`). Split from `Cover` because the disc is
- *  a rail-only flourish — no shelf card gets one. */
-export function NowSpinningCover({ imageUrl, name }: { imageUrl: string | null; name: string }) {
-  return (
+ *  a rail-only flourish — no shelf card gets one.
+ *
+ * `onTap`, when given, is the Centre Spread's entry point — tapping the
+ * cover opens the full-page now-playing view (`CentreSpread.tsx`). Rendered
+ * as a real `<button>` wrapping the cover, matching `ShelfCard`'s own
+ * reasoning for using a button over a styled `onClick` div: a touchscreen
+ * kiosk (and a keyboard) both need a real activatable target, not just a
+ * clickable-looking one. Omitting `onTap` (its default) keeps this
+ * component usable anywhere a plain, non-interactive cover is wanted. */
+export function NowSpinningCover({ imageUrl, name, onTap }: { imageUrl: string | null; name: string; onTap?: () => void }) {
+  const cover = (
     <div style={{ position: 'relative', marginTop: 4 }}>
       <Cover imageUrl={imageUrl} name={name} size={280} />
       <LpDisc />
     </div>
+  )
+
+  if (!onTap) return cover
+
+  return (
+    <button type="button" onClick={onTap} style={{ all: 'unset', cursor: 'pointer', display: 'block' }} aria-label="Open now playing">
+      {cover}
+    </button>
   )
 }

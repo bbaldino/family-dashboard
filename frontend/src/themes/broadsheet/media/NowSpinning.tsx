@@ -33,8 +33,14 @@ function formatDuration(seconds: number): string {
  * read for reference only): no active queue, or an active queue with
  * nothing loaded, both get the same written fallback rather than an empty
  * 280px hole where the cover would be.
+ *
+ * `onOpenCentreSpread`, when given, is wired to the cover's tap — `Media.tsx`
+ * passes it once there's something to spin; with nothing playing, the
+ * `!currentItem` branch below returns before the cover (and so the tap
+ * target) ever renders, matching the design brief's own reasoning for why
+ * the Centre Spread's entry point simply doesn't exist in that state.
  */
-export function NowSpinning() {
+export function NowSpinning({ onOpenCentreSpread }: { onOpenCentreSpread?: () => void } = {}) {
   const { state, isPlaying, pause, resume, next, previous, setVolume } = useMusic()
   const activeQueue = state.activeQueue
   const currentItem = activeQueue?.currentItem ?? null
@@ -74,7 +80,7 @@ export function NowSpinning() {
   return (
     <div className="flex flex-col" style={{ gap: 10 }}>
       <Kicker>Now spinning</Kicker>
-      <NowSpinningCover imageUrl={currentItem.imageUrl} name={currentItem.name} />
+      <NowSpinningCover imageUrl={currentItem.imageUrl} name={currentItem.name} onTap={onOpenCentreSpread} />
 
       <h2
         className="m-0 truncate"
