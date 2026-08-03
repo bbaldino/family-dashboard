@@ -110,19 +110,24 @@ export function PregameBlock({ game }: { game: Game }) {
         <TeamSide side="Away" team={game.away} pitcher={probablePitcher(game.athletes, 'away')} />
         <TeamSide side="Home" team={game.home} pitcher={probablePitcher(game.athletes, 'home')} />
       </div>
-      <p
-        className="m-0 mt-3"
-        style={{
-          fontFamily: 'var(--font-display)',
-          fontStyle: 'italic',
-          fontSize: 13,
-          color: 'var(--ink-muted)',
-          lineHeight: 1.5,
-        }}
-      >
-        {data?.summary ??
-          'The page will widen and the scoreboard will fill this space when first pitch lands.'}
-      </p>
+      {/* The preview only when there is one. Its old fallback announced that
+          "the page will widen and the scoreboard will fill this space when
+          first pitch lands" — the interface narrating its own layout, which is
+          not information about the game and read as filler on a cold cache. */}
+      {data?.summary && (
+        <p
+          className="m-0 mt-3"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontStyle: 'italic',
+            fontSize: 13,
+            color: 'var(--ink-muted)',
+            lineHeight: 1.5,
+          }}
+        >
+          {data.summary}
+        </p>
+      )}
     </div>
   )
 }

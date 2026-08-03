@@ -43,11 +43,16 @@ export function OffdayBlock({
       >
         {isLoading ? 'Checking the schedule…' : 'No game today.'}
       </h2>
-      <p className="m-0" style={{ ...proseStyle, marginBottom: 14 }}>
-        {isLoading
-          ? 'The schedule for today hasn’t loaded yet.'
-          : 'The column rests until the next first pitch. When a game lands on this date, it flexes back in here.'}
-      </p>
+      {/* Only the loading line survives here. What replaced it said the column
+          "rests until the next first pitch" and would "flex back in here" —
+          true of the layout, and no use to someone glancing at a wall display.
+          The heading already reports the fact; anything past it was the page
+          describing itself. */}
+      {isLoading && (
+        <p className="m-0" style={{ ...proseStyle, marginBottom: 14 }}>
+          The schedule for today hasn’t loaded yet.
+        </p>
+      )}
       {upcoming.length > 0 && (
         <div className="pt-2.5" style={{ borderTop: '1px solid var(--rule)' }}>
           <Kicker color="var(--ink-muted)">Next on the schedule</Kicker>
