@@ -1,0 +1,10 @@
+dist
+build
+node_modules
+coverage
+*.min.js
+package-lock.json
+CHANGELOG.md
+
+# Font binaries; prettier would skip them anyway, but be explicit.
+public/fonts
