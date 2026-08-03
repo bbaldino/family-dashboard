@@ -12,6 +12,12 @@ export default defineConfig({
   },
   server: {
     allowedHosts: ['dashboard.baldino.me'],
+    // The doorbell page is embedded cross-origin and we hand it `@font-face`
+    // rules pointing back here (see `data/doorbell/theming.ts`). Fonts are
+    // CORS-restricted even from plain CSS, and Vite sends no
+    // `Access-Control-Allow-Origin` by default, so without this every face
+    // fails to load and silently falls back to a generic family.
+    cors: true,
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:3042',
