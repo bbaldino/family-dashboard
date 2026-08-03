@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/bbaldino/family-dashboard/compare/v0.4.1...v0.4.2) (2026-08-03)
+
+
+### Bug Fixes
+
+* **themes/broadsheet:** stop the sports column narrating its own layout ([7151946](https://github.com/bbaldino/family-dashboard/commit/71519468cbba01780f2011b0963dc39632b8beac))
+
 ## [0.4.1](https://github.com/bbaldino/family-dashboard/compare/v0.4.0...v0.4.1) (2026-08-03)
 
 
