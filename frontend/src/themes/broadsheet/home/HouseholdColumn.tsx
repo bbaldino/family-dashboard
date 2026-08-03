@@ -148,16 +148,32 @@ interface VisibleChoreGroup {
  *  constraint that forced 2/2 no longer exists and the caps rise to 4/4 to
  *  match the design's own `CHORE_TASK_CAP`.
  *
- *  Two things still hold. The caps exist so nothing is ever sliced mid-row —
- *  anything past them rolls into a "+N more" line rather than being clipped,
- *  and this household routinely exceeds a cap of 2, so that line is a normal
- *  sight rather than an edge case. And if On this day is ever restored here,
- *  or the column gains another section, these must be re-measured against
- *  whatever sits below them rather than left at 4 on the assumption the room
- *  is still there.
+ *  `MAX_TASKS_PER_PERSON` then went 4 -> 6, measured against a real heavy day
+ *  (two people, six chores each — twelve in total). At 6 the whole list shows
+ *  with no "+N more" at all, and the lowest line in the column clears the
+ *  body's bottom edge by **0.4px**. That is a fit, not a margin: one more
+ *  chore for either person, a third person, or a webfont metric shift on a
+ *  cold boot pushes Coming up under the fold, and this column clips with
+ *  `overflow: hidden`, so it goes silently.
+ *
+ *  That is a deliberate trade — days this busy are rare, and the alternative
+ *  (the design's two-up people grid, halving the vertical cost) wraps task
+ *  names like "Refill mini fridge/snacks" in a ~230px column. If chores grow
+ *  routinely past this, that grid is the lever to reach for rather than a
+ *  smaller cap.
+ *
+ *  Note people stack vertically here; the design's two-up grid was never
+ *  implemented. So each extra task per person costs a full row per person,
+ *  not a shared one — the caps multiply rather than add.
+ *
+ *  The caps exist so nothing is ever sliced mid-row: anything past them rolls
+ *  into a "+N more" line rather than being clipped. And if On this day is ever
+ *  restored here, or the column gains another section, these must be
+ *  re-measured rather than left as they are on the assumption the room is
+ *  still there — it is not.
  */
 const MAX_VISIBLE_PEOPLE = 4
-const MAX_TASKS_PER_PERSON = 4
+const MAX_TASKS_PER_PERSON = 6
 
 function capChoreGroups(persons: PersonAssignments[]): {
   groups: VisibleChoreGroup[]

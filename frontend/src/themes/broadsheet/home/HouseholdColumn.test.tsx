@@ -104,10 +104,10 @@ describe('HouseholdColumn', () => {
         total_count: 10,
         persons: [
           {
-            // 6 assignments — past MAX_TASKS_PER_PERSON (4), so this
+            // 8 assignments — past MAX_TASKS_PER_PERSON (6), so this
             // person's own group shows a "+2 more" line.
             person: { id: 1, name: 'Ben', color: '#000', avatar: null },
-            assignments: Array.from({ length: 6 }, (_, i) => ({
+            assignments: Array.from({ length: 8 }, (_, i) => ({
               id: i,
               chore: { id: i, name: `Chore ${i}`, chore_type: 'regular', tags: [] },
               picked_chore: null,
@@ -115,8 +115,8 @@ describe('HouseholdColumn', () => {
             })),
           },
           {
-            // 3 assignments — now inside the per-person cap of 4, so this
-            // group shows every task and no "+more" line at all.
+            // 3 assignments — inside the per-person cap of 6, so this group
+            // shows every task and no "+more" line at all.
             person: { id: 2, name: 'Mia', color: '#000', avatar: null },
             assignments: Array.from({ length: 3 }, (_, i) => ({
               id: 20 + i,
@@ -189,14 +189,14 @@ describe('HouseholdColumn', () => {
     // Section header sums across every person, uncapped.
     expect(screen.getByText('2/10')).toBeInTheDocument()
     // Ben's own heading count is also uncapped...
-    expect(screen.getByText('2/6')).toBeInTheDocument()
+    expect(screen.getByText('2/8')).toBeInTheDocument()
     // ...but only 2 of his 6 tasks render, with the rest folded into a
     // per-person "+more" line that names whose tasks are hidden — the
     // column-level people overflow below uses different wording, so the two
     // can't be mistaken for each other.
     expect(screen.getByText('+2 more for Ben')).toBeInTheDocument()
-    expect(screen.queryByText('Chore 4')).not.toBeInTheDocument()
-    expect(screen.getByText('Chore 3')).toBeInTheDocument()
+    expect(screen.queryByText('Chore 6')).not.toBeInTheDocument()
+    expect(screen.getByText('Chore 5')).toBeInTheDocument()
     // Mia is also past the per-person cap — same treatment, her own
     // "+more" line with a different count.
     expect(screen.getByText('0/3')).toBeInTheDocument()
@@ -218,17 +218,17 @@ describe('HouseholdColumn', () => {
     // "more of that person's tasks". One names the person, the other says
     // what it is counting.
     //
-    // Sized against the caps (4 people, 4 tasks each): Ben carries five tasks
+    // Sized against the caps (4 people, 6 tasks each): Ben carries seven tasks
     // and there are five people, so each overflow is exactly one over and both
     // lines render together.
     useChores.mockReturnValue({
       data: {
         completed_count: 0,
-        total_count: 9,
+        total_count: 11,
         persons: [
           {
             person: { id: 1, name: 'Ben', color: '#000', avatar: null },
-            assignments: [0, 1, 2, 3, 4].map((i) => ({
+            assignments: [0, 1, 2, 3, 4, 5, 6].map((i) => ({
               id: i,
               completed: false,
               chore: { name: `Ben chore ${i}` },
