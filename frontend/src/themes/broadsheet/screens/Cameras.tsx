@@ -1,5 +1,7 @@
+import { useMemo, useRef } from 'react'
 import { useIntegrationConfig } from '@/data/use-integration-config'
-import { doorbellIntegration } from '@/data/doorbell'
+import { doorbellIntegration, useDoorbellTheme, buildDoorbellCss, BROADSHEET_LAYOUT } from '@/data/doorbell'
+import { resolveBroadsheetDoorbellVars } from '@/themes/broadsheet/ui/broadsheet-vars'
 import { MastheadFrame } from '@/themes/broadsheet/ui/MastheadFrame'
 import { mastheadKickerStyle, mastheadNumeralStyle } from '@/themes/broadsheet/ui/masthead-styles'
 import { useNow } from '@/themes/broadsheet/home/useNow'
@@ -115,6 +117,30 @@ export function Cameras() {
   const defaultCameraUrl = doorbellIntegration.schema.parse({}).camera_url
   const cameraUrl = config ? config.camera_url || null : defaultCameraUrl
 
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+
+  // Broadsheet's palette lives in CSS on `.broadsheet-root`, so it's read back
+  // off the document rather than restated in JS.
+  const css = useMemo(
+    () =>
+      buildDoorbellCss({
+        vars: resolveBroadsheetDoorbellVars(),
+        origin: window.location.origin,
+      }),
+    // The resolver reads the live document rather than anything in scope, so
+    // there is nothing here for the linter to see. The dependency is the point:
+    // re-read the palette each time this remounts, in case the theme changed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [cameraUrl],
+  )
+
+  const { revealed } = useDoorbellTheme({
+    iframeRef,
+    cameraUrl: cameraUrl ?? '',
+    css,
+    layoutCss: BROADSHEET_LAYOUT,
+  })
+
   return (
     <div data-testid="broadsheet-cameras" className="broadsheet-root w-[1600px] h-[900px] flex flex-col">
       <MastheadFrame
@@ -150,15 +176,38 @@ export function Cameras() {
               minHeight: 0,
               position: 'relative',
               border: '8px solid var(--ink)',
-              background: '#0a0805',
+              // The same tone the doorbell page's stage fill uses
+              // (`layouts.ts` reads it as `--doorbell-border`). Showing
+              // through while the frame is hidden, it makes the pre-theme beat
+              // the colour of what follows rather than a flash before it.
+              background: 'var(--rule-faint)',
               overflow: 'hidden',
               boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
             }}
           >
+            {/* Hidden until the first payload goes out. `postMessage` can't
+             *  beat first paint, so an immediately-visible frame shows the
+             *  doorbell page's own grey defaults for a beat before the theme
+             *  lands — against this frame's near-black ground that reads as a
+             *  flash. The ink backing behind shows through meanwhile, and
+             *  `useDoorbellTheme` reveals on a deadline regardless, so a page
+             *  that never handshakes still gets seen. */}
+            {/* Keyed on the URL so a change replaces the element rather than
+             *  editing its `src`. Config resolves after first paint, so this
+             *  frame mounts on the schema default and only then switches to
+             *  the household's real URL — and an in-place `src` change does
+             *  not reliably re-navigate a frame that is already loading. It
+             *  was observed sticking on the default's origin, streaming the
+             *  wrong doorbell entirely. Replacing the element also restarts
+             *  the theming handshake, which is what we want: the new page
+             *  posts its own `doorbell:ready`. */}
             <iframe
+              key={cameraUrl}
+              ref={iframeRef}
               src={cameraUrl}
               title="Front step camera"
               className="w-full h-full border-0"
+              style={{ visibility: revealed ? 'visible' : 'hidden' }}
               allow="autoplay; camera; microphone"
             />
           </div>

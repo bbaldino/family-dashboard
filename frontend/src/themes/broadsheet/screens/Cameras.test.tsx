@@ -59,4 +59,22 @@ describe('broadsheet Cameras (the Watch Room)', () => {
     render(<Cameras />)
     expect(screen.getByText('Now')).toBeInTheDocument()
   })
+
+  /** Config resolves after first paint, so the frame mounts pointing at the
+   *  schema default and only then switches to the household's real URL.
+   *  Changing an iframe's `src` attribute in place does not reliably
+   *  re-navigate a frame that is already loading — observed sticking on the
+   *  default's origin — so the element has to be replaced, not edited. */
+  it('remounts the frame when the configured URL changes', () => {
+    useIntegrationConfig.mockReturnValue(null)
+    const { rerender } = render(<Cameras />)
+    const before = screen.getByTitle('Front step camera')
+
+    useIntegrationConfig.mockReturnValue({ camera_url: 'https://example.com/other' })
+    rerender(<Cameras />)
+    const after = screen.getByTitle('Front step camera')
+
+    expect(after.getAttribute('src')).toBe('https://example.com/other')
+    expect(after).not.toBe(before)
+  })
 })
