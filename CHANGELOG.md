@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.3](https://github.com/bbaldino/family-dashboard/compare/v0.4.2...v0.4.3) (2026-08-03)
+
+
+### Bug Fixes
+
+* **chores:** make optimistic revert concurrency-safe ([b455515](https://github.com/bbaldino/family-dashboard/commit/b4555152419866fe2a51480a2b8422ea99da12d7))
+* **data/chores:** flip a chore optimistically and revert on failure ([20c9a3d](https://github.com/bbaldino/family-dashboard/commit/20c9a3da36de84416f5e40a55c9b6c76f067c92b))
+* **themes/broadsheet:** let a chore be checked and unchecked from the tablet ([8456a88](https://github.com/bbaldino/family-dashboard/commit/8456a88aa4ada19b2e739a682f4ddad1c6b96092))
+
 ## [0.4.2](https://github.com/bbaldino/family-dashboard/compare/v0.4.1...v0.4.2) (2026-08-03)
 
 
