@@ -40,6 +40,28 @@ function isActivePath(pathname: string, path: string): boolean {
   return path === '/' ? pathname === '/' : pathname === path || pathname.startsWith(`${path}/`)
 }
 
+/** The gear, per the mock's own inline SVG (`shared.jsx:210`). Drawn here
+ *  rather than pulled from lucide so it carries the same 1.5 stroke and
+ *  currentColor as the rest of broadsheet's chrome. */
+function SettingsIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={15}
+      height={15}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.5}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 19.4 9c.1.4.3.7.6 1H20a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+    </svg>
+  )
+}
+
 /** Thin vertical divider between nav entries — Hairline is horizontal-only. */
 function EntryDivider() {
   return <span style={{ width: 1, height: 12, background: 'var(--rule)' }} />
@@ -165,6 +187,7 @@ function NowPlaying() {
  */
 export function Footer() {
   const location = useLocation()
+  const settingsActive = location.pathname.startsWith('/admin')
 
   return (
     <div
@@ -181,24 +204,54 @@ export function Footer() {
         style={{ gridTemplateColumns: '1.6fr 1fr', gap: 24 }}
       >
         <NowPlaying />
-        <nav className="flex items-center justify-end gap-4">
-          {NAV_ITEMS.map((item, i) => {
-            const path = '/' + ROUTE_PATHS[item.key]
-            const active = isActivePath(location.pathname, path)
-            return (
-              <div key={item.key} className="flex items-center gap-4">
-                {i > 0 && <EntryDivider />}
-                <Link
-                  to={path}
-                  className="uppercase"
-                  style={active ? activeLinkStyle : inactiveLinkStyle}
-                >
-                  {item.label}
-                </Link>
-              </div>
-            )
-          })}
-        </nav>
+        {/* nav and settings share the grid's second cell. As siblings of the
+         *  grid itself they became a third item and wrapped onto an implicit
+         *  row, which the 64px footer then clipped out of sight. */}
+        <div className="flex items-center justify-end gap-4">
+          <nav className="flex items-center gap-4">
+            {NAV_ITEMS.map((item, i) => {
+              const path = '/' + ROUTE_PATHS[item.key]
+              const active = isActivePath(location.pathname, path)
+              return (
+                <div key={item.key} className="flex items-center gap-4">
+                  {i > 0 && <EntryDivider />}
+                  <Link
+                    to={path}
+                    className="uppercase"
+                    style={active ? activeLinkStyle : inactiveLinkStyle}
+                  >
+                    {item.label}
+                  </Link>
+                </div>
+              )
+            })}
+          </nav>
+
+          {/* Settings sits outside <nav> deliberately, per the mock
+           *  (`shared.jsx:286`): the nav lists screens you browse between, and
+           *  settings is not one of them — it is a way out of the dashboard into
+           *  its configuration. A taller divider and a bordered box set it apart
+           *  from the word-marks rather than letting it read as a sixth screen.
+           *
+           *  Until now broadsheet had no route into /admin at all; the only way
+           *  in was typing the URL, which is no use on a wall-mounted tablet. */}
+          <span style={{ width: 1, height: 20, background: 'var(--rule)' }} />
+          <Link
+            to="/admin"
+            aria-label="Settings"
+            title="Settings"
+            className="flex items-center justify-center shrink-0"
+            style={{
+              width: 32,
+              height: 32,
+              border: `1px solid ${settingsActive ? 'var(--ink)' : 'var(--rule)'}`,
+              background: settingsActive ? 'var(--ink)' : 'transparent',
+              color: settingsActive ? 'var(--paper)' : 'var(--ink-muted)',
+            }}
+          >
+            <SettingsIcon />
+          </Link>
+        </div>
       </div>
     </div>
   )

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { Footer } from './Footer'
 
@@ -80,5 +80,31 @@ describe('Footer', () => {
       </MemoryRouter>,
     )
     expect(screen.getByText(/Kitchen Radio/)).toBeInTheDocument()
+  })
+
+  /** The admin page had no route into it from broadsheet at all — the only way
+   *  in was typing the URL, which is no use on a wall-mounted tablet. The mock
+   *  (`shared.jsx:286`) sets it apart from the destinations rather than making
+   *  it a sixth nav entry: settings is not a screen you browse to. */
+  it('offers a way into settings', () => {
+    render(
+      <MemoryRouter>
+        <Footer />
+      </MemoryRouter>,
+    )
+
+    const settings = screen.getByRole('link', { name: /settings/i })
+    expect(settings.getAttribute('href')).toBe('/admin')
+  })
+
+  it('keeps settings out of the screen destinations', () => {
+    render(
+      <MemoryRouter>
+        <Footer />
+      </MemoryRouter>,
+    )
+
+    const nav = screen.getByRole('navigation')
+    expect(within(nav).queryByRole('link', { name: /settings/i })).toBeNull()
   })
 })
