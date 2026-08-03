@@ -32,9 +32,7 @@ function LeadersList({ leaders }: { leaders: Leader[] }) {
 }
 
 function UpcomingSchedule({ games, currentGameId }: { games: Game[]; currentGameId: string }) {
-  const upcoming = games
-    .filter((g) => g.id !== currentGameId && g.state === 'upcoming')
-    .slice(0, 3)
+  const upcoming = games.filter((g) => g.id !== currentGameId && g.state === 'upcoming').slice(0, 3)
 
   if (upcoming.length === 0) return null
 
@@ -48,8 +46,12 @@ function UpcomingSchedule({ games, currentGameId }: { games: Game[]; currentGame
           const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
           return (
             <div key={g.id} className="text-xs flex justify-between text-text-secondary">
-              <span>{g.away.abbreviation} vs {g.home.abbreviation}</span>
-              <span>{day} {time}</span>
+              <span>
+                {g.away.abbreviation} vs {g.home.abbreviation}
+              </span>
+              <span>
+                {day} {time}
+              </span>
             </div>
           )
         })}
@@ -75,7 +77,9 @@ function AthleteCard({ athlete }: { athlete: GameAthlete }) {
       )}
       <div className="min-w-0">
         <div className="text-xs font-semibold text-text-primary truncate">{athlete.name}</div>
-        <div className="text-[11px] text-text-secondary truncate">{athlete.stats ?? athlete.role}</div>
+        <div className="text-[11px] text-text-secondary truncate">
+          {athlete.stats ?? athlete.role}
+        </div>
       </div>
     </div>
   )
@@ -110,11 +114,15 @@ function ProbableAthletes({ athletes, game }: { athletes: GameAthlete[]; game: G
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1">
           <div className="text-[10px] text-text-muted font-semibold">{game.away.abbreviation}</div>
-          {away.map((a, i) => <AthleteCard key={i} athlete={a} />)}
+          {away.map((a, i) => (
+            <AthleteCard key={i} athlete={a} />
+          ))}
         </div>
         <div className="flex flex-col gap-1">
           <div className="text-[10px] text-text-muted font-semibold">{game.home.abbreviation}</div>
-          {home.map((a, i) => <AthleteCard key={i} athlete={a} />)}
+          {home.map((a, i) => (
+            <AthleteCard key={i} athlete={a} />
+          ))}
         </div>
       </div>
     </div>
@@ -155,19 +163,15 @@ export function GameCardExpanded({ game, allGames, onClick }: GameCardExpandedPr
         </div>
 
         <div className="text-center">
-          {(isLive || isFinal) ? (
+          {isLive || isFinal ? (
             <div className="text-lg font-bold text-text-primary">
               {game.away.score} - {game.home.score}
             </div>
           ) : (
             <div className="text-xs text-text-secondary">vs</div>
           )}
-          {isLive && (
-            <div className="text-xs text-error font-medium">{game.periodLabel}</div>
-          )}
-          {isFinal && (
-            <div className="text-xs text-text-secondary">Final</div>
-          )}
+          {isLive && <div className="text-xs text-error font-medium">{game.periodLabel}</div>}
+          {isFinal && <div className="text-xs text-text-secondary">Final</div>}
         </div>
 
         <div className="flex items-center gap-2">
@@ -180,9 +184,7 @@ export function GameCardExpanded({ game, allGames, onClick }: GameCardExpandedPr
       </div>
 
       {/* Live MLB: full live card (situation, linescore, plays, leaders) */}
-      {hasMlbLiveCard && game.liveDetail && (
-        <MlbLiveCard game={game} detail={game.liveDetail} />
-      )}
+      {hasMlbLiveCard && game.liveDetail && <MlbLiveCard game={game} detail={game.liveDetail} />}
 
       {/* Live: sport-specific situation */}
       {isLive && !hasMlbLiveCard && game.situation?.type === 'mlb' && (
@@ -190,15 +192,15 @@ export function GameCardExpanded({ game, allGames, onClick }: GameCardExpandedPr
       )}
 
       {/* Live: last play */}
-      {isLive && !hasMlbLiveCard && game.lastPlay && (
-        <LastPlayBar text={game.lastPlay} />
-      )}
+      {isLive && !hasMlbLiveCard && game.lastPlay && <LastPlayBar text={game.lastPlay} />}
 
       {/* Live + Final: sport-specific linescore */}
       {(isLive || isFinal) && !hasMlbLiveCard && <SportLinescore game={game} />}
 
       {/* Live + Final: leaders */}
-      {(isLive || isFinal) && !hasMlbLiveCard && <LeadersList leaders={game.allLeaders ?? game.leaders} />}
+      {(isLive || isFinal) && !hasMlbLiveCard && (
+        <LeadersList leaders={game.allLeaders ?? game.leaders} />
+      )}
 
       {/* Final: ESPN recap headline if published, else LLM-generated fallback */}
       {isFinal && game.headline && <GameHeadline text={game.headline} />}
@@ -206,17 +208,12 @@ export function GameCardExpanded({ game, allGames, onClick }: GameCardExpandedPr
 
       {/* Upcoming: athletes (probable pitchers, etc) */}
       {isUpcoming && game.athletes.length > 0 && (
-        <ProbableAthletes
-          athletes={game.athletes}
-          game={game}
-        />
+        <ProbableAthletes athletes={game.athletes} game={game} />
       )}
 
       {/* Upcoming: broadcast info */}
       {isUpcoming && game.broadcast && (
-        <div className="mt-2 text-xs text-text-muted">
-          {game.broadcast}
-        </div>
+        <div className="mt-2 text-xs text-text-muted">{game.broadcast}</div>
       )}
 
       {/* Upcoming: schedule + AI preview */}

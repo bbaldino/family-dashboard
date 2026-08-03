@@ -7,11 +7,7 @@ interface DoorbellRingModalProps {
   onClose: () => void
 }
 
-export function DoorbellRingModal({
-  isOpen,
-  cameraUrl,
-  onClose,
-}: DoorbellRingModalProps) {
+export function DoorbellRingModal({ isOpen, cameraUrl, onClose }: DoorbellRingModalProps) {
   const dismissBtnRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
@@ -54,10 +50,7 @@ export function DoorbellRingModal({
         className="flex flex-col items-center gap-6 px-8 w-full max-w-4xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div
-          id="doorbell-ring-title"
-          className="text-white/80 text-lg font-semibold"
-        >
+        <div id="doorbell-ring-title" className="text-white/80 text-lg font-semibold">
           Someone at the door
         </div>
 

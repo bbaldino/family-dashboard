@@ -29,7 +29,7 @@ export function SportsSettings() {
     setLoading(true)
     setError(null)
     try {
-      const config = await fetch('/api/config').then((r) => r.json()) as Record<string, string>
+      const config = (await fetch('/api/config').then((r) => r.json())) as Record<string, string>
       const tracked: TrackedTeam[] = config['sports.tracked_teams']
         ? JSON.parse(config['sports.tracked_teams'])
         : []
@@ -163,9 +163,7 @@ export function SportsSettings() {
 
   return (
     <div className="space-y-6">
-      {error && (
-        <div className="bg-error/10 text-error rounded-lg p-3 text-sm">{error}</div>
-      )}
+      {error && <div className="bg-error/10 text-error rounded-lg p-3 text-sm">{error}</div>}
 
       {/* Tracked teams summary */}
       {trackedTeams.length > 0 && (
@@ -177,9 +175,7 @@ export function SportsSettings() {
                 key={`${t.league}-${t.teamId}`}
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-palette-6/10 text-palette-6 text-sm font-medium"
               >
-                {t.logo && (
-                  <img src={t.logo} alt="" className="w-4 h-4 object-contain" />
-                )}
+                {t.logo && <img src={t.logo} alt="" className="w-4 h-4 object-contain" />}
                 {t.name ?? t.teamId}
                 <span className="text-palette-6/50 text-xs">{t.league.toUpperCase()}</span>
                 <button

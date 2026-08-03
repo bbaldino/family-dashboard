@@ -12,9 +12,17 @@ export function useLunchWidgetMeta(): WidgetMeta {
   }
 
   if (hasToday) {
-    return { visible: true, sizePreference: { orientation: 'square', relativeSize: 'large' }, priority: 3 }
+    return {
+      visible: true,
+      sizePreference: { orientation: 'square', relativeSize: 'large' },
+      priority: 3,
+    }
   }
 
   // Tomorrow only
-  return { visible: true, sizePreference: { orientation: 'square', relativeSize: 'medium' }, priority: 1 }
+  return {
+    visible: true,
+    sizePreference: { orientation: 'square', relativeSize: 'medium' },
+    priority: 1,
+  }
 }

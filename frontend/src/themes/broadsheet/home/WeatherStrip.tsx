@@ -70,8 +70,22 @@ function formatHourCompact(unixSeconds: number): string {
 }
 
 const COMPASS_POINTS = [
-  'N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
-  'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW',
+  'N',
+  'NNE',
+  'NE',
+  'ENE',
+  'E',
+  'ESE',
+  'SE',
+  'SSE',
+  'S',
+  'SSW',
+  'SW',
+  'WSW',
+  'W',
+  'WNW',
+  'NW',
+  'NNW',
 ]
 
 function compassDirection(deg: number): string {
@@ -177,12 +191,22 @@ export function WeatherStrip() {
       {hasSun && current && (
         <div style={{ gridColumn: 1, display: 'flex', alignItems: 'center', gap: 10 }}>
           <Sun size={16} strokeWidth={1.5} style={{ color: ACCENT2 }} />
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.1em', lineHeight: 1.3, color: 'var(--ink)' }}>
+          <div
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              letterSpacing: '0.1em',
+              lineHeight: 1.3,
+              color: 'var(--ink)',
+            }}
+          >
             <div>
-              <span style={{ color: 'var(--ink-muted)' }}>UP</span> {formatClockCompact(current.sunrise)}
+              <span style={{ color: 'var(--ink-muted)' }}>UP</span>{' '}
+              {formatClockCompact(current.sunrise)}
             </div>
             <div>
-              <span style={{ color: 'var(--ink-muted)' }}>DOWN</span> {formatClockCompact(current.sunset)}
+              <span style={{ color: 'var(--ink-muted)' }}>DOWN</span>{' '}
+              {formatClockCompact(current.sunset)}
             </div>
           </div>
         </div>
@@ -192,7 +216,15 @@ export function WeatherStrip() {
        *  hourly; each column's own time label carries the actual point in
        *  time rather than implying finer resolution. */}
       {hasHourly && (
-        <div style={{ gridColumn: 2, display: 'grid', gridTemplateColumns: `repeat(${hourly.length}, 1fr)`, gap: 0, minWidth: 0 }}>
+        <div
+          style={{
+            gridColumn: 2,
+            display: 'grid',
+            gridTemplateColumns: `repeat(${hourly.length}, 1fr)`,
+            gap: 0,
+            minWidth: 0,
+          }}
+        >
           {hourly.map((h, i) => {
             const heat = Math.max(0, Math.min(1, (h.temp - 50) / 30))
             const Icon = iconForCondition(h.condition)
@@ -208,11 +240,30 @@ export function WeatherStrip() {
                   padding: '0 2px',
                 }}
               >
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--ink-muted)', letterSpacing: '0.04em' }}>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 9,
+                    color: 'var(--ink-muted)',
+                    letterSpacing: '0.04em',
+                  }}
+                >
                   {formatHourCompact(h.dt)}
                 </span>
-                <Icon size={14} strokeWidth={1.4} style={{ color: heat > 0.7 ? 'var(--rust)' : 'var(--ink-muted)' }} />
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: 15, fontWeight: 500, lineHeight: 1, color: 'var(--ink)' }}>
+                <Icon
+                  size={14}
+                  strokeWidth={1.4}
+                  style={{ color: heat > 0.7 ? 'var(--rust)' : 'var(--ink-muted)' }}
+                />
+                <span
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: 15,
+                    fontWeight: 500,
+                    lineHeight: 1,
+                    color: 'var(--ink)',
+                  }}
+                >
                   {Math.round(h.temp)}°
                 </span>
               </div>
@@ -260,15 +311,38 @@ export function WeatherStrip() {
       {hasUv && air && (
         <div style={{ gridColumn: 4, textAlign: 'center', minWidth: 60 }}>
           <div style={cellLabelStyle}>{hasPollen ? 'UV · POLLEN' : 'UV INDEX'}</div>
-          <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontWeight: 500, lineHeight: 1.2, marginTop: 2, whiteSpace: 'nowrap', color: 'var(--ink)' }}>
+          <div
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 14,
+              fontWeight: 500,
+              lineHeight: 1.2,
+              marginTop: 2,
+              whiteSpace: 'nowrap',
+              color: 'var(--ink)',
+            }}
+          >
             {Math.round(air.uv_index!)}{' '}
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: ACCENT2, letterSpacing: '0.04em' }}>
+            <span
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                color: ACCENT2,
+                letterSpacing: '0.04em',
+              }}
+            >
               {UV_LABELS[air.uv_level!]}
             </span>
             {hasPollen && (
               <>
                 <span style={{ margin: '0 4px', color: 'var(--rule)' }}>·</span>
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-muted)' }}>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 10,
+                    color: 'var(--ink-muted)',
+                  }}
+                >
                   {POLLEN_LABELS[air.pollen_level!]}
                 </span>
               </>
@@ -281,7 +355,15 @@ export function WeatherStrip() {
       {hasWind && current && (
         <div style={{ gridColumn: 5, textAlign: 'right', minWidth: 90 }}>
           <div style={cellLabelStyle}>WIND · HUM</div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink)', marginTop: 3, letterSpacing: '0.04em' }}>
+          <div
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 11,
+              color: 'var(--ink)',
+              marginTop: 3,
+              letterSpacing: '0.04em',
+            }}
+          >
             {Math.round(current.wind_speed)}mph {compassDirection(current.wind_deg)}
             <br />
             <span style={{ color: 'var(--ink-muted)' }}>{current.humidity}%</span>

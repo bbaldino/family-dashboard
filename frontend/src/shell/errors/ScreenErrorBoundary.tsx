@@ -28,13 +28,8 @@ export class ScreenErrorBoundary extends Component<Props, State> {
       return (
         <div className="p-8 text-text-primary bg-bg-primary min-h-screen">
           <h1 className="text-lg font-bold mb-2">Screen failed to load</h1>
-          <p className="text-sm text-text-secondary mb-4">
-            {this.state.error.message}
-          </p>
-          <button
-            className="text-sm underline text-text-primary"
-            onClick={this.handleReload}
-          >
+          <p className="text-sm text-text-secondary mb-4">{this.state.error.message}</p>
+          <button className="text-sm underline text-text-primary" onClick={this.handleReload}>
             Reload
           </button>
         </div>

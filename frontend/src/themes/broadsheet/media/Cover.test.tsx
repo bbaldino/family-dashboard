@@ -7,7 +7,9 @@ describe('Cover', () => {
     // alt="" is intentional (decorative — the name is adjacent text), which
     // means the img has an accessible role of "presentation", not "img" —
     // query the DOM directly rather than by role.
-    const { container } = render(<Cover imageUrl="https://example.com/art.jpg" name="Amber Hours" />)
+    const { container } = render(
+      <Cover imageUrl="https://example.com/art.jpg" name="Amber Hours" />,
+    )
     const img = container.querySelector('img')
     expect(img).toHaveAttribute('src', 'https://example.com/art.jpg')
     expect(img).toHaveAttribute('alt', '')

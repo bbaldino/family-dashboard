@@ -34,13 +34,21 @@ describe('MeterBar', () => {
   })
 
   it('clamps out-of-range and non-finite percentages', () => {
-    expect(parts(render(<MeterBar percent={140} fill="var(--rust)" />).container).fill.style.width).toBe('100%')
-    expect(parts(render(<MeterBar percent={-5} fill="var(--rust)" />).container).fill.style.width).toBe('0%')
-    expect(parts(render(<MeterBar percent={NaN} fill="var(--rust)" />).container).fill.style.width).toBe('0%')
+    expect(
+      parts(render(<MeterBar percent={140} fill="var(--rust)" />).container).fill.style.width,
+    ).toBe('100%')
+    expect(
+      parts(render(<MeterBar percent={-5} fill="var(--rust)" />).container).fill.style.width,
+    ).toBe('0%')
+    expect(
+      parts(render(<MeterBar percent={NaN} fill="var(--rust)" />).container).fill.style.width,
+    ).toBe('0%')
   })
 
   it('passes a test id through for callers that need to find their own bar', () => {
-    const { container } = render(<MeterBar percent={0} fill="var(--rust)" testId="centre-spread-progress-track" />)
+    const { container } = render(
+      <MeterBar percent={0} fill="var(--rust)" testId="centre-spread-progress-track" />,
+    )
     expect(parts(container).track).toHaveAttribute('data-testid', 'centre-spread-progress-track')
   })
 })

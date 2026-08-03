@@ -3,7 +3,18 @@ import { visibleClipRect } from './visible-clip-rect'
 
 function mockRect(el: HTMLElement, rect: Partial<DOMRect>) {
   el.getBoundingClientRect = () =>
-    ({ top: 0, bottom: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => {}, ...rect }) as DOMRect
+    ({
+      top: 0,
+      bottom: 0,
+      left: 0,
+      right: 0,
+      width: 0,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+      ...rect,
+    }) as DOMRect
 }
 
 describe('visibleClipRect', () => {
@@ -18,7 +29,8 @@ describe('visibleClipRect', () => {
   })
 
   it('returns the bounding rect of a single clipping ancestor', () => {
-    document.body.innerHTML = '<div id="outer" style="overflow: hidden"><div id="inner"></div></div>'
+    document.body.innerHTML =
+      '<div id="outer" style="overflow: hidden"><div id="inner"></div></div>'
     const outer = document.getElementById('outer')!
     const inner = document.getElementById('inner')!
     mockRect(outer, { top: 10, bottom: 200 })

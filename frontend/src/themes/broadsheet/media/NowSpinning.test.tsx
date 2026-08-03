@@ -43,7 +43,15 @@ describe('NowSpinning', () => {
           queueId: 'kitchen',
           displayName: 'Kitchen',
           state: 'playing',
-          currentItem: { name: 'Black Steel', artist: 'Tricky', album: 'Maxinquaye', imageUrl: null, duration: 340, elapsed: 294, uri: 'u1' },
+          currentItem: {
+            name: 'Black Steel',
+            artist: 'Tricky',
+            album: 'Maxinquaye',
+            imageUrl: null,
+            duration: 340,
+            elapsed: 294,
+            uri: 'u1',
+          },
           volumeLevel: 62,
         },
       },
@@ -75,7 +83,15 @@ describe('NowSpinning', () => {
           queueId: 'kitchen',
           displayName: 'Kitchen',
           state: 'paused',
-          currentItem: { name: 'Black Steel', artist: 'Tricky', album: null, imageUrl: null, duration: 0, elapsed: null, uri: 'u1' },
+          currentItem: {
+            name: 'Black Steel',
+            artist: 'Tricky',
+            album: null,
+            imageUrl: null,
+            duration: 0,
+            elapsed: null,
+            uri: 'u1',
+          },
           volumeLevel: null,
         },
       },
@@ -112,7 +128,15 @@ describe('NowSpinning', () => {
           queueId: 'kitchen',
           displayName: 'Kitchen',
           state: 'playing',
-          currentItem: { name: 'Black Steel', artist: 'Tricky', album: 'Maxinquaye', imageUrl: null, duration: 340, elapsed: 294, uri: 'u1' },
+          currentItem: {
+            name: 'Black Steel',
+            artist: 'Tricky',
+            album: 'Maxinquaye',
+            imageUrl: null,
+            duration: 340,
+            elapsed: 294,
+            uri: 'u1',
+          },
           volumeLevel: 62,
         },
       },
@@ -136,7 +160,15 @@ describe('NowSpinning', () => {
           queueId: 'kitchen',
           displayName: 'Kitchen',
           state: 'playing',
-          currentItem: { name: 'Black Steel', artist: 'Tricky', album: null, imageUrl: null, duration: 100, elapsed: 10, uri: 'u1' },
+          currentItem: {
+            name: 'Black Steel',
+            artist: 'Tricky',
+            album: null,
+            imageUrl: null,
+            duration: 100,
+            elapsed: 10,
+            uri: 'u1',
+          },
           volumeLevel: 20,
         },
       },
@@ -149,7 +181,17 @@ describe('NowSpinning', () => {
     })
     render(<NowSpinning />)
     const slider = screen.getByLabelText('Volume')
-    vi.spyOn(slider, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 100, top: 0, right: 100, bottom: 0, height: 0, x: 0, y: 0, toJSON: () => {} })
+    vi.spyOn(slider, 'getBoundingClientRect').mockReturnValue({
+      left: 0,
+      width: 100,
+      top: 0,
+      right: 100,
+      bottom: 0,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    })
     fireEvent.click(slider, { clientX: 50 })
     expect(setVolume).toHaveBeenCalledWith('kitchen', 50)
   })

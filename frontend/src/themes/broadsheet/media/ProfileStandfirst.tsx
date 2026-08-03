@@ -19,7 +19,15 @@ export function ProfileStandfirst({ text }: { text: string }) {
       style={{ padding: '10px 56px 12px', borderBottom: '1px solid var(--rule)', gap: 18 }}
     >
       <Kicker>↘ on the artist</Kicker>
-      <p className="m-0 truncate" style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 16, lineHeight: 1.4 }}>
+      <p
+        className="m-0 truncate"
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontStyle: 'italic',
+          fontSize: 16,
+          lineHeight: 1.4,
+        }}
+      >
         {text}
       </p>
     </div>

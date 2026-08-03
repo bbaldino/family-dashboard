@@ -47,7 +47,9 @@ export function ShipmentRow({ shipment, onClick }: ShipmentRowProps) {
         {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <div className={`text-[14px] font-medium truncate ${isDelivered ? 'text-text-muted' : 'text-text-primary'}`}>
+        <div
+          className={`text-[14px] font-medium truncate ${isDelivered ? 'text-text-muted' : 'text-text-primary'}`}
+        >
           {shipment.name}
         </div>
         <div className="text-[11px] text-text-muted">
@@ -56,8 +58,7 @@ export function ShipmentRow({ shipment, onClick }: ShipmentRowProps) {
           ) : null}
           {isDelivered
             ? `${shipment.carrier ? ' · ' : ''}${formatDeliveredAgo(shipment.updatedAt)}`
-            : `${shipment.carrier ? ' · ' : ''}${STATUS_LABELS[shipment.status]}`
-          }
+            : `${shipment.carrier ? ' · ' : ''}${STATUS_LABELS[shipment.status]}`}
         </div>
         {!isDelivered && shipment.expectedDelivery && (
           <div className={`text-[11px] font-semibold mt-0.5 ${color}`}>

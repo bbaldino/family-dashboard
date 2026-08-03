@@ -22,9 +22,7 @@ export function parseLocalDate(dateStr: string): Date {
  * works for the former but shifts timed events to the wrong day in
  * negative-offset zones.
  */
-export function eventLocalDateStr(event: {
-  start: { date?: string; dateTime?: string }
-}): string {
+export function eventLocalDateStr(event: { start: { date?: string; dateTime?: string } }): string {
   const start = event.start.dateTime ?? event.start.date ?? ''
   return event.start.date && !event.start.dateTime
     ? start.substring(0, 10)

@@ -107,9 +107,7 @@ export function ServiceCard({ service }: { service: Service }) {
         <TypePill label={service.type_id} />
         <span className="text-sm text-text-secondary truncate min-w-0 flex-1">
           {service.message ??
-            (service.components.length > 0 && service.status === 'ok'
-              ? 'all components ok'
-              : '')}
+            (service.components.length > 0 && service.status === 'ok' ? 'all components ok' : '')}
         </span>
         <Chevron size={16} className="text-text-muted shrink-0" />
       </button>
@@ -129,9 +127,7 @@ export function ServiceCard({ service }: { service: Service }) {
               <div className="text-xs font-semibold text-text-primary">
                 {uptime.data ? `${uptime.data.percent_ok.toFixed(1)}% uptime` : 'Uptime'}
               </div>
-              <div className="text-[10px] text-text-muted uppercase tracking-wider">
-                24h
-              </div>
+              <div className="text-[10px] text-text-muted uppercase tracking-wider">24h</div>
             </div>
             {uptime.isLoading ? (
               <div className="text-xs text-text-muted">Loading uptime…</div>

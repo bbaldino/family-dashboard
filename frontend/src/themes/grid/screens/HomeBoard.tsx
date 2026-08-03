@@ -55,7 +55,14 @@ function useHiddenWidgets(): Set<string> {
       .then((r) => r.json())
       .then((data: Record<string, string>) => {
         const hiddenStr = data['dashboard.hidden'] ?? ''
-        setHidden(new Set(hiddenStr.split(',').map((s) => s.trim()).filter(Boolean)))
+        setHidden(
+          new Set(
+            hiddenStr
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean),
+          ),
+        )
       })
       .catch(() => {})
   }, [])
@@ -155,7 +162,6 @@ function Widgets({
   const onThisDayMeta = useOnThisDayWidgetMeta()
   const wordMeta = useWordOfTheDayWidgetMeta()
 
-
   const calendarElement = (
     <CalendarWidget
       days={calendarDays}
@@ -189,16 +195,18 @@ function Widgets({
   let widgets: CellGridWidget[]
   if (visibleFillers.length > 0) {
     const metaElement = (
-      <MetaFillerWidget
-        fillers={visibleFillers.map((f) => ({ key: f.key, element: f.element }))}
-      />
+      <MetaFillerWidget fillers={visibleFillers.map((f) => ({ key: f.key, element: f.element }))} />
     )
     widgets = [
       ...visibleContent,
       {
         key: 'meta-filler',
         element: metaElement,
-        meta: { visible: true, priority: 1, sizePreference: { orientation: 'square', relativeSize: 'medium' } },
+        meta: {
+          visible: true,
+          priority: 1,
+          sizePreference: { orientation: 'square', relativeSize: 'medium' },
+        },
       },
     ]
   } else {

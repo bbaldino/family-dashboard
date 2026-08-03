@@ -52,12 +52,9 @@ function originOf(url: string): string | null {
  * hidden until this flips — and it flips on a deadline regardless, so a page
  * that never handshakes is still seen.
  */
-export function useDoorbellTheme({
-  iframeRef,
-  cameraUrl,
-  css,
-  layoutCss,
-}: DoorbellThemeOptions): { revealed: boolean } {
+export function useDoorbellTheme({ iframeRef, cameraUrl, css, layoutCss }: DoorbellThemeOptions): {
+  revealed: boolean
+} {
   const [sent, setSent] = useState(false)
   const doorbellOrigin = useMemo(() => originOf(cameraUrl), [cameraUrl])
 

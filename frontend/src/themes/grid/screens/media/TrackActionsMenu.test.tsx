@@ -13,7 +13,10 @@ const baseTrack: TrackLike = {
   album_uri: 'spotify--x://album/1',
 }
 
-function renderMenu(overrides: Partial<TrackLike> = {}, callbacks: Partial<React.ComponentProps<typeof TrackActionsMenu>> = {}) {
+function renderMenu(
+  overrides: Partial<TrackLike> = {},
+  callbacks: Partial<React.ComponentProps<typeof TrackActionsMenu>> = {},
+) {
   const props = {
     item: { ...baseTrack, ...overrides },
     onPlayRadio: noop,

@@ -17,10 +17,7 @@ describe('ThemePicker', () => {
     _resetRegistry()
     registerTheme(stub('grid', 'Cards Grid'))
     registerTheme(stub('broadsheet', 'Broadsheet'))
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) }),
-    )
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) }))
   })
 
   afterEach(() => {
@@ -43,16 +40,12 @@ describe('ThemePicker', () => {
       }),
     )
     render(<ThemePicker />)
-    await waitFor(() =>
-      expect(screen.getByRole('radio', { name: /Broadsheet/ })).toBeChecked(),
-    )
+    await waitFor(() => expect(screen.getByRole('radio', { name: /Broadsheet/ })).toBeChecked())
   })
 
   it('defaults to grid when no theme is configured', async () => {
     render(<ThemePicker />)
-    await waitFor(() =>
-      expect(screen.getByRole('radio', { name: /Cards Grid/ })).toBeChecked(),
-    )
+    await waitFor(() => expect(screen.getByRole('radio', { name: /Cards Grid/ })).toBeChecked())
   })
 
   it('persists the choice to theme.presentation', async () => {
@@ -78,7 +71,10 @@ describe('ThemePicker', () => {
       'fetch',
       vi.fn().mockImplementation((url: string) => {
         if (url === '/api/config') {
-          return Promise.resolve({ ok: true, json: () => Promise.resolve({ 'theme.presentation': 'grid' }) })
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ 'theme.presentation': 'grid' }),
+          })
         }
         return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) })
       }),

@@ -4,7 +4,12 @@ import { buildAlbumNote } from './album-note'
 describe('buildAlbumNote', () => {
   it('reads well with the real-world combination: year, label, tracks, runtime', () => {
     // Push The Button — 11 tracks, ~56 min, label Virgin Records.
-    const text = buildAlbumNote({ year: 2005, label: 'Virgin Records', trackCount: 11, runtimeSeconds: 3360 })
+    const text = buildAlbumNote({
+      year: 2005,
+      label: 'Virgin Records',
+      trackCount: 11,
+      runtimeSeconds: 3360,
+    })
     expect(text).toBe('Released 2005 on Virgin Records — 11 tracks, running 56 min.')
   })
 
@@ -14,7 +19,12 @@ describe('buildAlbumNote', () => {
   })
 
   it('drops the year clause when absent', () => {
-    const text = buildAlbumNote({ year: null, label: 'Virgin Records', trackCount: 11, runtimeSeconds: 3360 })
+    const text = buildAlbumNote({
+      year: null,
+      label: 'Virgin Records',
+      trackCount: 11,
+      runtimeSeconds: 3360,
+    })
     expect(text).toBe('Released on Virgin Records — 11 tracks, running 56 min.')
   })
 

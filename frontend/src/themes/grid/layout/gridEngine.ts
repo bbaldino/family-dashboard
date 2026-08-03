@@ -247,11 +247,7 @@ export function placeWidgets(
  * to fill adjacent empty cells. Limited to 1 extra cell per direction
  * so widgets don't grow far beyond their requested size.
  */
-function expandToFillGaps(
-  placed: PlacedWidget[],
-  occupied: boolean[][],
-  grid: GridConfig,
-): void {
+function expandToFillGaps(placed: PlacedWidget[], occupied: boolean[][], grid: GridConfig): void {
   for (const w of [...placed].reverse()) {
     const row0 = w.rowStart - 1
     const col0 = w.colStart - 1

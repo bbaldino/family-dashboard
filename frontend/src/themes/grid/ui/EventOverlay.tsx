@@ -17,10 +17,7 @@ export function EventOverlay() {
       className="fixed inset-0 z-[100] flex items-center justify-center bg-bg-overlay animate-[fadeIn_200ms_ease-out]"
       onClick={dismissOverlay}
     >
-      <div
-        className="animate-[slideUp_300ms_ease-out]"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="animate-[slideUp_300ms_ease-out]" onClick={(e) => e.stopPropagation()}>
         {currentOverlay.content}
       </div>
     </div>

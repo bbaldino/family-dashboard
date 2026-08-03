@@ -97,7 +97,10 @@ export function CentreSpreadPlate({
   const remaining = duration > 0 ? Math.max(0, duration - elapsed) : 0
 
   return (
-    <div className="min-h-0 overflow-hidden flex flex-col items-center" style={{ padding: '18px 28px' }}>
+    <div
+      className="min-h-0 overflow-hidden flex flex-col items-center"
+      style={{ padding: '18px 28px' }}
+    >
       <div
         style={{
           width: 400,
@@ -139,7 +142,13 @@ export function CentreSpreadPlate({
         <MeterBar percent={progressPct} fill="var(--rust)" testId="centre-spread-progress-track" />
         <div
           className="flex justify-between"
-          style={{ marginTop: 6, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-muted)', letterSpacing: '0.08em' }}
+          style={{
+            marginTop: 6,
+            fontFamily: 'var(--font-mono)',
+            fontSize: 11,
+            color: 'var(--ink-muted)',
+            letterSpacing: '0.08em',
+          }}
         >
           <span style={{ color: 'var(--ink)' }}>{formatDuration(elapsed)}</span>
           <span>−{formatDuration(remaining)}</span>
@@ -148,7 +157,12 @@ export function CentreSpreadPlate({
       </div>
 
       <div className="flex items-center justify-center" style={{ gap: 34, marginTop: 16 }}>
-        <button type="button" onClick={onPrevious} style={{ all: 'unset', cursor: 'pointer', color: INK2, display: 'flex' }} aria-label="Previous track">
+        <button
+          type="button"
+          onClick={onPrevious}
+          style={{ all: 'unset', cursor: 'pointer', color: INK2, display: 'flex' }}
+          aria-label="Previous track"
+        >
           <SkipBack size={26} />
         </button>
         <button
@@ -173,7 +187,12 @@ export function CentreSpreadPlate({
         >
           {isPlaying ? <Pause size={28} /> : <Play size={28} />}
         </button>
-        <button type="button" onClick={onNext} style={{ all: 'unset', cursor: 'pointer', color: INK2, display: 'flex' }} aria-label="Next track">
+        <button
+          type="button"
+          onClick={onNext}
+          style={{ all: 'unset', cursor: 'pointer', color: INK2, display: 'flex' }}
+          aria-label="Next track"
+        >
           <SkipForward size={26} />
         </button>
       </div>

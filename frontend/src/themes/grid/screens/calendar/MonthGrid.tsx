@@ -43,8 +43,8 @@ function toDateKey(d: Date): string {
 interface SpanBar {
   event: CalendarEvent
   startCol: number // 0-6
-  endCol: number   // 0-6 (inclusive)
-  lane: number     // vertical slot (0, 1, 2...)
+  endCol: number // 0-6 (inclusive)
+  lane: number // vertical slot (0, 1, 2...)
   continuesFromPrev: boolean
   continuesToNext: boolean
 }
@@ -58,7 +58,10 @@ function isMultiDay(event: CalendarEvent): boolean {
 }
 
 /** Compute spanning bars for a single week row */
-function computeSpanBars(weekDates: Date[], eventsByDate: Record<string, CalendarEvent[]>): SpanBar[] {
+function computeSpanBars(
+  weekDates: Date[],
+  eventsByDate: Record<string, CalendarEvent[]>,
+): SpanBar[] {
   const weekStart = toDateKey(weekDates[0])
   const weekEndDate = new Date(weekDates[6])
   weekEndDate.setDate(weekEndDate.getDate() + 1)
@@ -136,7 +139,10 @@ function computeSpanBars(weekDates: Date[], eventsByDate: Record<string, Calenda
 }
 
 /** Get single-day events for a date (excluding multi-day) */
-function getSingleDayEvents(dateKey: string, eventsByDate: Record<string, CalendarEvent[]>): CalendarEvent[] {
+function getSingleDayEvents(
+  dateKey: string,
+  eventsByDate: Record<string, CalendarEvent[]>,
+): CalendarEvent[] {
   const events = eventsByDate[dateKey] ?? []
   return events.filter((e) => !isMultiDay(e))
 }
@@ -171,7 +177,10 @@ export function MonthGrid({ year, month, eventsByDate, selectedDate, onDayClick 
           const spanHeight = maxLane * (SPAN_BAR_HEIGHT + SPAN_BAR_GAP)
 
           return (
-            <div key={weekIdx} className="flex-1 min-h-0 relative border-b border-border last:border-b-0">
+            <div
+              key={weekIdx}
+              className="flex-1 min-h-0 relative border-b border-border last:border-b-0"
+            >
               {/* 7-column grid for day cells */}
               <div className="grid grid-cols-7 h-full">
                 {weekDates.map((date) => {

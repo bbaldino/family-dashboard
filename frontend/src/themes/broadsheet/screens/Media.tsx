@@ -90,24 +90,53 @@ export function Media() {
   }
 
   return (
-    <div data-testid="broadsheet-media" className="broadsheet-root relative w-[1600px] h-[900px] flex flex-col">
+    <div
+      data-testid="broadsheet-media"
+      className="broadsheet-root relative w-[1600px] h-[900px] flex flex-col"
+    >
       <MediaMasthead />
-      <SearchTabsRow query={query} onQueryChange={handleQueryChange} activeTab={tab} onTabChange={handleTabChange} searching={searching} />
-      <div data-testid="broadsheet-media-body" className="flex-1 min-h-0 grid" style={{ gridTemplateColumns: '1fr 380px' }}>
+      <SearchTabsRow
+        query={query}
+        onQueryChange={handleQueryChange}
+        activeTab={tab}
+        onTabChange={handleTabChange}
+        searching={searching}
+      />
+      <div
+        data-testid="broadsheet-media-body"
+        className="flex-1 min-h-0 grid"
+        style={{ gridTemplateColumns: '1fr 380px' }}
+      >
         <div
           data-testid="broadsheet-media-shelves"
           className="min-h-0 overflow-hidden flex flex-col"
           style={{ gap: 14, padding: '12px 28px 12px 56px' }}
         >
           {searching ? (
-            <SearchResultsPanel query={debouncedQuery} openMenuUri={openMenuUri} onToggleMenu={toggleMenu} onCloseMenu={closeMenu} />
+            <SearchResultsPanel
+              query={debouncedQuery}
+              openMenuUri={openMenuUri}
+              onToggleMenu={toggleMenu}
+              onCloseMenu={closeMenu}
+            />
           ) : tab === 'quick-dials' ? (
-            <QuickDialsShelves openMenuUri={openMenuUri} onToggleMenu={toggleMenu} onCloseMenu={closeMenu} />
+            <QuickDialsShelves
+              openMenuUri={openMenuUri}
+              onToggleMenu={toggleMenu}
+              onCloseMenu={closeMenu}
+            />
           ) : (
-            <ForYouShelf openMenuUri={openMenuUri} onToggleMenu={toggleMenu} onCloseMenu={closeMenu} />
+            <ForYouShelf
+              openMenuUri={openMenuUri}
+              onToggleMenu={toggleMenu}
+              onCloseMenu={closeMenu}
+            />
           )}
         </div>
-        <aside className="min-h-0" style={{ borderLeft: '1px solid var(--rule)', padding: '12px 56px 16px 28px' }}>
+        <aside
+          className="min-h-0"
+          style={{ borderLeft: '1px solid var(--rule)', padding: '12px 56px 16px 28px' }}
+        >
           <NowSpinning onOpenCentreSpread={() => setShowCentreSpread(true)} />
         </aside>
       </div>

@@ -74,15 +74,24 @@ function NowPlaying() {
   const currentItem = state.activeQueue?.currentItem ?? null
   const label = currentItem?.name ?? state.activeQueue?.displayName ?? null
   const isPlaying = state.activeQueue?.state === 'playing'
-  const hasProgress = currentItem?.duration != null && currentItem.duration > 0 && currentItem?.elapsed != null
-  const progressPct = hasProgress ? Math.min(100, Math.max(0, (currentItem!.elapsed! / currentItem!.duration!) * 100)) : 0
+  const hasProgress =
+    currentItem?.duration != null && currentItem.duration > 0 && currentItem?.elapsed != null
+  const progressPct = hasProgress
+    ? Math.min(100, Math.max(0, (currentItem!.elapsed! / currentItem!.duration!) * 100))
+    : 0
 
   return (
     <div className="flex items-center gap-3 min-w-0">
       {label && (
         <span
           className="flex items-center justify-center flex-shrink-0"
-          style={{ width: 34, height: 34, borderRadius: 34, background: 'var(--ink)', color: 'var(--paper)' }}
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: 34,
+            background: 'var(--ink)',
+            color: 'var(--paper)',
+          }}
         >
           {isPlaying ? <Pause size={13} /> : <Play size={13} />}
         </span>
@@ -94,26 +103,49 @@ function NowPlaying() {
             <>
               <span style={{ fontWeight: 600, color: 'var(--ink)' }}>{label}</span>
               {currentItem?.artist && (
-                <span style={{ fontStyle: 'italic', fontWeight: 400, color: 'var(--ink-muted)' }}> — {currentItem.artist}</span>
+                <span style={{ fontStyle: 'italic', fontWeight: 400, color: 'var(--ink-muted)' }}>
+                  {' '}
+                  — {currentItem.artist}
+                </span>
               )}
             </>
           ) : (
-            <span style={{ fontStyle: 'italic', color: 'var(--ink-muted)' }}>Quiet in the kitchen.</span>
+            <span style={{ fontStyle: 'italic', color: 'var(--ink-muted)' }}>
+              Quiet in the kitchen.
+            </span>
           )}
         </div>
         {hasProgress && (
           <div className="flex items-center gap-2 mt-0.5">
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--ink-muted)' }}>
+            <span
+              style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--ink-muted)' }}
+            >
               {formatDuration(currentItem!.elapsed!)}
             </span>
             <div style={{ width: 160, height: 2, background: 'var(--rule)', position: 'relative' }}>
-              <div style={{ position: 'absolute', inset: 0, width: `${progressPct}%`, background: 'var(--rust)' }} />
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: `${progressPct}%`,
+                  background: 'var(--rust)',
+                }}
+              />
             </div>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--ink-muted)' }}>
+            <span
+              style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--ink-muted)' }}
+            >
               {formatDuration(currentItem!.duration!)}
             </span>
             {state.activeQueue?.displayName && (
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--ink-muted)', letterSpacing: '0.18em' }}>
+              <span
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 9,
+                  color: 'var(--ink-muted)',
+                  letterSpacing: '0.18em',
+                }}
+              >
                 · {state.activeQueue.displayName.toUpperCase()}
               </span>
             )}
@@ -156,7 +188,11 @@ export function Footer() {
             return (
               <div key={item.key} className="flex items-center gap-4">
                 {i > 0 && <EntryDivider />}
-                <Link to={path} className="uppercase" style={active ? activeLinkStyle : inactiveLinkStyle}>
+                <Link
+                  to={path}
+                  className="uppercase"
+                  style={active ? activeLinkStyle : inactiveLinkStyle}
+                >
                   {item.label}
                 </Link>
               </div>

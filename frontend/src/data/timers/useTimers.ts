@@ -49,7 +49,11 @@ export function useTimers(serviceUrl: string | undefined, alarmSoundId?: string)
         switch (data.type) {
           case 'snapshot':
             if (data.timers) {
-              setTimers(data.timers.filter((t) => t.status === 'running' || t.status === 'paused').map(normalizeTimer))
+              setTimers(
+                data.timers
+                  .filter((t) => t.status === 'running' || t.status === 'paused')
+                  .map(normalizeTimer),
+              )
               // Clear any fired timers that are no longer in the snapshot
               // (they've been dismissed/cancelled on the server side)
               const activeIds = new Set(data.timers.map((t) => t.id))

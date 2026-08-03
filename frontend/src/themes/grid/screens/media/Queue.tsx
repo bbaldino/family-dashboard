@@ -3,11 +3,7 @@ import { useMusic, useQueue } from '@/data/music'
 import type { QueueItem } from '@/data/music'
 
 function imageFor(item: QueueItem): string | null {
-  return (
-    item.media_item.image?.path ??
-    item.media_item.metadata?.images?.[0]?.path ??
-    null
-  )
+  return item.media_item.image?.path ?? item.media_item.metadata?.images?.[0]?.path ?? null
 }
 
 function artistFor(item: QueueItem): string {
@@ -22,17 +18,13 @@ export function Queue() {
 
   if (!queueId) return null
   if (isLoading && !data) {
-    return (
-      <div className="px-4 py-3 text-text-secondary text-xs">Loading queue…</div>
-    )
+    return <div className="px-4 py-3 text-text-secondary text-xs">Loading queue…</div>
   }
   if (!data || data.length === 0) return null
 
   // Slice down to just the upcoming items — items at or before the current
   // position have already played and aren't useful here.
-  const currentIdx = currentUri
-    ? data.findIndex((item) => item.media_item.uri === currentUri)
-    : -1
+  const currentIdx = currentUri ? data.findIndex((item) => item.media_item.uri === currentUri) : -1
   const upcoming = currentIdx >= 0 ? data.slice(currentIdx + 1) : data
 
   if (upcoming.length === 0) return null
@@ -53,22 +45,14 @@ export function Queue() {
             >
               <div className="w-9 h-9 rounded overflow-hidden flex-shrink-0 bg-bg-primary flex items-center justify-center">
                 {imgUrl ? (
-                  <img
-                    src={imgUrl}
-                    alt=""
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={imgUrl} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <Music size={14} className="text-text-secondary" />
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-text-primary text-sm truncate">
-                  {item.media_item.name}
-                </div>
-                <div className="text-text-secondary text-xs truncate">
-                  {artistFor(item)}
-                </div>
+                <div className="text-text-primary text-sm truncate">{item.media_item.name}</div>
+                <div className="text-text-secondary text-xs truncate">{artistFor(item)}</div>
               </div>
             </li>
           )

@@ -41,8 +41,24 @@ describe('SearchResultsPanel', () => {
   it('flattens all four buckets, tracks first, and plays a track with a radio continuation on tap', () => {
     useSearch.mockReturnValue({
       data: {
-        tracks: [{ name: 'Amber Hours', uri: 't1', media_type: 'track', artist: 'The Night Shift', image: null }],
-        albums: [{ name: 'Late Bloom', uri: 'al1', media_type: 'album', artist: 'The Night Shift', image: null }],
+        tracks: [
+          {
+            name: 'Amber Hours',
+            uri: 't1',
+            media_type: 'track',
+            artist: 'The Night Shift',
+            image: null,
+          },
+        ],
+        albums: [
+          {
+            name: 'Late Bloom',
+            uri: 'al1',
+            media_type: 'album',
+            artist: 'The Night Shift',
+            image: null,
+          },
+        ],
         artists: [{ name: 'The Night Shift', uri: 'ar1', media_type: 'artist', image: null }],
         playlists: [{ name: 'Late Night Drive', uri: 'p1', media_type: 'playlist', image: null }],
       },
@@ -63,8 +79,25 @@ describe('SearchResultsPanel', () => {
   it('gives every result a track-actions trigger, one per row', () => {
     useSearch.mockReturnValue({
       data: {
-        tracks: [{ name: 'Amber Hours', uri: 't1', media_type: 'track', artist: 'The Night Shift', image: null }],
-        albums: [{ name: 'Late Bloom', uri: 'al1', media_type: 'album', artist: 'The Night Shift', artist_uri: 'ar1', image: null }],
+        tracks: [
+          {
+            name: 'Amber Hours',
+            uri: 't1',
+            media_type: 'track',
+            artist: 'The Night Shift',
+            image: null,
+          },
+        ],
+        albums: [
+          {
+            name: 'Late Bloom',
+            uri: 'al1',
+            media_type: 'album',
+            artist: 'The Night Shift',
+            artist_uri: 'ar1',
+            image: null,
+          },
+        ],
         artists: [{ name: 'The Night Shift', uri: 'ar1', media_type: 'artist', image: null }],
         playlists: [{ name: 'Late Night Drive', uri: 'p1', media_type: 'playlist', image: null }],
       },
@@ -78,7 +111,16 @@ describe('SearchResultsPanel', () => {
     useSearch.mockReturnValue({
       data: {
         tracks: [],
-        albums: [{ name: 'Late Bloom', uri: 'al1', media_type: 'album', artist: 'The Night Shift', artist_uri: 'ar1', image: null }],
+        albums: [
+          {
+            name: 'Late Bloom',
+            uri: 'al1',
+            media_type: 'album',
+            artist: 'The Night Shift',
+            artist_uri: 'ar1',
+            image: null,
+          },
+        ],
         artists: [],
         playlists: [],
       },

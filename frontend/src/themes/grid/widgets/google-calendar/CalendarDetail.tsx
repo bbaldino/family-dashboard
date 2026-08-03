@@ -36,9 +36,7 @@ export function CalendarDetail({ events }: CalendarDetailProps) {
               >
                 <div className="min-w-[80px]">
                   <div className="text-[14px] font-bold text-palette-1">{time}</div>
-                  {endTime && (
-                    <div className="text-[11px] text-text-muted">to {endTime}</div>
-                  )}
+                  {endTime && <div className="text-[11px] text-text-muted">to {endTime}</div>}
                 </div>
                 <div className="flex-1">
                   <div className="text-[15px] font-medium text-text-primary">

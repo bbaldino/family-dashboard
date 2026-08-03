@@ -10,5 +10,9 @@ export function useChoresWidgetMeta(): WidgetMeta {
     return { visible: false }
   }
 
-  return { visible: true, sizePreference: { orientation: 'square', relativeSize: 'medium' }, priority: 4 }
+  return {
+    visible: true,
+    sizePreference: { orientation: 'square', relativeSize: 'medium' },
+    priority: 4,
+  }
 }

@@ -24,29 +24,17 @@ function useDoorbellConfig(): DoorbellRingConfig | null {
     const load = async () => {
       const defaults = doorbellIntegration.schema.parse({})
       try {
-        const raw = (await fetch('/api/config').then((r) => r.json())) as Record<
-          string,
-          string
-        >
+        const raw = (await fetch('/api/config').then((r) => r.json())) as Record<string, string>
         const get = (k: string, d: string) => raw[`doorbell.${k}`] ?? d
         const seconds = parseInt(
           get('auto_dismiss_seconds', String(defaults.auto_dismiss_seconds)),
           10,
         )
         setConfig({
-          press_sensor_entity: get(
-            'press_sensor_entity',
-            defaults.press_sensor_entity,
-          ),
-          screensaver_entity: get(
-            'screensaver_entity',
-            defaults.screensaver_entity,
-          ),
-          auto_dismiss_seconds: Number.isFinite(seconds)
-            ? seconds
-            : defaults.auto_dismiss_seconds,
-          chime_enabled:
-            get('chime_enabled', String(defaults.chime_enabled)) === 'true',
+          press_sensor_entity: get('press_sensor_entity', defaults.press_sensor_entity),
+          screensaver_entity: get('screensaver_entity', defaults.screensaver_entity),
+          auto_dismiss_seconds: Number.isFinite(seconds) ? seconds : defaults.auto_dismiss_seconds,
+          chime_enabled: get('chime_enabled', String(defaults.chime_enabled)) === 'true',
           chime_sound_id: get('chime_sound_id', defaults.chime_sound_id),
           camera_url: get('camera_url', defaults.camera_url ?? ''),
         })
@@ -81,11 +69,8 @@ export function DoorbellRingListener() {
  */
 function ActiveListener({ config }: { config: DoorbellRingConfig }) {
   const pressSensor = useHaEntity(config.press_sensor_entity)
-  const screensaver = useHaEntity(
-    config.screensaver_entity || config.press_sensor_entity,
-  )
-  const screensaverActive =
-    Boolean(config.screensaver_entity) && screensaver?.state === 'on'
+  const screensaver = useHaEntity(config.screensaver_entity || config.press_sensor_entity)
+  const screensaverActive = Boolean(config.screensaver_entity) && screensaver?.state === 'on'
 
   const [isRinging, setIsRinging] = useState(false)
   const prevStateRef = useRef<string | undefined>(undefined)

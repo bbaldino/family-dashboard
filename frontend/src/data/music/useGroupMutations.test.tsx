@@ -18,7 +18,11 @@ const post = vi.hoisted(() => vi.fn())
 const get = vi.hoisted(() => vi.fn())
 vi.mock('./config', () => ({ musicIntegration: { api: { post, get } } }))
 
-import { useGroupMutations, CONFIRM_POLL_INTERVAL_MS, CONFIRM_POLL_TIMEOUT_MS } from './useGroupMutations'
+import {
+  useGroupMutations,
+  CONFIRM_POLL_INTERVAL_MS,
+  CONFIRM_POLL_TIMEOUT_MS,
+} from './useGroupMutations'
 
 const RAW_PLAYERS_KEY = ['music', 'players']
 
@@ -33,9 +37,25 @@ interface TestPlayer {
 
 function rawPlayers(): TestPlayer[] {
   return [
-    { player_id: 'kitchen', display_name: 'Kitchen', group_members: [], can_group_with: ['living', 'bedroom'], group_volume: null },
-    { player_id: 'living', display_name: 'Living Room', group_members: [], can_group_with: ['kitchen'] },
-    { player_id: 'bedroom', display_name: 'Bedroom', group_members: [], can_group_with: ['kitchen'] },
+    {
+      player_id: 'kitchen',
+      display_name: 'Kitchen',
+      group_members: [],
+      can_group_with: ['living', 'bedroom'],
+      group_volume: null,
+    },
+    {
+      player_id: 'living',
+      display_name: 'Living Room',
+      group_members: [],
+      can_group_with: ['kitchen'],
+    },
+    {
+      player_id: 'bedroom',
+      display_name: 'Bedroom',
+      group_members: [],
+      can_group_with: ['kitchen'],
+    },
   ]
 }
 
@@ -43,7 +63,9 @@ function rawPlayers(): TestPlayer[] {
  *  group_members — the shape a *real* /players response would report once
  *  MA has actually converged. */
 function kitchenGroupedWith(...ids: string[]): TestPlayer[] {
-  return rawPlayers().map((p) => (p.player_id === 'kitchen' ? { ...p, group_members: ['kitchen', ...ids] } : p))
+  return rawPlayers().map((p) =>
+    p.player_id === 'kitchen' ? { ...p, group_members: ['kitchen', ...ids] } : p,
+  )
 }
 
 function createWrapper(queryClient: QueryClient) {
@@ -53,7 +75,9 @@ function createWrapper(queryClient: QueryClient) {
 }
 
 function cacheGroupMembers(queryClient: QueryClient, playerId: string): string[] | undefined {
-  return queryClient.getQueryData<TestPlayer[]>(RAW_PLAYERS_KEY)?.find((p) => p.player_id === playerId)?.group_members
+  return queryClient
+    .getQueryData<TestPlayer[]>(RAW_PLAYERS_KEY)
+    ?.find((p) => p.player_id === playerId)?.group_members
 }
 
 describe('useGroupMutations', () => {
@@ -69,11 +93,17 @@ describe('useGroupMutations', () => {
 
   it('applies the optimistic patch immediately, before the POST resolves', async () => {
     let resolvePost: () => void = () => {}
-    post.mockReturnValue(new Promise<void>((resolve) => { resolvePost = resolve }))
+    post.mockReturnValue(
+      new Promise<void>((resolve) => {
+        resolvePost = resolve
+      }),
+    )
     get.mockResolvedValue(kitchenGroupedWith('living'))
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     queryClient.setQueryData(RAW_PLAYERS_KEY, rawPlayers())
-    const { result } = renderHook(() => useGroupMutations(), { wrapper: createWrapper(queryClient) })
+    const { result } = renderHook(() => useGroupMutations(), {
+      wrapper: createWrapper(queryClient),
+    })
 
     let mutation!: Promise<unknown>
     act(() => {
@@ -96,7 +126,9 @@ describe('useGroupMutations', () => {
 
   it('addToGroup is a no-op when there is no leader', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    const { result } = renderHook(() => useGroupMutations(), { wrapper: createWrapper(queryClient) })
+    const { result } = renderHook(() => useGroupMutations(), {
+      wrapper: createWrapper(queryClient),
+    })
 
     await act(async () => {
       await result.current.addToGroup('living', null)
@@ -109,7 +141,9 @@ describe('useGroupMutations', () => {
     post.mockRejectedValue(new Error('boom'))
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     queryClient.setQueryData(RAW_PLAYERS_KEY, rawPlayers())
-    const { result } = renderHook(() => useGroupMutations(), { wrapper: createWrapper(queryClient) })
+    const { result } = renderHook(() => useGroupMutations(), {
+      wrapper: createWrapper(queryClient),
+    })
 
     await act(async () => {
       await expect(result.current.addToGroup('living', 'kitchen')).rejects.toThrow('boom')
@@ -128,7 +162,9 @@ describe('useGroupMutations', () => {
     get.mockResolvedValue(kitchenGroupedWith())
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     queryClient.setQueryData(RAW_PLAYERS_KEY, kitchenGroupedWith('living'))
-    const { result } = renderHook(() => useGroupMutations(), { wrapper: createWrapper(queryClient) })
+    const { result } = renderHook(() => useGroupMutations(), {
+      wrapper: createWrapper(queryClient),
+    })
 
     let mutation!: Promise<unknown>
     act(() => {
@@ -147,7 +183,9 @@ describe('useGroupMutations', () => {
     post.mockRejectedValue(new Error('boom'))
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     queryClient.setQueryData(RAW_PLAYERS_KEY, kitchenGroupedWith('living'))
-    const { result } = renderHook(() => useGroupMutations(), { wrapper: createWrapper(queryClient) })
+    const { result } = renderHook(() => useGroupMutations(), {
+      wrapper: createWrapper(queryClient),
+    })
 
     await act(async () => {
       await expect(result.current.removeFromGroup('living', 'kitchen')).rejects.toThrow('boom')
@@ -168,7 +206,9 @@ describe('useGroupMutations', () => {
 
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     queryClient.setQueryData(RAW_PLAYERS_KEY, rawPlayers())
-    const { result } = renderHook(() => useGroupMutations(), { wrapper: createWrapper(queryClient) })
+    const { result } = renderHook(() => useGroupMutations(), {
+      wrapper: createWrapper(queryClient),
+    })
 
     let mutation!: Promise<unknown>
     act(() => {
@@ -208,7 +248,9 @@ describe('useGroupMutations', () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     queryClient.setQueryData(RAW_PLAYERS_KEY, rawPlayers())
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
-    const { result } = renderHook(() => useGroupMutations(), { wrapper: createWrapper(queryClient) })
+    const { result } = renderHook(() => useGroupMutations(), {
+      wrapper: createWrapper(queryClient),
+    })
 
     let mutation!: Promise<unknown>
     act(() => {
@@ -229,7 +271,9 @@ describe('useGroupMutations', () => {
     expect(result.current.pollingPaused).toBe(false)
     expect(invalidateSpy).toHaveBeenCalledTimes(1)
     // Bounded: never poll for confirmation longer than the timeout allows.
-    expect(get.mock.calls.length).toBeLessThanOrEqual(CONFIRM_POLL_TIMEOUT_MS / CONFIRM_POLL_INTERVAL_MS + 1)
+    expect(get.mock.calls.length).toBeLessThanOrEqual(
+      CONFIRM_POLL_TIMEOUT_MS / CONFIRM_POLL_INTERVAL_MS + 1,
+    )
   })
 
   it('refcounts overlapping mutations — polling resumes, and the refetch fires, only once the last one settles', async () => {
@@ -249,7 +293,9 @@ describe('useGroupMutations', () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     queryClient.setQueryData(RAW_PLAYERS_KEY, rawPlayers())
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
-    const { result } = renderHook(() => useGroupMutations(), { wrapper: createWrapper(queryClient) })
+    const { result } = renderHook(() => useGroupMutations(), {
+      wrapper: createWrapper(queryClient),
+    })
 
     let livingMutation!: Promise<unknown>
     let bedroomMutation!: Promise<unknown>
@@ -310,7 +356,9 @@ describe('useGroupMutations', () => {
       canGroupWith: [],
       groupVolume: null,
     }
-    const { result } = renderHook(() => useGroupMutations(), { wrapper: createWrapper(queryClient) })
+    const { result } = renderHook(() => useGroupMutations(), {
+      wrapper: createWrapper(queryClient),
+    })
 
     let mutation!: Promise<unknown>
     act(() => {
@@ -342,7 +390,9 @@ describe('useGroupMutations', () => {
       canGroupWith: [],
       groupVolume: null,
     }
-    const { result } = renderHook(() => useGroupMutations(), { wrapper: createWrapper(queryClient) })
+    const { result } = renderHook(() => useGroupMutations(), {
+      wrapper: createWrapper(queryClient),
+    })
 
     await act(async () => {
       await expect(result.current.ungroupAll(leader)).rejects.toThrow('boom')
@@ -353,7 +403,9 @@ describe('useGroupMutations', () => {
 
   it('ungroupAll is a no-op when there is no leader', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    const { result } = renderHook(() => useGroupMutations(), { wrapper: createWrapper(queryClient) })
+    const { result } = renderHook(() => useGroupMutations(), {
+      wrapper: createWrapper(queryClient),
+    })
 
     await act(async () => {
       await result.current.ungroupAll(null)
@@ -364,11 +416,18 @@ describe('useGroupMutations', () => {
 
   it('setGroupVolume posts /group-volume, applies immediately, and participates in the same pause/refetch protocol', async () => {
     post.mockResolvedValue({})
-    get.mockResolvedValue(rawPlayers().map((p) => (p.player_id === 'kitchen' ? { ...p, group_volume: 30 } : p)))
+    get.mockResolvedValue(
+      rawPlayers().map((p) => (p.player_id === 'kitchen' ? { ...p, group_volume: 30 } : p)),
+    )
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    queryClient.setQueryData(RAW_PLAYERS_KEY, rawPlayers().map((p) => (p.player_id === 'kitchen' ? { ...p, group_volume: 50 } : p)))
+    queryClient.setQueryData(
+      RAW_PLAYERS_KEY,
+      rawPlayers().map((p) => (p.player_id === 'kitchen' ? { ...p, group_volume: 50 } : p)),
+    )
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
-    const { result } = renderHook(() => useGroupMutations(), { wrapper: createWrapper(queryClient) })
+    const { result } = renderHook(() => useGroupMutations(), {
+      wrapper: createWrapper(queryClient),
+    })
 
     let mutation!: Promise<unknown>
     act(() => {
@@ -376,7 +435,9 @@ describe('useGroupMutations', () => {
     })
     expect(result.current.pollingPaused).toBe(true)
     expect(
-      queryClient.getQueryData<TestPlayer[]>(RAW_PLAYERS_KEY)?.find((p) => p.player_id === 'kitchen')?.group_volume,
+      queryClient
+        .getQueryData<TestPlayer[]>(RAW_PLAYERS_KEY)
+        ?.find((p) => p.player_id === 'kitchen')?.group_volume,
     ).toBe(30)
 
     await act(async () => {
@@ -388,7 +449,7 @@ describe('useGroupMutations', () => {
     expect(invalidateSpy).toHaveBeenCalledTimes(1)
   })
 
-  it('moves the follower\'s synced_to as well as the leader\'s group_members', async () => {
+  it("moves the follower's synced_to as well as the leader's group_members", async () => {
     // Membership is read as `leader.group_members.includes(id) || player.synced_to === leaderId`
     // (useRoomPills.isJoinedToAnchor). Patching only the leader left a removal
     // still reading as joined off the follower's stale synced_to, so the pill
@@ -399,9 +460,13 @@ describe('useGroupMutations', () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     queryClient.setQueryData(
       RAW_PLAYERS_KEY,
-      kitchenGroupedWith('living').map((p) => (p.player_id === 'living' ? { ...p, synced_to: 'kitchen' } : p)),
+      kitchenGroupedWith('living').map((p) =>
+        p.player_id === 'living' ? { ...p, synced_to: 'kitchen' } : p,
+      ),
     )
-    const { result } = renderHook(() => useGroupMutations(), { wrapper: createWrapper(queryClient) })
+    const { result } = renderHook(() => useGroupMutations(), {
+      wrapper: createWrapper(queryClient),
+    })
 
     let mutation!: Promise<unknown>
     act(() => {
@@ -420,14 +485,18 @@ describe('useGroupMutations', () => {
     })
   })
 
-  it('restores the follower\'s synced_to when a removal\'s POST rejects', async () => {
+  it("restores the follower's synced_to when a removal's POST rejects", async () => {
     post.mockRejectedValue(new Error('boom'))
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     queryClient.setQueryData(
       RAW_PLAYERS_KEY,
-      kitchenGroupedWith('living').map((p) => (p.player_id === 'living' ? { ...p, synced_to: 'kitchen' } : p)),
+      kitchenGroupedWith('living').map((p) =>
+        p.player_id === 'living' ? { ...p, synced_to: 'kitchen' } : p,
+      ),
     )
-    const { result } = renderHook(() => useGroupMutations(), { wrapper: createWrapper(queryClient) })
+    const { result } = renderHook(() => useGroupMutations(), {
+      wrapper: createWrapper(queryClient),
+    })
 
     await act(async () => {
       await expect(result.current.removeFromGroup('living', 'kitchen')).rejects.toThrow('boom')
@@ -447,10 +516,14 @@ describe('useGroupMutations', () => {
     post.mockResolvedValue({})
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     queryClient.setQueryData(RAW_PLAYERS_KEY, rawPlayers())
-    const { result } = renderHook(() => useGroupMutations(), { wrapper: createWrapper(queryClient) })
+    const { result } = renderHook(() => useGroupMutations(), {
+      wrapper: createWrapper(queryClient),
+    })
 
     await act(async () => {
-      await Promise.all([20, 25, 30, 35, 40].map((level) => result.current.setGroupVolume('kitchen', level)))
+      await Promise.all(
+        [20, 25, 30, 35, 40].map((level) => result.current.setGroupVolume('kitchen', level)),
+      )
       await vi.advanceTimersByTimeAsync(CONFIRM_POLL_TIMEOUT_MS * 2)
     })
 
@@ -462,21 +535,30 @@ describe('useGroupMutations', () => {
   it('setGroupVolume rolls back to the previous volume when the POST rejects', async () => {
     post.mockRejectedValue(new Error('boom'))
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    queryClient.setQueryData(RAW_PLAYERS_KEY, rawPlayers().map((p) => (p.player_id === 'kitchen' ? { ...p, group_volume: 50 } : p)))
-    const { result } = renderHook(() => useGroupMutations(), { wrapper: createWrapper(queryClient) })
+    queryClient.setQueryData(
+      RAW_PLAYERS_KEY,
+      rawPlayers().map((p) => (p.player_id === 'kitchen' ? { ...p, group_volume: 50 } : p)),
+    )
+    const { result } = renderHook(() => useGroupMutations(), {
+      wrapper: createWrapper(queryClient),
+    })
 
     await act(async () => {
       await expect(result.current.setGroupVolume('kitchen', 30)).rejects.toThrow('boom')
     })
 
     expect(
-      queryClient.getQueryData<TestPlayer[]>(RAW_PLAYERS_KEY)?.find((p) => p.player_id === 'kitchen')?.group_volume,
+      queryClient
+        .getQueryData<TestPlayer[]>(RAW_PLAYERS_KEY)
+        ?.find((p) => p.player_id === 'kitchen')?.group_volume,
     ).toBe(50)
   })
 
   it('setGroupVolume is a no-op when there is no leader', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-    const { result } = renderHook(() => useGroupMutations(), { wrapper: createWrapper(queryClient) })
+    const { result } = renderHook(() => useGroupMutations(), {
+      wrapper: createWrapper(queryClient),
+    })
 
     await act(async () => {
       await result.current.setGroupVolume(null, 30)

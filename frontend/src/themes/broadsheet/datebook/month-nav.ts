@@ -9,7 +9,11 @@
 /** `{ year, month }` shifted by `delta` months (negative goes back). Lets
  *  `Date`'s own month-overflow arithmetic handle year rollover, rather than
  *  hand-rolling the December→January / January→December edge cases. */
-export function shiftMonth(year: number, month: number, delta: number): { year: number; month: number } {
+export function shiftMonth(
+  year: number,
+  month: number,
+  delta: number,
+): { year: number; month: number } {
   const shifted = new Date(year, month + delta, 1)
   return { year: shifted.getFullYear(), month: shifted.getMonth() }
 }

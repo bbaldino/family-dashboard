@@ -86,14 +86,25 @@ export function DayCell({
               fontFamily: 'var(--font-display)',
               fontSize: 15,
               fontWeight: 600,
-              color: !isCurrentMonth ? 'var(--ink-muted)' : isWeekend ? 'var(--rust)' : 'var(--ink)',
+              color: !isCurrentMonth
+                ? 'var(--ink-muted)'
+                : isWeekend
+                  ? 'var(--rust)'
+                  : 'var(--ink)',
             }}
           >
             {dayNum}
           </span>
         )}
         {showAdjacentMonthLabel && (
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--ink-muted)', letterSpacing: '0.1em' }}>
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 9,
+              color: 'var(--ink-muted)',
+              letterSpacing: '0.1em',
+            }}
+          >
             {MONTH_ABBR_FORMAT.format(date).toUpperCase()}
           </span>
         )}
@@ -103,7 +114,15 @@ export function DayCell({
           <EventPill key={event.id + '-' + i} event={event} />
         ))}
         {hiddenCount > 0 && (
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fontStyle: 'italic', color: 'var(--ink-muted)', padding: '1px 6px' }}>
+          <div
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 9,
+              fontStyle: 'italic',
+              color: 'var(--ink-muted)',
+              padding: '1px 6px',
+            }}
+          >
             +{hiddenCount} more
           </div>
         )}

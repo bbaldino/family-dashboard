@@ -28,10 +28,13 @@ const broadsheetStub: ThemeModule = {
 
 function mockConfig(value: string | null) {
   const body: Record<string, string> = value === null ? {} : { 'theme.presentation': value }
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-    ok: true,
-    json: () => Promise.resolve(body),
-  }))
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(body),
+    }),
+  )
 }
 
 describe('ThemeMount', () => {
@@ -40,7 +43,11 @@ describe('ThemeMount', () => {
     registerTheme(gridStub)
     registerTheme(broadsheetStub)
     Object.defineProperty(window, 'innerWidth', { value: 1920, configurable: true, writable: true })
-    Object.defineProperty(window, 'innerHeight', { value: 1080, configurable: true, writable: true })
+    Object.defineProperty(window, 'innerHeight', {
+      value: 1080,
+      configurable: true,
+      writable: true,
+    })
   })
 
   it('mounts the theme named in config', async () => {

@@ -15,9 +15,7 @@ export interface CalendarDay {
 export type CalendarData = UsePollingResult<CalendarDay[]>
 
 function dayLabel(date: Date, today: Date): string {
-  const diff = Math.floor(
-    (date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
-  )
+  const diff = Math.floor((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
   const short = date.toLocaleDateString([], { month: 'numeric', day: 'numeric' })
   if (diff === 0) return `Today ${short}`
   if (diff === 1) return `Tomorrow ${short}`

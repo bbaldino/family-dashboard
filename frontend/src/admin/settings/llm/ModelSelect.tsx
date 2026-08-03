@@ -65,17 +65,15 @@ export function ModelSelect({ value, onChange, label, description }: ModelSelect
         </div>
       ) : (
         <>
-          <select
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className={inputClass}
-          >
+          <select value={value} onChange={(e) => onChange(e.target.value)} className={inputClass}>
             {valueMissingFromList && (
               <option value={value}>{value} (not in current provider)</option>
             )}
             {models.length === 0 && <option value="">(no models reported)</option>}
             {models.map((name) => (
-              <option key={name} value={name}>{name}</option>
+              <option key={name} value={name}>
+                {name}
+              </option>
             ))}
           </select>
           {valueMissingFromList && (

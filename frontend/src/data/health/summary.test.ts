@@ -24,7 +24,11 @@ describe('summarizeHealth', () => {
   })
 
   it('counts faults in the headline', () => {
-    const s = summarizeHealth([svc('Plex', 'ok'), svc('Frigate', 'critical'), svc('Backups', 'degraded')])
+    const s = summarizeHealth([
+      svc('Plex', 'ok'),
+      svc('Frigate', 'critical'),
+      svc('Backups', 'degraded'),
+    ])
 
     expect(s.headline).toBe('Two faults.')
   })
@@ -40,7 +44,11 @@ describe('summarizeHealth', () => {
    *  is the part a reader needs. Inventing narrative detail we can't see would
    *  be worse than saying less. */
   it('names the faulting services rather than describing them', () => {
-    const s = summarizeHealth([svc('Plex', 'ok'), svc('Frigate', 'critical'), svc('Backups', 'degraded')])
+    const s = summarizeHealth([
+      svc('Plex', 'ok'),
+      svc('Frigate', 'critical'),
+      svc('Backups', 'degraded'),
+    ])
 
     expect(s.standfirst).toContain('Frigate')
     expect(s.standfirst).toContain('Backups')

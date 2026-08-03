@@ -6,7 +6,8 @@ import { weatherIntegration } from './config'
  *  air_quality.rs`) so the thresholds live in one place. Slugs, not display
  *  words — the strip maps these to the tight mono labels the design calls
  *  for ("GOOD", "V.HIGH", …). */
-export type AqiLevel = 'good' | 'moderate' | 'unhealthy_sensitive' | 'unhealthy' | 'very_unhealthy' | 'hazardous'
+export type AqiLevel =
+  'good' | 'moderate' | 'unhealthy_sensitive' | 'unhealthy' | 'very_unhealthy' | 'hazardous'
 export type UvLevel = 'low' | 'moderate' | 'high' | 'very_high' | 'extreme'
 export type PollenLevel = 'none' | 'low' | 'moderate' | 'high' | 'very_high'
 

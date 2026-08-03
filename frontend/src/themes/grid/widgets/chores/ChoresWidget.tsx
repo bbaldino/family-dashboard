@@ -18,8 +18,16 @@ interface ChoresWidgetProps {
 }
 
 export function ChoresWidget({ size = 'standard' }: ChoresWidgetProps) {
-  const { data, isLoading, error, refetch, completeAssignment, uncompleteAssignment, pickChore, clearPick } =
-    useChores()
+  const {
+    data,
+    isLoading,
+    error,
+    refetch,
+    completeAssignment,
+    uncompleteAssignment,
+    pickChore,
+    clearPick,
+  } = useChores()
   const [picker, setPicker] = useState<PickerState | null>(null)
 
   if (isLoading) {
@@ -73,7 +81,11 @@ export function ChoresWidget({ size = 'standard' }: ChoresWidgetProps) {
               return (
                 <div key={pa.person.id} className="flex items-center gap-2 text-xs">
                   {pa.person.avatar ? (
-                    <img src={pa.person.avatar} alt="" className="w-4 h-4 rounded-full object-cover" />
+                    <img
+                      src={pa.person.avatar}
+                      alt=""
+                      className="w-4 h-4 rounded-full object-cover"
+                    />
                   ) : (
                     <div
                       className="w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white"
@@ -107,19 +119,25 @@ export function ChoresWidget({ size = 'standard' }: ChoresWidgetProps) {
 
   return (
     <>
-      <WidgetCard title="Chores" category="chores" badge={badge} className="h-full" visible={persons.length > 0}>
+      <WidgetCard
+        title="Chores"
+        category="chores"
+        badge={badge}
+        className="h-full"
+        visible={persons.length > 0}
+      >
         <div className="flex flex-col gap-3">
           {persons.map((pa) => (
-              <PersonSection
-                key={pa.person.id}
-                personAssignments={pa}
-                onComplete={completeAssignment}
-                onUncomplete={uncompleteAssignment}
-                onOpenPicker={(assignmentId, pickFromTags, currentPickId) =>
-                  setPicker({ assignmentId, pickFromTags, currentPickId })
-                }
-              />
-            ))}
+            <PersonSection
+              key={pa.person.id}
+              personAssignments={pa}
+              onComplete={completeAssignment}
+              onUncomplete={uncompleteAssignment}
+              onOpenPicker={(assignmentId, pickFromTags, currentPickId) =>
+                setPicker({ assignmentId, pickFromTags, currentPickId })
+              }
+            />
+          ))}
         </div>
       </WidgetCard>
 
@@ -203,9 +221,7 @@ function AssignmentRow({
       <div className="flex items-center gap-2 py-[2px]">
         <button
           className="text-[13px] text-palette-2 font-medium underline"
-          onClick={() =>
-            onOpenPicker(assignment.id, assignment.chore.tags, null)
-          }
+          onClick={() => onOpenPicker(assignment.id, assignment.chore.tags, null)}
         >
           Pick a chore
         </button>
@@ -215,7 +231,8 @@ function AssignmentRow({
   }
 
   // Regular chore or meta-chore with a pick
-  const displayName = isMeta && assignment.picked_chore ? assignment.picked_chore.name : assignment.chore.name
+  const displayName =
+    isMeta && assignment.picked_chore ? assignment.picked_chore.name : assignment.chore.name
 
   return (
     <div className="flex items-center gap-2 py-[2px]">

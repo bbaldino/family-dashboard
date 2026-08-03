@@ -10,7 +10,16 @@ function renderMasthead(onAction = vi.fn()) {
         <Route path="/from-somewhere" element={<div data-testid="landed-back" />} />
         <Route
           path="/current"
-          element={<MusicPageMasthead kicker="The Record" title="Push The Button" titleFontSize={62} actionLabel="Play album" actionIcon={<span>▶</span>} onAction={onAction} />}
+          element={
+            <MusicPageMasthead
+              kicker="The Record"
+              title="Push The Button"
+              titleFontSize={62}
+              actionLabel="Play album"
+              actionIcon={<span>▶</span>}
+              onAction={onAction}
+            />
+          }
         />
       </Routes>
     </MemoryRouter>,

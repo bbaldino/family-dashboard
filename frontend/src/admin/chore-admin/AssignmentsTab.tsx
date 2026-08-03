@@ -277,9 +277,7 @@ export function AssignmentsTab() {
   }
 
   function getAssignmentsForCell(personId: number, dayOfWeek: number): AssignmentResponse[] {
-    return assignments.filter(
-      (a) => a.person.id === personId && a.day_of_week === dayOfWeek,
-    )
+    return assignments.filter((a) => a.person.id === personId && a.day_of_week === dayOfWeek)
   }
 
   const pointerSensor = useSensor(PointerSensor, {
@@ -356,9 +354,7 @@ export function AssignmentsTab() {
               ))}
 
               {/* Calendar row */}
-              <div className="bg-bg-card p-2 text-xs text-text-muted flex items-start">
-                📅
-              </div>
+              <div className="bg-bg-card p-2 text-xs text-text-muted flex items-start">📅</div>
               {DAY_NAMES.map((_, dayIdx) => {
                 const events = calendarEvents[dayIdx] ?? []
                 return (
@@ -372,7 +368,10 @@ export function AssignmentsTab() {
                           const isAllDay = !event.start.dateTime
                           const time = isAllDay
                             ? ''
-                            : new Date(start).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+                            : new Date(start).toLocaleTimeString([], {
+                                hour: 'numeric',
+                                minute: '2-digit',
+                              })
                           return (
                             <div
                               key={event.id}
@@ -394,9 +393,7 @@ export function AssignmentsTab() {
               {people.map((person) => (
                 <Fragment key={person.id}>
                   {/* Person label */}
-                  <div
-                    className="bg-bg-card p-2 flex items-center gap-2"
-                  >
+                  <div className="bg-bg-card p-2 flex items-center gap-2">
                     {person.avatar ? (
                       <img
                         src={`/api/chores/people/${person.id}/avatar`}
@@ -442,10 +439,7 @@ export function AssignmentsTab() {
 
       <DragOverlay dropAnimation={null}>
         {activeChore ? (
-          <DragOverlayChip
-            name={activeChore.name}
-            isMeta={activeChore.chore_type === 'meta'}
-          />
+          <DragOverlayChip name={activeChore.name} isMeta={activeChore.chore_type === 'meta'} />
         ) : null}
       </DragOverlay>
     </DndContext>

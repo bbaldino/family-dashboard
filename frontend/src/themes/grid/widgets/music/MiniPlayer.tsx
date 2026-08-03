@@ -62,10 +62,7 @@ export function MiniPlayer() {
       </button>
 
       {/* Track info */}
-      <button
-        onClick={handleCoverOrTitleClick}
-        className="flex-1 min-w-0 text-left"
-      >
+      <button onClick={handleCoverOrTitleClick} className="flex-1 min-w-0 text-left">
         <div className="overflow-hidden text-ellipsis whitespace-nowrap text-text-primary text-sm font-medium">
           {currentItem?.name ?? '—'}
         </div>

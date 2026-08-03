@@ -8,26 +8,61 @@ function probablePitcher(athletes: GameAthlete[], side: 'home' | 'away'): GameAt
 }
 
 /** One team's card: cap, record, name, and its probable starter if known. */
-function TeamSide({ side, team, pitcher }: { side: 'Away' | 'Home'; team: Game['home']; pitcher?: GameAthlete }) {
+function TeamSide({
+  side,
+  team,
+  pitcher,
+}: {
+  side: 'Away' | 'Home'
+  team: Game['home']
+  pitcher?: GameAthlete
+}) {
   return (
     <div className="flex gap-3 items-start">
       <TeamCap short={team.abbreviation} primary={team.color} secondary={team.altColor} size={42} />
       <div className="min-w-0 flex-1">
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.18em', color: 'var(--ink-muted)' }}>
+        <div
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            letterSpacing: '0.18em',
+            color: 'var(--ink-muted)',
+          }}
+        >
           {side.toUpperCase()}
           {team.record ? ` · ${team.record}` : ''}
         </div>
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600 }}>{team.name}</div>
+        <div style={{ fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 600 }}>
+          {team.name}
+        </div>
         {pitcher && (
           <div className="mt-2">
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.16em', color: 'var(--ink-muted)' }}>
+            <div
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 9,
+                letterSpacing: '0.16em',
+                color: 'var(--ink-muted)',
+              }}
+            >
               PROBABLE
             </div>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 14, fontStyle: 'italic', fontWeight: 500 }}>
+            <div
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 14,
+                fontStyle: 'italic',
+                fontWeight: 500,
+              }}
+            >
               {pitcher.name}
             </div>
             {pitcher.stats && (
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-muted)' }}>{pitcher.stats}</div>
+              <div
+                style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-muted)' }}
+              >
+                {pitcher.stats}
+              </div>
             )}
           </div>
         )}
@@ -77,9 +112,16 @@ export function PregameBlock({ game }: { game: Game }) {
       </div>
       <p
         className="m-0 mt-3"
-        style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 13, color: 'var(--ink-muted)', lineHeight: 1.5 }}
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontStyle: 'italic',
+          fontSize: 13,
+          color: 'var(--ink-muted)',
+          lineHeight: 1.5,
+        }}
       >
-        {data?.summary ?? 'The page will widen and the scoreboard will fill this space when first pitch lands.'}
+        {data?.summary ??
+          'The page will widen and the scoreboard will fill this space when first pitch lands.'}
       </p>
     </div>
   )

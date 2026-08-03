@@ -68,7 +68,10 @@ export function CentreSpreadCredits({
   ]
 
   return (
-    <aside className="min-h-0 overflow-hidden flex flex-col" style={{ padding: '18px 24px 18px 56px' }}>
+    <aside
+      className="min-h-0 overflow-hidden flex flex-col"
+      style={{ padding: '18px 24px 18px 56px' }}
+    >
       <Kicker color="var(--ink-muted)">Credits</Kicker>
       <dl className="m-0" style={{ marginTop: 8, display: 'flex', flexDirection: 'column' }}>
         {rows.map(([label, value], i) => (
@@ -95,7 +98,14 @@ export function CentreSpreadCredits({
         {pills.length > 0 ? (
           <div
             className="flex flex-wrap uppercase"
-            style={{ gap: 5, marginTop: 6, marginBottom: 14, fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.16em' }}
+            style={{
+              gap: 5,
+              marginTop: 6,
+              marginBottom: 14,
+              fontFamily: 'var(--font-mono)',
+              fontSize: 9,
+              letterSpacing: '0.16em',
+            }}
           >
             {pills.map((pill) => (
               <RoomPill
@@ -108,12 +118,43 @@ export function CentreSpreadCredits({
             ))}
           </div>
         ) : (
-          <div style={{ marginTop: 6, marginBottom: 14, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-muted)' }}>{EMPTY}</div>
+          <div
+            style={{
+              marginTop: 6,
+              marginBottom: 14,
+              fontFamily: 'var(--font-mono)',
+              fontSize: 12,
+              color: 'var(--ink-muted)',
+            }}
+          >
+            {EMPTY}
+          </div>
         )}
         <div className="flex items-center" style={{ gap: 10 }}>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--ink-muted)', letterSpacing: '0.18em' }}>VOL</span>
-          <VolumeSlider volume={volume} onChange={(level) => onSetVolume(activeQueue.queueId, level)} />
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink)', letterSpacing: '0.06em' }}>{volume}</span>
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 9,
+              color: 'var(--ink-muted)',
+              letterSpacing: '0.18em',
+            }}
+          >
+            VOL
+          </span>
+          <VolumeSlider
+            volume={volume}
+            onChange={(level) => onSetVolume(activeQueue.queueId, level)}
+          />
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              color: 'var(--ink)',
+              letterSpacing: '0.06em',
+            }}
+          >
+            {volume}
+          </span>
         </div>
       </div>
     </aside>

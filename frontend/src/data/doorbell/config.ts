@@ -6,16 +6,9 @@ export const doorbellIntegration = defineIntegration({
   name: 'Doorbell Camera',
   hasBackend: false,
   schema: z.object({
-    camera_url: z
-      .string()
-      .optional()
-      .default('https://cast.baldino.me/webrtc-doorbell.html'),
-    press_sensor_entity: z
-      .string()
-      .default('binary_sensor.frontdoordoorbell_visitor'),
-    screensaver_entity: z
-      .string()
-      .default('switch.kitchen_kitchen_dashboard_screensaver'),
+    camera_url: z.string().optional().default('https://cast.baldino.me/webrtc-doorbell.html'),
+    press_sensor_entity: z.string().default('binary_sensor.frontdoordoorbell_visitor'),
+    screensaver_entity: z.string().default('switch.kitchen_kitchen_dashboard_screensaver'),
     auto_dismiss_seconds: z.number().int().min(0).default(60),
     chime_enabled: z.boolean().default(true),
     chime_sound_id: z.string().default('soft-doorbell'),
@@ -31,7 +24,8 @@ export const doorbellIntegration = defineIntegration({
     },
     screensaver_entity: {
       label: 'Screensaver Entity',
-      description: 'HA switch entity for the tablet screensaver. When on, popups are skipped. Empty disables the check.',
+      description:
+        'HA switch entity for the tablet screensaver. When on, popups are skipped. Empty disables the check.',
     },
     auto_dismiss_seconds: {
       label: 'Auto-dismiss (seconds)',

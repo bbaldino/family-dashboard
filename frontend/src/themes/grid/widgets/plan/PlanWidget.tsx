@@ -108,7 +108,11 @@ export function PlanWidget() {
   const plans = data ?? []
 
   return (
-    <WidgetCard title="Plans" category="calendar" badge={plans.length > 0 ? `${plans.length}` : undefined}>
+    <WidgetCard
+      title="Plans"
+      category="calendar"
+      badge={plans.length > 0 ? `${plans.length}` : undefined}
+    >
       {plans.length === 0 ? (
         <div className="text-[13px] text-text-muted py-1">No upcoming plans</div>
       ) : (

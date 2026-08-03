@@ -225,7 +225,13 @@ function LeadStory({
       </div>
       <div>
         <div
-          style={{ ...monoStyle, fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 5 }}
+          style={{
+            ...monoStyle,
+            fontSize: 9,
+            letterSpacing: '0.2em',
+            textTransform: 'uppercase',
+            marginBottom: 5,
+          }}
         >
           Last 24 hours
         </div>
@@ -260,7 +266,6 @@ function LeadStory({
     </div>
   )
 }
-
 
 /**
  * The ledger — the band the quiet state would otherwise leave empty.
@@ -306,9 +311,7 @@ function Ledger({
         >
           The ledger
         </span>
-        <span style={{ ...monoStyle, fontSize: 10, letterSpacing: '0.12em' }}>
-          LAST SEVEN DAYS
-        </span>
+        <span style={{ ...monoStyle, fontSize: 10, letterSpacing: '0.12em' }}>LAST SEVEN DAYS</span>
       </div>
 
       {failed ? (
@@ -459,7 +462,11 @@ export function Health() {
           <>
             <div style={{ ...mastheadKickerStyle, textAlign: 'right' }}>Wire copy</div>
             <div style={{ ...monoStyle, fontSize: 11, color: 'var(--ink)', textAlign: 'right' }}>
-              {now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}
+              {now.toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                second: '2-digit',
+              })}
             </div>
             <div style={{ ...monoStyle, fontSize: 9, textAlign: 'right', marginTop: 2 }}>
               REFRESHING EVERY {Math.round(REFRESH_MS / 1000)}s

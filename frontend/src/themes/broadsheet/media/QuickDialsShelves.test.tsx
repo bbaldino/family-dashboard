@@ -40,7 +40,17 @@ describe('QuickDialsShelves', () => {
 
   it('renders both shelves and plays a top track with a radio continuation on tap', () => {
     useTopTracks.mockReturnValue({
-      data: [{ uri: 'u1', name: 'Amber Hours', artist: 'The Night Shift', album: 'Late Bloom', image_url: null, play_count: 1, last_played: 0 }],
+      data: [
+        {
+          uri: 'u1',
+          name: 'Amber Hours',
+          artist: 'The Night Shift',
+          album: 'Late Bloom',
+          image_url: null,
+          play_count: 1,
+          last_played: 0,
+        },
+      ],
     })
     useRecentlyPlayed.mockReturnValue({
       data: [{ uri: 'u2', name: 'Late Night Drive', media_type: 'playlist', image_url: null }],
@@ -53,12 +63,25 @@ describe('QuickDialsShelves', () => {
     expect(screen.getByText('Playlist')).toBeInTheDocument()
 
     fireEvent.click(screen.getByText('Amber Hours'))
-    expect(play).toHaveBeenCalledWith('u1', expect.objectContaining({ radio: true, name: 'Amber Hours' }))
+    expect(play).toHaveBeenCalledWith(
+      'u1',
+      expect.objectContaining({ radio: true, name: 'Amber Hours' }),
+    )
   })
 
   it('wires a track-actions trigger onto each card, open for the one matching openMenuUri', () => {
     useTopTracks.mockReturnValue({
-      data: [{ uri: 'u1', name: 'Amber Hours', artist: 'The Night Shift', album: 'Late Bloom', image_url: null, play_count: 1, last_played: 0 }],
+      data: [
+        {
+          uri: 'u1',
+          name: 'Amber Hours',
+          artist: 'The Night Shift',
+          album: 'Late Bloom',
+          image_url: null,
+          play_count: 1,
+          last_played: 0,
+        },
+      ],
     })
     useRecentlyPlayed.mockReturnValue({ data: [] })
     renderShelves({ openMenuUri: 'frequently:u1' })
@@ -69,11 +92,28 @@ describe('QuickDialsShelves', () => {
     expect(screen.getByText('Play radio from this')).toBeInTheDocument()
   })
 
-  it('scopes a card\'s menu id to its shelf, so the same track in two shelves opens independently', () => {
-    const track = { uri: 'u1', name: 'Amber Hours', artist: 'The Night Shift', album: 'Late Bloom', image_url: null, play_count: 1, last_played: 0 }
+  it("scopes a card's menu id to its shelf, so the same track in two shelves opens independently", () => {
+    const track = {
+      uri: 'u1',
+      name: 'Amber Hours',
+      artist: 'The Night Shift',
+      album: 'Late Bloom',
+      image_url: null,
+      play_count: 1,
+      last_played: 0,
+    }
     useTopTracks.mockReturnValue({ data: [track] })
     useRecentlyPlayed.mockReturnValue({
-      data: [{ uri: 'u1', name: 'Amber Hours', artist: 'The Night Shift', album: 'Late Bloom', image_url: null, media_type: 'track' }],
+      data: [
+        {
+          uri: 'u1',
+          name: 'Amber Hours',
+          artist: 'The Night Shift',
+          album: 'Late Bloom',
+          image_url: null,
+          media_type: 'track',
+        },
+      ],
     })
     // The same track sits in both shelves — a bare uri as the card id opened
     // both menus at once, and the second rendered clipped inside its shelf.
@@ -82,9 +122,19 @@ describe('QuickDialsShelves', () => {
     expect(screen.getAllByText('Play just this track')).toHaveLength(1)
   })
 
-  it('calls onToggleMenu with the tapped card\'s shelf-scoped id', () => {
+  it("calls onToggleMenu with the tapped card's shelf-scoped id", () => {
     useTopTracks.mockReturnValue({
-      data: [{ uri: 'u1', name: 'Amber Hours', artist: 'The Night Shift', album: 'Late Bloom', image_url: null, play_count: 1, last_played: 0 }],
+      data: [
+        {
+          uri: 'u1',
+          name: 'Amber Hours',
+          artist: 'The Night Shift',
+          album: 'Late Bloom',
+          image_url: null,
+          play_count: 1,
+          last_played: 0,
+        },
+      ],
     })
     useRecentlyPlayed.mockReturnValue({ data: [] })
     const onToggleMenu = vi.fn()

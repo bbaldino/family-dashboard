@@ -25,8 +25,15 @@ interface WidgetCardProps {
 }
 
 export function WidgetCard({
-  title, category, badge, detail, children, visible = true, className = '',
-  onExpand, onCollapse,
+  title,
+  category,
+  badge,
+  detail,
+  children,
+  visible = true,
+  className = '',
+  onExpand,
+  onCollapse,
 }: WidgetCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
   const color = categoryColors[category]

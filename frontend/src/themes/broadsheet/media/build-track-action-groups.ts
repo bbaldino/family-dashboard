@@ -38,20 +38,56 @@ export function buildTrackActionGroups({
     {
       label: 'Play',
       items: [
-        { label: 'Play just this track', onSelect: () => run(() => play(track.uri, trackPlayOptions(track, { radio: false, enqueueMode: 'play' }))) },
-        { label: 'Play radio from this', onSelect: () => run(() => play(track.uri, trackPlayOptions(track, { radio: true, enqueueMode: 'play' }))) },
-        { label: 'Play next', onSelect: () => run(() => play(track.uri, trackPlayOptions(track, { radio: false, enqueueMode: 'next' }))) },
-        { label: 'Add to queue', onSelect: () => run(() => play(track.uri, trackPlayOptions(track, { radio: false, enqueueMode: 'add' }))) },
+        {
+          label: 'Play just this track',
+          onSelect: () =>
+            run(() =>
+              play(track.uri, trackPlayOptions(track, { radio: false, enqueueMode: 'play' })),
+            ),
+        },
+        {
+          label: 'Play radio from this',
+          onSelect: () =>
+            run(() =>
+              play(track.uri, trackPlayOptions(track, { radio: true, enqueueMode: 'play' })),
+            ),
+        },
+        {
+          label: 'Play next',
+          onSelect: () =>
+            run(() =>
+              play(track.uri, trackPlayOptions(track, { radio: false, enqueueMode: 'next' })),
+            ),
+        },
+        {
+          label: 'Add to queue',
+          onSelect: () =>
+            run(() =>
+              play(track.uri, trackPlayOptions(track, { radio: false, enqueueMode: 'add' })),
+            ),
+        },
       ],
     },
     {
       label: 'Go to',
       items: [
         ...(track.artist_uri
-          ? [{ label: 'Go to artist', onSelect: () => run(() => navigate(`/media/artist/${encodeUriParam(track.artist_uri!)}`)) }]
+          ? [
+              {
+                label: 'Go to artist',
+                onSelect: () =>
+                  run(() => navigate(`/media/artist/${encodeUriParam(track.artist_uri!)}`)),
+              },
+            ]
           : []),
         ...(track.album_uri
-          ? [{ label: 'Go to album', onSelect: () => run(() => navigate(`/media/album/${encodeUriParam(track.album_uri!)}`)) }]
+          ? [
+              {
+                label: 'Go to album',
+                onSelect: () =>
+                  run(() => navigate(`/media/album/${encodeUriParam(track.album_uri!)}`)),
+              },
+            ]
           : []),
       ],
     },

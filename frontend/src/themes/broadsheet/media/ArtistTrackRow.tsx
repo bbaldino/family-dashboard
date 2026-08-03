@@ -54,17 +54,43 @@ export function ArtistTrackRow({
     >
       <Cover imageUrl={track.image_url} name={track.name} size={44} />
       <div className="min-w-0">
-        <div className="truncate" style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 600, lineHeight: 1.2, color: isPlaying ? 'var(--rust)' : 'var(--ink)' }}>
+        <div
+          className="truncate"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 16,
+            fontWeight: 600,
+            lineHeight: 1.2,
+            color: isPlaying ? 'var(--rust)' : 'var(--ink)',
+          }}
+        >
           {track.name}
         </div>
         {track.album && (
-          <div className="truncate" style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 1 }}>
+          <div
+            className="truncate"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontStyle: 'italic',
+              fontSize: 12.5,
+              color: 'var(--ink-muted)',
+              marginTop: 1,
+            }}
+          >
             {track.album}
           </div>
         )}
       </div>
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-muted)' }}>{formatDuration(track.duration)}</span>
-      <TrackActionsTrigger isOpen={isMenuOpen} onToggle={onToggleMenu} kicker="Track" title={track.name} groups={groups} />
+      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-muted)' }}>
+        {formatDuration(track.duration)}
+      </span>
+      <TrackActionsTrigger
+        isOpen={isMenuOpen}
+        onToggle={onToggleMenu}
+        kicker="Track"
+        title={track.name}
+        groups={groups}
+      />
     </div>
   )
 }

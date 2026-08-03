@@ -19,22 +19,12 @@ function inningLabel(play: Play): string {
   return `${half}${play.inningNumber}`
 }
 
-function PlayRow({
-  play,
-  home,
-  away,
-}: {
-  play: Play
-  home: GameTeam
-  away: GameTeam
-}) {
+function PlayRow({ play, home, away }: { play: Play; home: GameTeam; away: GameTeam }) {
   const team = teamFor(play.teamId, home, away)
   return (
     <li className="text-[12px] leading-snug flex items-center gap-2 text-text-primary font-semibold">
       <TeamDot team={team} />
-      <span className="text-text-muted tabular-nums shrink-0 w-7">
-        {inningLabel(play)}
-      </span>
+      <span className="text-text-muted tabular-nums shrink-0 w-7">{inningLabel(play)}</span>
       <span className="min-w-0">{play.text}</span>
     </li>
   )

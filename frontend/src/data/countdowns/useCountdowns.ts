@@ -39,9 +39,8 @@ export function useCountdowns(): CountdownsData {
       return events
         .map((event) => {
           const dateStr = event.start.dateTime ?? event.start.date ?? ''
-          const eventDate = event.start.date && !event.start.dateTime
-            ? parseLocalDate(dateStr)
-            : new Date(dateStr)
+          const eventDate =
+            event.start.date && !event.start.dateTime ? parseLocalDate(dateStr) : new Date(dateStr)
           eventDate.setHours(0, 0, 0, 0)
 
           const diffMs = eventDate.getTime() - today.getTime()

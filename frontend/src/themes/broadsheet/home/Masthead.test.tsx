@@ -21,7 +21,13 @@ describe('Masthead', () => {
   beforeEach(() => {
     // useHeroWeather returns the HeroWeather object directly (or null) —
     // not a react-query result. See src/data/weather/useHeroWeather.ts.
-    useHeroWeather.mockReturnValue({ temperature: '75', high: '78', low: '53', condition: 'Sunny', icon: '☀️' })
+    useHeroWeather.mockReturnValue({
+      temperature: '75',
+      high: '78',
+      low: '53',
+      condition: 'Sunny',
+      icon: '☀️',
+    })
   })
 
   it('shows the temperature and condition', () => {

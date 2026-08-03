@@ -1,13 +1,7 @@
 import type { ComponentType } from 'react'
 
 export type ScreenKey =
-  | 'home'
-  | 'calendar'
-  | 'media'
-  | 'media.artist'
-  | 'media.album'
-  | 'cameras'
-  | 'health'
+  'home' | 'calendar' | 'media' | 'media.artist' | 'media.album' | 'cameras' | 'health'
 
 export type CanvasSpec =
   | { model: 'fluid' }

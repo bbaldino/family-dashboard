@@ -74,13 +74,27 @@ describe('broadsheet Media (The Listening Room)', () => {
   })
 
   it('shows the Quick Dials tab by default', () => {
-    useTopTracks.mockReturnValue({ data: [{ uri: 'u1', name: 'Amber Hours', artist: 'The Night Shift', album: null, image_url: null, play_count: 1, last_played: 0 }] })
+    useTopTracks.mockReturnValue({
+      data: [
+        {
+          uri: 'u1',
+          name: 'Amber Hours',
+          artist: 'The Night Shift',
+          album: null,
+          image_url: null,
+          play_count: 1,
+          last_played: 0,
+        },
+      ],
+    })
     renderMedia()
     expect(screen.getByText('Frequently played')).toBeInTheDocument()
   })
 
   it('switches to the For You tab on tap', () => {
-    useForYou.mockReturnValue({ data: [{ name: 'Late Night Drive', description: 'Discover Weekly', uri: 'p1', image: null }] })
+    useForYou.mockReturnValue({
+      data: [{ name: 'Late Night Drive', description: 'Discover Weekly', uri: 'p1', image: null }],
+    })
     renderMedia()
     fireEvent.click(screen.getByText('For You'))
     expect(screen.getByText('Late Night Drive')).toBeInTheDocument()
@@ -88,7 +102,20 @@ describe('broadsheet Media (The Listening Room)', () => {
 
   it('shows search results instead of the active tab once the query is long enough', async () => {
     useSearch.mockReturnValue({
-      data: { tracks: [{ name: 'Amber Hours', uri: 't1', media_type: 'track', artist: 'The Night Shift', image: null }], artists: [], albums: [], playlists: [] },
+      data: {
+        tracks: [
+          {
+            name: 'Amber Hours',
+            uri: 't1',
+            media_type: 'track',
+            artist: 'The Night Shift',
+            image: null,
+          },
+        ],
+        artists: [],
+        albums: [],
+        playlists: [],
+      },
       isFetching: false,
     })
     renderMedia()
@@ -105,7 +132,15 @@ describe('broadsheet Media (The Listening Room)', () => {
           queueId: 'kitchen',
           displayName: 'Kitchen',
           state: 'playing',
-          currentItem: { name: 'Amber Hours', artist: 'The Night Shift', album: 'Late Bloom', imageUrl: null, duration: 238, elapsed: 71, uri: 'u1' },
+          currentItem: {
+            name: 'Amber Hours',
+            artist: 'The Night Shift',
+            album: 'Late Bloom',
+            imageUrl: null,
+            duration: 238,
+            elapsed: 71,
+            uri: 'u1',
+          },
           volumeLevel: 45,
         },
       },
@@ -123,9 +158,19 @@ describe('broadsheet Media (The Listening Room)', () => {
     expect(screen.queryByTestId('broadsheet-centre-spread')).not.toBeInTheDocument()
   })
 
-  it('opens a card\'s track-actions menu and dismisses it via the scrim', () => {
+  it("opens a card's track-actions menu and dismisses it via the scrim", () => {
     useTopTracks.mockReturnValue({
-      data: [{ uri: 'u1', name: 'Amber Hours', artist: 'The Night Shift', album: null, image_url: null, play_count: 1, last_played: 0 }],
+      data: [
+        {
+          uri: 'u1',
+          name: 'Amber Hours',
+          artist: 'The Night Shift',
+          album: null,
+          image_url: null,
+          play_count: 1,
+          last_played: 0,
+        },
+      ],
     })
     renderMedia()
     fireEvent.click(screen.getByLabelText('Track actions'))
@@ -139,7 +184,17 @@ describe('broadsheet Media (The Listening Room)', () => {
 
   it('closes an open track-actions menu when switching tabs', () => {
     useTopTracks.mockReturnValue({
-      data: [{ uri: 'u1', name: 'Amber Hours', artist: 'The Night Shift', album: null, image_url: null, play_count: 1, last_played: 0 }],
+      data: [
+        {
+          uri: 'u1',
+          name: 'Amber Hours',
+          artist: 'The Night Shift',
+          album: null,
+          image_url: null,
+          play_count: 1,
+          last_played: 0,
+        },
+      ],
     })
     renderMedia()
     fireEvent.click(screen.getByLabelText('Track actions'))

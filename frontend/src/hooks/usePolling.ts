@@ -43,8 +43,14 @@ export function usePolling<T>({
 
   return {
     data: query.data ?? null,
-    error: query.error ? (query.error instanceof Error ? query.error.message : 'Unknown error') : null,
+    error: query.error
+      ? query.error instanceof Error
+        ? query.error.message
+        : 'Unknown error'
+      : null,
     isLoading: query.isLoading,
-    refetch: async () => { await query.refetch() },
+    refetch: async () => {
+      await query.refetch()
+    },
   }
 }

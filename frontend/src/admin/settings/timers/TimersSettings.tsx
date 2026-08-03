@@ -54,9 +54,7 @@ export function TimersSettings() {
 
   return (
     <div className="space-y-6">
-      {error && (
-        <div className="bg-error/10 text-error rounded-lg p-3 text-sm">{error}</div>
-      )}
+      {error && <div className="bg-error/10 text-error rounded-lg p-3 text-sm">{error}</div>}
 
       {/* Service URL */}
       <div>

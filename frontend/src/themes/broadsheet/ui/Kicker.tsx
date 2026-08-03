@@ -18,7 +18,13 @@ export function Kicker({
   return (
     <div
       className={`uppercase ${className}`}
-      style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.26em', fontWeight: 700, color }}
+      style={{
+        fontFamily: 'var(--font-mono)',
+        fontSize: 10,
+        letterSpacing: '0.26em',
+        fontWeight: 700,
+        color,
+      }}
     >
       {children}
     </div>

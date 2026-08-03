@@ -23,7 +23,10 @@ describe('ActionErrorNotice', () => {
   })
 
   it('names the action that failed', () => {
-    useMusic.mockReturnValue({ actionError: { message: 'Couldn’t play “Go”', at: 1 }, dismissError })
+    useMusic.mockReturnValue({
+      actionError: { message: 'Couldn’t play “Go”', at: 1 },
+      dismissError,
+    })
     render(<ActionErrorNotice />)
     expect(screen.getByText(/Couldn’t play “Go”\./)).toBeInTheDocument()
     expect(screen.getByText('STOP PRESS')).toBeInTheDocument()

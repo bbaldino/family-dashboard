@@ -110,7 +110,8 @@ export function resolveAnchorAndRooms(
 export function useRoomPills(): RoomPillsState {
   const config = useIntegrationConfig(musicIntegration)
   const fixtureAnchorId = musicAnchorFixtureFor(activeScenario)
-  const anchorId = fixtureAnchorId !== undefined ? fixtureAnchorId : (config?.default_player ?? null)
+  const anchorId =
+    fixtureAnchorId !== undefined ? fixtureAnchorId : (config?.default_player ?? null)
 
   const { pendingIds, pollingPaused, addToGroup, removeFromGroup } = useGroupMutations()
   const { data: rawPlayers } = usePlayers({ isOpen: true, pollingPaused })

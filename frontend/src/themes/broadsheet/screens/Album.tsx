@@ -40,8 +40,18 @@ export function Album() {
 
   if (!data) {
     return (
-      <div data-testid="broadsheet-album" className="broadsheet-root relative w-[1600px] h-[900px] flex items-center justify-center">
-        <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 20, color: 'var(--ink-muted)' }}>
+      <div
+        data-testid="broadsheet-album"
+        className="broadsheet-root relative w-[1600px] h-[900px] flex items-center justify-center"
+      >
+        <div
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontStyle: 'italic',
+            fontSize: 20,
+            color: 'var(--ink-muted)',
+          }}
+        >
           {error ? "Couldn't load this record." : isLoading ? 'Loading the record…' : ''}
         </div>
       </div>
@@ -68,7 +78,17 @@ export function Album() {
         actionIcon={<Play size={12} />}
         onAction={() => play(uri, { ...albumOptions, radio: false })}
       />
-      <div style={{ position: 'absolute', top: 140, bottom: 64, left: 0, right: 0, display: 'grid', gridTemplateColumns: '330px 1fr' }}>
+      <div
+        style={{
+          position: 'absolute',
+          top: 140,
+          bottom: 64,
+          left: 0,
+          right: 0,
+          display: 'grid',
+          gridTemplateColumns: '330px 1fr',
+        }}
+      >
         <RecordSleeve
           album={data}
           onQueue={() => play(uri, { ...albumOptions, radio: false, enqueueMode: 'add' })}
@@ -78,8 +98,12 @@ export function Album() {
           tracks={data.tracks}
           currentTrackUri={currentTrackUri}
           openMenuUri={openMenuUri}
-          onToggleMenu={(trackUri) => setOpenMenuUri((current) => (current === trackUri ? null : trackUri))}
-          buildGroups={(track) => buildTrackActionGroups({ track, play, navigate, onClose: closeMenu })}
+          onToggleMenu={(trackUri) =>
+            setOpenMenuUri((current) => (current === trackUri ? null : trackUri))
+          }
+          buildGroups={(track) =>
+            buildTrackActionGroups({ track, play, navigate, onClose: closeMenu })
+          }
         />
       </div>
       {openMenuUri && <MenuScrim onClose={closeMenu} />}

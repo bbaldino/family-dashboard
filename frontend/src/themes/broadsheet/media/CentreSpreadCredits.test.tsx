@@ -5,8 +5,28 @@ import { CentreSpreadCredits } from './CentreSpreadCredits'
 const useRoomPills = vi.hoisted(() => vi.fn())
 vi.mock('@/data/music', () => ({ useRoomPills }))
 
-const kitchen = { playerId: 'kitchen', displayName: 'Kitchen', state: 'playing', available: true, volumeLevel: 45, groupMembers: ['kitchen'], syncedTo: null, canGroupWith: ['living'], groupVolume: null }
-const living = { playerId: 'living', displayName: 'Living Room', state: 'idle', available: true, volumeLevel: 20, groupMembers: [], syncedTo: null, canGroupWith: ['kitchen'], groupVolume: null }
+const kitchen = {
+  playerId: 'kitchen',
+  displayName: 'Kitchen',
+  state: 'playing',
+  available: true,
+  volumeLevel: 45,
+  groupMembers: ['kitchen'],
+  syncedTo: null,
+  canGroupWith: ['living'],
+  groupVolume: null,
+}
+const living = {
+  playerId: 'living',
+  displayName: 'Living Room',
+  state: 'idle',
+  available: true,
+  volumeLevel: 20,
+  groupMembers: [],
+  syncedTo: null,
+  canGroupWith: ['kitchen'],
+  groupVolume: null,
+}
 
 const activeQueue = {
   queueId: 'kitchen',
@@ -41,7 +61,9 @@ describe('CentreSpreadCredits', () => {
   })
 
   it('renders exactly four credit rows — Artist, Album, Released, Source — never a fifth Label row', () => {
-    render(<CentreSpreadCredits track={fullTrack} activeQueue={activeQueue} onSetVolume={onSetVolume} />)
+    render(
+      <CentreSpreadCredits track={fullTrack} activeQueue={activeQueue} onSetVolume={onSetVolume} />,
+    )
     expect(screen.getByText('Artist')).toBeInTheDocument()
     expect(screen.getByText('Album')).toBeInTheDocument()
     expect(screen.getByText('Released')).toBeInTheDocument()
@@ -51,7 +73,9 @@ describe('CentreSpreadCredits', () => {
   })
 
   it('shows the values, formatting the raw provider id as a human source label', () => {
-    render(<CentreSpreadCredits track={fullTrack} activeQueue={activeQueue} onSetVolume={onSetVolume} />)
+    render(
+      <CentreSpreadCredits track={fullTrack} activeQueue={activeQueue} onSetVolume={onSetVolume} />,
+    )
     expect(screen.getByText('The Night Shift')).toBeInTheDocument()
     expect(screen.getByText('Late Bloom')).toBeInTheDocument()
     expect(screen.getByText('2023')).toBeInTheDocument()
@@ -63,8 +87,17 @@ describe('CentreSpreadCredits', () => {
     // A non-empty pill list, so the only dashes are the three credit-row
     // fallbacks — not also the empty-pills "Playing in" fallback this
     // file's other tests exercise separately.
-    useRoomPills.mockReturnValue({ pills: [{ player: kitchen, isAnchor: true, joined: true, pending: false }], toggle })
-    render(<CentreSpreadCredits track={sparseTrack} activeQueue={activeQueue} onSetVolume={onSetVolume} />)
+    useRoomPills.mockReturnValue({
+      pills: [{ player: kitchen, isAnchor: true, joined: true, pending: false }],
+      toggle,
+    })
+    render(
+      <CentreSpreadCredits
+        track={sparseTrack}
+        activeQueue={activeQueue}
+        onSetVolume={onSetVolume}
+      />,
+    )
     const dashes = screen.getAllByText('—')
     // Album, Released, Source all fall back — three dashes among the four rows.
     expect(dashes.length).toBe(3)
@@ -78,7 +111,9 @@ describe('CentreSpreadCredits', () => {
       ],
       toggle,
     })
-    render(<CentreSpreadCredits track={fullTrack} activeQueue={activeQueue} onSetVolume={onSetVolume} />)
+    render(
+      <CentreSpreadCredits track={fullTrack} activeQueue={activeQueue} onSetVolume={onSetVolume} />,
+    )
 
     const anchorPill = screen.getByText('Kitchen')
     expect(anchorPill.style.background).toBe('var(--ink)')
@@ -98,7 +133,9 @@ describe('CentreSpreadCredits', () => {
       ],
       toggle,
     })
-    render(<CentreSpreadCredits track={fullTrack} activeQueue={activeQueue} onSetVolume={onSetVolume} />)
+    render(
+      <CentreSpreadCredits track={fullTrack} activeQueue={activeQueue} onSetVolume={onSetVolume} />,
+    )
     const pendingPill = screen.getByRole('button', { name: 'Living Room' })
     expect(pendingPill).toBeDisabled()
     expect(pendingPill.style.opacity).toBe('0.55')
@@ -107,14 +144,28 @@ describe('CentreSpreadCredits', () => {
   })
 
   it('shows a dash when there are no pills — no anchor configured, no players yet, or the anchor is absent from the players list', () => {
-    render(<CentreSpreadCredits track={fullTrack} activeQueue={activeQueue} onSetVolume={onSetVolume} />)
+    render(
+      <CentreSpreadCredits track={fullTrack} activeQueue={activeQueue} onSetVolume={onSetVolume} />,
+    )
     expect(screen.getByText('—')).toBeInTheDocument()
   })
 
   it('sets volume from a tap position on the volume bar', () => {
-    render(<CentreSpreadCredits track={fullTrack} activeQueue={activeQueue} onSetVolume={onSetVolume} />)
+    render(
+      <CentreSpreadCredits track={fullTrack} activeQueue={activeQueue} onSetVolume={onSetVolume} />,
+    )
     const slider = screen.getByLabelText('Volume')
-    vi.spyOn(slider, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 100, top: 0, right: 100, bottom: 0, height: 0, x: 0, y: 0, toJSON: () => {} })
+    vi.spyOn(slider, 'getBoundingClientRect').mockReturnValue({
+      left: 0,
+      width: 100,
+      top: 0,
+      right: 100,
+      bottom: 0,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => {},
+    })
     fireEvent.click(slider, { clientX: 30 })
     expect(onSetVolume).toHaveBeenCalledWith('kitchen', 30)
   })

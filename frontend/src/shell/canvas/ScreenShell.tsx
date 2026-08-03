@@ -21,13 +21,12 @@ export function ScreenShell({ canvas, children }: Props) {
   }, [])
 
   if (viewport.width < canvas.minViewportWidth) {
-    return <SmallViewportFallback viewportWidth={viewport.width} minWidth={canvas.minViewportWidth} />
+    return (
+      <SmallViewportFallback viewportWidth={viewport.width} minWidth={canvas.minViewportWidth} />
+    )
   }
 
-  const scale = Math.min(
-    viewport.width / canvas.designWidth,
-    viewport.height / canvas.designHeight,
-  )
+  const scale = Math.min(viewport.width / canvas.designWidth, viewport.height / canvas.designHeight)
 
   return (
     <div className="fixed inset-0 bg-bg-primary flex items-center justify-center overflow-hidden">

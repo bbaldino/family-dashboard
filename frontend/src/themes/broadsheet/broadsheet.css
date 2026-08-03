@@ -1,7 +1,7 @@
 /* Newsreader carries the editorial voice — italic is the display face. */
-@import "@fontsource-variable/newsreader";
-@import "@fontsource-variable/newsreader/wght-italic.css";
-@import "@fontsource-variable/geist-mono";
+@import '@fontsource-variable/newsreader';
+@import '@fontsource-variable/newsreader/wght-italic.css';
+@import '@fontsource-variable/geist-mono';
 
 /*
  * Broadsheet's palette is fixed. It deliberately does NOT read the global
@@ -40,6 +40,11 @@
 }
 
 @keyframes doorbell-ringpulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.25; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
 }

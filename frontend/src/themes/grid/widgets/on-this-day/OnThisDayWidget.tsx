@@ -80,12 +80,20 @@ export function OnThisDayWidget({ size = 'standard' }: OnThisDayWidgetProps) {
         <div className="flex items-start justify-between" style={{ gap: 'min(2cqi, 12px)' }}>
           <div className="flex-1 min-w-0">
             {event.year && (
-              <div className="font-extrabold text-palette-3 leading-none tracking-tight" style={{ fontSize: 'min(7cqi, 42px)' }}>
+              <div
+                className="font-extrabold text-palette-3 leading-none tracking-tight"
+                style={{ fontSize: 'min(7cqi, 42px)' }}
+              >
                 {event.year}
               </div>
             )}
             <div className="flex" style={{ gap: 'min(2cqi, 12px)', marginTop: 'min(1.5cqi, 8px)' }}>
-              <p className="text-text-primary leading-relaxed flex-1" style={{ fontSize: 'min(3cqi, 18px)' }}>{event.text}</p>
+              <p
+                className="text-text-primary leading-relaxed flex-1"
+                style={{ fontSize: 'min(3cqi, 18px)' }}
+              >
+                {event.text}
+              </p>
               {event.imageUrl && (
                 <img
                   src={event.imageUrl}

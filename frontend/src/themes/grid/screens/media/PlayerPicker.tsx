@@ -12,11 +12,7 @@ interface PlayerPickerProps {
 function StateDot({ state }: { state: string }) {
   const isPlaying = state === 'playing'
   const isIdle = state === 'idle' || state === 'off'
-  const colorClass = isPlaying
-    ? 'bg-palette-1'
-    : isIdle
-      ? 'bg-text-secondary'
-      : 'bg-yellow-400'
+  const colorClass = isPlaying ? 'bg-palette-1' : isIdle ? 'bg-text-secondary' : 'bg-yellow-400'
   return <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${colorClass}`} />
 }
 
@@ -193,9 +189,7 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
   // MA reports group state via the LEADER's group_members array (which
   // includes the leader's own id). Followers don't reliably populate
   // synced_to, so detect followers via the leader's group_members list.
-  const followerIds = new Set(
-    (leader?.groupMembers ?? []).filter((id) => id !== leaderId),
-  )
+  const followerIds = new Set((leader?.groupMembers ?? []).filter((id) => id !== leaderId))
 
   // Sort: leader first, then group followers, then everything else.
   const sorted = [...players].sort((a, b) => {
@@ -233,9 +227,7 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
 
             // The leader's "Ungroup all" button stays busy while any of its
             // followers is mid-ungroup.
-            const anyFollowerPending = [...followerIds].some((id) =>
-              pendingIds.has(id),
-            )
+            const anyFollowerPending = [...followerIds].some((id) => pendingIds.has(id))
 
             const rowProps = (player: Player, framed: boolean) => {
               const isLeader = player.playerId === leaderId
@@ -254,8 +246,7 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
                 framed,
                 pending: pendingIds.has(player.playerId),
                 groupBusy: isLeader ? anyFollowerPending : false,
-                onVolumeChange: (level: number) =>
-                  setVolume(player.playerId, level),
+                onVolumeChange: (level: number) => setVolume(player.playerId, level),
                 onAdd: () => addToGroup(player.playerId),
                 onRemove: () => removeFromGroup(player.playerId),
                 onUngroupAll: ungroupAll,
@@ -276,10 +267,7 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
                       </span>
                     </div>
                     <div className="px-3 py-2 border-b border-palette-1/30">
-                      <VolumeSlider
-                        value={leader.groupVolume}
-                        onChange={setGroupVolume}
-                      />
+                      <VolumeSlider value={leader.groupVolume} onChange={setGroupVolume} />
                     </div>
                     {groupedRows.map((player, i) => (
                       <div
@@ -294,18 +282,12 @@ export function PlayerPicker({ isOpen, onClose }: PlayerPickerProps) {
                   // No group yet — render the leader as a regular standalone
                   // row (no special framing).
                   groupedRows.map((player) => (
-                    <PlayerRow
-                      key={player.playerId}
-                      {...rowProps(player, false)}
-                    />
+                    <PlayerRow key={player.playerId} {...rowProps(player, false)} />
                   ))
                 )}
 
                 {otherRows.map((player) => (
-                  <PlayerRow
-                    key={player.playerId}
-                    {...rowProps(player, false)}
-                  />
+                  <PlayerRow key={player.playerId} {...rowProps(player, false)} />
                 ))}
               </>
             )

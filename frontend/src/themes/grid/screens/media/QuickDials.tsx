@@ -210,7 +210,8 @@ export function QuickDials() {
                   onPlayNext={() => commonPlay('next', false)}
                   onAddToQueue={() => commonPlay('add', false)}
                   onGoToArtist={() =>
-                    track.artist_uri && navigate(`/media/artist/${encodeUriParam(track.artist_uri)}`)
+                    track.artist_uri &&
+                    navigate(`/media/artist/${encodeUriParam(track.artist_uri)}`)
                   }
                   onGoToAlbum={() =>
                     track.album_uri && navigate(`/media/album/${encodeUriParam(track.album_uri)}`)

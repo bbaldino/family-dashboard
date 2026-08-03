@@ -15,9 +15,7 @@ export function TriviaWidget() {
   if (isLoading || error || !data) {
     return (
       <WidgetCard title="Trivia" category="info">
-        <div className="text-text-muted text-sm">
-          {isLoading ? 'Loading...' : 'Unable to load'}
-        </div>
+        <div className="text-text-muted text-sm">{isLoading ? 'Loading...' : 'Unable to load'}</div>
       </WidgetCard>
     )
   }
@@ -32,8 +30,7 @@ export function TriviaWidget() {
         <div className="grid grid-cols-2 gap-1.5 mt-auto">
           {data.choices.map((choice, i) => {
             const isCorrect = i === data.correctIndex
-            let className =
-              'text-xs px-2 py-1.5 rounded border text-left transition-colors '
+            let className = 'text-xs px-2 py-1.5 rounded border text-left transition-colors '
             if (revealed) {
               className += isCorrect
                 ? 'border-success bg-success/10 text-success font-medium'

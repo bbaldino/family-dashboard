@@ -23,7 +23,13 @@ describe('RecordRunningOrder', () => {
   it('renders every track and no "+N more" line when under the cap', () => {
     const tracks = Array.from({ length: 4 }, (_, i) => track(i + 1))
     render(
-      <RecordRunningOrder tracks={tracks} currentTrackUri={null} openMenuUri={null} onToggleMenu={vi.fn()} buildGroups={noGroups} />,
+      <RecordRunningOrder
+        tracks={tracks}
+        currentTrackUri={null}
+        openMenuUri={null}
+        onToggleMenu={vi.fn()}
+        buildGroups={noGroups}
+      />,
     )
     expect(screen.getByText('Track 1')).toBeInTheDocument()
     expect(screen.getByText('Track 4')).toBeInTheDocument()
@@ -33,7 +39,13 @@ describe('RecordRunningOrder', () => {
   it('caps a 30-track album at MAX_RECORD_TRACKS and names the remainder', () => {
     const tracks = Array.from({ length: 30 }, (_, i) => track(i + 1))
     render(
-      <RecordRunningOrder tracks={tracks} currentTrackUri={null} openMenuUri={null} onToggleMenu={vi.fn()} buildGroups={noGroups} />,
+      <RecordRunningOrder
+        tracks={tracks}
+        currentTrackUri={null}
+        openMenuUri={null}
+        onToggleMenu={vi.fn()}
+        buildGroups={noGroups}
+      />,
     )
     expect(screen.getByText(`Track ${MAX_RECORD_TRACKS}`)).toBeInTheDocument()
     expect(screen.queryByText(`Track ${MAX_RECORD_TRACKS + 1}`)).not.toBeInTheDocument()
@@ -43,7 +55,13 @@ describe('RecordRunningOrder', () => {
   it('the header count/runtime always describes the whole album, not just the visible rows', () => {
     const tracks = Array.from({ length: 30 }, (_, i) => track(i + 1))
     render(
-      <RecordRunningOrder tracks={tracks} currentTrackUri={null} openMenuUri={null} onToggleMenu={vi.fn()} buildGroups={noGroups} />,
+      <RecordRunningOrder
+        tracks={tracks}
+        currentTrackUri={null}
+        openMenuUri={null}
+        onToggleMenu={vi.fn()}
+        buildGroups={noGroups}
+      />,
     )
     expect(screen.getByText(/30 tracks/)).toBeInTheDocument()
   })
@@ -51,7 +69,13 @@ describe('RecordRunningOrder', () => {
   it('splits visible tracks across exactly two columns', () => {
     const tracks = Array.from({ length: 5 }, (_, i) => track(i + 1))
     const { container } = render(
-      <RecordRunningOrder tracks={tracks} currentTrackUri={null} openMenuUri={null} onToggleMenu={vi.fn()} buildGroups={noGroups} />,
+      <RecordRunningOrder
+        tracks={tracks}
+        currentTrackUri={null}
+        openMenuUri={null}
+        onToggleMenu={vi.fn()}
+        buildGroups={noGroups}
+      />,
     )
     const section = container.querySelector('section')!
     const grid = section.children[1]

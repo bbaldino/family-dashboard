@@ -18,9 +18,7 @@ export function MlbLiveCard({ game, detail }: MlbLiveCardProps) {
   return (
     <div className="flex flex-col gap-3 h-full">
       {/* Inning header */}
-      {game.periodLabel && (
-        <div className="text-[14px] text-text-muted">{game.periodLabel}</div>
-      )}
+      {game.periodLabel && <div className="text-[14px] text-text-muted">{game.periodLabel}</div>}
 
       {detail.winProbability && (
         <WinProbabilityBar
@@ -84,11 +82,7 @@ export function MlbLiveCard({ game, detail }: MlbLiveCardProps) {
         away={game.away}
       />
 
-      <PlayByPlayLog
-        plays={detail.recentPlays}
-        home={game.home}
-        away={game.away}
-      />
+      <PlayByPlayLog plays={detail.recentPlays} home={game.home} away={game.away} />
 
       <GameLeaders
         leaders={detail.leaders}

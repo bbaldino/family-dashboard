@@ -19,28 +19,19 @@ export function DoorbellSettings() {
     kind: 'ok' | 'error'
     text: string
   } | null>(null)
-  const [micStatus, setMicStatus] = useState<
-    'unknown' | 'granted' | 'denied' | 'prompt'
-  >('unknown')
+  const [micStatus, setMicStatus] = useState<'unknown' | 'granted' | 'denied' | 'prompt'>('unknown')
   const previewCtxRef = useRef<AudioContext | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const raw = (await fetch('/api/config').then((r) => r.json())) as Record<
-        string,
-        string
-      >
+      const raw = (await fetch('/api/config').then((r) => r.json())) as Record<string, string>
       const g = (k: string, d: string) => raw[`doorbell.${k}`] ?? d
       setCameraUrl(g('camera_url', defaults.camera_url ?? ''))
       setPressSensor(g('press_sensor_entity', defaults.press_sensor_entity))
       setScreensaverEntity(g('screensaver_entity', defaults.screensaver_entity))
-      setAutoDismissSeconds(
-        g('auto_dismiss_seconds', String(defaults.auto_dismiss_seconds)),
-      )
-      setChimeEnabled(
-        g('chime_enabled', String(defaults.chime_enabled)) === 'true',
-      )
+      setAutoDismissSeconds(g('auto_dismiss_seconds', String(defaults.auto_dismiss_seconds)))
+      setChimeEnabled(g('chime_enabled', String(defaults.chime_enabled)) === 'true')
       setChimeSoundId(g('chime_sound_id', defaults.chime_sound_id))
     } catch {
       // fall through with defaults already in state
@@ -116,18 +107,14 @@ export function DoorbellSettings() {
     <div className="space-y-6 max-w-md">
       <div className="space-y-4">
         <div>
-          <h3 className="text-sm font-semibold text-text-primary mt-2 mb-1">
-            Camera view
-          </h3>
+          <h3 className="text-sm font-semibold text-text-primary mt-2 mb-1">Camera view</h3>
           <p className="text-xs text-text-muted mb-3">
             Used by the Cameras tab and the ring popup.
           </p>
         </div>
 
         <div>
-          <label className="text-xs text-text-muted block mb-1">
-            Camera Page URL
-          </label>
+          <label className="text-xs text-text-muted block mb-1">Camera Page URL</label>
           <input
             type="text"
             value={cameraUrl}
@@ -137,25 +124,20 @@ export function DoorbellSettings() {
         </div>
 
         <div className="bg-bg-card rounded-[var(--radius-card)] p-4 border border-border">
-          <div className="text-sm font-medium text-text-primary mb-2">
-            Microphone Permission
-          </div>
+          <div className="text-sm font-medium text-text-primary mb-2">Microphone Permission</div>
           <div className="text-xs text-text-muted mb-3">
-            Required for two-way audio on the camera feed. The iframe needs the parent page to have microphone access granted.
+            Required for two-way audio on the camera feed. The iframe needs the parent page to have
+            microphone access granted.
           </div>
           <div className="flex items-center gap-3">
             {micStatus === 'granted' ? (
-              <span className="text-sm text-success font-medium">
-                Microphone access granted
-              </span>
+              <span className="text-sm text-success font-medium">Microphone access granted</span>
             ) : micStatus === 'denied' ? (
               <span className="text-sm text-error font-medium">
                 Microphone access denied — check browser settings
               </span>
             ) : (
-              <Button onClick={requestMicrophone}>
-                Request Microphone Access
-              </Button>
+              <Button onClick={requestMicrophone}>Request Microphone Access</Button>
             )}
           </div>
         </div>
@@ -163,18 +145,14 @@ export function DoorbellSettings() {
 
       <div className="space-y-4">
         <div>
-          <h3 className="text-sm font-semibold text-text-primary mt-2 mb-1">
-            Ring popup
-          </h3>
+          <h3 className="text-sm font-semibold text-text-primary mt-2 mb-1">Ring popup</h3>
           <p className="text-xs text-text-muted mb-3">
             Behavior when someone presses the doorbell button.
           </p>
         </div>
 
         <div>
-          <label className="text-xs text-text-muted block mb-1">
-            Press Sensor Entity
-          </label>
+          <label className="text-xs text-text-muted block mb-1">Press Sensor Entity</label>
           <input
             type="text"
             value={pressSensor}
@@ -225,9 +203,7 @@ export function DoorbellSettings() {
           </label>
 
           <div>
-            <label className="text-xs text-text-muted block mb-1">
-              Chime Sound
-            </label>
+            <label className="text-xs text-text-muted block mb-1">Chime Sound</label>
             <div className="flex items-center gap-2">
               <select
                 value={chimeSoundId}
@@ -258,9 +234,7 @@ export function DoorbellSettings() {
       <div className="flex items-center gap-3">
         <Button onClick={handleSave}>Save</Button>
         {status && (
-          <span
-            className={`text-sm ${status.kind === 'ok' ? 'text-success' : 'text-error'}`}
-          >
+          <span className={`text-sm ${status.kind === 'ok' ? 'text-success' : 'text-error'}`}>
             {status.text}
           </span>
         )}

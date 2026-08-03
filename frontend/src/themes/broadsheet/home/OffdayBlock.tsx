@@ -18,7 +18,13 @@ const proseStyle = {
  * comment). `SportsColumn` threads the same data through so it can render
  * this before a game is even selected.
  */
-export function OffdayBlock({ data, isLoading }: { data: GamesResponse | undefined; isLoading: boolean }) {
+export function OffdayBlock({
+  data,
+  isLoading,
+}: {
+  data: GamesResponse | undefined
+  isLoading: boolean
+}) {
   const upcoming = (data?.games ?? []).filter((g) => g.state === 'upcoming').slice(0, 3)
 
   return (

@@ -52,7 +52,14 @@ export function ForYouShelf({
 
   if (items.length === 0) {
     return (
-      <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-muted)' }}>
+      <div
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontStyle: 'italic',
+          fontSize: 15,
+          color: 'var(--ink-muted)',
+        }}
+      >
         No curated playlists yet.
       </div>
     )

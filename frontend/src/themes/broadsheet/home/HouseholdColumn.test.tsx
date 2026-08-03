@@ -52,7 +52,10 @@ describe('HouseholdColumn', () => {
       data: { today: { entries: [{ name: 'Pizza', withItems: [] }], extras: [] } },
       isLoading: false,
     })
-    useChores.mockReturnValue({ data: { completed_count: 1, total_count: 3, persons: [] }, isLoading: false })
+    useChores.mockReturnValue({
+      data: { completed_count: 1, total_count: 3, persons: [] },
+      isLoading: false,
+    })
     useCountdowns.mockReturnValue({
       data: [{ id: '1', name: 'Hawaii', date: new Date('2026-08-17'), daysUntil: 18 }],
       isLoading: false,
@@ -79,7 +82,7 @@ describe('HouseholdColumn', () => {
     expect(screen.queryByText(/now playing/i)).toBeNull()
   })
 
-  it('gives the on-this-day blurb the column\'s full width instead of squeezing it beside the year', () => {
+  it("gives the on-this-day blurb the column's full width instead of squeezing it beside the year", () => {
     // Regression, found live: the mock puts the blurb inline beside the
     // 22px year, which read fine for the mock's one-line sample text but
     // wrapped to 4-5 cramped lines for the real feed's full-sentence
@@ -123,7 +126,10 @@ describe('HouseholdColumn', () => {
       data: { today: { entries: [{ name: 'Pizza', withItems: [] }], extras: [] } },
       isLoading: false,
     })
-    useChores.mockReturnValue({ data: { completed_count: 1, total_count: 3, persons: [] }, isLoading: false })
+    useChores.mockReturnValue({
+      data: { completed_count: 1, total_count: 3, persons: [] },
+      isLoading: false,
+    })
     useOnThisDay.mockReturnValue(longEvent)
 
     render(<HouseholdColumn />)
@@ -143,7 +149,10 @@ describe('HouseholdColumn', () => {
     // `lunch.today` null is a confirmed no-school day — the heading renders
     // but no item list, so the column is not crowded by lunch alone.
     useLunchMenu.mockReturnValue({ data: { today: null }, isLoading: false })
-    useChores.mockReturnValue({ data: { completed_count: 0, total_count: 2, persons: [] }, isLoading: false })
+    useChores.mockReturnValue({
+      data: { completed_count: 0, total_count: 2, persons: [] },
+      isLoading: false,
+    })
     useOnThisDay.mockReturnValue(longEvent)
 
     render(<HouseholdColumn />)
@@ -158,7 +167,12 @@ describe('HouseholdColumn', () => {
     // realistic combination is at least known not to crash, and the
     // "+more" caps are honoured together rather than only individually.
     useLunchMenu.mockReturnValue({
-      data: { today: { entries: [{ name: 'Chicken tenders', withItems: ['Mashed potatoes'] }], extras: [] } },
+      data: {
+        today: {
+          entries: [{ name: 'Chicken tenders', withItems: ['Mashed potatoes'] }],
+          extras: [],
+        },
+      },
       isLoading: false,
     })
     useChores.mockReturnValue({
@@ -193,19 +207,34 @@ describe('HouseholdColumn', () => {
             // three groups are hidden behind a column-level "+3 more" line.
             person: { id: 3, name: 'Zoe', color: '#000', avatar: null },
             assignments: [
-              { id: 30, chore: { id: 30, name: 'Set the table', chore_type: 'regular', tags: [] }, picked_chore: null, completed: false },
+              {
+                id: 30,
+                chore: { id: 30, name: 'Set the table', chore_type: 'regular', tags: [] },
+                picked_chore: null,
+                completed: false,
+              },
             ],
           },
           {
             person: { id: 4, name: 'Sam', color: '#000', avatar: null },
             assignments: [
-              { id: 40, chore: { id: 40, name: 'Take out trash', chore_type: 'regular', tags: [] }, picked_chore: null, completed: false },
+              {
+                id: 40,
+                chore: { id: 40, name: 'Take out trash', chore_type: 'regular', tags: [] },
+                picked_chore: null,
+                completed: false,
+              },
             ],
           },
           {
             person: { id: 5, name: 'Ana', color: '#000', avatar: null },
             assignments: [
-              { id: 50, chore: { id: 50, name: 'Water plants', chore_type: 'regular', tags: [] }, picked_chore: null, completed: false },
+              {
+                id: 50,
+                chore: { id: 50, name: 'Water plants', chore_type: 'regular', tags: [] },
+                picked_chore: null,
+                completed: false,
+              },
             ],
           },
         ],
@@ -312,8 +341,18 @@ describe('HouseholdColumn', () => {
           {
             person: { id: 1, name: 'Ben', color: '#000', avatar: null },
             assignments: [
-              { id: 1, chore: { id: 1, name: 'Feed the cat', chore_type: 'regular', tags: [] }, picked_chore: null, completed: true },
-              { id: 2, chore: { id: 2, name: 'Walk the dog', chore_type: 'regular', tags: [] }, picked_chore: null, completed: false },
+              {
+                id: 1,
+                chore: { id: 1, name: 'Feed the cat', chore_type: 'regular', tags: [] },
+                picked_chore: null,
+                completed: true,
+              },
+              {
+                id: 2,
+                chore: { id: 2, name: 'Walk the dog', chore_type: 'regular', tags: [] },
+                picked_chore: null,
+                completed: false,
+              },
             ],
           },
         ],
@@ -342,7 +381,12 @@ describe('HouseholdColumn', () => {
               {
                 id: 1,
                 chore: { id: 1, name: 'Pick a chore', chore_type: 'meta', tags: [] },
-                picked_chore: { id: 2, name: 'Vacuum living room', chore_type: 'regular', tags: [] },
+                picked_chore: {
+                  id: 2,
+                  name: 'Vacuum living room',
+                  chore_type: 'regular',
+                  tags: [],
+                },
                 completed: false,
               },
             ],

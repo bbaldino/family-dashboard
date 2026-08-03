@@ -14,7 +14,13 @@ import { pickFeaturedGame } from './featured-game'
  * that hook opens its own SSE connection, and `Home` already calls it once
  * for the whole page. See `Home`'s doc comment for why.
  */
-export function SportsColumn({ data, isLoading }: { data: GamesResponse | undefined; isLoading: boolean }) {
+export function SportsColumn({
+  data,
+  isLoading,
+}: {
+  data: GamesResponse | undefined
+  isLoading: boolean
+}) {
   const games = data?.games ?? []
   const featured = pickFeaturedGame(games)
 

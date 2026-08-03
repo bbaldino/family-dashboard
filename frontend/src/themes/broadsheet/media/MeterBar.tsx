@@ -30,7 +30,14 @@ export function MeterBar({
       style={{ width: '100%', height: 3, background: 'var(--rule-faint)', position: 'relative' }}
     >
       <div
-        style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${clamped}%`, background: fill }}
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: `${clamped}%`,
+          background: fill,
+        }}
       />
     </div>
   )

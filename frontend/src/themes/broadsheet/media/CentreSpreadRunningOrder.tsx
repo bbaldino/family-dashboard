@@ -71,37 +71,80 @@ export function CentreSpreadRunningOrder({
   // The queue passthrough includes the currently-playing item itself —
   // everything from one past it onward is what's actually "up next" (same
   // logic grid's own `Queue.tsx` uses, read for reference only).
-  const currentIdx = current.uri ? items.findIndex((item) => item.media_item.uri === current.uri) : -1
+  const currentIdx = current.uri
+    ? items.findIndex((item) => item.media_item.uri === current.uri)
+    : -1
   const upcoming = currentIdx >= 0 ? items.slice(currentIdx + 1) : items
   const visible = upcoming.slice(0, MAX_RUNNING_ORDER_ROWS)
   const hiddenCount = upcoming.length - visible.length
 
   return (
-    <aside className="min-h-0 overflow-hidden flex flex-col" style={{ padding: '18px 56px 18px 24px' }}>
+    <aside
+      className="min-h-0 overflow-hidden flex flex-col"
+      style={{ padding: '18px 56px 18px 24px' }}
+    >
       <div className="flex items-baseline justify-between">
         <Kicker>Running order</Kicker>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--ink-muted)', letterSpacing: '0.12em' }}>
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 9,
+            color: 'var(--ink-muted)',
+            letterSpacing: '0.12em',
+          }}
+        >
           {upcoming.length} up next
         </span>
       </div>
 
       <div style={{ ...rowGridStyle, borderTop: '2px solid var(--ink)', marginTop: 8 }}>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--rust)', fontWeight: 700 }}>▸</span>
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            color: 'var(--rust)',
+            fontWeight: 700,
+          }}
+        >
+          ▸
+        </span>
         <div className="min-w-0">
-          <div className="truncate" style={{ ...titleStyle, fontWeight: 600, color: 'var(--rust)' }}>
+          <div
+            className="truncate"
+            style={{ ...titleStyle, fontWeight: 600, color: 'var(--rust)' }}
+          >
             {current.title}
           </div>
           <div className="truncate" style={artistStyle}>
             {current.artist}
           </div>
         </div>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--rust)', letterSpacing: '0.06em' }}>now</span>
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            color: 'var(--rust)',
+            letterSpacing: '0.06em',
+          }}
+        >
+          now
+        </span>
       </div>
 
-      <ul className="m-0 p-0 min-h-0 overflow-hidden" style={{ listStyle: 'none', display: 'flex', flexDirection: 'column' }}>
+      <ul
+        className="m-0 p-0 min-h-0 overflow-hidden"
+        style={{ listStyle: 'none', display: 'flex', flexDirection: 'column' }}
+      >
         {visible.map((item, i) => (
-          <li key={item.queue_item_id ?? `${item.media_item.uri}-${i}`} style={{ ...rowGridStyle, borderTop: '1px dotted var(--rule)' }}>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-muted)' }}>{String(i + 1).padStart(2, '0')}</span>
+          <li
+            key={item.queue_item_id ?? `${item.media_item.uri}-${i}`}
+            style={{ ...rowGridStyle, borderTop: '1px dotted var(--rule)' }}
+          >
+            <span
+              style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-muted)' }}
+            >
+              {String(i + 1).padStart(2, '0')}
+            </span>
             <div className="min-w-0">
               <div className="truncate" style={titleStyle}>
                 {item.media_item.name}
@@ -111,7 +154,14 @@ export function CentreSpreadRunningOrder({
               </div>
             </div>
             {item.duration != null && (
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-muted)', letterSpacing: '0.06em' }}>
+              <span
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 10,
+                  color: 'var(--ink-muted)',
+                  letterSpacing: '0.06em',
+                }}
+              >
                 {formatDuration(item.duration)}
               </span>
             )}
@@ -120,7 +170,15 @@ export function CentreSpreadRunningOrder({
       </ul>
 
       {hiddenCount > 0 && (
-        <div style={{ marginTop: 4, fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--ink-muted)', letterSpacing: '0.1em' }}>
+        <div
+          style={{
+            marginTop: 4,
+            fontFamily: 'var(--font-mono)',
+            fontSize: 9,
+            color: 'var(--ink-muted)',
+            letterSpacing: '0.1em',
+          }}
+        >
           +{hiddenCount} more
         </div>
       )}

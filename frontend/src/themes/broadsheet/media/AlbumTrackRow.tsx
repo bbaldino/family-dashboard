@@ -62,20 +62,52 @@ export function AlbumTrackRow({
         paddingLeft: isMenuOpen ? 8 : 0,
       }}
     >
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: isPlaying ? 'var(--rust)' : 'var(--ink-muted)', fontWeight: isPlaying ? 700 : 400 }}>
+      <span
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 11,
+          color: isPlaying ? 'var(--rust)' : 'var(--ink-muted)',
+          fontWeight: isPlaying ? 700 : 400,
+        }}
+      >
         {isPlaying ? '▸' : String(index + 1).padStart(2, '0')}
       </span>
       <div className="min-w-0">
-        <div className="truncate" style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 600, lineHeight: 1.2, color: isPlaying ? 'var(--rust)' : 'var(--ink)' }}>
+        <div
+          className="truncate"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 16,
+            fontWeight: 600,
+            lineHeight: 1.2,
+            color: isPlaying ? 'var(--rust)' : 'var(--ink)',
+          }}
+        >
           {track.name}
         </div>
         {feat && (
-          <div className="truncate" style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 12.5, color: 'var(--ink-muted)', marginTop: 1 }}>
+          <div
+            className="truncate"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontStyle: 'italic',
+              fontSize: 12.5,
+              color: 'var(--ink-muted)',
+              marginTop: 1,
+            }}
+          >
             feat. {feat}
           </div>
         )}
       </div>
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-muted)', letterSpacing: '0.04em' }}>
+      <span
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 11,
+          color: 'var(--ink-muted)',
+          letterSpacing: '0.04em',
+        }}
+      >
         {formatDuration(track.duration)}
       </span>
       <TrackActionsTrigger

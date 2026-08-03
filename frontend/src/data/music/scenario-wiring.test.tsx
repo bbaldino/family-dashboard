@@ -92,12 +92,21 @@ describe('music hook scenario wiring', () => {
   })
 
   it('useAlbumDetail returns the fixture without touching fetch when one is defined', async () => {
-    const fixture = { name: 'Late Bloom', artist: null, artist_uri: null, image_url: null, year: null, tracks: [] }
+    const fixture = {
+      name: 'Late Bloom',
+      artist: null,
+      artist_uri: null,
+      image_url: null,
+      year: null,
+      tracks: [],
+    }
     musicAlbumDetailFixtureFor.mockReturnValue(fixture)
     const fetchSpy = vi.fn()
     globalThis.fetch = fetchSpy as unknown as typeof fetch
 
-    const { result } = renderHook(() => useAlbumDetail('fixture://album/late-bloom'), { wrapper: createWrapper() })
+    const { result } = renderHook(() => useAlbumDetail('fixture://album/late-bloom'), {
+      wrapper: createWrapper(),
+    })
     await waitFor(() => expect(result.current.data).toBeDefined())
 
     expect(result.current.data).toEqual(fixture)
@@ -106,9 +115,18 @@ describe('music hook scenario wiring', () => {
 
   it('useAlbumDetail fetches normally when no fixture is defined for the active scenario', async () => {
     musicAlbumDetailFixtureFor.mockReturnValue(undefined)
-    mockFetchJson({ name: 'Real Album', artist: null, artist_uri: null, image_url: null, year: null, tracks: [] })
+    mockFetchJson({
+      name: 'Real Album',
+      artist: null,
+      artist_uri: null,
+      image_url: null,
+      year: null,
+      tracks: [],
+    })
 
-    const { result } = renderHook(() => useAlbumDetail('spotify://album/1'), { wrapper: createWrapper() })
+    const { result } = renderHook(() => useAlbumDetail('spotify://album/1'), {
+      wrapper: createWrapper(),
+    })
     await waitFor(() => expect(result.current.data).toBeDefined())
 
     expect(result.current.data?.name).toBe('Real Album')
@@ -120,7 +138,9 @@ describe('music hook scenario wiring', () => {
     const fetchSpy = vi.fn()
     globalThis.fetch = fetchSpy as unknown as typeof fetch
 
-    const { result } = renderHook(() => useArtistDetail('fixture://artist/the-night-shift'), { wrapper: createWrapper() })
+    const { result } = renderHook(() => useArtistDetail('fixture://artist/the-night-shift'), {
+      wrapper: createWrapper(),
+    })
     await waitFor(() => expect(result.current.data).toBeDefined())
 
     expect(result.current.data).toEqual(fixture)
@@ -131,7 +151,9 @@ describe('music hook scenario wiring', () => {
     musicArtistDetailFixtureFor.mockReturnValue(undefined)
     mockFetchJson({ name: 'Real Artist', image_url: null, top_tracks: [], albums: [] })
 
-    const { result } = renderHook(() => useArtistDetail('spotify://artist/1'), { wrapper: createWrapper() })
+    const { result } = renderHook(() => useArtistDetail('spotify://artist/1'), {
+      wrapper: createWrapper(),
+    })
     await waitFor(() => expect(result.current.data).toBeDefined())
 
     expect(result.current.data?.name).toBe('Real Artist')
@@ -194,7 +216,9 @@ describe('music hook scenario wiring', () => {
   })
 
   it('useForYou returns the fixture without touching fetch when one is defined', async () => {
-    musicForYouFixtureFor.mockReturnValue([{ name: 'Kitchen Radio', description: 'x', uri: 'u', image: null }])
+    musicForYouFixtureFor.mockReturnValue([
+      { name: 'Kitchen Radio', description: 'x', uri: 'u', image: null },
+    ])
     const fetchSpy = vi.fn()
     globalThis.fetch = fetchSpy as unknown as typeof fetch
 

@@ -33,8 +33,18 @@ export function Artist() {
 
   if (!data) {
     return (
-      <div data-testid="broadsheet-artist" className="broadsheet-root relative w-[1600px] h-[900px] flex items-center justify-center">
-        <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 20, color: 'var(--ink-muted)' }}>
+      <div
+        data-testid="broadsheet-artist"
+        className="broadsheet-root relative w-[1600px] h-[900px] flex items-center justify-center"
+      >
+        <div
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontStyle: 'italic',
+            fontSize: 20,
+            color: 'var(--ink-muted)',
+          }}
+        >
           {error ? "Couldn't load this artist." : isLoading ? 'Loading the profile…' : ''}
         </div>
       </div>
@@ -42,7 +52,9 @@ export function Artist() {
   }
 
   const closeMenu = () => setOpenMenuUri(null)
-  const standfirst = data.description ?? buildArtistStandfirst({ genres: data.genres, albumCount: data.albums.length })
+  const standfirst =
+    data.description ??
+    buildArtistStandfirst({ genres: data.genres, albumCount: data.albums.length })
 
   return (
     <div data-testid="broadsheet-artist" className="broadsheet-root relative w-[1600px] h-[900px]">
@@ -52,18 +64,42 @@ export function Artist() {
         titleFontSize={58}
         actionLabel="Play radio"
         actionIcon={<Radio size={12} />}
-        onAction={() => play(uri, { radio: true, mediaType: 'artist', name: data.name, imageUrl: data.image_url ?? undefined })}
+        onAction={() =>
+          play(uri, {
+            radio: true,
+            mediaType: 'artist',
+            name: data.name,
+            imageUrl: data.image_url ?? undefined,
+          })
+        }
       />
       <ProfileStandfirst text={standfirst} />
-      <div style={{ position: 'absolute', top: 190, bottom: 64, left: 0, right: 0, display: 'grid', gridTemplateColumns: '1fr 400px' }}>
+      <div
+        style={{
+          position: 'absolute',
+          top: 190,
+          bottom: 64,
+          left: 0,
+          right: 0,
+          display: 'grid',
+          gridTemplateColumns: '1fr 400px',
+        }}
+      >
         <ProfileTopTracks
           tracks={data.top_tracks}
           currentTrackUri={currentTrackUri}
           openMenuUri={openMenuUri}
-          onToggleMenu={(trackUri) => setOpenMenuUri((current) => (current === trackUri ? null : trackUri))}
-          buildGroups={(track) => buildTrackActionGroups({ track, play, navigate, onClose: closeMenu })}
+          onToggleMenu={(trackUri) =>
+            setOpenMenuUri((current) => (current === trackUri ? null : trackUri))
+          }
+          buildGroups={(track) =>
+            buildTrackActionGroups({ track, play, navigate, onClose: closeMenu })
+          }
         />
-        <ProfileDiscography albums={data.albums} onOpenAlbum={(albumUri) => navigate(`/media/album/${encodeUriParam(albumUri)}`)} />
+        <ProfileDiscography
+          albums={data.albums}
+          onOpenAlbum={(albumUri) => navigate(`/media/album/${encodeUriParam(albumUri)}`)}
+        />
       </div>
       {openMenuUri && <MenuScrim onClose={closeMenu} />}
     </div>

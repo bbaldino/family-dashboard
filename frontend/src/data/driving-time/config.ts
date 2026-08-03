@@ -9,7 +9,13 @@ export const drivingTimeIntegration = defineIntegration({
     buffer_minutes: z.string().optional().default('5'),
   }),
   fields: {
-    home_address: { label: 'Home Address', description: 'Your home address for driving time calculations' },
-    buffer_minutes: { label: 'Buffer Minutes', description: 'Extra minutes to add before leave-by time' },
+    home_address: {
+      label: 'Home Address',
+      description: 'Your home address for driving time calculations',
+    },
+    buffer_minutes: {
+      label: 'Buffer Minutes',
+      description: 'Extra minutes to add before leave-by time',
+    },
   },
 })

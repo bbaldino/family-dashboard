@@ -7,7 +7,12 @@ describe('EventPill', () => {
   it('renders an all-day event without a time', () => {
     render(
       <EventPill
-        event={{ id: 'e1', summary: "Andi Wilson's birthday", start: { date: '2026-05-03' }, end: { date: '2026-05-04' } }}
+        event={{
+          id: 'e1',
+          summary: "Andi Wilson's birthday",
+          start: { date: '2026-05-03' },
+          end: { date: '2026-05-04' },
+        }}
       />,
     )
     expect(screen.getByText("Andi Wilson's birthday")).toBeInTheDocument()
@@ -30,7 +35,13 @@ describe('EventPill', () => {
   })
 
   it('falls back to "Untitled" for an event with no summary', () => {
-    render(<EventPill event={{ id: 'e3', start: { date: '2026-05-03' }, end: { date: '2026-05-04' } } as CalendarEvent} />)
+    render(
+      <EventPill
+        event={
+          { id: 'e3', start: { date: '2026-05-03' }, end: { date: '2026-05-04' } } as CalendarEvent
+        }
+      />,
+    )
     expect(screen.getByText('Untitled')).toBeInTheDocument()
   })
 
@@ -39,10 +50,24 @@ describe('EventPill', () => {
     // "allday" — only the Tally distinguishes birthdays. There is no
     // separate bday branch in EventPill to test.
     const { container: bday } = render(
-      <EventPill event={{ id: 'b1', summary: "Erik Hayden's birthday", start: { date: '2026-05-03' }, end: { date: '2026-05-04' } }} />,
+      <EventPill
+        event={{
+          id: 'b1',
+          summary: "Erik Hayden's birthday",
+          start: { date: '2026-05-03' },
+          end: { date: '2026-05-04' },
+        }}
+      />,
     )
     const { container: allDay } = render(
-      <EventPill event={{ id: 'a1', summary: 'School photo day', start: { date: '2026-05-03' }, end: { date: '2026-05-04' } }} />,
+      <EventPill
+        event={{
+          id: 'a1',
+          summary: 'School photo day',
+          start: { date: '2026-05-03' },
+          end: { date: '2026-05-04' },
+        }}
+      />,
     )
     expect(bday.firstElementChild?.tagName).toBe(allDay.firstElementChild?.tagName)
   })

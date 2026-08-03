@@ -63,7 +63,9 @@ export function MediaMasthead() {
       }
       center={
         <>
-          <div style={{ ...mastheadKickerStyle, textAlign: 'center' }}>{roomName ? 'Now playing in' : 'Now playing'}</div>
+          <div style={{ ...mastheadKickerStyle, textAlign: 'center' }}>
+            {roomName ? 'Now playing in' : 'Now playing'}
+          </div>
           <h1 className="m-0" style={mastheadNumeralStyle}>
             {roomName ? `the ${roomName}` : 'Quiet'}
           </h1>
@@ -75,7 +77,12 @@ export function MediaMasthead() {
           {visiblePills.length > 0 ? (
             <div
               className="flex justify-end uppercase"
-              style={{ gap: 6, fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.14em' }}
+              style={{
+                gap: 6,
+                fontFamily: 'var(--font-mono)',
+                fontSize: 10,
+                letterSpacing: '0.14em',
+              }}
             >
               {visiblePills.map((pill) => (
                 <RoomPill
@@ -88,7 +95,11 @@ export function MediaMasthead() {
               ))}
             </div>
           ) : (
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-muted)' }}>—</div>
+            <div
+              style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-muted)' }}
+            >
+              —
+            </div>
           )}
         </>
       }

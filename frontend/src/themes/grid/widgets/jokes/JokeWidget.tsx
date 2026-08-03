@@ -13,9 +13,7 @@ export function JokeWidget() {
   if (isLoading || error || !data) {
     return (
       <WidgetCard title="Joke of the Day" category="info">
-        <div className="text-text-muted text-sm">
-          {isLoading ? 'Loading...' : 'Unable to load'}
-        </div>
+        <div className="text-text-muted text-sm">{isLoading ? 'Loading...' : 'Unable to load'}</div>
       </WidgetCard>
     )
   }
@@ -36,7 +34,9 @@ export function JokeWidget() {
         {revealed ? (
           <p className="text-sm text-palette-3 font-medium leading-relaxed">{data.delivery}</p>
         ) : (
-          <div className="text-[10px] text-text-muted text-center mt-auto">Tap to reveal punchline</div>
+          <div className="text-[10px] text-text-muted text-center mt-auto">
+            Tap to reveal punchline
+          </div>
         )}
       </div>
     </WidgetCard>

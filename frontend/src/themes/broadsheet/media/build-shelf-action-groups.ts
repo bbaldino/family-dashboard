@@ -68,21 +68,48 @@ export function buildShelfActionGroups({
       label: 'Play',
       items: [
         ...(isTrack
-          ? [{ label: 'Play just this track', onSelect: () => run(() => play(item.uri, { ...base, radio: false, enqueueMode: 'play' })) }]
+          ? [
+              {
+                label: 'Play just this track',
+                onSelect: () =>
+                  run(() => play(item.uri, { ...base, radio: false, enqueueMode: 'play' })),
+              },
+            ]
           : []),
-        { label: 'Play radio from this', onSelect: () => run(() => play(item.uri, { ...base, radio: true, enqueueMode: 'play' })) },
-        { label: 'Play next', onSelect: () => run(() => play(item.uri, { ...base, radio: false, enqueueMode: 'next' })) },
-        { label: 'Add to queue', onSelect: () => run(() => play(item.uri, { ...base, radio: false, enqueueMode: 'add' })) },
+        {
+          label: 'Play radio from this',
+          onSelect: () => run(() => play(item.uri, { ...base, radio: true, enqueueMode: 'play' })),
+        },
+        {
+          label: 'Play next',
+          onSelect: () => run(() => play(item.uri, { ...base, radio: false, enqueueMode: 'next' })),
+        },
+        {
+          label: 'Add to queue',
+          onSelect: () => run(() => play(item.uri, { ...base, radio: false, enqueueMode: 'add' })),
+        },
       ],
     },
     {
       label: 'Go to',
       items: [
         ...(item.artistUri
-          ? [{ label: 'Go to artist', onSelect: () => run(() => navigate(`/media/artist/${encodeUriParam(item.artistUri!)}`)) }]
+          ? [
+              {
+                label: 'Go to artist',
+                onSelect: () =>
+                  run(() => navigate(`/media/artist/${encodeUriParam(item.artistUri!)}`)),
+              },
+            ]
           : []),
         ...(item.albumUri
-          ? [{ label: 'Go to album', onSelect: () => run(() => navigate(`/media/album/${encodeUriParam(item.albumUri!)}`)) }]
+          ? [
+              {
+                label: 'Go to album',
+                onSelect: () =>
+                  run(() => navigate(`/media/album/${encodeUriParam(item.albumUri!)}`)),
+              },
+            ]
           : []),
       ],
     },

@@ -8,8 +8,11 @@ import { ScoringSummary } from '@/themes/grid/widgets/sports/ScoringSummary'
 
 function formatGameTime(startTime: string): string {
   const d = new Date(startTime)
-  return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) +
-    ' ' + d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  return (
+    d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) +
+    ' ' +
+    d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  )
 }
 
 export function GameDetailModal({ game, onClose }: { game: Game | null; onClose: () => void }) {
@@ -25,18 +28,28 @@ export function GameDetailModal({ game, onClose }: { game: Game | null; onClose:
         {/* Matchup header */}
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 flex-1">
-            <img src={game.away.logo} alt={game.away.abbreviation} className="w-10 h-10 object-contain" />
+            <img
+              src={game.away.logo}
+              alt={game.away.abbreviation}
+              className="w-10 h-10 object-contain"
+            />
             <div>
               <div className="text-[15px] font-semibold text-text-primary">{game.away.name}</div>
-              {game.away.record && <div className="text-[11px] text-text-muted">{game.away.record}</div>}
+              {game.away.record && (
+                <div className="text-[11px] text-text-muted">{game.away.record}</div>
+              )}
             </div>
           </div>
           <div className="text-center min-w-[60px]">
             {hasScore && game.away.score != null && game.home.score != null ? (
               <div className="text-[28px] font-bold tracking-[2px]">
-                <span className={isFinal && game.away.winner === false ? 'text-text-disabled' : ''}>{game.away.score}</span>
+                <span className={isFinal && game.away.winner === false ? 'text-text-disabled' : ''}>
+                  {game.away.score}
+                </span>
                 <span className="text-text-disabled mx-1">-</span>
-                <span className={isFinal && game.home.winner === false ? 'text-text-disabled' : ''}>{game.home.score}</span>
+                <span className={isFinal && game.home.winner === false ? 'text-text-disabled' : ''}>
+                  {game.home.score}
+                </span>
               </div>
             ) : (
               <div className="text-[13px] text-text-muted">vs</div>
@@ -44,14 +57,22 @@ export function GameDetailModal({ game, onClose }: { game: Game | null; onClose:
             {isLive && game.periodLabel && (
               <div className="text-[12px] font-semibold text-error">{game.periodLabel}</div>
             )}
-            {isFinal && <div className="text-[11px] font-semibold text-success uppercase">Final</div>}
+            {isFinal && (
+              <div className="text-[11px] font-semibold text-success uppercase">Final</div>
+            )}
           </div>
           <div className="flex items-center gap-2 flex-1 justify-end">
             <div className="text-right">
               <div className="text-[15px] font-semibold text-text-primary">{game.home.name}</div>
-              {game.home.record && <div className="text-[11px] text-text-muted">{game.home.record}</div>}
+              {game.home.record && (
+                <div className="text-[11px] text-text-muted">{game.home.record}</div>
+              )}
             </div>
-            <img src={game.home.logo} alt={game.home.abbreviation} className="w-10 h-10 object-contain" />
+            <img
+              src={game.home.logo}
+              alt={game.home.abbreviation}
+              className="w-10 h-10 object-contain"
+            />
           </div>
         </div>
 
@@ -63,7 +84,10 @@ export function GameDetailModal({ game, onClose }: { game: Game | null; onClose:
                 <tr className="text-text-muted">
                   <th className="text-left font-semibold py-1 pr-2"></th>
                   {game.linescores.map((ls) => (
-                    <th key={ls.period} className="text-center font-semibold py-1 px-1 min-w-[20px]">
+                    <th
+                      key={ls.period}
+                      className="text-center font-semibold py-1 px-1 min-w-[20px]"
+                    >
                       {ls.period}
                     </th>
                   ))}
@@ -72,18 +96,26 @@ export function GameDetailModal({ game, onClose }: { game: Game | null; onClose:
               </thead>
               <tbody>
                 <tr>
-                  <td className="font-semibold text-text-primary py-1 pr-2">{game.away.abbreviation}</td>
+                  <td className="font-semibold text-text-primary py-1 pr-2">
+                    {game.away.abbreviation}
+                  </td>
                   {game.linescores.map((ls) => (
-                    <td key={ls.period} className="text-center text-text-secondary py-1 px-1">{ls.awayScore}</td>
+                    <td key={ls.period} className="text-center text-text-secondary py-1 px-1">
+                      {ls.awayScore}
+                    </td>
                   ))}
                   <td className="text-center font-bold text-text-primary py-1 pl-2 border-l border-border">
                     {game.away.score ?? '-'}
                   </td>
                 </tr>
                 <tr>
-                  <td className="font-semibold text-text-primary py-1 pr-2">{game.home.abbreviation}</td>
+                  <td className="font-semibold text-text-primary py-1 pr-2">
+                    {game.home.abbreviation}
+                  </td>
                   {game.linescores.map((ls) => (
-                    <td key={ls.period} className="text-center text-text-secondary py-1 px-1">{ls.homeScore}</td>
+                    <td key={ls.period} className="text-center text-text-secondary py-1 px-1">
+                      {ls.homeScore}
+                    </td>
                   ))}
                   <td className="text-center font-bold text-text-primary py-1 pl-2 border-l border-border">
                     {game.home.score ?? '-'}
@@ -95,9 +127,7 @@ export function GameDetailModal({ game, onClose }: { game: Game | null; onClose:
         )}
 
         {/* Situation (MLB live) */}
-        {isLive && game.situation?.type === 'mlb' && (
-          <MlbSituation situation={game.situation} />
-        )}
+        {isLive && game.situation?.type === 'mlb' && <MlbSituation situation={game.situation} />}
 
         {/* Leaders */}
         {game.allLeaders.length > 0 && (
@@ -126,7 +156,9 @@ export function GameDetailModal({ game, onClose }: { game: Game | null; onClose:
               {game.athletes.map((athlete, i) => (
                 <div key={i} className="flex items-center gap-2 text-[12px]">
                   <span className="font-medium text-text-primary">{athlete.name}</span>
-                  {athlete.role && <span className="text-[10px] text-text-muted">({athlete.role})</span>}
+                  {athlete.role && (
+                    <span className="text-[10px] text-text-muted">({athlete.role})</span>
+                  )}
                   {athlete.stats && <span className="text-text-muted">{athlete.stats}</span>}
                 </div>
               ))}
@@ -135,17 +167,15 @@ export function GameDetailModal({ game, onClose }: { game: Game | null; onClose:
         )}
 
         {/* Final MLB: scoring plays list, above the headline/recap */}
-        {isFinal &&
-          game.liveDetail?.sport === 'mlb' &&
-          game.liveDetail.scoringPlays.length > 0 && (
-            <ScoringSummary
-              allPlays={game.liveDetail.scoringPlays}
-              inProgressPlays={[]}
-              recap={null}
-              home={game.home}
-              away={game.away}
-            />
-          )}
+        {isFinal && game.liveDetail?.sport === 'mlb' && game.liveDetail.scoringPlays.length > 0 && (
+          <ScoringSummary
+            allPlays={game.liveDetail.scoringPlays}
+            inProgressPlays={[]}
+            recap={null}
+            home={game.home}
+            away={game.away}
+          />
+        )}
 
         {/* Final: ESPN recap headline if published, else LLM-generated fallback */}
         {isFinal && game.headline && <GameHeadline text={game.headline} />}
@@ -159,7 +189,9 @@ export function GameDetailModal({ game, onClose }: { game: Game | null; onClose:
           {game.venue && <div>{game.venue}</div>}
           {game.broadcast && <div>TV: {game.broadcast}</div>}
           {game.state === 'upcoming' && <div>{formatGameTime(game.startTime)}</div>}
-          {game.playoffRound && <div className="font-semibold text-text-secondary">{game.playoffRound}</div>}
+          {game.playoffRound && (
+            <div className="font-semibold text-text-secondary">{game.playoffRound}</div>
+          )}
         </div>
 
         {/* ESPN link */}

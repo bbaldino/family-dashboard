@@ -21,13 +21,9 @@ export function PackageDetailModal({ shipment, onClose }: PackageDetailModalProp
         <div className="flex items-center gap-3">
           <span className="text-[24px]">{icon}</span>
           <div>
-            <div className="text-[14px] font-medium text-text-primary">
-              {shipment.carrier}
-            </div>
+            <div className="text-[14px] font-medium text-text-primary">{shipment.carrier}</div>
             {shipment.trackingNumber && (
-              <div className="text-[12px] text-text-muted font-mono">
-                {shipment.trackingNumber}
-              </div>
+              <div className="text-[12px] text-text-muted font-mono">{shipment.trackingNumber}</div>
             )}
           </div>
           {shipment.expectedDelivery && (
@@ -57,10 +53,10 @@ export function PackageDetailModal({ shipment, onClose }: PackageDetailModalProp
                   className="flex gap-3 py-2 border-b border-border last:border-b-0"
                 >
                   <div className="flex flex-col items-center flex-shrink-0 w-[6px] mt-1">
-                    <div className={`w-[6px] h-[6px] rounded-full ${i === 0 ? 'bg-palette-5' : 'bg-text-disabled'}`} />
-                    {i < events.length - 1 && (
-                      <div className="w-px flex-1 bg-border-subtle mt-1" />
-                    )}
+                    <div
+                      className={`w-[6px] h-[6px] rounded-full ${i === 0 ? 'bg-palette-5' : 'bg-text-disabled'}`}
+                    />
+                    {i < events.length - 1 && <div className="w-px flex-1 bg-border-subtle mt-1" />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[13px] text-text-primary">{event.description}</div>

@@ -31,10 +31,20 @@ export function ProfileTopTracks({
   const columns = [visible.slice(0, half), visible.slice(half)]
 
   return (
-    <section className="min-h-0" style={{ padding: '18px 28px 18px 56px', borderRight: '1px solid var(--rule)' }}>
+    <section
+      className="min-h-0"
+      style={{ padding: '18px 28px 18px 56px', borderRight: '1px solid var(--rule)' }}
+    >
       <div className="flex items-baseline justify-between" style={{ marginBottom: 8 }}>
         <Kicker>Most played</Kicker>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-muted)', letterSpacing: '0.12em' }}>
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            color: 'var(--ink-muted)',
+            letterSpacing: '0.12em',
+          }}
+        >
           {tracks.length === 1 ? '1 top track' : `${tracks.length} top tracks`}
         </span>
       </div>
@@ -56,7 +66,15 @@ export function ProfileTopTracks({
         ))}
       </div>
       {hiddenCount > 0 && (
-        <div style={{ marginTop: 10, fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--ink-muted)', letterSpacing: '0.1em' }}>
+        <div
+          style={{
+            marginTop: 10,
+            fontFamily: 'var(--font-mono)',
+            fontSize: 9,
+            color: 'var(--ink-muted)',
+            letterSpacing: '0.1em',
+          }}
+        >
           +{hiddenCount} more tracks
         </div>
       )}

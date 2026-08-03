@@ -81,7 +81,10 @@ describe('SportsColumn', () => {
   })
 
   it('renders a live game with no situation or liveDetail', () => {
-    const data: GamesResponse = { games: [game('live', { situation: null, liveDetail: null })], hasLive: true }
+    const data: GamesResponse = {
+      games: [game('live', { situation: null, liveDetail: null })],
+      hasLive: true,
+    }
     expect(() => render(<SportsColumn data={data} isLoading={false} />)).not.toThrow()
   })
 

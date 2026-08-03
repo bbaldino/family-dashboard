@@ -43,7 +43,8 @@ export interface NflSituationData {
   type: 'nfl'
 }
 
-export type GameSituation = MlbSituationData | NbaSituationData | NhlSituationData | NflSituationData
+export type GameSituation =
+  MlbSituationData | NbaSituationData | NhlSituationData | NflSituationData
 
 export type GameState = 'live' | 'final' | 'upcoming' | 'postponed'
 

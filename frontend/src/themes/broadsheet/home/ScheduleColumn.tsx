@@ -22,7 +22,15 @@ const WEEK_DAY_DATE = new Intl.DateTimeFormat('en-US', { month: 'numeric', day: 
 
 /** One event in the Today hero: time, title + location, drive time. Mock:
  *  `broadsheet-v2.jsx:156-179`. */
-function TodayEventRow({ event, driveInfo, first }: { event: CalendarEvent; driveInfo?: EventDriveInfo; first: boolean }) {
+function TodayEventRow({
+  event,
+  driveInfo,
+  first,
+}: {
+  event: CalendarEvent
+  driveInfo?: EventDriveInfo
+  first: boolean
+}) {
   return (
     <div
       className="grid items-baseline gap-3"
@@ -32,15 +40,34 @@ function TodayEventRow({ event, driveInfo, first }: { event: CalendarEvent; driv
         borderTop: first ? '2px solid var(--ink)' : `1px solid ${RULE_SOFT}`,
       }}
     >
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', color: 'var(--ink)' }}>
+      <div
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 12,
+          fontWeight: 700,
+          letterSpacing: '0.04em',
+          color: 'var(--ink)',
+        }}
+      >
         {formatEventTime(event)}
       </div>
       <div className="min-w-0">
-        <div style={{ fontFamily: 'var(--font-display)', fontSize: 17, fontWeight: 600, lineHeight: 1.25, color: 'var(--ink)' }}>
+        <div
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 17,
+            fontWeight: 600,
+            lineHeight: 1.25,
+            color: 'var(--ink)',
+          }}
+        >
           {event.summary || 'Untitled'}
         </div>
         {event.location && (
-          <div className="flex items-center gap-1 mt-0.5" style={{ fontFamily: 'var(--font-body)', fontSize: 11.5, color: 'var(--ink-muted)' }}>
+          <div
+            className="flex items-center gap-1 mt-0.5"
+            style={{ fontFamily: 'var(--font-body)', fontSize: 11.5, color: 'var(--ink-muted)' }}
+          >
             <MapPin size={11} strokeWidth={1.5} />
             {event.location}
           </div>
@@ -50,7 +77,12 @@ function TodayEventRow({ event, driveInfo, first }: { event: CalendarEvent; driv
         <div className="text-right">
           <div
             className="flex items-center justify-end gap-1"
-            style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--rust)', letterSpacing: '0.06em' }}
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              color: 'var(--rust)',
+              letterSpacing: '0.06em',
+            }}
           >
             <Car size={11} strokeWidth={1.5} />
             {driveInfo.displayText}
@@ -79,7 +111,13 @@ const MAX_HERO_EVENTS = 4
 
 /** The lead block: today's date, headline, and today's events — or a
  *  written blank-docket line. Mock: `broadsheet-v2.jsx:146-188`. */
-function TodayHero({ today, driveInfo }: { today: CalendarDay | undefined; driveInfo: Record<string, EventDriveInfo> }) {
+function TodayHero({
+  today,
+  driveInfo,
+}: {
+  today: CalendarDay | undefined
+  driveInfo: Record<string, EventDriveInfo>
+}) {
   const allEvents = today?.events ?? []
   const events = allEvents.slice(0, MAX_HERO_EVENTS)
   const hiddenCount = allEvents.length - events.length
@@ -88,7 +126,14 @@ function TodayHero({ today, driveInfo }: { today: CalendarDay | undefined; drive
     <div style={{ marginBottom: 14 }}>
       <div className="flex items-baseline justify-between" style={{ marginBottom: 4 }}>
         <Kicker>Today{today ? ` · ${TODAY_KICKER_DATE.format(today.date)}` : ''}</Kicker>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-muted)', letterSpacing: '0.12em' }}>
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            color: 'var(--ink-muted)',
+            letterSpacing: '0.12em',
+          }}
+        >
           {allEvents.length} {allEvents.length === 1 ? 'event' : 'events'}
         </span>
       </div>
@@ -108,7 +153,12 @@ function TodayHero({ today, driveInfo }: { today: CalendarDay | undefined; drive
       {events.length > 0 ? (
         <div>
           {events.map((event, i) => (
-            <TodayEventRow key={event.id} event={event} driveInfo={driveInfo[event.id]} first={i === 0} />
+            <TodayEventRow
+              key={event.id}
+              event={event}
+              driveInfo={driveInfo[event.id]}
+              first={i === 0}
+            />
           ))}
           {hiddenCount > 0 && (
             <div
@@ -128,11 +178,25 @@ function TodayHero({ today, driveInfo }: { today: CalendarDay | undefined; drive
         <div style={{ padding: '14px 0', borderTop: '2px solid var(--ink)' }}>
           <p
             className="m-0"
-            style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 16, color: 'var(--ink-muted)', lineHeight: 1.4 }}
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontStyle: 'italic',
+              fontSize: 16,
+              color: 'var(--ink-muted)',
+              lineHeight: 1.4,
+            }}
           >
             — a rare blank docket —
           </p>
-          <p className="m-0" style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 13, color: 'var(--ink-muted)' }}>
+          <p
+            className="m-0"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontStyle: 'italic',
+              fontSize: 13,
+              color: 'var(--ink-muted)',
+            }}
+          >
             the house has nothing pencilled in.
           </p>
         </div>
@@ -143,7 +207,15 @@ function TodayHero({ today, driveInfo }: { today: CalendarDay | undefined; drive
 
 /** One day in the week-ahead strip: a compact day label and up to
  *  `maxEvents` lines. Mock: `broadsheet-v2.jsx:194-209`. */
-function WeekAheadDay({ day, maxEvents, first }: { day: CalendarDay; maxEvents: number; first: boolean }) {
+function WeekAheadDay({
+  day,
+  maxEvents,
+  first,
+}: {
+  day: CalendarDay
+  maxEvents: number
+  first: boolean
+}) {
   const events = day.events ?? []
   const visible = events.slice(0, maxEvents)
   const hidden = events.length - visible.length
@@ -151,21 +223,57 @@ function WeekAheadDay({ day, maxEvents, first }: { day: CalendarDay; maxEvents: 
   return (
     <div
       className="grid gap-2.5"
-      style={{ gridTemplateColumns: '60px 1fr', padding: '4px 0', borderTop: first ? 'none' : '1px dotted var(--rule)' }}
+      style={{
+        gridTemplateColumns: '60px 1fr',
+        padding: '4px 0',
+        borderTop: first ? 'none' : '1px dotted var(--rule)',
+      }}
     >
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10, letterSpacing: '0.14em', color: 'var(--ink-muted)', paddingTop: 3 }}>
-        <span style={{ fontWeight: 700, color: 'var(--ink)' }}>{WEEK_DAY_ABBR.format(day.date)}</span> {WEEK_DAY_DATE.format(day.date)}
+      <div
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 10,
+          letterSpacing: '0.14em',
+          color: 'var(--ink-muted)',
+          paddingTop: 3,
+        }}
+      >
+        <span style={{ fontWeight: 700, color: 'var(--ink)' }}>
+          {WEEK_DAY_ABBR.format(day.date)}
+        </span>{' '}
+        {WEEK_DAY_DATE.format(day.date)}
       </div>
       <div className="min-w-0">
         {events.length === 0 ? (
-          <span style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 12, color: 'var(--ink-muted)' }}>—</span>
+          <span
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontStyle: 'italic',
+              fontSize: 12,
+              color: 'var(--ink-muted)',
+            }}
+          >
+            —
+          </span>
         ) : (
           visible.map((event) => (
             <div
               key={event.id}
-              style={{ fontFamily: 'var(--font-display)', fontSize: 13, lineHeight: 1.3, color: 'var(--ink)' }}
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 13,
+                lineHeight: 1.3,
+                color: 'var(--ink)',
+              }}
             >
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-muted)', marginRight: 6 }}>
+              <span
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 10,
+                  color: 'var(--ink-muted)',
+                  marginRight: 6,
+                }}
+              >
                 {formatEventTime(event)}
               </span>
               {event.summary || 'Untitled'}
@@ -173,7 +281,15 @@ function WeekAheadDay({ day, maxEvents, first }: { day: CalendarDay; maxEvents: 
           ))
         )}
         {hidden > 0 && (
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fontStyle: 'italic', color: 'var(--ink-muted)', marginTop: 1 }}>
+          <div
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 9,
+              fontStyle: 'italic',
+              color: 'var(--ink-muted)',
+              marginTop: 1,
+            }}
+          >
             +{hidden} more
           </div>
         )}
@@ -256,7 +372,12 @@ export function ScheduleColumn({ isLive = false }: { isLive?: boolean }) {
           <Kicker color="var(--ink-muted)">The week ahead</Kicker>
           <div className="mt-2 flex flex-col">
             {weekAhead.map((day, i) => (
-              <WeekAheadDay key={day.label} day={day} maxEvents={maxWeekAheadEvents} first={i === 0} />
+              <WeekAheadDay
+                key={day.label}
+                day={day}
+                maxEvents={maxWeekAheadEvents}
+                first={i === 0}
+              />
             ))}
           </div>
         </div>

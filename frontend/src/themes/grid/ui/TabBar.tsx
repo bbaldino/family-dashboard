@@ -18,7 +18,10 @@ export function TabBar() {
       {tabs.map((tab) => {
         const Icon = tab.icon
         return (
-          <NavLink key={tab.to} to={tab.to} end={tab.to === '/'}
+          <NavLink
+            key={tab.to}
+            to={tab.to}
+            end={tab.to === '/'}
             className={({ isActive }) =>
               `flex flex-col items-center gap-[2px] px-[14px] py-1 rounded-[var(--radius-button)] transition-colors ${
                 isActive ? 'text-palette-1 bg-palette-1/10' : 'text-text-muted'

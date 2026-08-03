@@ -30,7 +30,15 @@ const normalizePlayer = vi.hoisted(() =>
 vi.mock('@/data/music', () => ({ useMusic, usePlayers, normalizePlayer, useGroupMutations }))
 
 const rawPlayers = [
-  { player_id: 'kitchen', display_name: 'Kitchen', state: 'playing', volume_level: 45, group_members: ['kitchen', 'bedroom'], can_group_with: ['living', 'bedroom'], group_volume: 38 },
+  {
+    player_id: 'kitchen',
+    display_name: 'Kitchen',
+    state: 'playing',
+    volume_level: 45,
+    group_members: ['kitchen', 'bedroom'],
+    can_group_with: ['living', 'bedroom'],
+    group_volume: 38,
+  },
   { player_id: 'bedroom', display_name: 'Bedroom', state: 'playing', volume_level: 30 },
   { player_id: 'living', display_name: 'Living Room', state: 'idle', volume_level: 20 },
   { player_id: 'office-display', display_name: 'Office Display', state: 'idle', volume_level: 50 },

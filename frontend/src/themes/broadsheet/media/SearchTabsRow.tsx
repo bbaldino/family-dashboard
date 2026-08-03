@@ -44,7 +44,12 @@ export function SearchTabsRow({
   return (
     <div
       className="grid items-center"
-      style={{ padding: '12px 56px 8px', borderBottom: '1px solid var(--rule)', gridTemplateColumns: '1fr auto', gap: 24 }}
+      style={{
+        padding: '12px 56px 8px',
+        borderBottom: '1px solid var(--rule)',
+        gridTemplateColumns: '1fr auto',
+        gap: 24,
+      }}
     >
       <div style={{ position: 'relative', maxWidth: 920 }}>
         <input
@@ -66,12 +71,21 @@ export function SearchTabsRow({
         />
         <span
           aria-hidden
-          style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--ink-muted)' }}
+          style={{
+            position: 'absolute',
+            left: 12,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            color: 'var(--ink-muted)',
+          }}
         >
           ⌕
         </span>
       </div>
-      <div className="flex uppercase" style={{ gap: 18, fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.22em' }}>
+      <div
+        className="flex uppercase"
+        style={{ gap: 18, fontFamily: 'var(--font-mono)', fontSize: 11, letterSpacing: '0.22em' }}
+      >
         {TABS.map((tab) => (
           <button
             key={tab.key}

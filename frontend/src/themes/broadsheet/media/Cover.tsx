@@ -25,7 +25,15 @@ export function Cover({
 }) {
   if (imageUrl) {
     return (
-      <div style={{ width: size, height: size, flexShrink: 0, overflow: 'hidden', position: 'relative' }}>
+      <div
+        style={{
+          width: size,
+          height: size,
+          flexShrink: 0,
+          overflow: 'hidden',
+          position: 'relative',
+        }}
+      >
         <img src={imageUrl} alt="" className="w-full h-full object-cover" />
       </div>
     )
@@ -52,7 +60,8 @@ export function Cover({
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.06) 0 2px, transparent 2px 4px)',
+          background:
+            'repeating-linear-gradient(45deg, rgba(255,255,255,0.06) 0 2px, transparent 2px 4px)',
         }}
       />
       <div

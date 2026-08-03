@@ -83,13 +83,27 @@ export function ShelfCard({ item }: { item: ShelfCardItem }) {
         type="button"
         onClick={item.onTap}
         className="flex items-center text-left min-w-0 flex-1"
-        style={{ all: 'unset', display: 'flex', alignItems: 'center', gap: 12, minWidth: 0, flex: 1, cursor: 'pointer' }}
+        style={{
+          all: 'unset',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          minWidth: 0,
+          flex: 1,
+          cursor: 'pointer',
+        }}
       >
         <Cover imageUrl={item.imageUrl} name={item.name} size={48} />
         <div className="min-w-0 flex-1">
           <div
             className="truncate"
-            style={{ fontFamily: 'var(--font-display)', fontSize: 13.5, fontWeight: 600, lineHeight: 1.2, color: 'var(--ink)' }}
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 13.5,
+              fontWeight: 600,
+              lineHeight: 1.2,
+              color: 'var(--ink)',
+            }}
           >
             {item.name}
           </div>

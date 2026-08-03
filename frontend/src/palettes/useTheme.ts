@@ -44,29 +44,23 @@ export function useTheme() {
     }
   }, [activeTheme, loaded])
 
-  const setActiveTheme = useCallback(
-    async (themeId: string) => {
-      setActiveId(themeId)
-      await fetch('/api/config/theme.active', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: themeId }),
-      })
-    },
-    [],
-  )
+  const setActiveTheme = useCallback(async (themeId: string) => {
+    setActiveId(themeId)
+    await fetch('/api/config/theme.active', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: themeId }),
+    })
+  }, [])
 
-  const saveCustomThemes = useCallback(
-    async (themes: Theme[]) => {
-      setCustomThemes(themes)
-      await fetch('/api/config/theme.custom_themes', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: JSON.stringify(themes) }),
-      })
-    },
-    [],
-  )
+  const saveCustomThemes = useCallback(async (themes: Theme[]) => {
+    setCustomThemes(themes)
+    await fetch('/api/config/theme.custom_themes', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: JSON.stringify(themes) }),
+    })
+  }, [])
 
   const applyPreview = useCallback((colors: ThemeColors) => {
     applyThemeToDocument(colors)

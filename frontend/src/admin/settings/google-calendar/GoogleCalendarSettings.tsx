@@ -45,9 +45,7 @@ export function GoogleCalendarSettings() {
   }, [])
 
   const toggleCalendar = (id: string) => {
-    setCalendarIds((prev) =>
-      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
-    )
+    setCalendarIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]))
   }
 
   const saveConfig = async () => {
@@ -85,9 +83,7 @@ export function GoogleCalendarSettings() {
             {calendarsLoading ? 'Loading...' : 'Fetch Calendars'}
           </button>
         </div>
-        {calendarsError && (
-          <div className="text-xs text-red-400 mb-2">{calendarsError}</div>
-        )}
+        {calendarsError && <div className="text-xs text-red-400 mb-2">{calendarsError}</div>}
         {calendars.length > 0 && (
           <div className="space-y-1">
             {calendars.map((cal) => (
@@ -98,9 +94,7 @@ export function GoogleCalendarSettings() {
                   onChange={() => toggleCalendar(cal.id)}
                 />
                 {cal.summary}
-                {cal.primary && (
-                  <span className="text-xs text-text-muted">(primary)</span>
-                )}
+                {cal.primary && <span className="text-xs text-text-muted">(primary)</span>}
               </label>
             ))}
           </div>

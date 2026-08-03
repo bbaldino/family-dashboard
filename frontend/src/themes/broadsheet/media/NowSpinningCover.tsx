@@ -15,7 +15,8 @@ function LpDisc() {
         width: 160,
         height: 160,
         borderRadius: 160,
-        background: 'radial-gradient(circle, #2a1814 0%, #2a1814 30%, #ad3a1a 32%, #2a1814 34%, #2a1814 100%)',
+        background:
+          'radial-gradient(circle, #2a1814 0%, #2a1814 30%, #ad3a1a 32%, #2a1814 34%, #2a1814 100%)',
         border: '2px solid var(--ink)',
         boxShadow: '0 6px 20px rgba(0,0,0,0.3)',
         opacity: 0.92,
@@ -26,7 +27,8 @@ function LpDisc() {
           position: 'absolute',
           inset: 12,
           borderRadius: '50%',
-          background: 'repeating-radial-gradient(circle, rgba(255,255,255,0.04) 0 2px, transparent 2px 4px)',
+          background:
+            'repeating-radial-gradient(circle, rgba(255,255,255,0.04) 0 2px, transparent 2px 4px)',
         }}
       />
       <div
@@ -57,7 +59,15 @@ function LpDisc() {
  * kiosk (and a keyboard) both need a real activatable target, not just a
  * clickable-looking one. Omitting `onTap` (its default) keeps this
  * component usable anywhere a plain, non-interactive cover is wanted. */
-export function NowSpinningCover({ imageUrl, name, onTap }: { imageUrl: string | null; name: string; onTap?: () => void }) {
+export function NowSpinningCover({
+  imageUrl,
+  name,
+  onTap,
+}: {
+  imageUrl: string | null
+  name: string
+  onTap?: () => void
+}) {
   const cover = (
     <div style={{ position: 'relative', marginTop: 4 }}>
       <Cover imageUrl={imageUrl} name={name} size={280} />
@@ -68,7 +78,12 @@ export function NowSpinningCover({ imageUrl, name, onTap }: { imageUrl: string |
   if (!onTap) return cover
 
   return (
-    <button type="button" onClick={onTap} style={{ all: 'unset', cursor: 'pointer', display: 'block' }} aria-label="Open now playing">
+    <button
+      type="button"
+      onClick={onTap}
+      style={{ all: 'unset', cursor: 'pointer', display: 'block' }}
+      aria-label="Open now playing"
+    >
       {cover}
     </button>
   )

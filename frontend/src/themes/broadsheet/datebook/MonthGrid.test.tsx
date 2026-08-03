@@ -81,7 +81,9 @@ describe('MonthGrid', () => {
       timed('e1', 'Event 1', '2026-05-14'),
       timed('e2', 'Event 2', '2026-05-14'),
     ]
-    const { unmount } = render(<MonthGrid year={2026} month={4} byDate={{ '2026-05-14': events }} />)
+    const { unmount } = render(
+      <MonthGrid year={2026} month={4} byDate={{ '2026-05-14': events }} />,
+    )
     expect(screen.queryByText('Event 2')).not.toBeInTheDocument()
     expect(screen.getByText('+1 more')).toBeInTheDocument()
     unmount()

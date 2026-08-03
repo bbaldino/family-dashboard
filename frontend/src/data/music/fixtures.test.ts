@@ -228,7 +228,9 @@ describe('musicArtistDetailFixtureFor / musicAlbumDetailFixtureFor', () => {
     const album = musicAlbumDetailFixtureFor('packed', 'fixture://album/late-bloom')!
     expect(album.name).toBe('Late Bloom')
     expect(album.tracks.length).toBeGreaterThan(0)
-    expect(album.tracks.every((t) => t.artist_uri === 'fixture://artist/the-night-shift')).toBe(true)
+    expect(album.tracks.every((t) => t.artist_uri === 'fixture://artist/the-night-shift')).toBe(
+      true,
+    )
   })
 
   it('packed artist has genres populated but no bio, the realistic case for this household', () => {

@@ -32,7 +32,10 @@ describe('ScheduleColumn', () => {
     // Index 0 is always today (see fetchCalendarEvents) — ScheduleColumn
     // relies on that rather than filtering on `isToday` itself.
     useGoogleCalendar.mockReturnValue({
-      data: [day('2026-05-22T00:00:00', true, ['Pick up kids']), day('2026-05-23T00:00:00', false, ['Cages'])],
+      data: [
+        day('2026-05-22T00:00:00', true, ['Pick up kids']),
+        day('2026-05-23T00:00:00', false, ['Cages']),
+      ],
       isLoading: false,
     })
     render(<ScheduleColumn />)
@@ -53,7 +56,10 @@ describe('ScheduleColumn', () => {
 
   it('writes an em dash for a clear day in the week-ahead strip', () => {
     useGoogleCalendar.mockReturnValue({
-      data: [day('2026-05-22T00:00:00', true, ['Pick up kids']), day('2026-05-23T00:00:00', false, [])],
+      data: [
+        day('2026-05-22T00:00:00', true, ['Pick up kids']),
+        day('2026-05-23T00:00:00', false, []),
+      ],
       isLoading: false,
     })
     render(<ScheduleColumn />)

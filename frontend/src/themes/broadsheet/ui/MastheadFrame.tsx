@@ -40,7 +40,10 @@ export function MastheadFrame({
 }) {
   return (
     <div style={{ padding, borderBottom: '3px double var(--ink)' }}>
-      <div className="grid items-end" style={{ gridTemplateColumns: '0.85fr 1.5fr 0.85fr', gap: 24 }}>
+      <div
+        className="grid items-end"
+        style={{ gridTemplateColumns: '0.85fr 1.5fr 0.85fr', gap: 24 }}
+      >
         <div>{left}</div>
         <div style={{ textAlign: 'center' }}>{center}</div>
         <div style={{ textAlign: 'right' }}>{right}</div>

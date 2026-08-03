@@ -8,29 +8,81 @@ import type { Theme, ThemeColors } from './types'
 // A curated set of colors for the tap-to-pick grid
 const PICKER_COLORS = [
   // Reds / warm
-  '#e53935', '#d4574a', '#c04040', '#b71c1c', '#ff5252',
+  '#e53935',
+  '#d4574a',
+  '#c04040',
+  '#b71c1c',
+  '#ff5252',
   // Oranges
-  '#c06830', '#e8965a', '#f57c00', '#ff9800', '#ffb74d',
+  '#c06830',
+  '#e8965a',
+  '#f57c00',
+  '#ff9800',
+  '#ffb74d',
   // Yellows / Gold
-  '#f0c040', '#9a7a30', '#fbc02d', '#ffeb3b', '#c0a030',
+  '#f0c040',
+  '#9a7a30',
+  '#fbc02d',
+  '#ffeb3b',
+  '#c0a030',
   // Greens
-  '#4a8a4a', '#2a7a5a', '#388e3c', '#4caf50', '#81c784',
+  '#4a8a4a',
+  '#2a7a5a',
+  '#388e3c',
+  '#4caf50',
+  '#81c784',
   // Teals / Cyans
-  '#3a9a8a', '#009688', '#26a69a', '#00838f', '#4dd0e1',
+  '#3a9a8a',
+  '#009688',
+  '#26a69a',
+  '#00838f',
+  '#4dd0e1',
   // Blues
-  '#4a7a9a', '#5a8aba', '#1976d2', '#2196f3', '#64b5f6',
+  '#4a7a9a',
+  '#5a8aba',
+  '#1976d2',
+  '#2196f3',
+  '#64b5f6',
   // Purples
-  '#8a5a9a', '#7a6a9a', '#7b1fa2', '#9c27b0', '#ba68c8',
+  '#8a5a9a',
+  '#7a6a9a',
+  '#7b1fa2',
+  '#9c27b0',
+  '#ba68c8',
   // Pinks / Rose
-  '#c06080', '#aa6a7a', '#c2185b', '#e91e63', '#f48fb1',
+  '#c06080',
+  '#aa6a7a',
+  '#c2185b',
+  '#e91e63',
+  '#f48fb1',
   // Browns
-  '#7a6a5a', '#8d6e63', '#5d4037', '#795548', '#a1887f',
+  '#7a6a5a',
+  '#8d6e63',
+  '#5d4037',
+  '#795548',
+  '#a1887f',
   // Neutrals
-  '#2a2520', '#4a4a4a', '#757575', '#9e9e9e', '#bdbdbd',
-  '#d0d0d0', '#e0e0e0', '#f0f0f0', '#f5f5f5', '#ffffff',
+  '#2a2520',
+  '#4a4a4a',
+  '#757575',
+  '#9e9e9e',
+  '#bdbdbd',
+  '#d0d0d0',
+  '#e0e0e0',
+  '#f0f0f0',
+  '#f5f5f5',
+  '#ffffff',
 ]
 
-function ColorSwatch({ value, label, onChange }: { value: string; label: string; onChange: (v: string) => void }) {
+function ColorSwatch({
+  value,
+  label,
+  onChange,
+}: {
+  value: string
+  label: string
+  onChange: (v: string) => void
+}) {
   const [editing, setEditing] = useState(false)
   const swatchRef = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState({ top: 0, left: 0 })
@@ -80,7 +132,10 @@ function ColorSwatch({ value, label, onChange }: { value: string; label: string;
                   className={`w-9 h-9 rounded-lg cursor-pointer hover:scale-110 transition-transform ${
                     c === value ? 'ring-2 ring-offset-2 ring-text-primary' : ''
                   }`}
-                  style={{ background: c, border: c === '#ffffff' ? '1px solid #e0e0e0' : undefined }}
+                  style={{
+                    background: c,
+                    border: c === '#ffffff' ? '1px solid #e0e0e0' : undefined,
+                  }}
                   onClick={() => {
                     onChange(c)
                     setEditing(false)
@@ -112,7 +167,12 @@ function deepClone<T>(obj: T): T {
 
 const COLOR_SECTIONS: {
   label: string
-  items: { key: string; label: string; get: (c: ThemeColors) => string; set: (c: ThemeColors, v: string) => void }[]
+  items: {
+    key: string
+    label: string
+    get: (c: ThemeColors) => string
+    set: (c: ThemeColors, v: string) => void
+  }[]
 }[] = [
   {
     label: 'Palette',
@@ -120,35 +180,129 @@ const COLOR_SECTIONS: {
       key: `palette-${i + 1}`,
       label: `Palette ${i + 1}`,
       get: (c: ThemeColors) => c.palette[i],
-      set: (c: ThemeColors, v: string) => { c.palette[i] = v },
+      set: (c: ThemeColors, v: string) => {
+        c.palette[i] = v
+      },
     })),
   },
   {
     label: 'Roles',
     items: [
-      { key: 'success', label: 'Success', get: (c) => c.roles.success, set: (c, v) => { c.roles.success = v } },
-      { key: 'warning', label: 'Warning', get: (c) => c.roles.warning, set: (c, v) => { c.roles.warning = v } },
-      { key: 'error', label: 'Error', get: (c) => c.roles.error, set: (c, v) => { c.roles.error = v } },
-      { key: 'info', label: 'Info', get: (c) => c.roles.info, set: (c, v) => { c.roles.info = v } },
+      {
+        key: 'success',
+        label: 'Success',
+        get: (c) => c.roles.success,
+        set: (c, v) => {
+          c.roles.success = v
+        },
+      },
+      {
+        key: 'warning',
+        label: 'Warning',
+        get: (c) => c.roles.warning,
+        set: (c, v) => {
+          c.roles.warning = v
+        },
+      },
+      {
+        key: 'error',
+        label: 'Error',
+        get: (c) => c.roles.error,
+        set: (c, v) => {
+          c.roles.error = v
+        },
+      },
+      {
+        key: 'info',
+        label: 'Info',
+        get: (c) => c.roles.info,
+        set: (c, v) => {
+          c.roles.info = v
+        },
+      },
     ],
   },
   {
     label: 'Surfaces, Text & Borders',
     items: [
-      { key: 'bg', label: 'Background', get: (c) => c.surfaces.background, set: (c, v) => { c.surfaces.background = v } },
-      { key: 'card', label: 'Card', get: (c) => c.surfaces.card, set: (c, v) => { c.surfaces.card = v } },
-      { key: 'text-primary', label: 'Text Primary', get: (c) => c.text.primary, set: (c, v) => { c.text.primary = v } },
-      { key: 'text-secondary', label: 'Text Secondary', get: (c) => c.text.secondary, set: (c, v) => { c.text.secondary = v } },
-      { key: 'text-muted', label: 'Text Muted', get: (c) => c.text.muted, set: (c, v) => { c.text.muted = v } },
-      { key: 'text-disabled', label: 'Text Disabled', get: (c) => c.text.disabled, set: (c, v) => { c.text.disabled = v } },
-      { key: 'border', label: 'Border', get: (c) => c.border.default, set: (c, v) => { c.border.default = v } },
-      { key: 'border-subtle', label: 'Border Subtle', get: (c) => c.border.subtle, set: (c, v) => { c.border.subtle = v } },
+      {
+        key: 'bg',
+        label: 'Background',
+        get: (c) => c.surfaces.background,
+        set: (c, v) => {
+          c.surfaces.background = v
+        },
+      },
+      {
+        key: 'card',
+        label: 'Card',
+        get: (c) => c.surfaces.card,
+        set: (c, v) => {
+          c.surfaces.card = v
+        },
+      },
+      {
+        key: 'text-primary',
+        label: 'Text Primary',
+        get: (c) => c.text.primary,
+        set: (c, v) => {
+          c.text.primary = v
+        },
+      },
+      {
+        key: 'text-secondary',
+        label: 'Text Secondary',
+        get: (c) => c.text.secondary,
+        set: (c, v) => {
+          c.text.secondary = v
+        },
+      },
+      {
+        key: 'text-muted',
+        label: 'Text Muted',
+        get: (c) => c.text.muted,
+        set: (c, v) => {
+          c.text.muted = v
+        },
+      },
+      {
+        key: 'text-disabled',
+        label: 'Text Disabled',
+        get: (c) => c.text.disabled,
+        set: (c, v) => {
+          c.text.disabled = v
+        },
+      },
+      {
+        key: 'border',
+        label: 'Border',
+        get: (c) => c.border.default,
+        set: (c, v) => {
+          c.border.default = v
+        },
+      },
+      {
+        key: 'border-subtle',
+        label: 'Border Subtle',
+        get: (c) => c.border.subtle,
+        set: (c, v) => {
+          c.border.subtle = v
+        },
+      },
     ],
   },
 ]
 
 export function ThemeSettings() {
-  const { activeTheme, allThemes, customThemes, setActiveTheme, saveCustomThemes, applyPreview, clearPreview } = useTheme()
+  const {
+    activeTheme,
+    allThemes,
+    customThemes,
+    setActiveTheme,
+    saveCustomThemes,
+    applyPreview,
+    clearPreview,
+  } = useTheme()
   const [editingTheme, setEditingTheme] = useState<Theme | null>(null)
   const [editedColors, setEditedColors] = useState<ThemeColors | null>(null)
   const [status, setStatus] = useState<string | null>(null)
@@ -268,7 +422,10 @@ export function ThemeSettings() {
                   <ColorSwatch
                     key={item.key}
                     value={value}
-                    label={item.label.replace('Palette ', 'P').replace('Text ', '').replace('Border ', 'Bdr ')}
+                    label={item.label
+                      .replace('Palette ', 'P')
+                      .replace('Text ', '')
+                      .replace('Border ', 'Bdr ')}
                     onChange={(v) => handleColorChange(item.key, v)}
                   />
                 )
@@ -280,9 +437,7 @@ export function ThemeSettings() {
 
       {/* Actions */}
       <div className="flex items-center gap-2 flex-shrink-0">
-        {!editingTheme?.builtin && (
-          <Button onClick={handleSave}>Save Theme</Button>
-        )}
+        {!editingTheme?.builtin && <Button onClick={handleSave}>Save Theme</Button>}
         <button
           onClick={handleReset}
           className="px-4 py-2 rounded-[var(--radius-button)] text-[13px] font-medium bg-bg-card-hover text-text-secondary"
@@ -298,7 +453,9 @@ export function ThemeSettings() {
           </button>
         )}
         {editingTheme?.builtin && (
-          <span className="text-[11px] text-text-muted">Built-in theme — create a copy to customize</span>
+          <span className="text-[11px] text-text-muted">
+            Built-in theme — create a copy to customize
+          </span>
         )}
         {status && <span className="text-[12px] text-success ml-auto">{status}</span>}
       </div>

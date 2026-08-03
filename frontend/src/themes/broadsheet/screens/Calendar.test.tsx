@@ -89,7 +89,18 @@ describe('broadsheet Calendar (the Datebook)', () => {
 
   it('omits the birthday tally figure when the month has none', () => {
     useMonthCalendar.mockReturnValue({
-      data: { byDate: { [todayKey()]: [{ id: 'e1', summary: 'Errand', start: { dateTime: new Date().toISOString() }, end: { dateTime: new Date().toISOString() } }] } },
+      data: {
+        byDate: {
+          [todayKey()]: [
+            {
+              id: 'e1',
+              summary: 'Errand',
+              start: { dateTime: new Date().toISOString() },
+              end: { dateTime: new Date().toISOString() },
+            },
+          ],
+        },
+      },
       isLoading: false,
     })
     render(<Calendar />)
@@ -99,7 +110,18 @@ describe('broadsheet Calendar (the Datebook)', () => {
   it('shows a birthday tally figure when an all-day event ends in "\'s birthday"', () => {
     const key = todayKey()
     useMonthCalendar.mockReturnValue({
-      data: { byDate: { [key]: [{ id: 'bd1', summary: "Andi Wilson's birthday", start: { date: key }, end: { date: key } }] } },
+      data: {
+        byDate: {
+          [key]: [
+            {
+              id: 'bd1',
+              summary: "Andi Wilson's birthday",
+              start: { date: key },
+              end: { date: key },
+            },
+          ],
+        },
+      },
       isLoading: false,
     })
     render(<Calendar />)

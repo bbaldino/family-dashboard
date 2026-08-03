@@ -23,10 +23,15 @@ vi.mock('@/data/weather', () => ({
   useWeatherForecast: () => ({ data: undefined, isLoading: true }),
   useAirQuality: () => ({ data: undefined, isLoading: true }),
 }))
-vi.mock('@/data/google-calendar', () => ({ useGoogleCalendar: () => ({ data: undefined, isLoading: true }) }))
+vi.mock('@/data/google-calendar', () => ({
+  useGoogleCalendar: () => ({ data: undefined, isLoading: true }),
+}))
 vi.mock('@/data/driving-time', () => ({ useDrivingTime: () => ({}) }))
 const useSportsGames = vi.hoisted(() =>
-  vi.fn<() => { data: GamesResponse | undefined; isLoading: boolean }>(() => ({ data: undefined, isLoading: true })),
+  vi.fn<() => { data: GamesResponse | undefined; isLoading: boolean }>(() => ({
+    data: undefined,
+    isLoading: true,
+  })),
 )
 vi.mock('@/data/sports', () => ({
   useSportsGames,
@@ -36,7 +41,9 @@ vi.mock('@/data/sports', () => ({
 vi.mock('@/data/countdowns', () => ({
   useCountdowns: () => ({ data: null, isLoading: false, error: null, refetch: vi.fn() }),
 }))
-vi.mock('@/data/on-this-day', () => ({ useOnThisDay: () => ({ data: undefined, isLoading: false }) }))
+vi.mock('@/data/on-this-day', () => ({
+  useOnThisDay: () => ({ data: undefined, isLoading: false }),
+}))
 vi.mock('@/data/chores', () => ({ useChores: () => ({ data: null, isLoading: false }) }))
 vi.mock('@/data/nutrislice', () => ({ useLunchMenu: () => ({ data: null, isLoading: false }) }))
 
@@ -152,7 +159,10 @@ describe('broadsheet Home', () => {
     // broadsheet-v2.jsx:139). Off-day/pregame favours the schedule
     // (1.5fr 1fr 0.9fr); live, sports blooms to 1.6fr and schedule shrinks
     // to 0.85fr.
-    useSportsGames.mockReturnValue({ data: { games: [game('upcoming')], hasLive: false }, isLoading: false })
+    useSportsGames.mockReturnValue({
+      data: { games: [game('upcoming')], hasLive: false },
+      isLoading: false,
+    })
     const { unmount } = render(
       <MemoryRouter>
         <Home />
@@ -162,7 +172,10 @@ describe('broadsheet Home', () => {
     expect(offdayBody.style.gridTemplateColumns).toBe('1.5fr 1fr 0.9fr')
     unmount()
 
-    useSportsGames.mockReturnValue({ data: { games: [game('live')], hasLive: true }, isLoading: false })
+    useSportsGames.mockReturnValue({
+      data: { games: [game('live')], hasLive: true },
+      isLoading: false,
+    })
     render(
       <MemoryRouter>
         <Home />

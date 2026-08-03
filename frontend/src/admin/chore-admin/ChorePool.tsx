@@ -48,7 +48,9 @@ export function ChorePool({ chores }: ChorePoolProps) {
           <DraggableChoreChip key={chore.id} chore={chore} />
         ))}
         {chores.length === 0 && (
-          <p className="text-text-secondary text-sm">No chores available. Add some in the Manage Chores tab.</p>
+          <p className="text-text-secondary text-sm">
+            No chores available. Add some in the Manage Chores tab.
+          </p>
         )}
       </div>
     </div>

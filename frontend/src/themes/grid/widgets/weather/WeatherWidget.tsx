@@ -10,11 +10,7 @@ export function WeatherWidget() {
   const icon = conditionIcons[weather.condition] ?? '☁️'
 
   return (
-    <WidgetCard
-      title="Weather"
-      category="info"
-      detail={<WeatherDetail />}
-    >
+    <WidgetCard title="Weather" category="info" detail={<WeatherDetail />}>
       <div className="flex items-center gap-3">
         <span className="text-[36px]">{icon}</span>
         <div>

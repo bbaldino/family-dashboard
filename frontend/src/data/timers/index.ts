@@ -1,10 +1,5 @@
 export { timersIntegration } from './config'
 export { useTimers } from './useTimers'
 export type { Timer, TimerEvent } from './types'
-export {
-  ALARM_SOUNDS,
-  DEFAULT_ALARM_ID,
-  getAlarmById,
-  startRepeatingAlarm,
-} from './alarmSounds'
+export { ALARM_SOUNDS, DEFAULT_ALARM_ID, getAlarmById, startRepeatingAlarm } from './alarmSounds'
 export type { AlarmSound } from './alarmSounds'

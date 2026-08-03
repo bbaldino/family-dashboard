@@ -29,8 +29,7 @@ const fixtureQueues: QueueState[] | undefined = musicStateFixtureFor(activeScena
 function deriveActiveQueue(queues: QueueState[], defaultPlayerId?: string): QueueState | null {
   // Playing or paused — unambiguous
   const active =
-    queues.find((q) => q.state === 'playing') ??
-    queues.find((q) => q.state === 'paused')
+    queues.find((q) => q.state === 'playing') ?? queues.find((q) => q.state === 'paused')
   if (active) return active
 
   // Idle with a current item — prefer the default player to avoid showing
@@ -77,8 +76,7 @@ export function MusicProvider({ children }: MusicProviderProps) {
 
     es.addEventListener('state', (e: MessageEvent) => {
       const data = JSON.parse(e.data) as
-        | { type: 'state'; queues: QueueState[] }
-        | { type: 'queueUpdated'; queue: QueueState }
+        { type: 'state'; queues: QueueState[] } | { type: 'queueUpdated'; queue: QueueState }
 
       const preserveVolume = Date.now() < volumeLockUntilRef.current
 
@@ -112,9 +110,10 @@ export function MusicProvider({ children }: MusicProviderProps) {
       } else if (data.type === 'queueUpdated') {
         setQueues((prev) => {
           const idx = prev.findIndex((q) => q.queueId === data.queue.queueId)
-          const queue = preserveVolume && idx !== -1
-            ? { ...data.queue, volumeLevel: prev[idx].volumeLevel }
-            : data.queue
+          const queue =
+            preserveVolume && idx !== -1
+              ? { ...data.queue, volumeLevel: prev[idx].volumeLevel }
+              : data.queue
           if (idx === -1) return [...prev, queue]
           const next = [...prev]
           next[idx] = queue
@@ -204,24 +203,24 @@ export function MusicProvider({ children }: MusicProviderProps) {
 
   const pause = useCallback(async () => {
     setOptimisticPlaying(false)
-    await runAction("Couldn’t pause", () => musicIntegration.api.post('/pause', {}))
+    await runAction('Couldn’t pause', () => musicIntegration.api.post('/pause', {}))
   }, [runAction])
 
   const resume = useCallback(async () => {
     setOptimisticPlaying(true)
-    await runAction("Couldn’t resume", () => musicIntegration.api.post('/resume', {}))
+    await runAction('Couldn’t resume', () => musicIntegration.api.post('/resume', {}))
   }, [runAction])
 
   const stop = useCallback(async () => {
-    await runAction("Couldn’t stop", () => musicIntegration.api.post('/stop', {}))
+    await runAction('Couldn’t stop', () => musicIntegration.api.post('/stop', {}))
   }, [runAction])
 
   const next = useCallback(async () => {
-    await runAction("Couldn’t skip forward", () => musicIntegration.api.post('/next', {}))
+    await runAction('Couldn’t skip forward', () => musicIntegration.api.post('/next', {}))
   }, [runAction])
 
   const previous = useCallback(async () => {
-    await runAction("Couldn’t skip back", () => musicIntegration.api.post('/previous', {}))
+    await runAction('Couldn’t skip back', () => musicIntegration.api.post('/previous', {}))
   }, [runAction])
 
   const setVolume = useCallback(
@@ -231,7 +230,7 @@ export function MusicProvider({ children }: MusicProviderProps) {
       setQueues((prev) =>
         prev.map((q) => (q.queueId === playerId ? { ...q, volumeLevel: level } : q)),
       )
-      await runAction("Couldn’t change the volume", () =>
+      await runAction('Couldn’t change the volume', () =>
         musicIntegration.api.post('/volume', { player_id: playerId, level }),
       )
     },
@@ -239,11 +238,7 @@ export function MusicProvider({ children }: MusicProviderProps) {
   )
 
   if (!isConfigured) {
-    return (
-      <MusicContext.Provider value={defaultContextValue}>
-        {children}
-      </MusicContext.Provider>
-    )
+    return <MusicContext.Provider value={defaultContextValue}>{children}</MusicContext.Provider>
   }
 
   const activeQueue = deriveActiveQueue(queues, config?.default_player)
@@ -265,9 +260,5 @@ export function MusicProvider({ children }: MusicProviderProps) {
     setVolume,
   }
 
-  return (
-    <MusicContext.Provider value={contextValue}>
-      {children}
-    </MusicContext.Provider>
-  )
+  return <MusicContext.Provider value={contextValue}>{children}</MusicContext.Provider>
 }

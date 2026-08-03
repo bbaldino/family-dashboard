@@ -22,7 +22,10 @@ function LunchSection({ lunch }: { lunch: LunchMenuData }) {
   const today = lunch.today
   const items = today
     ? today.entries.length > 0
-      ? today.entries.map((entry) => ({ name: entry.name, sub: (entry.withItems ?? []).join(', ') || null }))
+      ? today.entries.map((entry) => ({
+          name: entry.name,
+          sub: (entry.withItems ?? []).join(', ') || null,
+        }))
       : today.extras.map((name) => ({ name, sub: null as string | null }))
     : []
 
@@ -47,14 +50,37 @@ function LunchSection({ lunch }: { lunch: LunchMenuData }) {
         <ol className="m-0 p-0 flex flex-col gap-1" style={{ listStyle: 'none' }}>
           {items.map((item, i) => (
             <li key={i} className="flex items-baseline gap-2">
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--ink-muted)', width: 14, flexShrink: 0 }}>
+              <span
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: 9,
+                  color: 'var(--ink-muted)',
+                  width: 14,
+                  flexShrink: 0,
+                }}
+              >
                 {String(i + 1).padStart(2, '0')}
               </span>
               <div className="min-w-0">
-                <span style={{ fontFamily: 'var(--font-display)', fontSize: 13, lineHeight: 1.2, color: 'var(--ink)' }}>{item.name}</span>
+                <span
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontSize: 13,
+                    lineHeight: 1.2,
+                    color: 'var(--ink)',
+                  }}
+                >
+                  {item.name}
+                </span>
                 {item.sub && (
                   <span
-                    style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 11, color: 'var(--ink-muted)', marginLeft: 5 }}
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontStyle: 'italic',
+                      fontSize: 11,
+                      color: 'var(--ink-muted)',
+                      marginLeft: 5,
+                    }}
                   >
                     {item.sub}
                   </span>
@@ -66,7 +92,13 @@ function LunchSection({ lunch }: { lunch: LunchMenuData }) {
       ) : (
         <p
           className="m-0"
-          style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 12.5, color: 'var(--ink-muted)', lineHeight: 1.5 }}
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontStyle: 'italic',
+            fontSize: 12.5,
+            color: 'var(--ink-muted)',
+            lineHeight: 1.5,
+          }}
         >
           The cafeteria&apos;s closed. Pantry&apos;s yours — leftovers, fruit, the usual.
         </p>
@@ -133,7 +165,10 @@ interface VisibleChoreGroup {
 const MAX_VISIBLE_PEOPLE = 2
 const MAX_TASKS_PER_PERSON = 2
 
-function capChoreGroups(persons: PersonAssignments[]): { groups: VisibleChoreGroup[]; hiddenPeopleCount: number } {
+function capChoreGroups(persons: PersonAssignments[]): {
+  groups: VisibleChoreGroup[]
+  hiddenPeopleCount: number
+} {
   const visiblePersons = persons.slice(0, MAX_VISIBLE_PEOPLE)
   const groups = visiblePersons.map((p) => {
     const allTasks = p.assignments.map((a) => ({
@@ -161,7 +196,14 @@ function ChoresSection({ chores }: { chores: TodayResponse }) {
     <div style={{ marginTop: 14, paddingTop: 8, borderTop: '1px solid var(--rule)' }}>
       <div className="flex items-baseline justify-between" style={{ marginBottom: 6 }}>
         <Kicker>Chores today</Kicker>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--ink-muted)', letterSpacing: '0.12em' }}>
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 9,
+            color: 'var(--ink-muted)',
+            letterSpacing: '0.12em',
+          }}
+        >
           {chores.completed_count}/{chores.total_count}
         </span>
       </div>
@@ -176,7 +218,12 @@ function ChoresSection({ chores }: { chores: TodayResponse }) {
                  *  assignee (the mock moved it here from a per-row label). */}
                 <div
                   className="flex items-baseline"
-                  style={{ gap: 8, borderBottom: '1px solid var(--ink)', paddingBottom: 2, marginBottom: 3 }}
+                  style={{
+                    gap: 8,
+                    borderBottom: '1px solid var(--ink)',
+                    paddingBottom: 2,
+                    marginBottom: 3,
+                  }}
                 >
                   <span
                     style={{
@@ -189,9 +236,18 @@ function ChoresSection({ chores }: { chores: TodayResponse }) {
                   >
                     {group.personName}
                   </span>
-                  {allDone && <Check size={11} strokeWidth={2.6} style={{ color: 'var(--forest)' }} />}
+                  {allDone && (
+                    <Check size={11} strokeWidth={2.6} style={{ color: 'var(--forest)' }} />
+                  )}
                   <span className="flex-1" />
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--ink-muted)', letterSpacing: '0.12em' }}>
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 9,
+                      color: 'var(--ink-muted)',
+                      letterSpacing: '0.12em',
+                    }}
+                  >
                     {group.doneCount}/{group.totalCount}
                   </span>
                 </div>
@@ -233,7 +289,15 @@ function ChoresSection({ chores }: { chores: TodayResponse }) {
                   ))}
                 </ul>
                 {group.hiddenTaskCount > 0 && (
-                  <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fontStyle: 'italic', color: 'var(--ink-muted)', marginTop: 2 }}>
+                  <div
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 9,
+                      fontStyle: 'italic',
+                      color: 'var(--ink-muted)',
+                      marginTop: 2,
+                    }}
+                  >
                     +{group.hiddenTaskCount} more for {group.personName}
                   </div>
                 )}
@@ -282,11 +346,33 @@ function ComingUpSection({ items }: { items: CountdownItem[] }) {
           <li
             key={item.id}
             className="flex items-baseline"
-            style={{ gap: 8, fontFamily: 'var(--font-display)', fontSize: 12.5, color: 'var(--ink)' }}
+            style={{
+              gap: 8,
+              fontFamily: 'var(--font-display)',
+              fontSize: 12.5,
+              color: 'var(--ink)',
+            }}
           >
             <span>{item.name}</span>
-            <span style={{ flex: 1, borderBottom: '1px dotted var(--rule)', height: 8, alignSelf: 'flex-end', marginBottom: 4 }} />
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 600, color: 'var(--rust)' }}>{item.daysUntil}d</span>
+            <span
+              style={{
+                flex: 1,
+                borderBottom: '1px dotted var(--rule)',
+                height: 8,
+                alignSelf: 'flex-end',
+                marginBottom: 4,
+              }}
+            />
+            <span
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 9,
+                fontWeight: 600,
+                color: 'var(--rust)',
+              }}
+            >
+              {item.daysUntil}d
+            </span>
           </li>
         ))}
       </ul>
@@ -350,13 +436,24 @@ function OnThisDaySection({
       <div className="flex items-baseline" style={{ gap: 10 }}>
         <span
           className="uppercase whitespace-nowrap"
-          style={{ fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--ink-muted)', letterSpacing: '0.18em' }}
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 9,
+            color: 'var(--ink-muted)',
+            letterSpacing: '0.18em',
+          }}
         >
           On this day
         </span>
         {event.year !== null && (
           <span
-            style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 22, lineHeight: 0.9, color: SOFT_ACCENT }}
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontStyle: 'italic',
+              fontSize: 22,
+              lineHeight: 0.9,
+              color: SOFT_ACCENT,
+            }}
           >
             {event.year}
           </span>

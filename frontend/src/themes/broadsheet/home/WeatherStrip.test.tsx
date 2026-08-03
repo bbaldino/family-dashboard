@@ -23,8 +23,24 @@ const CURRENT = {
 }
 
 const HOURLY = [
-  { dt: 1785531600, temp: 90.99, condition: 'Clear', description: 'clear sky', icon: '01d', pop: 0, humidity: 33 },
-  { dt: 1785542400, temp: 88.47, condition: 'Clouds', description: 'few clouds', icon: '02d', pop: 0, humidity: 28 },
+  {
+    dt: 1785531600,
+    temp: 90.99,
+    condition: 'Clear',
+    description: 'clear sky',
+    icon: '01d',
+    pop: 0,
+    humidity: 33,
+  },
+  {
+    dt: 1785542400,
+    temp: 88.47,
+    condition: 'Clouds',
+    description: 'few clouds',
+    icon: '02d',
+    pop: 0,
+    humidity: 28,
+  },
 ]
 
 const AIR_FULL = {
@@ -38,9 +54,24 @@ const AIR_FULL = {
 
 describe('WeatherStrip', () => {
   beforeEach(() => {
-    useWeatherData.mockReturnValue({ data: CURRENT, isLoading: false, error: null, refetch: vi.fn() })
-    useWeatherForecast.mockReturnValue({ data: { daily: [], hourly: HOURLY }, isLoading: false, error: null, refetch: vi.fn() })
-    useAirQuality.mockReturnValue({ data: AIR_FULL, isLoading: false, error: null, refetch: vi.fn() })
+    useWeatherData.mockReturnValue({
+      data: CURRENT,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    })
+    useWeatherForecast.mockReturnValue({
+      data: { daily: [], hourly: HOURLY },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    })
+    useAirQuality.mockReturnValue({
+      data: AIR_FULL,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    })
   })
 
   it('renders with every source empty', () => {
@@ -49,7 +80,12 @@ describe('WeatherStrip', () => {
 
   it('renders nothing when every source is empty, rather than an empty bordered band', () => {
     useWeatherData.mockReturnValue({ data: null, isLoading: false, error: null, refetch: vi.fn() })
-    useWeatherForecast.mockReturnValue({ data: null, isLoading: false, error: null, refetch: vi.fn() })
+    useWeatherForecast.mockReturnValue({
+      data: null,
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    })
     useAirQuality.mockReturnValue({ data: null, isLoading: false, error: null, refetch: vi.fn() })
     const { container } = render(<WeatherStrip />)
     expect(container.firstChild).toBeNull()
@@ -84,7 +120,12 @@ describe('WeatherStrip', () => {
   })
 
   it('drops only the hourly cell on an empty forecast', () => {
-    useWeatherForecast.mockReturnValue({ data: { daily: [], hourly: [] }, isLoading: false, error: null, refetch: vi.fn() })
+    useWeatherForecast.mockReturnValue({
+      data: { daily: [], hourly: [] },
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    })
     render(<WeatherStrip />)
     expect(screen.queryByText('91°')).toBeNull()
     // AQI (an unrelated source) still renders.
@@ -97,7 +138,14 @@ describe('WeatherStrip', () => {
     // isolation contract, so this exercises the same null-field path a
     // real outage produces.
     useAirQuality.mockReturnValue({
-      data: { aqi: null, aqi_level: null, uv_index: null, uv_level: null, pollen: null, pollen_level: null },
+      data: {
+        aqi: null,
+        aqi_level: null,
+        uv_index: null,
+        uv_level: null,
+        pollen: null,
+        pollen_level: null,
+      },
       isLoading: false,
       error: null,
       refetch: vi.fn(),
@@ -114,7 +162,14 @@ describe('WeatherStrip', () => {
     // The real-world case for this dashboard's US location: Open-Meteo
     // returns AQI and UV but every pollen species is null.
     useAirQuality.mockReturnValue({
-      data: { aqi: 55, aqi_level: 'moderate', uv_index: 10.55, uv_level: 'very_high', pollen: null, pollen_level: null },
+      data: {
+        aqi: 55,
+        aqi_level: 'moderate',
+        uv_index: 10.55,
+        uv_level: 'very_high',
+        pollen: null,
+        pollen_level: null,
+      },
       isLoading: false,
       error: null,
       refetch: vi.fn(),
@@ -127,7 +182,14 @@ describe('WeatherStrip', () => {
 
   it('colours the AQI value forest only when the level is good', () => {
     useAirQuality.mockReturnValue({
-      data: { aqi: 20, aqi_level: 'good', uv_index: null, uv_level: null, pollen: null, pollen_level: null },
+      data: {
+        aqi: 20,
+        aqi_level: 'good',
+        uv_index: null,
+        uv_level: null,
+        pollen: null,
+        pollen_level: null,
+      },
       isLoading: false,
       error: null,
       refetch: vi.fn(),

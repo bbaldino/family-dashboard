@@ -10,9 +10,14 @@ interface BottomSheetProps {
 
 export function BottomSheet({ isOpen, onClose, children, height = 'partial' }: BottomSheetProps) {
   useEffect(() => {
-    if (isOpen) { document.body.style.overflow = 'hidden' }
-    else { document.body.style.overflow = '' }
-    return () => { document.body.style.overflow = '' }
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
   }, [isOpen])
 
   if (!isOpen) return null

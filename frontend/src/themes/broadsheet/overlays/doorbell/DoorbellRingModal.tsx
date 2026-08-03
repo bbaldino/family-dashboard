@@ -270,8 +270,7 @@ export function DoorbellRingModal({ isOpen, cameraUrl, onClose }: DoorbellRingMo
                     maxWidth: 420,
                   }}
                 >
-                  No picture from the front step. Add a camera URL in Settings → Doorbell
-                  Camera.
+                  No picture from the front step. Add a camera URL in Settings → Doorbell Camera.
                 </p>
               </div>
             )}

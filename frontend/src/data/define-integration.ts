@@ -13,19 +13,20 @@ interface IntegrationDefBase<T extends z.ZodObject<z.ZodRawShape>> {
   fields: Record<keyof z.infer<T>, FieldMeta>
 }
 
-export interface BackendIntegrationDef<T extends z.ZodObject<z.ZodRawShape>>
-  extends IntegrationDefBase<T> {
+export interface BackendIntegrationDef<
+  T extends z.ZodObject<z.ZodRawShape>,
+> extends IntegrationDefBase<T> {
   hasBackend?: true // default, can be omitted
 }
 
-export interface ClientIntegrationDef<T extends z.ZodObject<z.ZodRawShape>>
-  extends IntegrationDefBase<T> {
+export interface ClientIntegrationDef<
+  T extends z.ZodObject<z.ZodRawShape>,
+> extends IntegrationDefBase<T> {
   hasBackend: false
 }
 
 export type IntegrationDef<T extends z.ZodObject<z.ZodRawShape>> =
-  | BackendIntegrationDef<T>
-  | ClientIntegrationDef<T>
+  BackendIntegrationDef<T> | ClientIntegrationDef<T>
 
 export interface IntegrationApi {
   get: <R>(path: string) => Promise<R>
@@ -34,25 +35,22 @@ export interface IntegrationApi {
   del: (path: string) => Promise<void>
 }
 
-export interface BackendIntegration<T extends z.ZodObject<z.ZodRawShape>>
-  extends IntegrationDefBase<T> {
+export interface BackendIntegration<
+  T extends z.ZodObject<z.ZodRawShape>,
+> extends IntegrationDefBase<T> {
   api: IntegrationApi
 }
 
-export interface ClientIntegration<T extends z.ZodObject<z.ZodRawShape>>
-  extends IntegrationDefBase<T> {
+export interface ClientIntegration<
+  T extends z.ZodObject<z.ZodRawShape>,
+> extends IntegrationDefBase<T> {
   api?: undefined
 }
 
 export type Integration<T extends z.ZodObject<z.ZodRawShape>> =
-  | BackendIntegration<T>
-  | ClientIntegration<T>
+  BackendIntegration<T> | ClientIntegration<T>
 
-async function apiRequest<R>(
-  baseUrl: string,
-  path: string,
-  options?: RequestInit,
-): Promise<R> {
+async function apiRequest<R>(baseUrl: string, path: string, options?: RequestInit): Promise<R> {
   const resp = await fetch(`${baseUrl}${path}`, options)
   if (!resp.ok) {
     const err = await resp.json().catch(() => ({ error: 'Request failed' }))
@@ -95,8 +93,7 @@ export function defineIntegration<T extends z.ZodObject<z.ZodRawShape>>(
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         }),
-      del: (path: string) =>
-        apiRequest<void>(baseUrl, path, { method: 'DELETE' }),
+      del: (path: string) => apiRequest<void>(baseUrl, path, { method: 'DELETE' }),
     },
   }
 }

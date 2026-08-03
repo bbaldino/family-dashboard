@@ -46,7 +46,15 @@ describe('CentreSpread', () => {
 
   it('renders nothing and closes immediately when there is no current item (cold start / track vanished)', () => {
     const onClose = vi.fn()
-    useMusic.mockReturnValue({ state: { queues: [], activeQueue: null }, isPlaying: false, pause, resume, next, previous, setVolume })
+    useMusic.mockReturnValue({
+      state: { queues: [], activeQueue: null },
+      isPlaying: false,
+      pause,
+      resume,
+      next,
+      previous,
+      setVolume,
+    })
     const { container } = render(<CentreSpread onClose={onClose} />)
     expect(container.firstChild).toBeNull()
     expect(onClose).toHaveBeenCalledTimes(1)
@@ -54,7 +62,15 @@ describe('CentreSpread', () => {
 
   it('renders the full page for the active track', () => {
     const onClose = vi.fn()
-    useMusic.mockReturnValue({ state: { queues: [], activeQueue: playingQueue }, isPlaying: true, pause, resume, next, previous, setVolume })
+    useMusic.mockReturnValue({
+      state: { queues: [], activeQueue: playingQueue },
+      isPlaying: true,
+      pause,
+      resume,
+      next,
+      previous,
+      setVolume,
+    })
     render(<CentreSpread onClose={onClose} />)
     expect(screen.getByTestId('broadsheet-centre-spread')).toBeInTheDocument()
     // Appears twice: the masthead's own 62px title, and the running order's head row.
@@ -64,7 +80,15 @@ describe('CentreSpread', () => {
 
   it('calls onClose when Close is tapped', () => {
     const onClose = vi.fn()
-    useMusic.mockReturnValue({ state: { queues: [], activeQueue: playingQueue }, isPlaying: true, pause, resume, next, previous, setVolume })
+    useMusic.mockReturnValue({
+      state: { queues: [], activeQueue: playingQueue },
+      isPlaying: true,
+      pause,
+      resume,
+      next,
+      previous,
+      setVolume,
+    })
     render(<CentreSpread onClose={onClose} />)
     fireEvent.click(screen.getByText('Close ✕'))
     expect(onClose).toHaveBeenCalledTimes(1)
@@ -72,18 +96,42 @@ describe('CentreSpread', () => {
 
   it('closes automatically when the current track disappears mid-view', () => {
     const onClose = vi.fn()
-    useMusic.mockReturnValue({ state: { queues: [], activeQueue: playingQueue }, isPlaying: true, pause, resume, next, previous, setVolume })
+    useMusic.mockReturnValue({
+      state: { queues: [], activeQueue: playingQueue },
+      isPlaying: true,
+      pause,
+      resume,
+      next,
+      previous,
+      setVolume,
+    })
     const { rerender } = render(<CentreSpread onClose={onClose} />)
     expect(onClose).not.toHaveBeenCalled()
 
-    useMusic.mockReturnValue({ state: { queues: [], activeQueue: null }, isPlaying: false, pause, resume, next, previous, setVolume })
+    useMusic.mockReturnValue({
+      state: { queues: [], activeQueue: null },
+      isPlaying: false,
+      pause,
+      resume,
+      next,
+      previous,
+      setVolume,
+    })
     rerender(<CentreSpread onClose={onClose} />)
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
   it('does not render the theme Footer itself — BroadsheetLayout owns it', () => {
     const onClose = vi.fn()
-    useMusic.mockReturnValue({ state: { queues: [], activeQueue: playingQueue }, isPlaying: true, pause, resume, next, previous, setVolume })
+    useMusic.mockReturnValue({
+      state: { queues: [], activeQueue: playingQueue },
+      isPlaying: true,
+      pause,
+      resume,
+      next,
+      previous,
+      setVolume,
+    })
     render(<CentreSpread onClose={onClose} />)
     expect(screen.queryByText('Cameras')).not.toBeInTheDocument()
   })

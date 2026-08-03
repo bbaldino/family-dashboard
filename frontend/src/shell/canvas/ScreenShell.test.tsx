@@ -4,7 +4,11 @@ import { ScreenShell } from './ScreenShell'
 
 function setViewport(width: number, height: number) {
   Object.defineProperty(window, 'innerWidth', { value: width, configurable: true, writable: true })
-  Object.defineProperty(window, 'innerHeight', { value: height, configurable: true, writable: true })
+  Object.defineProperty(window, 'innerHeight', {
+    value: height,
+    configurable: true,
+    writable: true,
+  })
   window.dispatchEvent(new Event('resize'))
 }
 

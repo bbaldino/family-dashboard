@@ -48,7 +48,9 @@ export function CountdownsWidget({ size = 'standard' }: CountdownsWidgetProps) {
                   className="flex items-center justify-between py-[5px] border-b border-border last:border-b-0"
                 >
                   <span className="text-[14px] text-text-primary truncate mr-2">{item.name}</span>
-                  <span className={`text-[16px] font-semibold whitespace-nowrap ${item.daysUntil === 0 ? 'text-success' : 'text-info'}`}>
+                  <span
+                    className={`text-[16px] font-semibold whitespace-nowrap ${item.daysUntil === 0 ? 'text-success' : 'text-info'}`}
+                  >
                     {formatDays(item.daysUntil)}
                   </span>
                 </div>
@@ -59,12 +61,11 @@ export function CountdownsWidget({ size = 'standard' }: CountdownsWidgetProps) {
       >
         <div className="flex flex-col">
           {items.slice(0, 3).map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center justify-between py-1 text-xs"
-            >
+            <div key={item.id} className="flex items-center justify-between py-1 text-xs">
               <span className="text-text-primary truncate mr-2">{item.name}</span>
-              <span className={`font-semibold whitespace-nowrap ${item.daysUntil === 0 ? 'text-success' : 'text-info'}`}>
+              <span
+                className={`font-semibold whitespace-nowrap ${item.daysUntil === 0 ? 'text-success' : 'text-info'}`}
+              >
                 {formatDays(item.daysUntil)}
               </span>
             </div>
@@ -85,9 +86,7 @@ export function CountdownsWidget({ size = 'standard' }: CountdownsWidgetProps) {
               key={item.id}
               className="flex items-center justify-between py-[5px] border-b border-border last:border-b-0"
             >
-              <span className="text-[14px] text-text-primary truncate mr-2">
-                {item.name}
-              </span>
+              <span className="text-[14px] text-text-primary truncate mr-2">{item.name}</span>
               <span
                 className={`text-[16px] font-semibold whitespace-nowrap ${
                   item.daysUntil === 0 ? 'text-success' : 'text-info'

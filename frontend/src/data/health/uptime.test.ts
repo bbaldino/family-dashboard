@@ -66,9 +66,9 @@ describe('bucketSegments', () => {
   /** Anchoring the bar to the browser's clock instead would draw phantom
    *  "unknown" blocks on any tablet whose time drifts ahead of the server. */
   it('takes the window end from the newest segment, not the clock', () => {
-    expect(
-      windowEndOf([seg('ok', NOW - DAY, NOW - 100), seg('ok', NOW - 100, NOW - 50)]),
-    ).toBe(NOW - 50)
+    expect(windowEndOf([seg('ok', NOW - DAY, NOW - 100), seg('ok', NOW - 100, NOW - 50)])).toBe(
+      NOW - 50,
+    )
   })
 
   it('has no window end when there is nothing to draw', () => {

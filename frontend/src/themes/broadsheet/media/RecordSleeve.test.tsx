@@ -12,8 +12,28 @@ const album: AlbumDetail = {
   label: 'Virgin Records',
   description: null,
   tracks: [
-    { uri: 't1', name: 'Galvanize', artist: 'x', artist_uri: null, artists: [], album: null, album_uri: null, image_url: null, duration: 393 },
-    { uri: 't2', name: 'The Boxer', artist: 'x', artist_uri: null, artists: [], album: null, album_uri: null, image_url: null, duration: 263 },
+    {
+      uri: 't1',
+      name: 'Galvanize',
+      artist: 'x',
+      artist_uri: null,
+      artists: [],
+      album: null,
+      album_uri: null,
+      image_url: null,
+      duration: 393,
+    },
+    {
+      uri: 't2',
+      name: 'The Boxer',
+      artist: 'x',
+      artist_uri: null,
+      artists: [],
+      album: null,
+      album_uri: null,
+      image_url: null,
+      duration: 263,
+    },
   ],
 }
 
@@ -27,11 +47,19 @@ describe('RecordSleeve', () => {
     expect(screen.getByText('Virgin Records')).toBeInTheDocument()
     expect(screen.getByText('Length')).toBeInTheDocument()
     expect(screen.getByText('2 tracks · 11 min')).toBeInTheDocument()
-    expect(screen.getByText('Released 2005 on Virgin Records — 2 tracks, running 11 min.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Released 2005 on Virgin Records — 2 tracks, running 11 min.'),
+    ).toBeInTheDocument()
   })
 
   it('renders the real description verbatim when present', () => {
-    render(<RecordSleeve album={{ ...album, description: 'Cut between Kensal Rise and a rented barn.' }} onQueue={vi.fn()} onRadio={vi.fn()} />)
+    render(
+      <RecordSleeve
+        album={{ ...album, description: 'Cut between Kensal Rise and a rented barn.' }}
+        onQueue={vi.fn()}
+        onRadio={vi.fn()}
+      />,
+    )
     expect(screen.getByText('Cut between Kensal Rise and a rented barn.')).toBeInTheDocument()
   })
 

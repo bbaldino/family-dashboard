@@ -65,7 +65,14 @@ describe('DayCell', () => {
   })
 
   it('labels the very first grid cell when it opens a leading adjacent month', () => {
-    render(<DayCell {...baseProps} date={new Date(2026, 3, 26)} isCurrentMonth={false} isFirstCellOfGrid />)
+    render(
+      <DayCell
+        {...baseProps}
+        date={new Date(2026, 3, 26)}
+        isCurrentMonth={false}
+        isFirstCellOfGrid
+      />,
+    )
     expect(screen.getByText('APR')).toBeInTheDocument()
   })
 

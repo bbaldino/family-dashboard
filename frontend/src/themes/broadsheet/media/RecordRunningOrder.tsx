@@ -36,8 +36,16 @@ export function RecordRunningOrder({
     <section style={{ padding: '20px 56px 20px 28px', position: 'relative' }}>
       <div className="flex items-baseline justify-between" style={{ marginBottom: 8 }}>
         <Kicker>The running order</Kicker>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-muted)', letterSpacing: '0.12em' }}>
-          {tracks.length === 1 ? '1 track' : `${tracks.length} tracks`} · {formatRuntimeMinutes(totalRuntime)}
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            color: 'var(--ink-muted)',
+            letterSpacing: '0.12em',
+          }}
+        >
+          {tracks.length === 1 ? '1 track' : `${tracks.length} tracks`} ·{' '}
+          {formatRuntimeMinutes(totalRuntime)}
         </span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}>
@@ -61,7 +69,15 @@ export function RecordRunningOrder({
         ))}
       </div>
       {hiddenCount > 0 && (
-        <div style={{ marginTop: 10, fontFamily: 'var(--font-mono)', fontSize: 9, color: 'var(--ink-muted)', letterSpacing: '0.1em' }}>
+        <div
+          style={{
+            marginTop: 10,
+            fontFamily: 'var(--font-mono)',
+            fontSize: 9,
+            color: 'var(--ink-muted)',
+            letterSpacing: '0.1em',
+          }}
+        >
           +{hiddenCount} more tracks
         </div>
       )}

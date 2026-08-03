@@ -17,10 +17,7 @@
  *   ('on', 'off')      -> false
  *   ('unavailable', 'on') -> false
  */
-export function detectRisingEdge(
-  prev: string | undefined,
-  current: string | undefined,
-): boolean {
+export function detectRisingEdge(prev: string | undefined, current: string | undefined): boolean {
   if (prev === undefined) return false
   if (prev === 'unavailable') return false
   return prev !== 'on' && current === 'on'

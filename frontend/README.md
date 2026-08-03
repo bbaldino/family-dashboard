@@ -21,10 +21,10 @@ the household uses.
 
 **Currently wired for the calendar only** (`src/data/google-calendar/`):
 
-| Scenario   | What it shows |
-|------------|----------------|
-| `empty`    | No events at all. |
-| `packed`   | Several busy days; one day (month grid) and today (rolling week) carry more events than their layouts budget for, to check overflow handling. |
+| Scenario   | What it shows                                                                                                                                                    |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `empty`    | No events at all.                                                                                                                                                |
+| `packed`   | Several busy days; one day (month grid) and today (rolling week) carry more events than their layouts budget for, to check overflow handling.                    |
 | `spanning` | A multi-day event crossing a month boundary, plus an all-day and a timed event landing on the same day (tests the sort rule: all-day first, then chronological). |
 
 A scenario name with no fixture for a given hook (e.g. a future

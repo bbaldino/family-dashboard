@@ -6,8 +6,28 @@ const useMusic = vi.hoisted(() => vi.fn())
 const useRoomPills = vi.hoisted(() => vi.fn())
 vi.mock('@/data/music', () => ({ useMusic, useRoomPills }))
 
-const kitchen = { playerId: 'kitchen', displayName: 'Kitchen', state: 'playing', available: true, volumeLevel: 45, groupMembers: ['kitchen'], syncedTo: null, canGroupWith: ['living'], groupVolume: null }
-const living = { playerId: 'living', displayName: 'Living Room', state: 'idle', available: true, volumeLevel: 20, groupMembers: [], syncedTo: null, canGroupWith: ['kitchen'], groupVolume: null }
+const kitchen = {
+  playerId: 'kitchen',
+  displayName: 'Kitchen',
+  state: 'playing',
+  available: true,
+  volumeLevel: 45,
+  groupMembers: ['kitchen'],
+  syncedTo: null,
+  canGroupWith: ['living'],
+  groupVolume: null,
+}
+const living = {
+  playerId: 'living',
+  displayName: 'Living Room',
+  state: 'idle',
+  available: true,
+  volumeLevel: 20,
+  groupMembers: [],
+  syncedTo: null,
+  canGroupWith: ['kitchen'],
+  groupVolume: null,
+}
 
 describe('MediaMasthead', () => {
   const toggle = vi.fn()
@@ -26,7 +46,16 @@ describe('MediaMasthead', () => {
 
   it('shows the active queue’s room as the centrepiece', () => {
     useMusic.mockReturnValue({
-      state: { queues: [], activeQueue: { queueId: 'kitchen', displayName: 'Kitchen', state: 'playing', currentItem: null, volumeLevel: 50 } },
+      state: {
+        queues: [],
+        activeQueue: {
+          queueId: 'kitchen',
+          displayName: 'Kitchen',
+          state: 'playing',
+          currentItem: null,
+          volumeLevel: 50,
+        },
+      },
     })
     render(<MediaMasthead />)
     expect(screen.getByText('the Kitchen')).toBeInTheDocument()

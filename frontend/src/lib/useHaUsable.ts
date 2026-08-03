@@ -59,7 +59,8 @@ export function useHaUsable(url: string | undefined, token: string | undefined):
       } catch {
         return
       }
-      if (message.type === 'auth_required') socket?.send(JSON.stringify({ type: 'auth', access_token: token }))
+      if (message.type === 'auth_required')
+        socket?.send(JSON.stringify({ type: 'auth', access_token: token }))
       else if (message.type === 'auth_ok') finish(true)
       else if (message.type === 'auth_invalid')
         finish(false, message.message ?? 'authentication rejected')

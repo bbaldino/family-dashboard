@@ -9,5 +9,9 @@ export function useCountdownsWidgetMeta(): WidgetMeta {
     return { visible: false }
   }
 
-  return { visible: true, sizePreference: { orientation: 'vertical', relativeSize: 'medium' }, priority: 2 }
+  return {
+    visible: true,
+    sizePreference: { orientation: 'vertical', relativeSize: 'medium' },
+    priority: 2,
+  }
 }

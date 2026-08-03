@@ -1,4 +1,8 @@
-import { useRef, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import {
+  useRef,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react'
 import { MeterBar } from './MeterBar'
 
 /**
@@ -29,7 +33,13 @@ import { MeterBar } from './MeterBar'
  * volume change (SSE) doesn't get masked by a stale "already sent this"
  * memory of a previous drag.
  */
-export function VolumeSlider({ volume, onChange }: { volume: number; onChange: (level: number) => void }) {
+export function VolumeSlider({
+  volume,
+  onChange,
+}: {
+  volume: number
+  onChange: (level: number) => void
+}) {
   const lastDragLevel = useRef<number | null>(null)
 
   const levelFromClientX = (target: Element, clientX: number): number => {
@@ -67,7 +77,14 @@ export function VolumeSlider({ volume, onChange }: { volume: number; onChange: (
       onClick={handleClick}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
-      style={{ flex: 1, display: 'flex', alignItems: 'center', height: 40, cursor: 'pointer', touchAction: 'none' }}
+      style={{
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        height: 40,
+        cursor: 'pointer',
+        touchAction: 'none',
+      }}
     >
       <MeterBar percent={volume} fill="var(--ink)" />
     </div>

@@ -36,7 +36,11 @@ function isBirthdayEvent(event: CalendarEvent): boolean {
  *  month" specifically. A spanning multi-day event appears once per day it
  *  touches in `byDate` (`useMonthCalendar` already expands it that way); it
  *  is de-duplicated by id here so it counts once rather than once per day. */
-export function computeMonthTally(monthEvents: MonthEvents, year: number, month: number): MonthTally {
+export function computeMonthTally(
+  monthEvents: MonthEvents,
+  year: number,
+  month: number,
+): MonthTally {
   const monthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`
   const eventIds = new Set<string>()
   const birthdayIds = new Set<string>()

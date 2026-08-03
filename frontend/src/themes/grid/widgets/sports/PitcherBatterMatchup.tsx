@@ -28,7 +28,9 @@ export function PitcherBatterMatchup({ matchup }: PitcherBatterMatchupProps) {
       <div className="flex-1 flex items-center gap-2">
         <Headshot url={pitcher.headshotUrl} alt={pitcher.name} />
         <div className="min-w-0">
-          <div className="text-[12px] text-text-muted">Pitching {pitcher.hand ? `(${pitcher.hand})` : ''}</div>
+          <div className="text-[12px] text-text-muted">
+            Pitching {pitcher.hand ? `(${pitcher.hand})` : ''}
+          </div>
           <div className="text-[14px] font-semibold text-text-primary truncate">{pitcher.name}</div>
           <div className="text-[11px] text-text-muted">
             {pitcher.era ? `ERA ${pitcher.era}` : ''}
@@ -41,7 +43,9 @@ export function PitcherBatterMatchup({ matchup }: PitcherBatterMatchupProps) {
       <div className="flex-1 flex items-center gap-2">
         <Headshot url={batter.headshotUrl} alt={batter.name} />
         <div className="min-w-0">
-          <div className="text-[12px] text-text-muted">At Bat {batter.hand ? `(${batter.hand})` : ''}</div>
+          <div className="text-[12px] text-text-muted">
+            At Bat {batter.hand ? `(${batter.hand})` : ''}
+          </div>
           <div className="text-[14px] font-semibold text-text-primary truncate">{batter.name}</div>
           <div className="text-[11px] text-text-muted">
             {batter.avg ? batter.avg : ''}

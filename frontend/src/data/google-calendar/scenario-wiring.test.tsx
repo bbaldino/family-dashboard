@@ -83,7 +83,9 @@ describe('calendar hook scenario wiring', () => {
   })
 
   it('useGoogleCalendar returns the fixture without touching fetch when one is defined', async () => {
-    const fixture = [{ date: new Date(2026, 4, 15), label: 'Today 5/15', isToday: true, events: [] }]
+    const fixture = [
+      { date: new Date(2026, 4, 15), label: 'Today 5/15', isToday: true, events: [] },
+    ]
     weekFixtureFor.mockReturnValue(fixture)
     const fetchSpy = vi.fn()
     globalThis.fetch = fetchSpy as unknown as typeof fetch

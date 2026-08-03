@@ -82,9 +82,7 @@ export function WeatherDetail() {
                 {Math.round(hour.temp)}&deg;
               </span>
               {hour.pop > 0 && (
-                <span className="text-[10px] text-info font-medium">
-                  {Math.round(hour.pop)}%
-                </span>
+                <span className="text-[10px] text-info font-medium">{Math.round(hour.pop)}%</span>
               )}
             </div>
           )
@@ -98,23 +96,24 @@ export function WeatherDetail() {
       <div className="flex flex-col gap-2">
         {forecast.daily.map((day, i) => {
           const date = new Date(day.date + 'T12:00:00')
-          const dayName = i === 0
-            ? 'Today'
-            : i === 1
-              ? 'Tomorrow'
-              : date.toLocaleDateString([], { weekday: 'long' })
+          const dayName =
+            i === 0
+              ? 'Today'
+              : i === 1
+                ? 'Tomorrow'
+                : date.toLocaleDateString([], { weekday: 'long' })
           const icon = conditionIcons[day.condition] ?? '\u2601\uFE0F'
 
           return (
             <div
               key={day.date}
               className={`flex items-center gap-4 p-3 rounded-xl ${
-                i === 0 ? 'bg-[color-mix(in_srgb,var(--color-role-info)_6%,transparent)]' : 'bg-bg-primary'
+                i === 0
+                  ? 'bg-[color-mix(in_srgb,var(--color-role-info)_6%,transparent)]'
+                  : 'bg-bg-primary'
               }`}
             >
-              <span className="text-[14px] font-medium text-text-primary w-[100px]">
-                {dayName}
-              </span>
+              <span className="text-[14px] font-medium text-text-primary w-[100px]">{dayName}</span>
               <span className="text-[24px]">{icon}</span>
               <div className="flex-1">
                 <span className="text-[13px] text-text-secondary capitalize">

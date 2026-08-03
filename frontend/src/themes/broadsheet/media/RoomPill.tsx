@@ -68,7 +68,12 @@ export function RoomPill({
       onClick={onToggle}
       disabled={pending}
       aria-pressed={active}
-      style={{ all: 'unset', ...pillStyle, cursor: pending ? 'default' : 'pointer', opacity: pending ? 0.55 : 1 }}
+      style={{
+        all: 'unset',
+        ...pillStyle,
+        cursor: pending ? 'default' : 'pointer',
+        opacity: pending ? 0.55 : 1,
+      }}
     >
       {label}
     </button>

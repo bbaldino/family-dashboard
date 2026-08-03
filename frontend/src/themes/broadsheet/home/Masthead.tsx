@@ -1,7 +1,10 @@
 import { useHeroWeather } from '@/data/weather'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { MastheadFrame } from '@/themes/broadsheet/ui/MastheadFrame'
-import { mastheadKickerStyle, mastheadNumeralStyle as numeralStyle } from '@/themes/broadsheet/ui/masthead-styles'
+import {
+  mastheadKickerStyle,
+  mastheadNumeralStyle as numeralStyle,
+} from '@/themes/broadsheet/ui/masthead-styles'
 import { ordinalSuffix } from './ordinal'
 import { useNow } from './useNow'
 
@@ -100,7 +103,9 @@ export function Masthead({
             <div style={mastheadKickerStyle}>Now</div>
             <div style={numeralStyle}>
               {time}
-              <span style={{ fontSize: 32, color: 'var(--ink-muted)', marginLeft: 8 }}>{ampm.toLowerCase()}</span>
+              <span style={{ fontSize: 32, color: 'var(--ink-muted)', marginLeft: 8 }}>
+                {ampm.toLowerCase()}
+              </span>
             </div>
           </>
         }
@@ -129,7 +134,9 @@ export function Masthead({
             <div className="flex items-baseline justify-end" style={{ gap: 10 }}>
               {/* Condition-aware icon (mapped from the current condition
                *  in `useHeroWeather`), not the mock's hard-coded sun. */}
-              <span style={{ fontSize: 30, alignSelf: 'center', color: 'var(--forest)' }}>{heroWeather.icon}</span>
+              <span style={{ fontSize: 30, alignSelf: 'center', color: 'var(--forest)' }}>
+                {heroWeather.icon}
+              </span>
               <span style={numeralStyle}>{heroWeather.temperature}°</span>
               <span
                 style={{
@@ -144,7 +151,11 @@ export function Masthead({
               </span>
             </div>
           ) : (
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-muted)' }}>—</div>
+            <div
+              style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-muted)' }}
+            >
+              —
+            </div>
           )
         }
         footer={
@@ -155,7 +166,15 @@ export function Masthead({
           // dropped: they made the old line the longest thing in the
           // header for the least essential information at a glance.
           heroWeather && (
-            <div style={{ textAlign: 'right', marginTop: 4, fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-muted)' }}>
+            <div
+              style={{
+                textAlign: 'right',
+                marginTop: 4,
+                fontFamily: 'var(--font-mono)',
+                fontSize: 11,
+                color: 'var(--ink-muted)',
+              }}
+            >
               H {heroWeather.high}° · L {heroWeather.low}°
             </div>
           )
@@ -164,7 +183,12 @@ export function Masthead({
 
       <div
         className="grid items-baseline"
-        style={{ gridTemplateColumns: 'auto 1fr auto', gap: 18, padding: '10px 56px 12px', borderBottom: '1px solid var(--rule)' }}
+        style={{
+          gridTemplateColumns: 'auto 1fr auto',
+          gap: 18,
+          padding: '10px 56px 12px',
+          borderBottom: '1px solid var(--rule)',
+        }}
       >
         <Kicker>↘ from the house</Kicker>
         <p className="m-0" style={standfirstProseStyle}>

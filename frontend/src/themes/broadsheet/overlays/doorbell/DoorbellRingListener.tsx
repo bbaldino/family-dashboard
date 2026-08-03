@@ -32,10 +32,6 @@ function ActiveListener({
   })
 
   return (
-    <DoorbellRingModal
-      isOpen={isRinging}
-      cameraUrl={config.camera_url || null}
-      onClose={dismiss}
-    />
+    <DoorbellRingModal isOpen={isRinging} cameraUrl={config.camera_url || null} onClose={dismiss} />
   )
 }

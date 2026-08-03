@@ -6,14 +6,20 @@ type WidgetSize = 'compact' | 'standard' | 'expanded'
 
 function EntryItem({ entry, compact = false }: { entry: MenuEntry; compact?: boolean }) {
   return (
-    <div className={`${compact ? 'py-[1px]' : 'py-[2px]'} ${entry.isAlternative ? 'pl-[14px]' : ''}`}>
+    <div
+      className={`${compact ? 'py-[1px]' : 'py-[2px]'} ${entry.isAlternative ? 'pl-[14px]' : ''}`}
+    >
       <div className="flex items-center gap-[6px]">
         {entry.isAlternative ? (
-          <span className={`${compact ? 'text-[11px]' : 'text-[12px]'} text-palette-4 font-medium`}>or</span>
+          <span className={`${compact ? 'text-[11px]' : 'text-[12px]'} text-palette-4 font-medium`}>
+            or
+          </span>
         ) : (
           <span className="w-[5px] h-[5px] rounded-full bg-palette-4 flex-shrink-0" />
         )}
-        <span className={`${compact ? 'text-[13px]' : 'text-[14px]'} font-medium text-text-primary`}>
+        <span
+          className={`${compact ? 'text-[13px]' : 'text-[14px]'} font-medium text-text-primary`}
+        >
           {entry.name}
         </span>
       </div>
@@ -24,7 +30,8 @@ function EntryItem({ entry, compact = false }: { entry: MenuEntry; compact?: boo
               key={i}
               className={`${compact ? 'text-[11px]' : 'text-[12px]'} text-text-secondary italic`}
             >
-              w/ {withItem}{i < entry.withItems.length - 1 ? ', ' : ''}
+              w/ {withItem}
+              {i < entry.withItems.length - 1 ? ', ' : ''}
             </span>
           ))}
         </div>

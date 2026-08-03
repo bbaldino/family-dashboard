@@ -95,7 +95,14 @@ export function QuickDialsShelves({
 
   if (frequentlyItems.length === 0 && recentlyItems.length === 0) {
     return (
-      <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-muted)' }}>
+      <div
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontStyle: 'italic',
+          fontSize: 15,
+          color: 'var(--ink-muted)',
+        }}
+      >
         Play something to build your quick dials.
       </div>
     )
@@ -103,7 +110,11 @@ export function QuickDialsShelves({
 
   return (
     <>
-      <ShelfSection title="Frequently played" items={frequentlyItems} maxRows={FREQUENTLY_PLAYED_MAX_ROWS} />
+      <ShelfSection
+        title="Frequently played"
+        items={frequentlyItems}
+        maxRows={FREQUENTLY_PLAYED_MAX_ROWS}
+      />
       <ShelfSection
         title="Recently played"
         titleColor="var(--ink-muted)"

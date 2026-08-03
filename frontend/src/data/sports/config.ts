@@ -13,9 +13,18 @@ export const sportsIntegration = defineIntegration({
   }),
   fields: {
     tracked_teams: { label: 'Tracked Teams', description: 'JSON array of tracked teams' },
-    poll_interval_live: { label: 'Live Poll Interval (seconds)', description: 'How often to refresh during live games' },
-    poll_interval_idle: { label: 'Idle Poll Interval (seconds)', description: 'How often to refresh when no live games' },
-    window_hours: { label: 'Time Window (hours)', description: 'How far back/forward to show games' },
+    poll_interval_live: {
+      label: 'Live Poll Interval (seconds)',
+      description: 'How often to refresh during live games',
+    },
+    poll_interval_idle: {
+      label: 'Idle Poll Interval (seconds)',
+      description: 'How often to refresh when no live games',
+    },
+    window_hours: {
+      label: 'Time Window (hours)',
+      description: 'How far back/forward to show games',
+    },
     model: { label: 'Model', type: 'model-select', description: 'Model for AI game previews' },
   },
 })

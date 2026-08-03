@@ -39,7 +39,9 @@ export function visibleClipRect(el: Element): { top: number; bottom: number } | 
     // `'visible'` a real browser reports, so `''` has to count as "not
     // clipping" too, or every ancestor would look like it clips.
     const style = getComputedStyle(node)
-    const clips = (style.overflowY !== 'visible' && style.overflowY !== '') || (style.overflow !== 'visible' && style.overflow !== '')
+    const clips =
+      (style.overflowY !== 'visible' && style.overflowY !== '') ||
+      (style.overflow !== 'visible' && style.overflow !== '')
     if (clips) {
       const rect = node.getBoundingClientRect()
       top = Math.max(top, rect.top)

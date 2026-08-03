@@ -22,9 +22,7 @@ export const googleCalendarIntegration = defineIntegration({
 export async function fetchCalendarIds(): Promise<string[]> {
   let calendarIds: string[] = []
   try {
-    const allConfig: Record<string, string> = await fetch('/api/config').then(
-      (r) => r.json(),
-    )
+    const allConfig: Record<string, string> = await fetch('/api/config').then((r) => r.json())
     const saved = allConfig['google-calendar.calendar_ids']
     if (saved) {
       calendarIds = JSON.parse(saved)

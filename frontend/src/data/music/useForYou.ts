@@ -26,15 +26,12 @@ async function fetchCuratedPlaylists(): Promise<CuratedPlaylist[]> {
 
   for (const { name, query } of CURATED_PLAYLISTS) {
     try {
-      const data = await musicIntegration.api.get<unknown>(
-        `/search?q=${encodeURIComponent(query)}`,
-      )
+      const data = await musicIntegration.api.get<unknown>(`/search?q=${encodeURIComponent(query)}`)
       const { playlists } = parseSearchResponse(data)
       if (playlists.length > 0) {
         // Find the best match — exact name match preferred
         const match =
-          playlists.find((p) => p.name.toLowerCase() === name.toLowerCase()) ??
-          playlists[0]
+          playlists.find((p) => p.name.toLowerCase() === name.toLowerCase()) ?? playlists[0]
         results.push({
           name: match.name || name,
           description: name,

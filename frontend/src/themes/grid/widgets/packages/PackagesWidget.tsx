@@ -31,8 +31,7 @@ export function PackagesWidget({ size = 'standard' }: PackagesWidgetProps) {
 
   const allShipments = data?.shipments ?? []
 
-  const visible = allShipments
-    .filter((s) => !HIDDEN_STATUSES.includes(s.status))
+  const visible = allShipments.filter((s) => !HIDDEN_STATUSES.includes(s.status))
 
   const active = visible
     .filter((s) => s.status !== 'delivered')
@@ -117,33 +116,30 @@ export function PackagesWidget({ size = 'standard' }: PackagesWidgetProps) {
         visible={shipments.length > 0}
       >
         <div className="flex flex-col">
-            {active.map((shipment) => (
-              <ShipmentRow
-                key={shipment.id}
-                shipment={shipment}
-                onClick={() => setSelectedShipment(shipment)}
-              />
-            ))}
-            {delivered.length > 0 && (
-              <>
-                <div className="text-[10px] font-semibold text-text-muted uppercase tracking-[0.3px] pt-[6px] mt-[4px]">
-                  Recently delivered
-                </div>
-                {delivered.map((shipment) => (
-                  <ShipmentRow
-                    key={shipment.id}
-                    shipment={shipment}
-                    onClick={() => setSelectedShipment(shipment)}
-                  />
-                ))}
-              </>
-            )}
-          </div>
+          {active.map((shipment) => (
+            <ShipmentRow
+              key={shipment.id}
+              shipment={shipment}
+              onClick={() => setSelectedShipment(shipment)}
+            />
+          ))}
+          {delivered.length > 0 && (
+            <>
+              <div className="text-[10px] font-semibold text-text-muted uppercase tracking-[0.3px] pt-[6px] mt-[4px]">
+                Recently delivered
+              </div>
+              {delivered.map((shipment) => (
+                <ShipmentRow
+                  key={shipment.id}
+                  shipment={shipment}
+                  onClick={() => setSelectedShipment(shipment)}
+                />
+              ))}
+            </>
+          )}
+        </div>
       </WidgetCard>
-      <PackageDetailModal
-        shipment={selectedShipment}
-        onClose={() => setSelectedShipment(null)}
-      />
+      <PackageDetailModal shipment={selectedShipment} onClose={() => setSelectedShipment(null)} />
     </>
   )
 }

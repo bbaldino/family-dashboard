@@ -12,9 +12,13 @@ export function WinProbabilityBar({ win, homeAbbr, awayAbbr }: WinProbabilityBar
   return (
     <div className="w-full">
       <div className="flex justify-between text-[10px] text-text-muted mb-1">
-        <span>{awayAbbr} {awayPct}%</span>
+        <span>
+          {awayAbbr} {awayPct}%
+        </span>
         <span>Win Probability</span>
-        <span>{homePct}% {homeAbbr}</span>
+        <span>
+          {homePct}% {homeAbbr}
+        </span>
       </div>
       <div className="relative w-full h-2 rounded-full overflow-hidden bg-bg-primary">
         <div className="absolute inset-y-0 left-0 bg-palette-3" style={{ width: `${awayPct}%` }} />

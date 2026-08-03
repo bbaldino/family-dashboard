@@ -34,7 +34,9 @@ export function LlmSettings() {
     }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+  }, [load])
 
   const put = (key: string, value: string) =>
     fetch(`/api/config/${encodeURIComponent(key)}`, {
@@ -43,8 +45,7 @@ export function LlmSettings() {
       body: JSON.stringify({ value }),
     })
 
-  const del = (key: string) =>
-    fetch(`/api/config/${encodeURIComponent(key)}`, { method: 'DELETE' })
+  const del = (key: string) => fetch(`/api/config/${encodeURIComponent(key)}`, { method: 'DELETE' })
 
   const handleSave = async () => {
     try {
@@ -76,9 +77,7 @@ export function LlmSettings() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      {error && (
-        <div className="bg-error/10 text-error rounded-lg p-3 text-sm">{error}</div>
-      )}
+      {error && <div className="bg-error/10 text-error rounded-lg p-3 text-sm">{error}</div>}
 
       <div className="bg-bg-card rounded-[var(--radius-card)] p-4 border border-border">
         <label className="text-xs text-text-muted block mb-2">Provider</label>
@@ -88,7 +87,9 @@ export function LlmSettings() {
           className={inputClass}
         >
           {PROVIDERS.map((p) => (
-            <option key={p.id} value={p.id}>{p.label}</option>
+            <option key={p.id} value={p.id}>
+              {p.label}
+            </option>
           ))}
         </select>
         <div className="text-xs text-text-muted mt-1">
@@ -141,7 +142,8 @@ export function LlmSettings() {
               className={inputClass}
             />
             <div className="text-xs text-text-muted mt-1">
-              Base URL of the chat-completions service (no trailing <code>/v1/chat/completions</code> — that's appended).
+              Base URL of the chat-completions service (no trailing{' '}
+              <code>/v1/chat/completions</code> — that's appended).
             </div>
           </div>
         </div>

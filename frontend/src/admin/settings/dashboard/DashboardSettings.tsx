@@ -23,11 +23,18 @@ export function DashboardSettings() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const config = await fetch('/api/config').then((r) => r.json()) as Record<string, string>
+      const config = (await fetch('/api/config').then((r) => r.json())) as Record<string, string>
       setColumns(config['dashboard.columns'] ?? '8')
       setRows(config['dashboard.rows'] ?? '6')
       const hiddenStr = config['dashboard.hidden'] ?? ''
-      setHidden(new Set(hiddenStr.split(',').map((s) => s.trim()).filter(Boolean)))
+      setHidden(
+        new Set(
+          hiddenStr
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean),
+        ),
+      )
     } catch {
       setError('Failed to load settings')
     } finally {
@@ -35,7 +42,9 @@ export function DashboardSettings() {
     }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+  }, [load])
 
   const toggleWidget = (id: string) => {
     setHidden((prev) => {
@@ -87,9 +96,7 @@ export function DashboardSettings() {
 
   return (
     <div className="space-y-6">
-      {error && (
-        <div className="bg-error/10 text-error rounded-lg p-3 text-sm">{error}</div>
-      )}
+      {error && <div className="bg-error/10 text-error rounded-lg p-3 text-sm">{error}</div>}
 
       <div>
         <label className="text-xs text-text-muted block mb-2">Grid Columns</label>
@@ -101,7 +108,9 @@ export function DashboardSettings() {
           onChange={(e) => setColumns(e.target.value)}
           className="w-24 px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
         />
-        <div className="text-xs text-text-muted mt-1">Number of columns in the widget grid (default: 8)</div>
+        <div className="text-xs text-text-muted mt-1">
+          Number of columns in the widget grid (default: 8)
+        </div>
       </div>
 
       <div>
@@ -114,17 +123,16 @@ export function DashboardSettings() {
           onChange={(e) => setRows(e.target.value)}
           className="w-24 px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
         />
-        <div className="text-xs text-text-muted mt-1">Number of rows in the widget grid (default: 6)</div>
+        <div className="text-xs text-text-muted mt-1">
+          Number of rows in the widget grid (default: 6)
+        </div>
       </div>
 
       <div>
         <label className="text-xs text-text-muted block mb-2">Visible Widgets</label>
         <div className="space-y-2">
           {WIDGETS.map((w) => (
-            <label
-              key={w.id}
-              className="flex items-center gap-3 cursor-pointer"
-            >
+            <label key={w.id} className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
                 checked={!hidden.has(w.id)}

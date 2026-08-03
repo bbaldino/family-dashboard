@@ -44,7 +44,10 @@ describe('resolveAnchorAndRooms', () => {
   })
 
   it('returns no anchor and no rooms when the configured id is not in the players list', () => {
-    expect(resolveAnchorAndRooms(fixturePlayers(), 'RINCON_NOT_IN_LIST')).toEqual({ anchor: null, rooms: [] })
+    expect(resolveAnchorAndRooms(fixturePlayers(), 'RINCON_NOT_IN_LIST')).toEqual({
+      anchor: null,
+      rooms: [],
+    })
   })
 
   it('returns no anchor and no rooms against an empty players list (cold cache)', () => {
@@ -82,7 +85,11 @@ describe('resolveAnchorAndRooms', () => {
     const players = fixturePlayers().map((p) =>
       p.playerId === 'fixture-kitchen' ? { ...p, canGroupWith: [] } : p,
     )
-    const { rooms } = resolveAnchorAndRooms(players, 'fixture-kitchen', new Set(['fixture-living-room']))
+    const { rooms } = resolveAnchorAndRooms(
+      players,
+      'fixture-kitchen',
+      new Set(['fixture-living-room']),
+    )
     expect(rooms.map((r) => r.displayName).sort()).toEqual(['Bedroom', 'Living Room'])
   })
 
@@ -170,7 +177,9 @@ describe('useRoomPills', () => {
     const { result, rerender } = renderHook(() => useRoomPills())
     expect(result.current.pills.map((p) => p.player.displayName)).toContain('Living Room')
 
-    usePlayers.mockReturnValue({ data: players.filter((p) => p.player_id !== 'fixture-living-room') })
+    usePlayers.mockReturnValue({
+      data: players.filter((p) => p.player_id !== 'fixture-living-room'),
+    })
     rerender()
     expect(result.current.pills.map((p) => p.player.displayName)).not.toContain('Living Room')
   })
@@ -239,7 +248,9 @@ describe('useRoomPills', () => {
       removeFromGroup,
     })
     const { result } = renderHook(() => useRoomPills())
-    expect(result.current.pills.find((p) => p.player.playerId === 'fixture-living-room')?.pending).toBe(true)
+    expect(
+      result.current.pills.find((p) => p.player.playerId === 'fixture-living-room')?.pending,
+    ).toBe(true)
     act(() => result.current.toggle('fixture-living-room'))
     expect(addToGroup).not.toHaveBeenCalled()
   })

@@ -9,7 +9,16 @@ describe('gradientForName', () => {
   })
 
   it('always returns a real palette entry', () => {
-    const names = ['Amber Hours', '', 'a', 'The Night Shift', 'Static Bloom', 'Low Tide', '🎵', 'x'.repeat(500)]
+    const names = [
+      'Amber Hours',
+      '',
+      'a',
+      'The Night Shift',
+      'Static Bloom',
+      'Low Tide',
+      '🎵',
+      'x'.repeat(500),
+    ]
     for (const name of names) {
       const gradient = gradientForName(name)
       expect(ALBUM_GRADIENT_PALETTE).toContainEqual(gradient)
@@ -17,7 +26,14 @@ describe('gradientForName', () => {
   })
 
   it('spreads distinct names across more than one palette entry', () => {
-    const names = ['Amber Hours', 'Low Tide', 'Porch Light', 'Static Bloom', 'Harbor Lights', 'Black Steel']
+    const names = [
+      'Amber Hours',
+      'Low Tide',
+      'Porch Light',
+      'Static Bloom',
+      'Harbor Lights',
+      'Black Steel',
+    ]
     const gradients = new Set(names.map((n) => gradientForName(n).join('|')))
     expect(gradients.size).toBeGreaterThan(1)
   })

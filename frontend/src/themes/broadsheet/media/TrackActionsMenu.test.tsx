@@ -3,7 +3,12 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { TrackActionsMenu } from './TrackActionsMenu'
 
 function groups(overrides?: { playItems?: string[]; navItems?: string[] }) {
-  const playLabels = overrides?.playItems ?? ['Play just this track', 'Play radio from this', 'Play next', 'Add to queue']
+  const playLabels = overrides?.playItems ?? [
+    'Play just this track',
+    'Play radio from this',
+    'Play next',
+    'Add to queue',
+  ]
   const navLabels = overrides?.navItems ?? ['Go to artist', 'Go to album']
   return [
     { label: 'Play', items: playLabels.map((label) => ({ label, onSelect: vi.fn() })) },
@@ -20,7 +25,14 @@ describe('TrackActionsMenu', () => {
 
   it('renders all six actions across both groups', () => {
     render(<TrackActionsMenu kicker="Track 01" title="Galvanize" groups={groups()} />)
-    for (const label of ['Play just this track', 'Play radio from this', 'Play next', 'Add to queue', 'Go to artist', 'Go to album']) {
+    for (const label of [
+      'Play just this track',
+      'Play radio from this',
+      'Play next',
+      'Add to queue',
+      'Go to artist',
+      'Go to album',
+    ]) {
       expect(screen.getByText(label)).toBeInTheDocument()
     }
   })
@@ -35,13 +47,17 @@ describe('TrackActionsMenu', () => {
   })
 
   it('omits a group entirely when it has no items — e.g. "Go to" with no URIs to navigate to', () => {
-    render(<TrackActionsMenu kicker="Track 01" title="Galvanize" groups={groups({ navItems: [] })} />)
+    render(
+      <TrackActionsMenu kicker="Track 01" title="Galvanize" groups={groups({ navItems: [] })} />,
+    )
     expect(screen.queryByText('Go to')).not.toBeInTheDocument()
     expect(screen.queryByText('Go to artist')).not.toBeInTheDocument()
   })
 
   it('renders nothing when every group is empty', () => {
-    const { container } = render(<TrackActionsMenu kicker="Track 01" title="Galvanize" groups={[]} />)
+    const { container } = render(
+      <TrackActionsMenu kicker="Track 01" title="Galvanize" groups={[]} />,
+    )
     expect(container.firstChild).toBeNull()
   })
 

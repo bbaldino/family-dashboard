@@ -80,11 +80,17 @@ describe('Album', () => {
     useAlbumDetail.mockReturnValue({ data: albumData, isLoading: false, error: null })
     renderAlbum()
     expect(screen.getAllByText('Push The Button').length).toBeGreaterThan(0)
-    expect(screen.getByText('Released 2005 on Virgin Records — 2 tracks, running 11 min.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Released 2005 on Virgin Records — 2 tracks, running 11 min.'),
+    ).toBeInTheDocument()
   })
 
   it('renders the real description verbatim when present, not the generated note', () => {
-    useAlbumDetail.mockReturnValue({ data: { ...albumData, description: 'A hand-written editorial note.' }, isLoading: false, error: null })
+    useAlbumDetail.mockReturnValue({
+      data: { ...albumData, description: 'A hand-written editorial note.' },
+      isLoading: false,
+      error: null,
+    })
     renderAlbum()
     expect(screen.getByText('A hand-written editorial note.')).toBeInTheDocument()
     expect(screen.queryByText(/Released 2005 on Virgin Records/)).not.toBeInTheDocument()
@@ -126,13 +132,19 @@ describe('Album', () => {
     renderAlbum()
     fireEvent.click(screen.getAllByLabelText('Track actions')[0])
     fireEvent.click(screen.getByText('Play just this track'))
-    expect(play).toHaveBeenCalledWith('spotify--x://track/1', expect.objectContaining({ radio: false, enqueueMode: 'play' }))
+    expect(play).toHaveBeenCalledWith(
+      'spotify--x://track/1',
+      expect.objectContaining({ radio: false, enqueueMode: 'play' }),
+    )
   })
 
   it('the masthead "Play album" button is wired to the album uri', () => {
     useAlbumDetail.mockReturnValue({ data: albumData, isLoading: false, error: null })
     renderAlbum()
     fireEvent.click(screen.getByText('Play album'))
-    expect(play).toHaveBeenCalledWith('spotify--x://album/1', expect.objectContaining({ mediaType: 'album' }))
+    expect(play).toHaveBeenCalledWith(
+      'spotify--x://album/1',
+      expect.objectContaining({ mediaType: 'album' }),
+    )
   })
 })

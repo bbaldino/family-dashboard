@@ -124,17 +124,58 @@ export function musicStateFixtureFor(scenario: string | null): QueueState[] | un
 
 function packedQueueItems(): QueueItem[] {
   return [
-    { queue_item_id: 'qi-1', position: 0, duration: 238, media_item: { name: 'Amber Hours', uri: PLAYING_TRACK_URI, media_type: 'track', artists: [{ name: 'The Night Shift' }] } },
-    { queue_item_id: 'qi-2', position: 1, duration: 201, media_item: { name: 'Low Tide', uri: 'fixture://track/low-tide', media_type: 'track', artists: [{ name: 'The Night Shift' }] } },
-    { queue_item_id: 'qi-3', position: 2, duration: 176, media_item: { name: 'Porch Light', uri: 'fixture://track/porch-light', media_type: 'track', artists: [{ name: 'The Night Shift' }] } },
-    { queue_item_id: 'qi-4', position: 3, duration: 220, media_item: { name: 'Static Bloom', uri: 'fixture://track/static-bloom', media_type: 'track', artists: [{ name: 'Bellwether Coast' }] } },
+    {
+      queue_item_id: 'qi-1',
+      position: 0,
+      duration: 238,
+      media_item: {
+        name: 'Amber Hours',
+        uri: PLAYING_TRACK_URI,
+        media_type: 'track',
+        artists: [{ name: 'The Night Shift' }],
+      },
+    },
+    {
+      queue_item_id: 'qi-2',
+      position: 1,
+      duration: 201,
+      media_item: {
+        name: 'Low Tide',
+        uri: 'fixture://track/low-tide',
+        media_type: 'track',
+        artists: [{ name: 'The Night Shift' }],
+      },
+    },
+    {
+      queue_item_id: 'qi-3',
+      position: 2,
+      duration: 176,
+      media_item: {
+        name: 'Porch Light',
+        uri: 'fixture://track/porch-light',
+        media_type: 'track',
+        artists: [{ name: 'The Night Shift' }],
+      },
+    },
+    {
+      queue_item_id: 'qi-4',
+      position: 3,
+      duration: 220,
+      media_item: {
+        name: 'Static Bloom',
+        uri: 'fixture://track/static-bloom',
+        media_type: 'track',
+        artists: [{ name: 'Bellwether Coast' }],
+      },
+    },
   ]
 }
 
-const musicQueueItemFixtures: Record<MusicScenario, (queueId: string) => QueueItem[] | undefined> = {
-  empty: () => [],
-  packed: (queueId) => (queueId === KITCHEN_QUEUE_ID ? packedQueueItems() : []),
-}
+const musicQueueItemFixtures: Record<MusicScenario, (queueId: string) => QueueItem[] | undefined> =
+  {
+    empty: () => [],
+    packed: (queueId) => (queueId === KITCHEN_QUEUE_ID ? packedQueueItems() : []),
+  }
 
 /** The upcoming-items `QueueItem[]` fixture for `scenario`/`queueId` —
  *  `useQueue`'s real return shape — or `undefined` if no scenario is active
@@ -319,9 +360,24 @@ export function musicRecentFixtureFor(scenario: string | null): RecentItem[] | u
 
 function packedForYou(): CuratedPlaylist[] {
   return [
-    { name: 'Late Night Drive', description: 'Discover Weekly', uri: 'fixture://playlist/late-night-drive', image: null },
-    { name: 'Kitchen Radio', description: 'Release Radar', uri: 'fixture://playlist/kitchen-radio', image: null },
-    { name: 'Sunday Slow Mix', description: 'Daily Mix 1', uri: 'fixture://playlist/sunday-slow-mix', image: null },
+    {
+      name: 'Late Night Drive',
+      description: 'Discover Weekly',
+      uri: 'fixture://playlist/late-night-drive',
+      image: null,
+    },
+    {
+      name: 'Kitchen Radio',
+      description: 'Release Radar',
+      uri: 'fixture://playlist/kitchen-radio',
+      image: null,
+    },
+    {
+      name: 'Sunday Slow Mix',
+      description: 'Daily Mix 1',
+      uri: 'fixture://playlist/sunday-slow-mix',
+      image: null,
+    },
   ]
 }
 
@@ -478,8 +534,28 @@ function nightShiftArtist(): ArtistDetail {
         image_url: null,
         duration: 238,
       },
-      { uri: 'fixture://track/low-tide', name: 'Low Tide', artist: 'The Night Shift', artist_uri: ARTIST_URI, artists: [{ name: 'The Night Shift', uri: ARTIST_URI }], album: 'Late Bloom', album_uri: ALBUM_URI, image_url: null, duration: 201 },
-      { uri: 'fixture://track/porch-light', name: 'Porch Light', artist: 'The Night Shift', artist_uri: ARTIST_URI, artists: [{ name: 'The Night Shift', uri: ARTIST_URI }], album: 'Late Bloom', album_uri: ALBUM_URI, image_url: null, duration: 176 },
+      {
+        uri: 'fixture://track/low-tide',
+        name: 'Low Tide',
+        artist: 'The Night Shift',
+        artist_uri: ARTIST_URI,
+        artists: [{ name: 'The Night Shift', uri: ARTIST_URI }],
+        album: 'Late Bloom',
+        album_uri: ALBUM_URI,
+        image_url: null,
+        duration: 201,
+      },
+      {
+        uri: 'fixture://track/porch-light',
+        name: 'Porch Light',
+        artist: 'The Night Shift',
+        artist_uri: ARTIST_URI,
+        artists: [{ name: 'The Night Shift', uri: ARTIST_URI }],
+        album: 'Late Bloom',
+        album_uri: ALBUM_URI,
+        image_url: null,
+        duration: 176,
+      },
     ],
     albums: [
       { uri: ALBUM_URI, name: 'Late Bloom', image_url: null, year: 2023 },
@@ -516,9 +592,39 @@ function lateBloomAlbum(): AlbumDetail {
         image_url: null,
         duration: 238,
       },
-      { uri: 'fixture://track/low-tide', name: 'Low Tide', artist: 'The Night Shift', artist_uri: ARTIST_URI, artists: [{ name: 'The Night Shift', uri: ARTIST_URI }], album: 'Late Bloom', album_uri: ALBUM_URI, image_url: null, duration: 201 },
-      { uri: 'fixture://track/porch-light', name: 'Porch Light', artist: 'The Night Shift', artist_uri: ARTIST_URI, artists: [{ name: 'The Night Shift', uri: ARTIST_URI }], album: 'Late Bloom', album_uri: ALBUM_URI, image_url: null, duration: 176 },
-      { uri: 'fixture://track/static-bloom', name: 'Static Bloom', artist: 'The Night Shift', artist_uri: ARTIST_URI, artists: [{ name: 'The Night Shift', uri: ARTIST_URI }], album: 'Late Bloom', album_uri: ALBUM_URI, image_url: null, duration: 220 },
+      {
+        uri: 'fixture://track/low-tide',
+        name: 'Low Tide',
+        artist: 'The Night Shift',
+        artist_uri: ARTIST_URI,
+        artists: [{ name: 'The Night Shift', uri: ARTIST_URI }],
+        album: 'Late Bloom',
+        album_uri: ALBUM_URI,
+        image_url: null,
+        duration: 201,
+      },
+      {
+        uri: 'fixture://track/porch-light',
+        name: 'Porch Light',
+        artist: 'The Night Shift',
+        artist_uri: ARTIST_URI,
+        artists: [{ name: 'The Night Shift', uri: ARTIST_URI }],
+        album: 'Late Bloom',
+        album_uri: ALBUM_URI,
+        image_url: null,
+        duration: 176,
+      },
+      {
+        uri: 'fixture://track/static-bloom',
+        name: 'Static Bloom',
+        artist: 'The Night Shift',
+        artist_uri: ARTIST_URI,
+        artists: [{ name: 'The Night Shift', uri: ARTIST_URI }],
+        album: 'Late Bloom',
+        album_uri: ALBUM_URI,
+        image_url: null,
+        duration: 220,
+      },
     ],
   }
 }
@@ -526,7 +632,10 @@ function lateBloomAlbum(): AlbumDetail {
 /** The `ArtistDetail` fixture for `scenario`/`uri`, or `undefined` if no
  *  scenario is active, it isn't one this integration defines, or `uri`
  *  isn't the fixture artist the rest of the music fixtures link to. */
-export function musicArtistDetailFixtureFor(scenario: string | null, uri: string): ArtistDetail | undefined {
+export function musicArtistDetailFixtureFor(
+  scenario: string | null,
+  uri: string,
+): ArtistDetail | undefined {
   if (!scenario || !isMusicScenario(scenario)) return undefined
   if (scenario === 'empty') return undefined
   if (uri !== ARTIST_URI) return undefined
@@ -536,7 +645,10 @@ export function musicArtistDetailFixtureFor(scenario: string | null, uri: string
 /** The `AlbumDetail` fixture for `scenario`/`uri`, or `undefined` if no
  *  scenario is active, it isn't one this integration defines, or `uri`
  *  isn't the fixture album the rest of the music fixtures link to. */
-export function musicAlbumDetailFixtureFor(scenario: string | null, uri: string): AlbumDetail | undefined {
+export function musicAlbumDetailFixtureFor(
+  scenario: string | null,
+  uri: string,
+): AlbumDetail | undefined {
   if (!scenario || !isMusicScenario(scenario)) return undefined
   if (scenario === 'empty') return undefined
   if (uri !== ALBUM_URI) return undefined

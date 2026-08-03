@@ -66,16 +66,29 @@ export function RecordSleeve({
   onRadio: () => void
 }) {
   const runtimeSeconds = sumDurationSeconds(album.tracks)
-  const note = album.description ?? buildAlbumNote({ year: album.year, label: album.label, trackCount: album.tracks.length, runtimeSeconds })
+  const note =
+    album.description ??
+    buildAlbumNote({
+      year: album.year,
+      label: album.label,
+      trackCount: album.tracks.length,
+      runtimeSeconds,
+    })
 
   const rows: [string, string][] = [
     ['Released', album.year ? String(album.year) : EMPTY],
     ['Label', album.label ?? EMPTY],
-    ['Length', `${album.tracks.length === 1 ? '1 track' : `${album.tracks.length} tracks`} · ${formatRuntimeMinutes(runtimeSeconds)}`],
+    [
+      'Length',
+      `${album.tracks.length === 1 ? '1 track' : `${album.tracks.length} tracks`} · ${formatRuntimeMinutes(runtimeSeconds)}`,
+    ],
   ]
 
   return (
-    <aside className="min-h-0 flex flex-col" style={{ padding: '20px 28px 20px 56px', borderRight: '1px solid var(--rule)' }}>
+    <aside
+      className="min-h-0 flex flex-col"
+      style={{ padding: '20px 28px 20px 56px', borderRight: '1px solid var(--rule)' }}
+    >
       <div style={{ position: 'relative', display: 'inline-block' }}>
         <Cover imageUrl={album.image_url} name={album.name} size={274} />
         <div
@@ -95,13 +108,41 @@ export function RecordSleeve({
           PLATE I
         </div>
       </div>
-      <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 20, color: INK2, marginTop: 14, lineHeight: 1.25 }}>
+      <div
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontStyle: 'italic',
+          fontSize: 20,
+          color: INK2,
+          marginTop: 14,
+          lineHeight: 1.25,
+        }}
+      >
         {album.artist ?? 'Unknown artist'}
       </div>
-      <p style={{ fontFamily: 'var(--font-display)', fontSize: 13.5, color: 'var(--ink-muted)', lineHeight: 1.45, marginTop: 8 }}>{note}</p>
+      <p
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: 13.5,
+          color: 'var(--ink-muted)',
+          lineHeight: 1.45,
+          marginTop: 8,
+        }}
+      >
+        {note}
+      </p>
       <dl className="m-0" style={{ marginTop: 14 }}>
         {rows.map(([label, value], i) => (
-          <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 1, padding: '6px 0', borderTop: i === 0 ? '1px solid var(--ink)' : '1px dotted var(--rule)' }}>
+          <div
+            key={label}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1,
+              padding: '6px 0',
+              borderTop: i === 0 ? '1px solid var(--ink)' : '1px dotted var(--rule)',
+            }}
+          >
             <dt style={dtStyle}>{label}</dt>
             <dd className="truncate" style={ddStyle}>
               {value}
@@ -109,7 +150,15 @@ export function RecordSleeve({
           </div>
         ))}
       </dl>
-      <div style={{ marginTop: 'auto', paddingTop: 14, borderTop: '1px solid var(--rule)', display: 'flex', gap: 6 }}>
+      <div
+        style={{
+          marginTop: 'auto',
+          paddingTop: 14,
+          borderTop: '1px solid var(--rule)',
+          display: 'flex',
+          gap: 6,
+        }}
+      >
         <button type="button" onClick={onQueue} style={footActionStyle}>
           Queue
         </button>

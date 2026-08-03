@@ -67,11 +67,17 @@ describe('Artist', () => {
     useArtistDetail.mockReturnValue({ data: artistData, isLoading: false, error: null })
     renderArtist()
     expect(screen.getAllByText('The Chemical Brothers').length).toBeGreaterThan(0)
-    expect(screen.getByText('Breakbeat, big beat, electronic, electronica — 2 albums in the library.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Breakbeat, big beat, electronic, electronica — 2 albums in the library.'),
+    ).toBeInTheDocument()
   })
 
   it('renders the real description verbatim when present, not the generated standfirst', () => {
-    useArtistDetail.mockReturnValue({ data: { ...artistData, description: 'A hand-written artist bio.' }, isLoading: false, error: null })
+    useArtistDetail.mockReturnValue({
+      data: { ...artistData, description: 'A hand-written artist bio.' },
+      isLoading: false,
+      error: null,
+    })
     renderArtist()
     expect(screen.getByText('A hand-written artist bio.')).toBeInTheDocument()
     expect(screen.queryByText(/albums in the library/)).not.toBeInTheDocument()
@@ -104,6 +110,9 @@ describe('Artist', () => {
     useArtistDetail.mockReturnValue({ data: artistData, isLoading: false, error: null })
     renderArtist()
     fireEvent.click(screen.getByText('Play radio'))
-    expect(play).toHaveBeenCalledWith('spotify--x://artist/1', expect.objectContaining({ radio: true, mediaType: 'artist' }))
+    expect(play).toHaveBeenCalledWith(
+      'spotify--x://artist/1',
+      expect.objectContaining({ radio: true, mediaType: 'artist' }),
+    )
   })
 })

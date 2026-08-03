@@ -118,23 +118,67 @@ function packedMonth(year: number, month: number): MonthEvents {
   addOnDay(byDate, day(3), allDayEvent('school-photo-day', 'School photo day', day(3), day(4)))
 
   addOnDay(byDate, day(8), timedEvent('piano-leo', 'Piano lesson — Leo', atTime(day(8), 16, 0), 45))
-  addOnDay(byDate, day(8), timedEvent('grocery-pickup', 'Grocery pickup', atTime(day(8), 17, 30), 30))
+  addOnDay(
+    byDate,
+    day(8),
+    timedEvent('grocery-pickup', 'Grocery pickup', atTime(day(8), 17, 30), 30),
+  )
 
   // The crowded day: six events on one cell — more than the grid's four
   // visible pills, so it must show a "+N more" overflow.
   addOnDay(byDate, day(14), timedEvent('drop-off', 'School drop-off', atTime(day(14), 7, 15), 20))
-  addOnDay(byDate, day(14), timedEvent('dentist-mia', 'Dentist — Mia', atTime(day(14), 9, 0), 45, 'Riverside Pediatric Dental'))
+  addOnDay(
+    byDate,
+    day(14),
+    timedEvent(
+      'dentist-mia',
+      'Dentist — Mia',
+      atTime(day(14), 9, 0),
+      45,
+      'Riverside Pediatric Dental',
+    ),
+  )
   addOnDay(byDate, day(14), allDayEvent('trash-pickup', 'Trash pickup', day(14), day(15)))
-  addOnDay(byDate, day(14), timedEvent('soccer-practice', 'Soccer practice', atTime(day(14), 16, 0), 60, 'Lincoln Park Fields'))
-  addOnDay(byDate, day(14), timedEvent('piano-mia', 'Piano lesson — Mia', atTime(day(14), 17, 0), 45))
+  addOnDay(
+    byDate,
+    day(14),
+    timedEvent(
+      'soccer-practice',
+      'Soccer practice',
+      atTime(day(14), 16, 0),
+      60,
+      'Lincoln Park Fields',
+    ),
+  )
+  addOnDay(
+    byDate,
+    day(14),
+    timedEvent('piano-mia', 'Piano lesson — Mia', atTime(day(14), 17, 0), 45),
+  )
   addOnDay(byDate, day(14), timedEvent('book-club', 'Book club', atTime(day(14), 19, 0), 90))
 
-  addOnDay(byDate, day(19), allDayEvent('conferences', 'Parent-teacher conferences', day(19), day(20)))
-  addOnDay(byDate, day(19), timedEvent('ortho-leo', 'Orthodontist — Leo', atTime(day(19), 15, 30), 45))
+  addOnDay(
+    byDate,
+    day(19),
+    allDayEvent('conferences', 'Parent-teacher conferences', day(19), day(20)),
+  )
+  addOnDay(
+    byDate,
+    day(19),
+    timedEvent('ortho-leo', 'Orthodontist — Leo', atTime(day(19), 15, 30), 45),
+  )
 
   addOnDay(byDate, day(24), timedEvent('grocery-run', 'Grocery run', atTime(day(24), 10, 0), 45))
-  addOnDay(byDate, day(24), timedEvent('birthday-emma', 'Birthday party — Emma', atTime(day(24), 13, 0), 120))
-  addOnDay(byDate, day(24), timedEvent('movie-night', 'Family movie night', atTime(day(24), 19, 0), 100))
+  addOnDay(
+    byDate,
+    day(24),
+    timedEvent('birthday-emma', 'Birthday party — Emma', atTime(day(24), 13, 0), 120),
+  )
+  addOnDay(
+    byDate,
+    day(24),
+    timedEvent('movie-night', 'Family movie night', atTime(day(24), 19, 0), 100),
+  )
 
   sortDays(byDate)
   return { byDate }
@@ -154,7 +198,11 @@ function spanningMonth(year: number, month: number): MonthEvents {
   // The trip's last day also carries another all-day event and a timed
   // one, to exercise the sort rule: all-day first, then chronological.
   const lastTripDay = addDays(tripEndExclusive, -1)
-  addOnDay(byDate, lastTripDay, allDayEvent('half-day', 'Half-day dismissal', lastTripDay, addDays(lastTripDay, 1)))
+  addOnDay(
+    byDate,
+    lastTripDay,
+    allDayEvent('half-day', 'Half-day dismissal', lastTripDay, addDays(lastTripDay, 1)),
+  )
   addOnDay(
     byDate,
     lastTripDay,
@@ -174,7 +222,11 @@ const monthFixtures: Record<CalendarScenario, (year: number, month: number) => M
 /** The `MonthEvents` fixture for `scenario`, or `undefined` if no scenario
  *  is active or this integration doesn't define one by that name — in
  *  which case the caller should fetch live data as usual. */
-export function monthFixtureFor(scenario: string | null, year: number, month: number): MonthEvents | undefined {
+export function monthFixtureFor(
+  scenario: string | null,
+  year: number,
+  month: number,
+): MonthEvents | undefined {
   if (!scenario || !isCalendarScenario(scenario)) return undefined
   return monthFixtures[scenario](year, month)
 }
@@ -189,7 +241,9 @@ function dayLabel(date: Date, today: Date): string {
   return `${date.toLocaleDateString([], { weekday: 'long' })} ${short}`
 }
 
-function buildWeek(eventsForOffset: (offset: number, date: Date) => CalendarEvent[]): CalendarDay[] {
+function buildWeek(
+  eventsForOffset: (offset: number, date: Date) => CalendarEvent[],
+): CalendarDay[] {
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const days: CalendarDay[] = []
@@ -217,8 +271,20 @@ function packedWeek(): CalendarDay[] {
         // event uncapped, which is exactly what this scenario is for.
         return [
           timedEvent('drop-off', 'School drop-off', atTime(date, 7, 15), 20),
-          timedEvent('dentist-mia', 'Dentist — Mia', atTime(date, 9, 0), 45, 'Riverside Pediatric Dental'),
-          timedEvent('soccer-practice', 'Soccer practice', atTime(date, 16, 0), 60, 'Lincoln Park Fields'),
+          timedEvent(
+            'dentist-mia',
+            'Dentist — Mia',
+            atTime(date, 9, 0),
+            45,
+            'Riverside Pediatric Dental',
+          ),
+          timedEvent(
+            'soccer-practice',
+            'Soccer practice',
+            atTime(date, 16, 0),
+            60,
+            'Lincoln Park Fields',
+          ),
           timedEvent('piano-leo', 'Piano lesson — Leo', atTime(date, 17, 0), 45),
           timedEvent('grocery-pickup', 'Grocery pickup', atTime(date, 18, 0), 30),
           timedEvent('book-club', 'Book club', atTime(date, 19, 30), 90),

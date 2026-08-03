@@ -11,7 +11,11 @@ import { render, screen, waitFor } from '@testing-library/react'
 const { musicStateFixtureFor } = vi.hoisted(() => ({ musicStateFixtureFor: vi.fn() }))
 vi.mock('./fixtures', () => ({ musicStateFixtureFor }))
 
-function MusicProbe({ useMusic }: { useMusic: () => { state: { queues: unknown[] }; isConnected: boolean } }) {
+function MusicProbe({
+  useMusic,
+}: {
+  useMusic: () => { state: { queues: unknown[] }; isConnected: boolean }
+}) {
   const { state, isConnected } = useMusic()
   return (
     <div>
@@ -30,10 +34,7 @@ async function freshMusicModules() {
 
 describe('MusicProvider scenario wiring', () => {
   beforeEach(() => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) }),
-    )
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) }))
   })
 
   afterEach(() => {
@@ -158,11 +159,13 @@ describe('MusicProvider action failures', () => {
   it('records a failed play, naming the item, instead of dropping the rejection', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockImplementation((url: string) =>
-        String(url).includes('/api/music/play')
-          ? Promise.resolve({ ok: false, status: 500, text: () => Promise.resolve('boom') })
-          : Promise.resolve({ ok: true, json: () => Promise.resolve({}) }),
-      ),
+      vi
+        .fn()
+        .mockImplementation((url: string) =>
+          String(url).includes('/api/music/play')
+            ? Promise.resolve({ ok: false, status: 500, text: () => Promise.resolve('boom') })
+            : Promise.resolve({ ok: true, json: () => Promise.resolve({}) }),
+        ),
     )
     const { MusicProvider, useMusic } = await freshMusicModules()
     render(
@@ -176,10 +179,7 @@ describe('MusicProvider action failures', () => {
   })
 
   it('leaves actionError null when the action succeeds', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) }),
-    )
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) }))
     const { MusicProvider, useMusic } = await freshMusicModules()
     render(
       <MusicProvider>

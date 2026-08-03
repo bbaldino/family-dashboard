@@ -72,17 +72,34 @@ export function NowSpinning({ onOpenCentreSpread }: { onOpenCentreSpread?: () =>
   return (
     <div className="flex flex-col" style={{ gap: 10 }}>
       <Kicker>Now spinning</Kicker>
-      <NowSpinningCover imageUrl={currentItem.imageUrl} name={currentItem.name} onTap={onOpenCentreSpread} />
+      <NowSpinningCover
+        imageUrl={currentItem.imageUrl}
+        name={currentItem.name}
+        onTap={onOpenCentreSpread}
+      />
 
       <h2
         className="m-0 truncate"
-        style={{ fontFamily: 'var(--font-display)', fontSize: 30, fontWeight: 600, letterSpacing: '-0.01em', lineHeight: 1, marginTop: 8 }}
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: 30,
+          fontWeight: 600,
+          letterSpacing: '-0.01em',
+          lineHeight: 1,
+          marginTop: 8,
+        }}
       >
         {currentItem.name}
       </h2>
       <div
         className="truncate"
-        style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 16, color: 'var(--ink-muted)', marginTop: 2 }}
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontStyle: 'italic',
+          fontSize: 16,
+          color: 'var(--ink-muted)',
+          marginTop: 2,
+        }}
       >
         {currentItem.artist}
         {currentItem.album && (
@@ -97,7 +114,13 @@ export function NowSpinning({ onOpenCentreSpread }: { onOpenCentreSpread?: () =>
         <MeterBar percent={progressPct} fill="var(--rust)" />
         <div
           className="flex justify-between"
-          style={{ marginTop: 4, fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-muted)', letterSpacing: '0.08em' }}
+          style={{
+            marginTop: 4,
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            color: 'var(--ink-muted)',
+            letterSpacing: '0.08em',
+          }}
         >
           <span>{formatDuration(elapsed)}</span>
           <span>{formatDuration(duration)}</span>
@@ -105,7 +128,12 @@ export function NowSpinning({ onOpenCentreSpread }: { onOpenCentreSpread?: () =>
       </div>
 
       <div className="flex items-center justify-center" style={{ gap: 24, marginTop: 12 }}>
-        <button type="button" onClick={() => previous()} style={{ all: 'unset', cursor: 'pointer', color: INK2 }} aria-label="Previous track">
+        <button
+          type="button"
+          onClick={() => previous()}
+          style={{ all: 'unset', cursor: 'pointer', color: INK2 }}
+          aria-label="Previous track"
+        >
           <SkipBack size={20} />
         </button>
         <button
@@ -130,15 +158,41 @@ export function NowSpinning({ onOpenCentreSpread }: { onOpenCentreSpread?: () =>
         >
           {isPlaying ? <Pause size={20} /> : <Play size={20} />}
         </button>
-        <button type="button" onClick={() => next()} style={{ all: 'unset', cursor: 'pointer', color: INK2 }} aria-label="Next track">
+        <button
+          type="button"
+          onClick={() => next()}
+          style={{ all: 'unset', cursor: 'pointer', color: INK2 }}
+          aria-label="Next track"
+        >
           <SkipForward size={20} />
         </button>
       </div>
 
       <div className="flex items-center" style={{ gap: 10, marginTop: 8 }}>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink-muted)', letterSpacing: '0.15em' }}>VOL</span>
-        <VolumeSlider volume={volume} onChange={(level) => activeQueue && setVolume(activeQueue.queueId, level)} />
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--ink)', letterSpacing: '0.08em' }}>{volume}</span>
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            color: 'var(--ink-muted)',
+            letterSpacing: '0.15em',
+          }}
+        >
+          VOL
+        </span>
+        <VolumeSlider
+          volume={volume}
+          onChange={(level) => activeQueue && setVolume(activeQueue.queueId, level)}
+        />
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            color: 'var(--ink)',
+            letterSpacing: '0.08em',
+          }}
+        >
+          {volume}
+        </span>
       </div>
     </div>
   )

@@ -1,8 +1,16 @@
 import { useState } from 'react'
 
 const PRESET_COLORS = [
-  '#e88a6a', '#6a9aba', '#8a6aba', '#4a8a6a', '#ba6a8a',
-  '#c0a030', '#4a7a9a', '#aa5a5a', '#5aaa8a', '#7a7a7a',
+  '#e88a6a',
+  '#6a9aba',
+  '#8a6aba',
+  '#4a8a6a',
+  '#ba6a8a',
+  '#c0a030',
+  '#4a7a9a',
+  '#aa5a5a',
+  '#5aaa8a',
+  '#7a7a7a',
 ]
 
 interface ColorPickerProps {

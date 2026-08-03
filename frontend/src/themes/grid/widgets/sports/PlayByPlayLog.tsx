@@ -12,9 +12,7 @@ interface PlayByPlayLogProps {
 export function TeamDot({ team }: { team: GameTeam | null }) {
   const hex = team?.color
   if (!hex) {
-    return (
-      <span className="inline-block w-2.5 h-2.5 rounded-full border border-border shrink-0" />
-    )
+    return <span className="inline-block w-2.5 h-2.5 rounded-full border border-border shrink-0" />
   }
   return (
     <span
@@ -39,9 +37,7 @@ export function PlayByPlayLog({ plays, home, away }: PlayByPlayLogProps) {
               className={`text-[12px] leading-snug flex items-center gap-2 text-text-primary ${play.scoring ? 'font-semibold' : ''}`}
             >
               <TeamDot team={team} />
-              {abbr && (
-                <span className="text-text-muted tabular-nums shrink-0 w-9">{abbr}</span>
-              )}
+              {abbr && <span className="text-text-muted tabular-nums shrink-0 w-9">{abbr}</span>}
               <span className="min-w-0 truncate">{play.text}</span>
             </li>
           )

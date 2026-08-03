@@ -38,7 +38,9 @@ describe('getMonthGridDates', () => {
       const lastOfMonth = new Date(year, month + 1, 0)
       const fetchGridEnd = new Date(lastOfMonth)
       fetchGridEnd.setDate(fetchGridEnd.getDate() + (6 - fetchGridEnd.getDay()) + 1)
-      const fetchedDayCount = Math.round((fetchGridEnd.getTime() - gridStart.getTime()) / (1000 * 60 * 60 * 24))
+      const fetchedDayCount = Math.round(
+        (fetchGridEnd.getTime() - gridStart.getTime()) / (1000 * 60 * 60 * 24),
+      )
 
       expect(getMonthGridDates(year, month)).toHaveLength(fetchedDayCount)
     }

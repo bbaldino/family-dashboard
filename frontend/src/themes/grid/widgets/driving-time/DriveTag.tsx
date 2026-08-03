@@ -13,7 +13,9 @@ interface DriveTagProps {
 
 export function DriveTag({ displayText, urgency }: DriveTagProps) {
   return (
-    <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md ${urgencyStyles[urgency]}`}>
+    <span
+      className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-md ${urgencyStyles[urgency]}`}
+    >
       <span>🚗</span>
       {displayText}
     </span>

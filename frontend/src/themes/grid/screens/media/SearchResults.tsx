@@ -41,7 +41,14 @@ interface ResultItemProps {
   showArtist?: boolean
 }
 
-function ResultItem({ item, pending, onTap, playItem, navigate, showArtist = false }: ResultItemProps) {
+function ResultItem({
+  item,
+  pending,
+  onTap,
+  playItem,
+  navigate,
+  showArtist = false,
+}: ResultItemProps) {
   return (
     <div
       className={`flex items-center gap-3 w-full px-3 py-2 rounded text-left ${
@@ -83,8 +90,12 @@ function ResultItem({ item, pending, onTap, playItem, navigate, showArtist = fal
         onPlayJustThis={() => playItem(item, 'play', false)}
         onPlayNext={() => playItem(item, 'next', false)}
         onAddToQueue={() => playItem(item, 'add', false)}
-        onGoToArtist={() => item.artist_uri && navigate(`/media/artist/${encodeUriParam(item.artist_uri)}`)}
-        onGoToAlbum={() => item.album_uri && navigate(`/media/album/${encodeUriParam(item.album_uri)}`)}
+        onGoToArtist={() =>
+          item.artist_uri && navigate(`/media/artist/${encodeUriParam(item.artist_uri)}`)
+        }
+        onGoToAlbum={() =>
+          item.album_uri && navigate(`/media/album/${encodeUriParam(item.album_uri)}`)
+        }
       />
     </div>
   )
@@ -149,11 +160,7 @@ export function SearchResults({ rawQuery, debouncedQuery }: SearchResultsProps) 
 
   const { data: results, isFetching } = useSearch(debouncedQuery)
 
-  const playItem = async (
-    item: SearchItem,
-    mode: EnqueueMode,
-    radio: boolean,
-  ) => {
+  const playItem = async (item: SearchItem, mode: EnqueueMode, radio: boolean) => {
     setPendingUri(item.uri)
     try {
       await play(item.uri, {
@@ -175,8 +182,7 @@ export function SearchResults({ rawQuery, debouncedQuery }: SearchResultsProps) 
   // Default tap on a track: play it, then continue with a radio station seeded
   // from it ("...and keep going with similar music"). Albums / playlists /
   // artists already have built-in continuation, so no radio there.
-  const handleTap = (item: SearchItem) =>
-    playItem(item, 'play', item.media_type === 'track')
+  const handleTap = (item: SearchItem) => playItem(item, 'play', item.media_type === 'track')
 
   // Settling or fetching the current debounced query → show the indicator
   // before any results are rendered, even if older results are still cached.

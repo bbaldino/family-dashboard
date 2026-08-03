@@ -130,16 +130,10 @@ export function SettingsAdmin() {
 
       {/* Content */}
       <div className="flex-1 min-h-0 flex flex-col">
-        {error && (
-          <div className="bg-error/10 text-error rounded-lg p-3 mb-4 text-sm">
-            {error}
-          </div>
-        )}
+        {error && <div className="bg-error/10 text-error rounded-lg p-3 mb-4 text-sm">{error}</div>}
 
         {!selectedIntegration && (
-          <p className="text-text-muted text-sm">
-            Select an integration to configure.
-          </p>
+          <p className="text-text-muted text-sm">Select an integration to configure.</p>
         )}
 
         {selectedIntegration && (
@@ -183,19 +177,11 @@ export function SettingsAdmin() {
 
                       if (meta.type === 'boolean') {
                         return (
-                          <label
-                            key={key}
-                            className="flex items-center gap-3"
-                          >
+                          <label key={key} className="flex items-center gap-3">
                             <input
                               type="checkbox"
                               checked={value === 'true'}
-                              onChange={(e) =>
-                                handleChange(
-                                  fullKey,
-                                  String(e.target.checked),
-                                )
-                              }
+                              onChange={(e) => handleChange(fullKey, String(e.target.checked))}
                               className="w-5 h-5 rounded accent-palette-1"
                             />
                             <div>
@@ -203,9 +189,7 @@ export function SettingsAdmin() {
                                 {meta.label}
                               </div>
                               {meta.description && (
-                                <div className="text-xs text-text-muted">
-                                  {meta.description}
-                                </div>
+                                <div className="text-xs text-text-muted">{meta.description}</div>
                               )}
                             </div>
                           </label>
@@ -214,17 +198,11 @@ export function SettingsAdmin() {
 
                       return (
                         <div key={key}>
-                          <label className="text-xs text-text-muted block mb-1">
-                            {meta.label}
-                          </label>
+                          <label className="text-xs text-text-muted block mb-1">{meta.label}</label>
                           <input
-                            type={
-                              meta.type === 'secret' ? 'password' : 'text'
-                            }
+                            type={meta.type === 'secret' ? 'password' : 'text'}
                             value={value}
-                            onChange={(e) =>
-                              handleChange(fullKey, e.target.value)
-                            }
+                            onChange={(e) => handleChange(fullKey, e.target.value)}
                             placeholder={meta.description}
                             className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
                           />
@@ -236,9 +214,7 @@ export function SettingsAdmin() {
 
                 <div className="flex items-center gap-3">
                   <Button onClick={handleSave}>Save</Button>
-                  {status && (
-                    <span className="text-sm text-success">{status}</span>
-                  )}
+                  {status && <span className="text-sm text-success">{status}</span>}
                 </div>
               </div>
             )}

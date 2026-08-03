@@ -1,6 +1,11 @@
 import { useMemo, useRef } from 'react'
 import { useIntegrationConfig } from '@/data/use-integration-config'
-import { doorbellIntegration, useDoorbellTheme, buildDoorbellCss, BROADSHEET_LAYOUT } from '@/data/doorbell'
+import {
+  doorbellIntegration,
+  useDoorbellTheme,
+  buildDoorbellCss,
+  BROADSHEET_LAYOUT,
+} from '@/data/doorbell'
 import { resolveBroadsheetDoorbellVars } from '@/themes/broadsheet/ui/broadsheet-vars'
 import { MastheadFrame } from '@/themes/broadsheet/ui/MastheadFrame'
 import { mastheadKickerStyle, mastheadNumeralStyle } from '@/themes/broadsheet/ui/masthead-styles'
@@ -142,7 +147,10 @@ export function Cameras() {
   })
 
   return (
-    <div data-testid="broadsheet-cameras" className="broadsheet-root w-[1600px] h-[900px] flex flex-col">
+    <div
+      data-testid="broadsheet-cameras"
+      className="broadsheet-root w-[1600px] h-[900px] flex flex-col"
+    >
       <MastheadFrame
         left={
           <>
@@ -161,8 +169,12 @@ export function Cameras() {
         right={
           <>
             <div style={{ ...mastheadKickerStyle, textAlign: 'right' }}>Now</div>
-            <div style={{ ...clockTimeStyle, textAlign: 'right' }}>{CLOCK_TIME_FORMAT.format(now)}</div>
-            <div style={{ ...clockDateStyle, textAlign: 'right' }}>{CLOCK_DATE_FORMAT.format(now).toUpperCase()}</div>
+            <div style={{ ...clockTimeStyle, textAlign: 'right' }}>
+              {CLOCK_TIME_FORMAT.format(now)}
+            </div>
+            <div style={{ ...clockDateStyle, textAlign: 'right' }}>
+              {CLOCK_DATE_FORMAT.format(now).toUpperCase()}
+            </div>
           </>
         }
       />

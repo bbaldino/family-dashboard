@@ -64,9 +64,7 @@ export function CountdownsSettings() {
 
   return (
     <div className="space-y-4">
-      {error && (
-        <div className="bg-error/10 text-error rounded-lg p-3 text-sm">{error}</div>
-      )}
+      {error && <div className="bg-error/10 text-error rounded-lg p-3 text-sm">{error}</div>}
 
       <div>
         <label className="text-xs text-text-muted block mb-1">Countdown Calendar</label>
@@ -94,9 +92,7 @@ export function CountdownsSettings() {
                 />
                 <div>
                   <div className="text-sm font-medium text-text-primary">{cal.summary}</div>
-                  {cal.primary && (
-                    <span className="text-xs text-text-muted">Primary</span>
-                  )}
+                  {cal.primary && <span className="text-xs text-text-muted">Primary</span>}
                 </div>
               </label>
             ))}

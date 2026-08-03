@@ -131,7 +131,8 @@ export function useGroupMutations() {
   // Abort any in-flight /players refetch (e.g. one kicked by the 5s polling
   // interval moments before the user tapped) so it doesn't land after our
   // optimistic apply and overwrite it with stale pre-mutation data.
-  const cancelInFlightPlayersFetches = () => queryClient.cancelQueries({ queryKey: PLAYERS_QUERY_KEY })
+  const cancelInFlightPlayersFetches = () =>
+    queryClient.cancelQueries({ queryKey: PLAYERS_QUERY_KEY })
 
   const markPending = (ids: string[]) =>
     setPendingIds((prev) => {
@@ -185,7 +186,13 @@ export function useGroupMutations() {
     isConfirmed?: (players: RawPlayer[]) => boolean
   }
 
-  const runMutation = async ({ pendingIds: ids, apply, rollback, apiCall, isConfirmed }: MutationSpec) => {
+  const runMutation = async ({
+    pendingIds: ids,
+    apply,
+    rollback,
+    apiCall,
+    isConfirmed,
+  }: MutationSpec) => {
     markPending(ids)
     beginMutation()
     // Apply synchronously, before anything else — including the
@@ -240,7 +247,8 @@ export function useGroupMutations() {
         })
         setSyncedTo(playerId, null)
       },
-      apiCall: () => musicIntegration.api.post('/group', { player_id: playerId, target_player: leaderId }),
+      apiCall: () =>
+        musicIntegration.api.post('/group', { player_id: playerId, target_player: leaderId }),
       isConfirmed: (players) => {
         const leader = players.find((p) => p.player_id === leaderId)
         return !!leader && (leader.group_members ?? []).includes(playerId)
@@ -293,7 +301,9 @@ export function useGroupMutations() {
         for (const id of followers) setSyncedTo(id, leader.playerId)
       },
       apiCall: () =>
-        Promise.all(followers.map((id) => musicIntegration.api.post('/ungroup', { player_id: id }))),
+        Promise.all(
+          followers.map((id) => musicIntegration.api.post('/ungroup', { player_id: id })),
+        ),
       isConfirmed: (players) => {
         const current = players.find((p) => p.player_id === leader.playerId)
         return !current || (current.group_members ?? []).length <= 1
@@ -304,8 +314,9 @@ export function useGroupMutations() {
   const setGroupVolume = (leaderId: string | null, level: number) => {
     if (!leaderId) return
     const previousVolume =
-      queryClient.getQueryData<RawPlayer[]>(PLAYERS_QUERY_KEY)?.find((p) => p.player_id === leaderId)
-        ?.group_volume ?? null
+      queryClient
+        .getQueryData<RawPlayer[]>(PLAYERS_QUERY_KEY)
+        ?.find((p) => p.player_id === leaderId)?.group_volume ?? null
     return runMutation({
       // No visual pending state for a volume drag — unchanged from before
       // this file's rollback/refcount treatment was extended to cover it.

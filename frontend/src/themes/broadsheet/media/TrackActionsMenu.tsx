@@ -89,11 +89,30 @@ export function TrackActionsMenu({
         boxShadow: '10px 10px 0 rgba(25,21,18,0.16)',
       }}
     >
-      <div style={{ padding: '8px 14px', borderBottom: '2px solid var(--ink)', background: CARD_BG }}>
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, letterSpacing: '0.22em', textTransform: 'uppercase', color: 'var(--ink-muted)' }}>
+      <div
+        style={{ padding: '8px 14px', borderBottom: '2px solid var(--ink)', background: CARD_BG }}
+      >
+        <div
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 9,
+            letterSpacing: '0.22em',
+            textTransform: 'uppercase',
+            color: 'var(--ink-muted)',
+          }}
+        >
           {kicker}
         </div>
-        <div className="truncate" style={{ fontFamily: 'var(--font-display)', fontSize: 16, fontWeight: 600, lineHeight: 1.15, marginTop: 1 }}>
+        <div
+          className="truncate"
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 16,
+            fontWeight: 600,
+            lineHeight: 1.15,
+            marginTop: 1,
+          }}
+        >
           {title}
         </div>
       </div>
@@ -115,7 +134,10 @@ export function TrackActionsMenu({
             {group.items.map((item, i) => {
               const isDefault = gi === 0 && i === 0
               return (
-                <li key={item.label} style={{ borderTop: i === 0 ? 'none' : '1px dotted var(--rule)' }}>
+                <li
+                  key={item.label}
+                  style={{ borderTop: i === 0 ? 'none' : '1px dotted var(--rule)' }}
+                >
                   <button
                     type="button"
                     onClick={item.onSelect}

@@ -49,7 +49,15 @@ export function EventPill({ event }: { event: CalendarEvent }) {
         overflow: 'hidden',
       }}
     >
-      <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, color: ACCENT2, flexShrink: 0 }}>
+      <span
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 9,
+          fontWeight: 700,
+          color: ACCENT2,
+          flexShrink: 0,
+        }}
+      >
         {formatEventTime(event)}
       </span>
       <span

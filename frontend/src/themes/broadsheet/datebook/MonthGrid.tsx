@@ -57,7 +57,10 @@ export function MonthGrid({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="grid grid-cols-7 flex-shrink-0" style={{ borderBottom: '2px solid var(--ink)' }}>
+      <div
+        className="grid grid-cols-7 flex-shrink-0"
+        style={{ borderBottom: '2px solid var(--ink)' }}
+      >
         {WEEKDAYS.map((label, i) => (
           <div
             key={label}
@@ -76,9 +79,17 @@ export function MonthGrid({
           </div>
         ))}
       </div>
-      <div data-testid="month-grid-weeks" className="flex-1 min-h-0 grid" style={{ gridTemplateRows: `repeat(${weeks.length}, 1fr)` }}>
+      <div
+        data-testid="month-grid-weeks"
+        className="flex-1 min-h-0 grid"
+        style={{ gridTemplateRows: `repeat(${weeks.length}, 1fr)` }}
+      >
         {weeks.map((week, weekIndex) => (
-          <div key={week[0].toISOString()} data-testid="month-grid-week" className="grid grid-cols-7 min-h-0">
+          <div
+            key={week[0].toISOString()}
+            data-testid="month-grid-week"
+            className="grid grid-cols-7 min-h-0"
+          >
             {week.map((date, dayIndex) => {
               const dateKey = toLocalDateStr(date)
               return (

@@ -26,9 +26,7 @@ function formatEventTime(event: CalendarEvent): string {
 function isCurrentEvent(event: CalendarEvent): boolean {
   if (!event.start.dateTime || !event.end.dateTime) return false
   const now = new Date()
-  return (
-    new Date(event.start.dateTime) <= now && now < new Date(event.end.dateTime)
-  )
+  return new Date(event.start.dateTime) <= now && now < new Date(event.end.dateTime)
 }
 
 function isPastEvent(event: CalendarEvent): boolean {
@@ -44,12 +42,7 @@ interface CalendarWidgetProps {
   refetch: () => Promise<void>
 }
 
-export function CalendarWidget({
-  days,
-  isLoading,
-  error,
-  refetch,
-}: CalendarWidgetProps) {
+export function CalendarWidget({ days, isLoading, error, refetch }: CalendarWidgetProps) {
   const allEvents = (days ?? []).flatMap((d) => d.events)
   const driveInfo = useDrivingTime(allEvents)
 
@@ -84,9 +77,7 @@ export function CalendarWidget({
     <WidgetCard title="Schedule" category="calendar" badge={badge} className="h-full">
       <div className="flex flex-col gap-[8px] overflow-auto">
         {visibleDays.length === 0 ? (
-          <div className="text-[14px] text-text-muted py-2">
-            No events this week
-          </div>
+          <div className="text-[14px] text-text-muted py-2">No events this week</div>
         ) : (
           visibleDays.map((day) => (
             <div key={day.label}>
@@ -98,9 +89,7 @@ export function CalendarWidget({
                 {day.label}
               </div>
               {day.events.length === 0 ? (
-                <div className="text-[13px] text-text-muted pl-1">
-                  No events
-                </div>
+                <div className="text-[13px] text-text-muted pl-1">No events</div>
               ) : (
                 <div className="flex flex-col gap-[1px]">
                   {day.events.map((event) => {

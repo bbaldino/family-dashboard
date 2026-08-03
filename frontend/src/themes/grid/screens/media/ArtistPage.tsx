@@ -33,8 +33,7 @@ export function ArtistPage() {
     )
   }
 
-  const goToAlbum = (albumUri: string) =>
-    navigate(`/media/album/${encodeUriParam(albumUri)}`)
+  const goToAlbum = (albumUri: string) => navigate(`/media/album/${encodeUriParam(albumUri)}`)
 
   return (
     <div className="p-4 flex flex-col gap-6 overflow-auto">
@@ -63,9 +62,7 @@ export function ArtistPage() {
           </div>
         </div>
         <button
-          onClick={() =>
-            play(uri, { radio: true, mediaType: 'artist', name: data.name })
-          }
+          onClick={() => play(uri, { radio: true, mediaType: 'artist', name: data.name })}
           className="flex items-center gap-2 px-4 py-2 rounded-full bg-white text-black text-sm font-medium"
         >
           <Radio size={16} />
@@ -168,9 +165,7 @@ export function ArtistPage() {
                 <span className="text-text-primary text-xs font-medium leading-tight line-clamp-2 w-full">
                   {a.name}
                 </span>
-                {a.year && (
-                  <span className="text-text-secondary text-xs">{a.year}</span>
-                )}
+                {a.year && <span className="text-text-secondary text-xs">{a.year}</span>}
               </button>
             ))}
           </div>

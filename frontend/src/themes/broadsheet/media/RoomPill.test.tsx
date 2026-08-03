@@ -50,7 +50,9 @@ describe('RoomPill', () => {
 
   it('does not change box dimensions between idle and pending — only opacity differs', () => {
     const onToggle = vi.fn()
-    const { rerender } = render(<RoomPill label="Living Room" active={false} pending={false} onToggle={onToggle} />)
+    const { rerender } = render(
+      <RoomPill label="Living Room" active={false} pending={false} onToggle={onToggle} />,
+    )
     const idle = screen.getByRole('button', { name: 'Living Room' })
     // Captured before the rerender below — React reuses the same DOM node
     // for this update, so reading these live afterward would just compare

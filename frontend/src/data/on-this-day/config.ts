@@ -10,6 +10,9 @@ export const onThisDayIntegration = defineIntegration({
   }),
   fields: {
     model: { label: 'Model', type: 'model-select', description: 'Model for content filtering' },
-    cycle_minutes: { label: 'Cycle Interval (minutes)', description: 'How often to show the next event' },
+    cycle_minutes: {
+      label: 'Cycle Interval (minutes)',
+      description: 'How often to show the next event',
+    },
   },
 })

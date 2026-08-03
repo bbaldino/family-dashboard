@@ -16,18 +16,45 @@ const track = {
 
 describe('ArtistTrackRow', () => {
   it('renders the track title and its album line', () => {
-    render(<ArtistTrackRow track={track} isFirstInColumn isPlaying={false} isMenuOpen={false} onToggleMenu={vi.fn()} groups={[]} />)
+    render(
+      <ArtistTrackRow
+        track={track}
+        isFirstInColumn
+        isPlaying={false}
+        isMenuOpen={false}
+        onToggleMenu={vi.fn()}
+        groups={[]}
+      />,
+    )
     expect(screen.getByText('Galvanize')).toBeInTheDocument()
     expect(screen.getByText('Push The Button')).toBeInTheDocument()
   })
 
   it('omits the album line when the track has none', () => {
-    render(<ArtistTrackRow track={{ ...track, album: null }} isFirstInColumn isPlaying={false} isMenuOpen={false} onToggleMenu={vi.fn()} groups={[]} />)
+    render(
+      <ArtistTrackRow
+        track={{ ...track, album: null }}
+        isFirstInColumn
+        isPlaying={false}
+        isMenuOpen={false}
+        onToggleMenu={vi.fn()}
+        groups={[]}
+      />,
+    )
     expect(screen.queryByText('Push The Button')).not.toBeInTheDocument()
   })
 
   it('formats duration as m:ss', () => {
-    render(<ArtistTrackRow track={track} isFirstInColumn isPlaying={false} isMenuOpen={false} onToggleMenu={vi.fn()} groups={[]} />)
+    render(
+      <ArtistTrackRow
+        track={track}
+        isFirstInColumn
+        isPlaying={false}
+        isMenuOpen={false}
+        onToggleMenu={vi.fn()}
+        groups={[]}
+      />,
+    )
     expect(screen.getByText('6:33')).toBeInTheDocument()
   })
 })

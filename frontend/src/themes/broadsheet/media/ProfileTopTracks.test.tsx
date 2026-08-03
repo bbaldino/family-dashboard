@@ -22,14 +22,30 @@ const noGroups = () => []
 describe('ProfileTopTracks', () => {
   it('renders every track under the cap with no "+N more" line', () => {
     const tracks = Array.from({ length: 3 }, (_, i) => track(i + 1))
-    render(<ProfileTopTracks tracks={tracks} currentTrackUri={null} openMenuUri={null} onToggleMenu={vi.fn()} buildGroups={noGroups} />)
+    render(
+      <ProfileTopTracks
+        tracks={tracks}
+        currentTrackUri={null}
+        openMenuUri={null}
+        onToggleMenu={vi.fn()}
+        buildGroups={noGroups}
+      />,
+    )
     expect(screen.getByText('Track 1')).toBeInTheDocument()
     expect(screen.queryByText(/more tracks/)).not.toBeInTheDocument()
   })
 
   it('caps a long top-tracks list and names the remainder', () => {
     const tracks = Array.from({ length: 40 }, (_, i) => track(i + 1))
-    render(<ProfileTopTracks tracks={tracks} currentTrackUri={null} openMenuUri={null} onToggleMenu={vi.fn()} buildGroups={noGroups} />)
+    render(
+      <ProfileTopTracks
+        tracks={tracks}
+        currentTrackUri={null}
+        openMenuUri={null}
+        onToggleMenu={vi.fn()}
+        buildGroups={noGroups}
+      />,
+    )
     expect(screen.getByText(`Track ${MAX_TOP_TRACKS}`)).toBeInTheDocument()
     expect(screen.queryByText(`Track ${MAX_TOP_TRACKS + 1}`)).not.toBeInTheDocument()
     expect(screen.getByText(`+${40 - MAX_TOP_TRACKS} more tracks`)).toBeInTheDocument()

@@ -31,7 +31,9 @@ describe('fetchCalendarIds', () => {
   })
 
   it('swallows a fetch failure and falls back to primary', async () => {
-    globalThis.fetch = vi.fn().mockRejectedValue(new Error('network down')) as unknown as typeof fetch
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValue(new Error('network down')) as unknown as typeof fetch
     await expect(fetchCalendarIds()).resolves.toEqual(['primary'])
   })
 

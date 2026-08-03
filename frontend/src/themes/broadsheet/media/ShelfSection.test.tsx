@@ -12,7 +12,15 @@ describe('ShelfSection', () => {
     render(
       <ShelfSection
         title="Frequently played"
-        items={[{ key: 'u1', name: 'Amber Hours', secondary: 'The Night Shift', imageUrl: null, onTap: () => {} }]}
+        items={[
+          {
+            key: 'u1',
+            name: 'Amber Hours',
+            secondary: 'The Night Shift',
+            imageUrl: null,
+            onTap: () => {},
+          },
+        ]}
         maxRows={2}
       />,
     )

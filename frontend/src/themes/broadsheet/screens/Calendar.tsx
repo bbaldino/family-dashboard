@@ -55,7 +55,10 @@ export function Calendar() {
   const goToNextMonth = () => setDisplayed(({ year, month }) => shiftMonth(year, month, 1))
 
   return (
-    <div data-testid="broadsheet-calendar" className="broadsheet-root w-[1600px] h-[900px] flex flex-col">
+    <div
+      data-testid="broadsheet-calendar"
+      className="broadsheet-root w-[1600px] h-[900px] flex flex-col"
+    >
       <DatebookMasthead
         year={year}
         month={month}

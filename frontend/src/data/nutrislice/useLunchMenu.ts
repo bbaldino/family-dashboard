@@ -67,9 +67,7 @@ function parseDayMenu(day: NutriSliceDay | undefined): LunchMenuDay | null {
   if (!day) return null
 
   // Sort by position (matches how NutriSlice orders them)
-  const sorted = [...day.menu_items].sort(
-    (a, b) => (a.position ?? 0) - (b.position ?? 0),
-  )
+  const sorted = [...day.menu_items].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
 
   const entries: MenuEntry[] = []
   const extras: string[] = []
@@ -102,14 +100,10 @@ function parseDayMenu(day: NutriSliceDay | undefined): LunchMenuDay | null {
     }
 
     // Check if previous entry ends with " or" — this item is the alternative
-    const isAlt =
-      entries.length > 0 && entries[entries.length - 1].name.endsWith(' or')
+    const isAlt = entries.length > 0 && entries[entries.length - 1].name.endsWith(' or')
     if (isAlt) {
       // Clean up the " or" from previous entry
-      entries[entries.length - 1].name = entries[entries.length - 1].name.slice(
-        0,
-        -3,
-      )
+      entries[entries.length - 1].name = entries[entries.length - 1].name.slice(0, -3)
       entries.push({ name, withItems: [], isAlternative: true })
       continue
     }

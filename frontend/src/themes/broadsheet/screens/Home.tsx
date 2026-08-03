@@ -67,7 +67,8 @@ export function Home() {
     featuredGame?.state === 'live' ? 'live' : featuredGame ? 'pregame' : 'none'
 
   const lunchToday = lunch?.today
-  const lunchAvailable = !!lunchToday && (lunchToday.entries.length > 0 || lunchToday.extras.length > 0)
+  const lunchAvailable =
+    !!lunchToday && (lunchToday.entries.length > 0 || lunchToday.extras.length > 0)
 
   const standfirst = buildStandfirst({
     eventCount: upcoming.length,
@@ -77,8 +78,15 @@ export function Home() {
   })
 
   return (
-    <div data-testid="broadsheet-home" className="broadsheet-root w-[1600px] h-[900px] flex flex-col">
-      <Masthead standfirst={standfirst} nextEventSummary={nextEventSummary} totalEvents={totalEvents} />
+    <div
+      data-testid="broadsheet-home"
+      className="broadsheet-root w-[1600px] h-[900px] flex flex-col"
+    >
+      <Masthead
+        standfirst={standfirst}
+        nextEventSummary={nextEventSummary}
+        totalEvents={totalEvents}
+      />
       {/*
        * This is a fixed 900px canvas with no scrolling — content that runs
        * long must clip, never spill under the footer. `overflow-hidden` here

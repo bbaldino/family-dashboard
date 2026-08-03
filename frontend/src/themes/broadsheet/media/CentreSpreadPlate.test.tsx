@@ -27,7 +27,9 @@ describe('CentreSpreadPlate', () => {
   })
 
   it('builds the caption with album/year/artist/track, and no Label or "of {m}" clause', () => {
-    const { container } = render(<CentreSpreadPlate track={fullTrack} isPlaying {...noopHandlers()} />)
+    const { container } = render(
+      <CentreSpreadPlate track={fullTrack} isPlaying {...noopHandlers()} />,
+    )
     expect(container.textContent).toContain('Late Bloom, 2023 — The Night Shift. Track 1.')
     expect(container.textContent).not.toContain('Harbor Sound Records')
     expect(container.textContent).not.toContain('of 11')

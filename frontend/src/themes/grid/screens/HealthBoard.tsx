@@ -49,29 +49,20 @@ function SummaryStrip({
 export function HealthBoard() {
   const { data, isLoading, error, dataUpdatedAt } = useQuery({
     queryKey: ['health', 'status'],
-    queryFn: () =>
-      fetch('/api/health/status').then((r) => r.json() as Promise<Service[]>),
+    queryFn: () => fetch('/api/health/status').then((r) => r.json() as Promise<Service[]>),
     refetchInterval: 30 * 1000,
     staleTime: 15 * 1000,
   })
 
   if (isLoading && !data) {
-    return (
-      <div className="p-4 text-text-muted text-sm">Loading service health…</div>
-    )
+    return <div className="p-4 text-text-muted text-sm">Loading service health…</div>
   }
   if (error) {
-    return (
-      <div className="p-4 text-error text-sm">
-        Couldn't reach the health service.
-      </div>
-    )
+    return <div className="p-4 text-error text-sm">Couldn't reach the health service.</div>
   }
 
   const services = data ?? []
-  const sorted = [...services].sort(
-    (a, b) => severity(b.status) - severity(a.status),
-  )
+  const sorted = [...services].sort((a, b) => severity(b.status) - severity(a.status))
   const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt) : null
 
   return (
@@ -80,9 +71,7 @@ export function HealthBoard() {
         <h1 className="text-lg font-bold text-text-primary">Homelab Health</h1>
         <span className="text-xs text-text-muted">auto-refreshing every 30s</span>
       </div>
-      {services.length > 0 && (
-        <SummaryStrip services={services} lastUpdated={lastUpdated} />
-      )}
+      {services.length > 0 && <SummaryStrip services={services} lastUpdated={lastUpdated} />}
       {services.length === 0 ? (
         <div className="text-text-muted text-sm">No services being monitored.</div>
       ) : (

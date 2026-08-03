@@ -52,7 +52,11 @@ function makeAlarm(
 }
 
 export const ALARM_SOUNDS: AlarmSound[] = [
-  makeAlarm('gentle-chime', 'Gentle Chime', 'Two-note ascending chime, soft and musical', 2.4,
+  makeAlarm(
+    'gentle-chime',
+    'Gentle Chime',
+    'Two-note ascending chime, soft and musical',
+    2.4,
     (ctx, t) => {
       for (let i = 0; i < 3; i++) {
         const offset = i * 0.8
@@ -61,7 +65,11 @@ export const ALARM_SOUNDS: AlarmSound[] = [
       }
     },
   ),
-  makeAlarm('kitchen-bell', 'Kitchen Bell', 'Quick triple ding at a bright pitch', 2.5,
+  makeAlarm(
+    'kitchen-bell',
+    'Kitchen Bell',
+    'Quick triple ding at a bright pitch',
+    2.5,
     (ctx, t) => {
       for (let i = 0; i < 3; i++) {
         tone(ctx, 1047, t + i * 0.35, 0.2, 0.25, 'triangle')
@@ -71,16 +79,18 @@ export const ALARM_SOUNDS: AlarmSound[] = [
       }
     },
   ),
-  makeAlarm('soft-doorbell', 'Soft Doorbell', 'Warm two-tone doorbell chime', 2.4,
-    (ctx, t) => {
-      for (let i = 0; i < 2; i++) {
-        const offset = i * 1.2
-        tone(ctx, 659, t + offset, 0.8, 0.2, 'sine')
-        tone(ctx, 523, t + offset + 0.3, 1.0, 0.15, 'sine')
-      }
-    },
-  ),
-  makeAlarm('xylophone-cascade', 'Xylophone Cascade', 'Rising 4-note musical phrase', 2.4,
+  makeAlarm('soft-doorbell', 'Soft Doorbell', 'Warm two-tone doorbell chime', 2.4, (ctx, t) => {
+    for (let i = 0; i < 2; i++) {
+      const offset = i * 1.2
+      tone(ctx, 659, t + offset, 0.8, 0.2, 'sine')
+      tone(ctx, 523, t + offset + 0.3, 1.0, 0.15, 'sine')
+    }
+  }),
+  makeAlarm(
+    'xylophone-cascade',
+    'Xylophone Cascade',
+    'Rising 4-note musical phrase',
+    2.4,
     (ctx, t) => {
       const notes = [523, 659, 784, 1047]
       for (let r = 0; r < 2; r++) {
@@ -90,7 +100,11 @@ export const ALARM_SOUNDS: AlarmSound[] = [
       }
     },
   ),
-  makeAlarm('meditation-bowl', 'Meditation Bowl', 'Single resonant tone that fades slowly', 6.5,
+  makeAlarm(
+    'meditation-bowl',
+    'Meditation Bowl',
+    'Single resonant tone that fades slowly',
+    6.5,
     (ctx, t) => {
       tone(ctx, 262, t, 3.0, 0.15, 'sine')
       tone(ctx, 524, t, 2.5, 0.08, 'sine')
@@ -100,10 +114,19 @@ export const ALARM_SOUNDS: AlarmSound[] = [
       tone(ctx, 786, t + 3.51, 2.0, 0.04, 'sine')
     },
   ),
-  makeAlarm('marimba-pattern', 'Marimba Pattern', 'Warm wooden tone pattern, like a softer iPhone alarm', 3.6,
+  makeAlarm(
+    'marimba-pattern',
+    'Marimba Pattern',
+    'Warm wooden tone pattern, like a softer iPhone alarm',
+    3.6,
     (ctx, t) => {
       const pattern: [number, number][] = [
-        [523, 0], [659, 0.2], [523, 0.4], [784, 0.6], [659, 1.0], [523, 1.2],
+        [523, 0],
+        [659, 0.2],
+        [523, 0.4],
+        [784, 0.6],
+        [659, 1.0],
+        [523, 1.2],
       ]
       for (let r = 0; r < 2; r++) {
         for (const [freq, offset] of pattern) {
@@ -140,9 +163,12 @@ export function startRepeatingAlarm(soundId: string): () => void {
 
     // Auto-close after all repeats finish
     const totalDuration = REPEAT_COUNT * interval
-    const autoCloseTimer = setTimeout(() => {
-      ctx.close().catch(() => {})
-    }, totalDuration * 1000 + 1000) // +1s buffer
+    const autoCloseTimer = setTimeout(
+      () => {
+        ctx.close().catch(() => {})
+      },
+      totalDuration * 1000 + 1000,
+    ) // +1s buffer
 
     return () => {
       clearTimeout(autoCloseTimer)

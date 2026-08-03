@@ -6,11 +6,7 @@ interface UseWebRtcStreamOptions {
   enabled?: boolean
 }
 
-export function useWebRtcStream({
-  go2rtcUrl,
-  streamName,
-  enabled = true,
-}: UseWebRtcStreamOptions) {
+export function useWebRtcStream({ go2rtcUrl, streamName, enabled = true }: UseWebRtcStreamOptions) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const pcRef = useRef<RTCPeerConnection | null>(null)
   const [isConnected, setIsConnected] = useState(false)

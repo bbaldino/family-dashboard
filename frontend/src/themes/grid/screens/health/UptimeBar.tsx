@@ -17,10 +17,7 @@ function bucketStatuses(report: UptimeReport, buckets: number): Status[] {
     const segEnd = Math.min(seg.end, now)
     if (segEnd <= segStart) continue
     const startBucket = Math.floor((segStart - windowStart) / bucketSize)
-    const endBucket = Math.min(
-      buckets - 1,
-      Math.floor((segEnd - windowStart) / bucketSize),
-    )
+    const endBucket = Math.min(buckets - 1, Math.floor((segEnd - windowStart) / bucketSize))
     for (let b = startBucket; b <= endBucket; b++) {
       // null means "no data yet" for this bucket — always yield to real data.
       // Otherwise, worst status wins (critical > unknown > degraded > ok).
@@ -32,24 +29,14 @@ function bucketStatuses(report: UptimeReport, buckets: number): Status[] {
   return out
 }
 
-export function UptimeBar({
-  report,
-  buckets = 48,
-}: {
-  report: UptimeReport
-  buckets?: number
-}) {
+export function UptimeBar({ report, buckets = 48 }: { report: UptimeReport; buckets?: number }) {
   const painted = bucketStatuses(report, buckets)
   return (
     <div className="flex gap-[2px]">
       {painted.map((s, i) => {
         const tone = statusTone(s)
         return (
-          <div
-            key={i}
-            className={`h-6 flex-1 rounded-[2px] ${tone.bg}`}
-            title={s ?? 'no data'}
-          />
+          <div key={i} className={`h-6 flex-1 rounded-[2px] ${tone.bg}`} title={s ?? 'no data'} />
         )
       })}
     </div>

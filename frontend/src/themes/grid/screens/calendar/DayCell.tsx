@@ -13,7 +13,15 @@ interface DayCellProps {
   spanSlotHeight: number // px reserved at top for multi-day spanning bars
 }
 
-export function DayCell({ date, events, isToday, isCurrentMonth, isSelected, onClick, spanSlotHeight }: DayCellProps) {
+export function DayCell({
+  date,
+  events,
+  isToday,
+  isCurrentMonth,
+  isSelected,
+  onClick,
+  spanSlotHeight,
+}: DayCellProps) {
   const dayNum = date.getDate()
   const visible = events.slice(0, MAX_PILLS)
   const remaining = events.length - visible.length
@@ -29,9 +37,7 @@ export function DayCell({ date, events, isToday, isCurrentMonth, isSelected, onC
       <div className="flex-shrink-0 px-1 pt-1 mb-0.5">
         <span
           className={`inline-flex items-center justify-center text-[12px] font-medium ${
-            isToday
-              ? 'w-6 h-6 rounded-full bg-palette-1 text-white'
-              : 'text-text-primary'
+            isToday ? 'w-6 h-6 rounded-full bg-palette-1 text-white' : 'text-text-primary'
           }`}
         >
           {dayNum}

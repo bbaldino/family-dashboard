@@ -18,7 +18,10 @@ export function TimerBanner() {
       .catch(() => {})
   }, [])
 
-  const { timers, firedTimers, pause, resume, cancel, dismiss } = useTimers(serviceUrl, alarmSoundId)
+  const { timers, firedTimers, pause, resume, cancel, dismiss } = useTimers(
+    serviceUrl,
+    alarmSoundId,
+  )
 
   const hasContent = timers.length > 0 || firedTimers.length > 0
   if (!hasContent) return null

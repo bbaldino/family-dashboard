@@ -9,7 +9,11 @@ function computeUrgency(minutesUntilLeave: number): DriveUrgency {
   return 'urgent'
 }
 
-function computeDisplayText(urgency: DriveUrgency, durationText: string, minutesUntilLeave: number): string {
+function computeDisplayText(
+  urgency: DriveUrgency,
+  durationText: string,
+  minutesUntilLeave: number,
+): string {
   if (urgency === 'ok') return `${durationText} drive`
   if (urgency === 'urgent') return 'Leave now!'
   return `Leave in ${Math.max(0, Math.round(minutesUntilLeave))} min`
@@ -108,7 +112,12 @@ export function useDrivingTime(events: CalendarEvent[]) {
           )
 
           if (result.durationSeconds != null && result.durationText != null) {
-            updateDriveInfo(destination, result.durationSeconds, result.durationText, result.bufferMinutes)
+            updateDriveInfo(
+              destination,
+              result.durationSeconds,
+              result.durationText,
+              result.bufferMinutes,
+            )
           }
         } catch {
           // Don't block other destinations on failure
@@ -119,7 +128,9 @@ export function useDrivingTime(events: CalendarEvent[]) {
     if (relevantEvents.length > 0) {
       fetchAll()
     }
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [relevantKey, fetchTick, updateDriveInfo])
 

@@ -73,7 +73,14 @@ export function SearchResultsPanel({
 
   if (!results && isFetching) {
     return (
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ink-muted)', letterSpacing: '0.1em' }}>
+      <div
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 11,
+          color: 'var(--ink-muted)',
+          letterSpacing: '0.1em',
+        }}
+      >
         Searching…
       </div>
     )
@@ -81,7 +88,14 @@ export function SearchResultsPanel({
 
   if (items.length === 0) {
     return (
-      <div style={{ fontFamily: 'var(--font-display)', fontStyle: 'italic', fontSize: 15, color: 'var(--ink-muted)' }}>
+      <div
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontStyle: 'italic',
+          fontSize: 15,
+          color: 'var(--ink-muted)',
+        }}
+      >
         No results for &ldquo;{query}&rdquo;.
       </div>
     )

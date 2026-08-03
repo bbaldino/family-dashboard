@@ -69,7 +69,6 @@ export function worstOf(...statuses: Status[]): Status {
   return worst
 }
 
-
 /**
  * One outage: a maximal contiguous period of non-Ok *committed* (debounced)
  * status, so it is already grouped — one row per outage, not per failed poll.

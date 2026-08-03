@@ -15,18 +15,38 @@ const track = {
 
 describe('buildTrackActionGroups', () => {
   it('builds four play actions and two nav actions when both URIs are present', () => {
-    const groups = buildTrackActionGroups({ track, play: vi.fn(), navigate: vi.fn(), onClose: vi.fn() })
-    expect(groups[0].items.map((i) => i.label)).toEqual(['Play just this track', 'Play radio from this', 'Play next', 'Add to queue'])
+    const groups = buildTrackActionGroups({
+      track,
+      play: vi.fn(),
+      navigate: vi.fn(),
+      onClose: vi.fn(),
+    })
+    expect(groups[0].items.map((i) => i.label)).toEqual([
+      'Play just this track',
+      'Play radio from this',
+      'Play next',
+      'Add to queue',
+    ])
     expect(groups[1].items.map((i) => i.label)).toEqual(['Go to artist', 'Go to album'])
   })
 
   it('omits "Go to artist" when artist_uri is null', () => {
-    const groups = buildTrackActionGroups({ track: { ...track, artist_uri: null }, play: vi.fn(), navigate: vi.fn(), onClose: vi.fn() })
+    const groups = buildTrackActionGroups({
+      track: { ...track, artist_uri: null },
+      play: vi.fn(),
+      navigate: vi.fn(),
+      onClose: vi.fn(),
+    })
     expect(groups[1].items.map((i) => i.label)).toEqual(['Go to album'])
   })
 
   it('omits "Go to album" when album_uri is null', () => {
-    const groups = buildTrackActionGroups({ track: { ...track, album_uri: null }, play: vi.fn(), navigate: vi.fn(), onClose: vi.fn() })
+    const groups = buildTrackActionGroups({
+      track: { ...track, album_uri: null },
+      play: vi.fn(),
+      navigate: vi.fn(),
+      onClose: vi.fn(),
+    })
     expect(groups[1].items.map((i) => i.label)).toEqual(['Go to artist'])
   })
 
@@ -34,14 +54,20 @@ describe('buildTrackActionGroups', () => {
     const play = vi.fn()
     const groups = buildTrackActionGroups({ track, play, navigate: vi.fn(), onClose: vi.fn() })
     groups[0].items[0].onSelect()
-    expect(play).toHaveBeenCalledWith(track.uri, expect.objectContaining({ radio: false, enqueueMode: 'play' }))
+    expect(play).toHaveBeenCalledWith(
+      track.uri,
+      expect.objectContaining({ radio: false, enqueueMode: 'play' }),
+    )
   })
 
   it('"Play radio from this" plays with radio', () => {
     const play = vi.fn()
     const groups = buildTrackActionGroups({ track, play, navigate: vi.fn(), onClose: vi.fn() })
     groups[0].items[1].onSelect()
-    expect(play).toHaveBeenCalledWith(track.uri, expect.objectContaining({ radio: true, enqueueMode: 'play' }))
+    expect(play).toHaveBeenCalledWith(
+      track.uri,
+      expect.objectContaining({ radio: true, enqueueMode: 'play' }),
+    )
   })
 
   it('"Play next" and "Add to queue" use the matching enqueue mode', () => {
@@ -49,8 +75,16 @@ describe('buildTrackActionGroups', () => {
     const groups = buildTrackActionGroups({ track, play, navigate: vi.fn(), onClose: vi.fn() })
     groups[0].items[2].onSelect()
     groups[0].items[3].onSelect()
-    expect(play).toHaveBeenNthCalledWith(1, track.uri, expect.objectContaining({ enqueueMode: 'next' }))
-    expect(play).toHaveBeenNthCalledWith(2, track.uri, expect.objectContaining({ enqueueMode: 'add' }))
+    expect(play).toHaveBeenNthCalledWith(
+      1,
+      track.uri,
+      expect.objectContaining({ enqueueMode: 'next' }),
+    )
+    expect(play).toHaveBeenNthCalledWith(
+      2,
+      track.uri,
+      expect.objectContaining({ enqueueMode: 'add' }),
+    )
   })
 
   it('"Go to artist" navigates to the URL-encoded artist route', () => {

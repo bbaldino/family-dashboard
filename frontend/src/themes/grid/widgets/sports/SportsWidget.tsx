@@ -34,10 +34,7 @@ export function SportsWidget() {
       <WidgetCard title="Sports" category="sports">
         <div className="text-[13px] text-text-muted">
           Unable to load scores
-          <button
-            onClick={() => refetch()}
-            className="ml-2 text-palette-6 underline"
-          >
+          <button onClick={() => refetch()} className="ml-2 text-palette-6 underline">
             Retry
           </button>
         </div>

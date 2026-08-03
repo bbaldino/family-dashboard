@@ -15,7 +15,9 @@ export async function fetchJson<T>(url: string): Promise<T> {
   if (!response.ok) {
     const detail = await response
       .json()
-      .then((body) => (body && typeof body === 'object' && 'error' in body ? String(body.error) : ''))
+      .then((body) =>
+        body && typeof body === 'object' && 'error' in body ? String(body.error) : '',
+      )
       .catch(() => '')
     throw new Error(detail || `${url} failed with ${response.status}`)
   }

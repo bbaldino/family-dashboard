@@ -52,7 +52,10 @@ export function CentreSpread({ onClose }: { onClose: () => void }) {
   if (!currentItem || !activeQueue) return null
 
   return (
-    <div data-testid="broadsheet-centre-spread" className="broadsheet-root w-[1600px] h-[900px] flex flex-col">
+    <div
+      data-testid="broadsheet-centre-spread"
+      className="broadsheet-root w-[1600px] h-[900px] flex flex-col"
+    >
       <CentreSpreadMasthead
         room={activeQueue.displayName}
         trackTitle={currentItem.name}
@@ -64,9 +67,23 @@ export function CentreSpread({ onClose }: { onClose: () => void }) {
         className="flex-1 min-h-0 grid"
         style={{ gridTemplateColumns: '300px 1fr 340px' }}
       >
-        <CentreSpreadCredits track={currentItem} activeQueue={activeQueue} onSetVolume={setVolume} />
-        <div className="min-h-0" style={{ borderLeft: '1px solid var(--rule)', borderRight: '1px solid var(--rule)' }}>
-          <CentreSpreadPlate track={currentItem} isPlaying={isPlaying} onPause={pause} onResume={resume} onNext={next} onPrevious={previous} />
+        <CentreSpreadCredits
+          track={currentItem}
+          activeQueue={activeQueue}
+          onSetVolume={setVolume}
+        />
+        <div
+          className="min-h-0"
+          style={{ borderLeft: '1px solid var(--rule)', borderRight: '1px solid var(--rule)' }}
+        >
+          <CentreSpreadPlate
+            track={currentItem}
+            isPlaying={isPlaying}
+            onPause={pause}
+            onResume={resume}
+            onNext={next}
+            onPrevious={previous}
+          />
         </div>
         <CentreSpreadRunningOrder
           queueId={activeQueue.queueId}

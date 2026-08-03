@@ -44,11 +44,7 @@ export function AlbumPage() {
           <ArrowLeft size={20} />
         </button>
         {data.image_url ? (
-          <img
-            src={data.image_url}
-            alt={data.name}
-            className="w-20 h-20 rounded object-cover"
-          />
+          <img src={data.image_url} alt={data.name} className="w-20 h-20 rounded object-cover" />
         ) : (
           <div className="w-20 h-20 rounded bg-bg-card flex items-center justify-center">
             <Music size={28} className="text-text-secondary" />
@@ -61,8 +57,7 @@ export function AlbumPage() {
           {data.artist && (
             <button
               onClick={() =>
-                data.artist_uri &&
-                navigate(`/media/artist/${encodeUriParam(data.artist_uri)}`)
+                data.artist_uri && navigate(`/media/artist/${encodeUriParam(data.artist_uri)}`)
               }
               className="text-text-secondary text-sm truncate hover:underline text-left"
               disabled={!data.artist_uri}
@@ -72,10 +67,7 @@ export function AlbumPage() {
           )}
           {(data.year || data.tracks.length > 0) && (
             <div className="text-text-secondary text-xs mt-0.5">
-              {[
-                data.year || null,
-                data.tracks.length ? `${data.tracks.length} tracks` : null,
-              ]
+              {[data.year || null, data.tracks.length ? `${data.tracks.length} tracks` : null]
                 .filter(Boolean)
                 .join(' · ')}
             </div>
@@ -118,9 +110,7 @@ export function AlbumPage() {
               key={t.uri}
               className="flex items-center gap-3 px-2 py-2 rounded hover:bg-bg-primary"
             >
-              <span className="text-text-secondary text-xs w-6 text-right">
-                {i + 1}
-              </span>
+              <span className="text-text-secondary text-xs w-6 text-right">{i + 1}</span>
               <button
                 onClick={() => commonPlay('play', true)}
                 className="flex-1 min-w-0 text-left text-sm text-text-primary truncate"

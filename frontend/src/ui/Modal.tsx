@@ -33,19 +33,14 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
   if (!isOpen) return null
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
       <div className="absolute inset-0 bg-bg-overlay animate-[fadeIn_200ms_ease-out]" />
       <div
         className="relative w-[min(480px,90vw)] max-h-[80vh] bg-bg-card rounded-[var(--radius-card)] shadow-lg animate-[fadeIn_200ms_ease-out] overflow-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-border sticky top-0 bg-bg-card z-10">
-          {title && (
-            <h3 className="text-[15px] font-semibold text-text-primary">{title}</h3>
-          )}
+          {title && <h3 className="text-[15px] font-semibold text-text-primary">{title}</h3>}
           <button
             onClick={onClose}
             className="p-1 rounded-[var(--radius-button)] text-text-muted hover:text-text-secondary hover:bg-bg-card-hover transition-colors ml-auto"

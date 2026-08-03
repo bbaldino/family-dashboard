@@ -44,28 +44,27 @@ export function MetaFillerWidget({ fillers }: MetaFillerWidgetProps) {
     touchStartX.current = e.touches[0].clientX
   }, [])
 
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    if (touchStartX.current === null) return
-    const diff = e.changedTouches[0].clientX - touchStartX.current
-    touchStartX.current = null
-    if (Math.abs(diff) < SWIPE_THRESHOLD) return
-    if (diff < 0) {
-      advance()
-    } else {
-      goBack()
-    }
-  }, [advance, goBack])
+  const handleTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (touchStartX.current === null) return
+      const diff = e.changedTouches[0].clientX - touchStartX.current
+      touchStartX.current = null
+      if (Math.abs(diff) < SWIPE_THRESHOLD) return
+      if (diff < 0) {
+        advance()
+      } else {
+        goBack()
+      }
+    },
+    [advance, goBack],
+  )
 
   if (fillers.length === 0) return null
 
   const current = fillers[index % fillers.length]
 
   return (
-    <div
-      className="relative h-full"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
+    <div className="relative h-full" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       {/* Render the current filler widget (includes its own WidgetCard) */}
       <div key={`${current.key}-${cycleKey}`} className="h-full">
         {current.element}

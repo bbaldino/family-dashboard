@@ -43,7 +43,10 @@ describe('ForYouShelf', () => {
     renderShelf()
     expect(screen.getByText('For you')).toBeInTheDocument()
     fireEvent.click(screen.getByText('Late Night Drive'))
-    expect(play).toHaveBeenCalledWith('p1', expect.objectContaining({ mediaType: 'playlist', radio: false }))
+    expect(play).toHaveBeenCalledWith(
+      'p1',
+      expect.objectContaining({ mediaType: 'playlist', radio: false }),
+    )
   })
 
   it('gives a playlist card a menu with no "Play just this" or "Go to" — only radio/next/queue', () => {

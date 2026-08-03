@@ -96,7 +96,9 @@ describe('LiveGame', () => {
       sport: 'mlb',
       matchup: null,
       recentPlays: [],
-      scoringPlays: Array.from({ length: 6 }, (_, i) => play(`sp-${i}`, `Scoring play number ${i}`)),
+      scoringPlays: Array.from({ length: 6 }, (_, i) =>
+        play(`sp-${i}`, `Scoring play number ${i}`),
+      ),
       inProgressScoring: [],
       scoringRecap: null,
       winProbability: null,
@@ -139,7 +141,10 @@ describe('LiveGame', () => {
       recentPlays: [],
       scoringPlays: Array.from({ length: 6 }, (_, i) => play(`sp-${i}`, `Old scoring play ${i}`)),
       inProgressScoring: [play('ip-0', 'Current half-inning play')],
-      scoringRecap: { text: 'LAD scored 4 across the first six innings.', throughInning: { half: 'top', number: 6 } },
+      scoringRecap: {
+        text: 'LAD scored 4 across the first six innings.',
+        throughInning: { half: 'top', number: 6 },
+      },
       winProbability: null,
       leaders: { away: [], home: [] },
     }
@@ -166,7 +171,16 @@ describe('LiveGame', () => {
       sport: 'mlb',
       matchup: null,
       recentPlays: [],
-      scoringPlays: [{ id: 'sp-0', text: 'Homered to left.', inningHalf: 'Bottom', inningNumber: 1, scoring: true, teamId: null }],
+      scoringPlays: [
+        {
+          id: 'sp-0',
+          text: 'Homered to left.',
+          inningHalf: 'Bottom',
+          inningNumber: 1,
+          scoring: true,
+          teamId: null,
+        },
+      ],
       inProgressScoring: [],
       scoringRecap: null,
       winProbability: null,
@@ -177,11 +191,20 @@ describe('LiveGame', () => {
     expect(screen.queryByText(/Bottom/)).not.toBeInTheDocument()
   })
 
-  it('formats the inning label regardless of the feed\'s casing', () => {
+  it("formats the inning label regardless of the feed's casing", () => {
     const detail: GameLiveDetail = {
       sport: 'mlb',
       matchup: null,
-      recentPlays: [{ id: 'rp-0', text: 'Grounded out.', inningHalf: 'top', inningNumber: 5, scoring: false, teamId: null }],
+      recentPlays: [
+        {
+          id: 'rp-0',
+          text: 'Grounded out.',
+          inningHalf: 'top',
+          inningNumber: 5,
+          scoring: false,
+          teamId: null,
+        },
+      ],
       scoringPlays: [],
       inProgressScoring: [],
       scoringRecap: null,
@@ -196,7 +219,16 @@ describe('LiveGame', () => {
     const detail: GameLiveDetail = {
       sport: 'mlb',
       matchup: null,
-      recentPlays: [{ id: 'rp-0', text: 'Grounded out.', inningHalf: null, inningNumber: null, scoring: false, teamId: null }],
+      recentPlays: [
+        {
+          id: 'rp-0',
+          text: 'Grounded out.',
+          inningHalf: null,
+          inningNumber: null,
+          scoring: false,
+          teamId: null,
+        },
+      ],
       scoringPlays: [],
       inProgressScoring: [],
       scoringRecap: null,

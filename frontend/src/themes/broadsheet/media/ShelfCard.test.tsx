@@ -8,7 +8,13 @@ describe('ShelfCard', () => {
   it('renders the title and secondary line', () => {
     render(
       <ShelfCard
-        item={{ key: 'u1', name: 'Amber Hours', secondary: 'The Night Shift', imageUrl: null, onTap: () => {} }}
+        item={{
+          key: 'u1',
+          name: 'Amber Hours',
+          secondary: 'The Night Shift',
+          imageUrl: null,
+          onTap: () => {},
+        }}
       />,
     )
     expect(screen.getByText('Amber Hours')).toBeInTheDocument()
@@ -17,7 +23,17 @@ describe('ShelfCard', () => {
 
   it('calls onTap when pressed, with no menu wired', () => {
     const onTap = vi.fn()
-    render(<ShelfCard item={{ key: 'u1', name: 'Amber Hours', secondary: 'The Night Shift', imageUrl: null, onTap }} />)
+    render(
+      <ShelfCard
+        item={{
+          key: 'u1',
+          name: 'Amber Hours',
+          secondary: 'The Night Shift',
+          imageUrl: null,
+          onTap,
+        }}
+      />,
+    )
     expect(screen.getAllByRole('button')).toHaveLength(1)
     fireEvent.click(screen.getByRole('button'))
     expect(onTap).toHaveBeenCalledTimes(1)

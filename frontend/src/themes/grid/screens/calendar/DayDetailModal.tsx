@@ -31,9 +31,7 @@ export function DayDetailModal({ date, events, onClose }: DayDetailModalProps) {
                 style={{ background: 'var(--color-palette-1)', minHeight: '14px' }}
               />
               <div className="flex-1 min-w-0">
-                <div className="text-[11px] text-text-muted">
-                  {formatEventTimeFull(event)}
-                </div>
+                <div className="text-[11px] text-text-muted">{formatEventTimeFull(event)}</div>
                 <div className="text-[14px] font-medium text-text-primary">
                   {event.summary ?? '(No title)'}
                 </div>

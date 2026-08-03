@@ -10,7 +10,9 @@ export function useTopTracks() {
     queryKey: ['music', 'top-tracks'],
     queryFn: () => {
       const fixture = musicTopTracksFixtureFor(activeScenario)
-      return fixture ? Promise.resolve(fixture) : musicIntegration.api.get<TopTrack[]>('/top-tracks?limit=12')
+      return fixture
+        ? Promise.resolve(fixture)
+        : musicIntegration.api.get<TopTrack[]>('/top-tracks?limit=12')
     },
     refetchInterval: 5 * 60 * 1000,
   })

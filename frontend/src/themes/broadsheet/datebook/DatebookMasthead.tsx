@@ -77,15 +77,30 @@ export function DatebookMasthead({
             <div style={mastheadKickerStyle}>The Datebook</div>
             <div
               className="flex items-center"
-              style={{ gap: 8, color: 'var(--ink-muted)', fontFamily: 'var(--font-mono)', fontSize: 11 }}
+              style={{
+                gap: 8,
+                color: 'var(--ink-muted)',
+                fontFamily: 'var(--font-mono)',
+                fontSize: 11,
+              }}
             >
-              <button type="button" style={navButtonStyle} onClick={onPrevMonth} aria-label="Previous month">
+              <button
+                type="button"
+                style={navButtonStyle}
+                onClick={onPrevMonth}
+                aria-label="Previous month"
+              >
                 ‹
               </button>
               <span style={{ letterSpacing: '0.12em' }}>
                 {formatMonthYear(prev.year, prev.month)} · {formatMonthYear(next.year, next.month)}
               </span>
-              <button type="button" style={navButtonStyle} onClick={onNextMonth} aria-label="Next month">
+              <button
+                type="button"
+                style={navButtonStyle}
+                onClick={onNextMonth}
+                aria-label="Next month"
+              >
                 ›
               </button>
             </div>
@@ -102,9 +117,13 @@ export function DatebookMasthead({
         right={
           <>
             <div style={{ ...mastheadKickerStyle, textAlign: 'right' }}>The Tally</div>
-            <div className="flex justify-end" style={{ gap: 14, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink)' }}>
+            <div
+              className="flex justify-end"
+              style={{ gap: 14, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink)' }}
+            >
               <span>
-                <span style={{ color: 'var(--rust)', fontWeight: 700 }}>{tally.eventCount}</span> events
+                <span style={{ color: 'var(--rust)', fontWeight: 700 }}>{tally.eventCount}</span>{' '}
+                events
               </span>
               {/* Birthdays are omitted entirely rather than printed as "0
                *  birthdays" — see `tally.ts`'s header comment on why the
@@ -114,7 +133,10 @@ export function DatebookMasthead({
                *  conditionally like birthdays — there's no field to check. */}
               {tally.birthdayCount > 0 && (
                 <span>
-                  <span style={{ color: 'var(--forest)', fontWeight: 700 }}>{tally.birthdayCount}</span> birthdays
+                  <span style={{ color: 'var(--forest)', fontWeight: 700 }}>
+                    {tally.birthdayCount}
+                  </span>{' '}
+                  birthdays
                 </span>
               )}
             </div>
@@ -124,7 +146,12 @@ export function DatebookMasthead({
 
       <div
         className="grid items-baseline"
-        style={{ gridTemplateColumns: 'auto 1fr auto', gap: 18, padding: '8px 56px 10px', borderBottom: '1px solid var(--rule)' }}
+        style={{
+          gridTemplateColumns: 'auto 1fr auto',
+          gap: 18,
+          padding: '8px 56px 10px',
+          borderBottom: '1px solid var(--rule)',
+        }}
       >
         <Kicker>↘ from the house</Kicker>
         <p className="m-0" style={standfirstProseStyle}>
