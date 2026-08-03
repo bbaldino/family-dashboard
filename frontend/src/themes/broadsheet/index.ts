@@ -8,6 +8,7 @@ import { Media } from './screens/Media'
 import { Album } from './screens/Album'
 import { Artist } from './screens/Artist'
 import { Cameras } from './screens/Cameras'
+import { Health } from './screens/Health'
 import { broadsheetCanvas } from './canvas'
 import { BroadsheetLayout } from './layout/BroadsheetLayout'
 
@@ -23,6 +24,7 @@ export const broadsheetTheme: ThemeModule = {
     'media.album': Album,
     'media.artist': Artist,
     cameras: Cameras,
+    health: Health,
   },
   overlays: [DoorbellRingListener],
 }
