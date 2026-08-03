@@ -1,7 +1,6 @@
 import { Check } from 'lucide-react'
 import { useCountdowns } from '@/data/countdowns'
 import type { CountdownItem } from '@/data/countdowns'
-import { useOnThisDay } from '@/data/on-this-day'
 import { useChores } from '@/data/chores'
 import type { PersonAssignments, TodayResponse } from '@/data/chores'
 import { useLunchMenu } from '@/data/nutrislice'
@@ -13,7 +12,6 @@ import { Kicker } from '@/themes/broadsheet/ui/Kicker'
  *  for it; approximated as a blend of the two we do have (per the design
  *  brief's guidance on `ruleSoft`/`ink2`/`accent2`: approximate rather than
  *  add a token) instead of hard-coding a new colour. */
-const SOFT_ACCENT = 'color-mix(in srgb, var(--rust) 55%, var(--ink-muted) 45%)'
 
 /* ───────────────────────── Lunch ─────────────────────────
  * Mock: broadsheet-v2.jsx:229-249. */
@@ -136,34 +134,30 @@ interface VisibleChoreGroup {
  *  canvas's logical scale, plus an 8px gap between groups), so total cost
  *  is `people × (1 + tasksPerPerson)`, not just a task count.
  *
- *  These two numbers were tuned by measurement, not guesswork: rendered the
- *  household column live via Playwright route interception (school-day
- *  lunch populated + coming-up at its cap + the on-this-day blurb at its
- *  tight 2-line "crowded" clamp — the fullest realistic combination this
- *  file's other comments already establish) and checked whether the
- *  on-this-day *blurb paragraph itself* — not just its heading, which sits
- *  above it and can fit while the paragraph below still clips — stayed
- *  inside the body row's bounds. That distinction mattered: an
- *  `On this day` heading can report a healthy margin while the blurb
- *  beneath it is entirely clipped (found live, screenshotted, and reverted
- *  once caught), because `margin-top: auto` pins the *section* to the
- *  column's foot but doesn't protect the section's own children from being
- *  pushed past the fold if the section is taller than the space that's
- *  left. `MAX_VISIBLE_PEOPLE = 2` matches today's actual household size —
- *  a third member would need to join before it ever engages.
- *  `MAX_TASKS_PER_PERSON = 2` is the largest value that keeps the blurb
- *  paragraph fully on-screen at the worst case the caps ever allow (two
- *  people, each pushed past their cap) — verified both by measuring the
- *  paragraph's own bounding box and by screenshot. It's tighter than it
- *  looks: this household's own recorded history has both people
- *  simultaneously over a cap of 2 on roughly half of sampled days, so the
- *  "+N more" fallback is a routine sight, not a rare edge case — and the
- *  fit has zero measured clearance to spare, tight enough that a webfont
- *  swap on a cold boot is a real (if unconfirmed) risk. If the household
- *  grows past two people, or this ever clips in practice, re-measure
- *  against the blurb paragraph rather than raising these blind. */
-const MAX_VISIBLE_PEOPLE = 2
-const MAX_TASKS_PER_PERSON = 2
+ *  The original pair were tuned by measurement rather than guesswork:
+ *  rendered live via Playwright route interception at the column's fullest
+ *  realistic state, checking that the section beneath them was not clipped.
+ *  A heading can report a healthy margin while the paragraph below it is
+ *  entirely off the fold, so what mattered was measuring the *last* element,
+ *  not the section's top edge.
+ *
+ *  These were 2 and 2, sized so the On this day blurb beneath them stayed
+ *  fully on screen — with, as measured at the time, zero clearance to spare.
+ *  That section has since been taken off Home entirely (the design moved it
+ *  to the glance strip precisely so chores get the vertical room), so the
+ *  constraint that forced 2/2 no longer exists and the caps rise to 4/4 to
+ *  match the design's own `CHORE_TASK_CAP`.
+ *
+ *  Two things still hold. The caps exist so nothing is ever sliced mid-row —
+ *  anything past them rolls into a "+N more" line rather than being clipped,
+ *  and this household routinely exceeds a cap of 2, so that line is a normal
+ *  sight rather than an edge case. And if On this day is ever restored here,
+ *  or the column gains another section, these must be re-measured against
+ *  whatever sits below them rather than left at 4 on the assumption the room
+ *  is still there.
+ */
+const MAX_VISIBLE_PEOPLE = 4
+const MAX_TASKS_PER_PERSON = 4
 
 function capChoreGroups(persons: PersonAssignments[]): {
   groups: VisibleChoreGroup[]
@@ -335,13 +329,25 @@ function ChoresSection({ chores }: { chores: TodayResponse }) {
  * Mock: broadsheet-v2.jsx:288-301. The dotted leader rule that flexes to
  * fill the gap between title and count is the signature detail here. */
 
-const MAX_COMING_UP = 3
+const MAX_COMING_UP = 4
 
 function ComingUpSection({ items }: { items: CountdownItem[] }) {
   return (
     <div style={{ marginTop: 12, paddingTop: 8, borderTop: '1px solid var(--rule)' }}>
       <Kicker color="var(--ink-muted)">Coming up</Kicker>
-      <ul className="m-0 p-0 flex flex-col" style={{ listStyle: 'none', marginTop: 4, gap: 2 }}>
+      {/* Two-up, per the design: four entries across two columns rather than
+          a single stack of three, so the column's width carries them instead
+          of its height. */}
+      <ul
+        className="m-0 p-0"
+        style={{
+          listStyle: 'none',
+          marginTop: 4,
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '2px 24px',
+        }}
+      >
         {items.slice(0, MAX_COMING_UP).map((item) => (
           <li
             key={item.id}
@@ -399,85 +405,10 @@ function ComingUpSection({ items }: { items: CountdownItem[] }) {
  * this is the column's bottom-pinned section, so an unbounded blurb could
  * push its own top edge past what's visible when the sections above it are
  * full. Was `line-clamp-3` until `WeatherStrip` (the full-width band above
- * the footer) took roughly 70px from every column above it — measured live
- * against the running dashboard, the column's fullest state (lunch, capped
- * chores, capped coming-up, and this blurb) still fit at 3 lines with zero
- * pixels of clearance, which is a hairline to build on rather than a real
- * margin (webfont metrics before `Newsreader Variable` finishes loading on
- * a cold boot could tip it). Trimmed to 2 lines for real headroom, which
- * also now matches `grid`'s own on-this-day widget for this exact field
- * (`OnThisDayWidget.tsx`), coincidentally already 2. */
-
-/**
- * How many lines of the blurb to show. Real entries run 80–165 characters —
- * two lines holds roughly 90, so a fixed two-line clamp truncates most of
- * them, and on a quiet day it does so with a screenful of empty column
- * sitting above. But the clamp can't simply be raised: when Lunch and Chores
- * are both populated (i.e. a school day) the column is full, and the extra
- * lines are exactly what would push this block past the canvas.
- *
- * So the clamp follows the column's own occupancy — which we already know
- * here, without measuring anything. A crowded column keeps the tight
- * two-line setting; a sparse one spends the space it actually has.
- */
-function blurbLineClamp(crowded: boolean): 'line-clamp-2' | 'line-clamp-4' {
-  return crowded ? 'line-clamp-2' : 'line-clamp-4'
-}
-
-function OnThisDaySection({
-  event,
-  crowded,
-}: {
-  event: { year: number | null; text: string }
-  crowded: boolean
-}) {
-  return (
-    <div style={{ marginTop: 'auto', paddingTop: 8, borderTop: '1px solid var(--rule)' }}>
-      <div className="flex items-baseline" style={{ gap: 10 }}>
-        <span
-          className="uppercase whitespace-nowrap"
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 9,
-            color: 'var(--ink-muted)',
-            letterSpacing: '0.18em',
-          }}
-        >
-          On this day
-        </span>
-        {event.year !== null && (
-          <span
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontStyle: 'italic',
-              fontSize: 22,
-              lineHeight: 0.9,
-              color: SOFT_ACCENT,
-            }}
-          >
-            {event.year}
-          </span>
-        )}
-      </div>
-      <p
-        className={`m-0 ${blurbLineClamp(crowded)}`}
-        style={{
-          marginTop: 4,
-          fontFamily: 'var(--font-display)',
-          fontStyle: 'italic',
-          // The mock sets 11.5px, but its sample blurb was one short line. Real
-          // entries run to three, and at wall-viewing distance 11.5px is too
-          // small to be worth reading — sized up to sit with the lunch list.
-          fontSize: 15,
-          lineHeight: 1.4,
-          color: 'var(--ink)',
-        }}
-      >
-        {event.text}
-      </p>
-    </div>
-  )
-}
+ * the footer) took roughly 70px from every column above it. With On this day
+ * now off Home, this section is the last block in the column and the design
+ * gives it two columns of four (`broadsheet-v2.jsx`), which is what the cap
+ * below reflects. */
 
 /**
  * The third column of the Home screen's body: the household rundown —
@@ -498,25 +429,18 @@ export function HouseholdColumn() {
   const { data: lunch } = useLunchMenu()
   const { data: chores } = useChores()
   const { data: countdowns } = useCountdowns()
-  const { data: onThisDay } = useOnThisDay()
 
   const hasChores = !!chores && chores.total_count > 0
   const nextCountdowns = countdowns ?? []
-  const onThisDayEvent = onThisDay?.events?.[0]
 
-  const hasAnything = !!lunch || hasChores || nextCountdowns.length > 0 || !!onThisDayEvent
+  const hasAnything = !!lunch || hasChores || nextCountdowns.length > 0
   if (!hasAnything) return null
-
-  // A lunch menu with actual items and a chore list are what fill this column;
-  // with both present there is no slack left for a longer blurb below.
-  const crowded = !!lunch?.today && hasChores
 
   return (
     <div className="h-full min-h-0 flex flex-col overflow-hidden">
       {lunch && <LunchSection lunch={lunch} />}
       {hasChores && chores && <ChoresSection chores={chores} />}
       {nextCountdowns.length > 0 && <ComingUpSection items={nextCountdowns} />}
-      {onThisDayEvent && <OnThisDaySection event={onThisDayEvent} crowded={crowded} />}
     </div>
   )
 }

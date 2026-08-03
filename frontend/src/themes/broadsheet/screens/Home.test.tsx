@@ -169,7 +169,7 @@ describe('broadsheet Home', () => {
       </MemoryRouter>,
     )
     const offdayBody = screen.getByTestId('broadsheet-home-body')
-    expect(offdayBody.style.gridTemplateColumns).toBe('1.5fr 1fr 0.9fr')
+    expect(offdayBody.style.gridTemplateColumns).toBe('1.15fr 1fr 1.2fr')
     unmount()
 
     useSportsGames.mockReturnValue({
@@ -182,6 +182,6 @@ describe('broadsheet Home', () => {
       </MemoryRouter>,
     )
     const liveBody = screen.getByTestId('broadsheet-home-body')
-    expect(liveBody.style.gridTemplateColumns).toBe('0.85fr 1.6fr 0.78fr')
+    expect(liveBody.style.gridTemplateColumns).toBe('0.8fr 1.5fr 0.95fr')
   })
 })

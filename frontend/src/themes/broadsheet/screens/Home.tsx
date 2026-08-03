@@ -16,8 +16,8 @@ import { isAllDay, nextEventLabel } from '@/themes/broadsheet/home/event-format'
  *  sports column widens and the schedule column narrows once a game goes
  *  live, so the page re-proportions around it. Values from the design mock
  *  (`broadsheet-v2.jsx:139`). */
-const BODY_COLUMNS_OFFDAY = '1.5fr 1fr 0.9fr'
-const BODY_COLUMNS_LIVE = '0.85fr 1.6fr 0.78fr'
+const BODY_COLUMNS_OFFDAY = '1.15fr 1fr 1.2fr'
+const BODY_COLUMNS_LIVE = '0.8fr 1.5fr 0.95fr'
 
 /** Today's events that haven't started yet — all-day events always count. */
 function upcomingTodayEvents(today: CalendarDay | undefined, now: Date): CalendarEvent[] {
