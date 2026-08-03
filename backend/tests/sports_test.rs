@@ -22,12 +22,16 @@ fn parse_summary_returns_none_for_empty_object() {
 
 #[test]
 fn test_transform_scoreboard_filters_tracked_teams() {
+    // Recent for the same reason as test_transform_game_states: the window
+    // filter drops stale games, so a fixed date eventually makes this assert
+    // absence instead of filtering.
+    let recent = (chrono::Utc::now() - chrono::Duration::hours(1)).to_rfc3339();
     let raw = json!({
         "events": [
             {
                 "id": "1",
                 "name": "Team A at Team B",
-                "date": "2026-03-16T20:00:00Z",
+                "date": recent,
                 "competitions": [{
                     "competitors": [
                         {
@@ -98,11 +102,18 @@ fn test_transform_scoreboard_filters_tracked_teams() {
 
 #[test]
 fn test_transform_game_states() {
+    // Recent, not fixed. `transform_scoreboard` drops Final and Postponed
+    // games older than its window (48h here), so a hardcoded date silently
+    // stops exercising those two states the moment it ages past the window —
+    // the assertions then fail on absence rather than on a wrong mapping.
+    // This test is about status-name -> GameState, so the date has to stay
+    // inside the window on every run.
+    let recent = (chrono::Utc::now() - chrono::Duration::hours(1)).to_rfc3339();
     let make_event = |id: &str, status_name: &str| {
         json!({
             "id": id,
             "name": "Game",
-            "date": "2026-03-16T20:00:00Z",
+            "date": recent,
             "competitions": [{
                 "competitors": [
                     {
