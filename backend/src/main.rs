@@ -1,5 +1,6 @@
 use dashboard_backend::{db, integrations};
 use std::net::SocketAddr;
+use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::{ServeDir, ServeFile};
 
 /// One-time migration: copy google-calendar OAuth credentials to google-cloud prefix.
@@ -54,6 +55,22 @@ async fn main() {
     let spa_service =
         ServeDir::new("static").not_found_service(ServeFile::new("static/index.html"));
 
+    // The doorbell page is embedded cross-origin and receives `@font-face`
+    // rules pointing back at /fonts (see the frontend's
+    // `data/doorbell/theming.ts`). Fonts are CORS-restricted even when
+    // requested from plain CSS, so without these headers every face fails to
+    // load and silently degrades to a generic family. Scoped to /fonts rather
+    // than applied to the whole app: these are public static assets with
+    // nothing to leak, and the API has no business being readable
+    // cross-origin.
+    let fonts_service = axum::Router::new()
+        .fallback_service(ServeDir::new("static/fonts"))
+        .layer(
+            CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods([axum::http::Method::GET, axum::http::Method::HEAD]),
+        );
+
     // Runtime config endpoint — serves env vars to the frontend so they don't
     // need to be baked in at build time.
     let runtime_config = axum::Router::new().route(
@@ -69,6 +86,7 @@ async fn main() {
     let app = axum::Router::new()
         .nest("/api", api_routes)
         .nest("/api", runtime_config)
+        .nest("/fonts", fonts_service)
         .fallback_service(spa_service);
 
     let port: u16 = std::env::var("PORT")
