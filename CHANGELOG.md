@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.3.0](https://github.com/bbaldino/family-dashboard/compare/v0.2.0...v0.3.0) (2026-08-03)
+
+
+### Features
+
+* **data/doorbell:** theme the embedded doorbell page over postMessage ([f8dd910](https://github.com/bbaldino/family-dashboard/commit/f8dd910040e730b28f4e7abf3cab3e956c0f0375))
+* **themes/broadsheet:** add cameras screen, the Watch Room ([fbba6d0](https://github.com/bbaldino/family-dashboard/commit/fbba6d0a0a1a4b836fbf8b04e2feeba8a383ed59))
+* **themes/broadsheet:** add The Wire, the service health board ([de8657e](https://github.com/bbaldino/family-dashboard/commit/de8657e5f3f908e0e47b5a903eadd6f12a21172e))
+* **themes/broadsheet:** announce a doorbell press as a stop-press slip ([1779bbd](https://github.com/bbaldino/family-dashboard/commit/1779bbd6cac90fb41a76826f1756f17bb957549c))
+* **themes/broadsheet:** dress the Watch Room's camera feed ([123844f](https://github.com/bbaldino/family-dashboard/commit/123844f570fcc8b0513a89d1a6b7c2f47160d753))
+
+
+### Bug Fixes
+
+* **app:** decide HA availability over the websocket, not a CORS-blocked fetch ([d36ae2c](https://github.com/bbaldino/family-dashboard/commit/d36ae2c574fbab472664e3fb94518f725cd5a442))
+* **hooks:** return null for a missing entity instead of throwing ([3320e76](https://github.com/bbaldino/family-dashboard/commit/3320e762fdea074441e0bc56a5f8fc6f7ded3bef))
+
 ## [0.2.0](https://github.com/bbaldino/family-dashboard/compare/v0.1.0...v0.2.0) (2026-08-03)
 
 
