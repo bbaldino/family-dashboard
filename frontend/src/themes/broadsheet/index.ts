@@ -1,5 +1,6 @@
 import './broadsheet.css'
 import type { ThemeModule } from '@/shell/types'
+import { DoorbellRingListener } from '@/themes/broadsheet/overlays/doorbell/DoorbellRingListener'
 import { registerTheme } from '@/shell/ThemeRegistry'
 import { Home } from './screens/Home'
 import { Calendar } from './screens/Calendar'
@@ -23,7 +24,7 @@ export const broadsheetTheme: ThemeModule = {
     'media.artist': Artist,
     cameras: Cameras,
   },
-  overlays: [],
+  overlays: [DoorbellRingListener],
 }
 
 registerTheme(broadsheetTheme)
