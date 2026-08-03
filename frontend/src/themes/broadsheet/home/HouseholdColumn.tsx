@@ -107,8 +107,9 @@ function LunchSection({ lunch }: { lunch: LunchMenuData }) {
 
 /* ───────────────────────── Chores ─────────────────────────
  * Mock: broadsheet-v2.jsx:252-297. The mock's chores are clickable and show
- * a per-person streak; ours are read-only (per the brief — no toggling in
- * this task) and the streak has no backing data (`TodayResponse` carries
+ * a per-person streak; ours now toggle (tap a row to check or uncheck it —
+ * see the row's own comment for why the tap target is the existing box) and
+ * the streak has no backing data (`TodayResponse` carries
  * `completed_count`/`total_count`, not a streak), so it's omitted rather
  * than invented. Everything else the mock shows — chores grouped under a
  * person heading, each with their own done/total — the real `useChores()`
@@ -199,7 +200,13 @@ function capChoreGroups(persons: PersonAssignments[]): {
   return { groups, hiddenPeopleCount: persons.length - visiblePersons.length }
 }
 
-function ChoresSection({ chores }: { chores: TodayResponse }) {
+function ChoresSection({
+  chores,
+  onToggle,
+}: {
+  chores: TodayResponse
+  onToggle: (id: number, completed: boolean) => void
+}) {
   const { groups, hiddenPeopleCount } = capChoreGroups(chores.persons ?? [])
 
   return (
@@ -263,38 +270,61 @@ function ChoresSection({ chores }: { chores: TodayResponse }) {
                 </div>
                 <ul className="m-0 p-0 flex flex-col" style={{ listStyle: 'none' }}>
                   {group.tasks.map((task) => (
-                    <li
-                      key={task.id}
-                      className="flex items-center"
-                      style={{ gap: 9, padding: '4px 0 4px 2px' }}
-                    >
-                      {/* Read-only status mark, not a control — the mock's
-                       *  chores are clickable, ours aren't (per the brief).
-                       *  No cursor, no hover, no button semantics. */}
-                      <span
-                        className="flex items-center justify-center flex-shrink-0"
+                    <li key={task.id}>
+                      {/* The row's own box is the tap target — a button that
+                       *  fills it, carrying the padding the `li` used to hold
+                       *  rather than adding a box of its own. That is not a
+                       *  stylistic preference: this column is `overflow:
+                       *  hidden` and clears its last line by 0.4px at six
+                       *  chores per person, so any extra height silently
+                       *  pushes Coming up under the fold.
+                       *
+                       *  29.9px is under the 44px touch guideline, but the row
+                       *  is 592px wide, and a toggle is self-undoing — a stray
+                       *  tap is corrected by tapping again, which is why the
+                       *  brief's original read-only treatment could be
+                       *  relaxed. */}
+                      <button
+                        type="button"
+                        aria-pressed={task.completed}
+                        onClick={() => onToggle(task.id, !task.completed)}
+                        className="flex items-center w-full text-left active:opacity-60"
                         style={{
-                          width: 16,
-                          height: 16,
-                          border: `1.5px solid ${task.completed ? 'var(--forest)' : 'var(--ink)'}`,
-                          background: task.completed ? 'var(--forest)' : 'transparent',
-                          color: 'var(--paper)',
+                          gap: 9,
+                          padding: '4px 0 4px 2px',
+                          background: 'none',
+                          border: 'none',
+                          font: 'inherit',
+                          color: 'inherit',
+                          cursor: 'pointer',
+                          WebkitTapHighlightColor: 'transparent',
                         }}
                       >
-                        {task.completed && <Check size={11} strokeWidth={2.5} />}
-                      </span>
-                      <span
-                        className="flex-1 min-w-0"
-                        style={{
-                          fontFamily: 'var(--font-display)',
-                          fontSize: 13.5,
-                          lineHeight: 1.25,
-                          textDecoration: task.completed ? 'line-through' : 'none',
-                          color: task.completed ? 'var(--ink-muted)' : 'var(--ink)',
-                        }}
-                      >
-                        {task.name}
-                      </span>
+                        <span
+                          className="flex items-center justify-center flex-shrink-0"
+                          style={{
+                            width: 16,
+                            height: 16,
+                            border: `1.5px solid ${task.completed ? 'var(--forest)' : 'var(--ink)'}`,
+                            background: task.completed ? 'var(--forest)' : 'transparent',
+                            color: 'var(--paper)',
+                          }}
+                        >
+                          {task.completed && <Check size={11} strokeWidth={2.5} />}
+                        </span>
+                        <span
+                          className="flex-1 min-w-0"
+                          style={{
+                            fontFamily: 'var(--font-display)',
+                            fontSize: 13.5,
+                            lineHeight: 1.25,
+                            textDecoration: task.completed ? 'line-through' : 'none',
+                            color: task.completed ? 'var(--ink-muted)' : 'var(--ink)',
+                          }}
+                        >
+                          {task.name}
+                        </span>
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -443,7 +473,7 @@ function ComingUpSection({ items }: { items: CountdownItem[] }) {
  */
 export function HouseholdColumn() {
   const { data: lunch } = useLunchMenu()
-  const { data: chores } = useChores()
+  const { data: chores, completeAssignment, uncompleteAssignment } = useChores()
   const { data: countdowns } = useCountdowns()
 
   const hasChores = !!chores && chores.total_count > 0
@@ -452,10 +482,16 @@ export function HouseholdColumn() {
   const hasAnything = !!lunch || hasChores || nextCountdowns.length > 0
   if (!hasAnything) return null
 
+  // `completed` is the desired next state. `useChores` swallows failures and
+  // reverts its own optimistic flip, so there is nothing to catch here.
+  const handleToggle = (id: number, completed: boolean) => {
+    void (completed ? completeAssignment(id) : uncompleteAssignment(id))
+  }
+
   return (
     <div className="h-full min-h-0 flex flex-col overflow-hidden">
       {lunch && <LunchSection lunch={lunch} />}
-      {hasChores && chores && <ChoresSection chores={chores} />}
+      {hasChores && chores && <ChoresSection chores={chores} onToggle={handleToggle} />}
       {nextCountdowns.length > 0 && <ComingUpSection items={nextCountdowns} />}
     </div>
   )

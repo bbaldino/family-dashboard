@@ -1,11 +1,13 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { HouseholdColumn } from './HouseholdColumn'
 
 const useCountdowns = vi.hoisted(() => vi.fn())
 const useOnThisDay = vi.hoisted(() => vi.fn())
 const useChores = vi.hoisted(() => vi.fn())
 const useLunchMenu = vi.hoisted(() => vi.fn())
+const completeAssignment = vi.hoisted(() => vi.fn())
+const uncompleteAssignment = vi.hoisted(() => vi.fn())
 vi.mock('@/data/countdowns', () => ({ useCountdowns }))
 vi.mock('@/data/on-this-day', () => ({ useOnThisDay }))
 vi.mock('@/data/chores', () => ({ useChores }))
@@ -13,13 +15,23 @@ vi.mock('@/data/nutrislice', () => ({ useLunchMenu }))
 
 describe('HouseholdColumn', () => {
   beforeEach(() => {
+    // completeAssignment/uncompleteAssignment are shared spies reused across
+    // every mockReturnValue call in this file (see useChores.test.tsx for the
+    // same pattern) — clear their call history so one test's toggle doesn't
+    // leak into the next.
+    vi.clearAllMocks()
     // useCountdowns: UsePollingResult<CountdownItem[]> — data is the array
     // directly (or null), not { items: [...] }.
     useCountdowns.mockReturnValue({ data: null, isLoading: false, error: null, refetch: vi.fn() })
     // useOnThisDay: plain react-query result; data is OnThisDayData | undefined.
     useOnThisDay.mockReturnValue({ data: undefined, isLoading: false })
     // useChores: data is TodayResponse | null (persons/completed_count/total_count).
-    useChores.mockReturnValue({ data: null, isLoading: false })
+    useChores.mockReturnValue({
+      data: null,
+      isLoading: false,
+      completeAssignment,
+      uncompleteAssignment,
+    })
     // useLunchMenu: UsePollingResult<LunchMenuData>; data.today is a LunchMenuDay | null.
     useLunchMenu.mockReturnValue({ data: null, isLoading: false })
   })
@@ -344,5 +356,64 @@ describe('HouseholdColumn', () => {
 
     expect(screen.queryByText(/On this day/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/Pac-Man/)).not.toBeInTheDocument()
+  })
+
+  describe('chore toggling', () => {
+    function withChores() {
+      useChores.mockReturnValue({
+        data: {
+          completed_count: 1,
+          total_count: 2,
+          persons: [
+            {
+              person: { id: 1, name: 'Ben', color: '#000', avatar: null },
+              assignments: [
+                {
+                  id: 10,
+                  chore: { id: 100, name: 'Dishes', chore_type: 'regular', tags: [] },
+                  picked_chore: null,
+                  completed: false,
+                },
+                {
+                  id: 11,
+                  chore: { id: 101, name: 'Trash', chore_type: 'regular', tags: [] },
+                  picked_chore: null,
+                  completed: true,
+                },
+              ],
+            },
+          ],
+        },
+        isLoading: false,
+        completeAssignment,
+        uncompleteAssignment,
+      })
+    }
+
+    it('renders each chore as a button carrying its completed state', () => {
+      withChores()
+      render(<HouseholdColumn />)
+      expect(screen.getByRole('button', { name: /Dishes/ })).toHaveAttribute(
+        'aria-pressed',
+        'false',
+      )
+      expect(screen.getByRole('button', { name: /Trash/ })).toHaveAttribute('aria-pressed', 'true')
+    })
+
+    it('unchecks a completed chore', () => {
+      withChores()
+      render(<HouseholdColumn />)
+      fireEvent.click(screen.getByRole('button', { name: /Trash/ }))
+      expect(uncompleteAssignment).toHaveBeenCalledWith(11)
+      expect(completeAssignment).not.toHaveBeenCalled()
+    })
+
+    it('checks an incomplete chore', () => {
+      withChores()
+      render(<HouseholdColumn />)
+      fireEvent.click(screen.getByRole('button', { name: /Dishes/ }))
+      expect(completeAssignment).toHaveBeenCalledWith(10)
+      expect(uncompleteAssignment).not.toHaveBeenCalled()
+    })
   })
 })
