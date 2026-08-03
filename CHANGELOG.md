@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.0](https://github.com/bbaldino/family-dashboard/compare/v0.3.0...v0.4.0) (2026-08-03)
+
+
+### Features
+
+* **themes/broadsheet:** give the household column the room it needed ([7fc5f24](https://github.com/bbaldino/family-dashboard/commit/7fc5f242667121859e81cc6727a69c1020514160))
+* **themes/broadsheet:** put a way into settings in the footer ([1954b9c](https://github.com/bbaldino/family-dashboard/commit/1954b9c7f1b51e778a04cf8d82703723b5c17d3d))
+
 ## [0.3.0](https://github.com/bbaldino/family-dashboard/compare/v0.2.0...v0.3.0) (2026-08-03)
 
 
