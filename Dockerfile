@@ -2,7 +2,11 @@
 FROM node:22-slim AS frontend-builder
 WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json ./
-RUN npm install --legacy-peer-deps
+# npm ci, not npm install: installs exactly what package-lock.json pins and
+# fails if the lockfile is out of sync. With npm install the same commit could
+# resolve a different dependency tree on different days, so two builds of one
+# tag were not guaranteed to contain the same frontend.
+RUN npm ci --legacy-peer-deps
 COPY frontend/ ./
 RUN npm run build
 

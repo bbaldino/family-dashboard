@@ -22,19 +22,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # There is deliberately no `test` job yet, and `publish` therefore has no
-  # `needs: test`. The standard requires one — an image should never publish
-  # from code that does not build and pass its checks — but this adoption is
-  # seeded on the deployed commit, which predates the project's current lint and
-  # formatting state. Wiring the gate here would fail the first run on
-  # pre-existing drift rather than on anything this change did, and the fix
-  # would land tangled into the adoption commit.
-  #
-  # The gate (cargo +nightly fmt --check, clippy -D warnings, cargo test, and
-  # the Node typecheck/format/test scripts) lands with the theme work that
-  # follows, where the fixes it demands belong. Until then a red main can still
-  # be released: a known, temporary hole rather than an oversight.
+  test:
+    uses: ./.github/workflows/test.yml
+
   publish:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: read

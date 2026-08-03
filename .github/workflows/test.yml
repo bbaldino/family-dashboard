@@ -1,0 +1,69 @@
+name: test
+
+# Reusable, and called by BOTH publish-image.yml and release.yml.
+#
+# Living in one place is load-bearing rather than tidy: those two workflows have
+# different triggers, different concurrency groups, and neither waits for the
+# other. A gate in only one of them still lets the other tag or publish broken
+# code — the release workflow would happily open and auto-merge a release PR for
+# a commit whose tests fail, cut the tag, and leave a GitHub Release marked
+# "Latest" for a version that has no image.
+on:
+  workflow_call:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      # Nightly for rustfmt only: nightly rustfmt is this project's standard,
+      # and --check fails rather than rewriting.
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+
+      - run: cargo +nightly fmt --check
+
+      # -D warnings makes lints blocking rather than advisory.
+      - run: cargo +stable clippy --all-targets --all-features -- -D warnings
+
+      # --locked fails if Cargo.lock would change, catching an uncommitted
+      # lockfile before it reaches an image. No separate build step: cargo test
+      # builds everything already.
+      - run: cargo +stable test --locked
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Matches the version the Dockerfile builds with.
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # npm ci, not npm install: installs exactly the lockfile and fails if it
+      # is out of sync — the Node equivalent of Rust's --locked.
+      - run: npm ci
+
+      - run: npm run typecheck
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm test

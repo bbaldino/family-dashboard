@@ -13,11 +13,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # No `needs: test` yet — see the note in publish-image.yml. The gate lands
-  # with the theme work, and must be added to BOTH workflows: they have
-  # different triggers and neither waits for the other, so a gate in only one
-  # of them still lets the other tag broken code.
+  test:
+    uses: ./.github/workflows/test.yml
+
+  # Gated so a red main opens no release PR, and therefore cuts no tag. Every
+  # release-bot run pays for the suite; that is the correct trade against
+  # tagging code that does not build.
   release:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: write
