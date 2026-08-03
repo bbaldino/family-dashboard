@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/bbaldino/family-dashboard/compare/v0.4.0...v0.4.1) (2026-08-03)
+
+
+### Bug Fixes
+
+* **themes/broadsheet:** show six chores per person ([60d0d27](https://github.com/bbaldino/family-dashboard/commit/60d0d271a2eecb36f912dcf1e6155e8299ecb9d3))
+
 ## [0.4.0](https://github.com/bbaldino/family-dashboard/compare/v0.3.0...v0.4.0) (2026-08-03)
 
 
