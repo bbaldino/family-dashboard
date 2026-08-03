@@ -58,11 +58,11 @@ fn replay_response(
     let all_games = transform::transform_scoreboard(&snapshot.scoreboard, "mlb", &[], 24.0 * 365.0);
     let mut games: Vec<Game> = all_games.into_iter().filter(|g| g.id == *game_id).collect();
 
-    if let Some(game) = games.iter_mut().find(|g| g.id == *game_id) {
-        if let Some(mut detail) = transform::parse_summary_to_live_detail(&snapshot.summary) {
-            attach_scoring_recap(state, game, &mut detail);
-            game.live_detail = Some(detail);
-        }
+    if let Some(game) = games.iter_mut().find(|g| g.id == *game_id)
+        && let Some(mut detail) = transform::parse_summary_to_live_detail(&snapshot.summary)
+    {
+        attach_scoring_recap(state, game, &mut detail);
+        game.live_detail = Some(detail);
     }
 
     let any_live = games.iter().any(|g| g.state == GameState::Live);
@@ -77,9 +77,7 @@ fn replay_response(
 /// scoring plays = `scoring_plays` minus the tail `in_progress_scoring`
 /// (the in-progress half-inning, which is always the chronological end).
 fn attach_scoring_recap(state: &SportsState, game: &Game, detail: &mut LiveGameDetail) {
-    let mlb = match &mut detail.sport_specific {
-        SportSpecificLive::Mlb(mlb) => mlb,
-    };
+    let SportSpecificLive::Mlb(mlb) = &mut detail.sport_specific;
 
     if mlb.scoring_plays.len() <= mlb.in_progress_scoring.len() {
         return; // nothing in a completed inning yet
@@ -246,15 +244,15 @@ pub async fn get_games(State(state): State<SportsState>) -> Result<Json<GamesRes
                 },
             };
 
-            if let Some(summary) = summary_json {
-                if let Some(mut detail) = transform::parse_summary_to_live_detail(&summary) {
-                    if is_live {
-                        // Live-only: LLM narrates in-progress scoring. Finals get
-                        // the raw scoring-play list plus (separately) the AI recap.
-                        attach_scoring_recap(&state, game, &mut detail);
-                    }
-                    game.live_detail = Some(detail);
+            if let Some(summary) = summary_json
+                && let Some(mut detail) = transform::parse_summary_to_live_detail(&summary)
+            {
+                if is_live {
+                    // Live-only: LLM narrates in-progress scoring. Finals get
+                    // the raw scoring-play list plus (separately) the AI recap.
+                    attach_scoring_recap(&state, game, &mut detail);
                 }
+                game.live_detail = Some(detail);
             }
         }
         all_games.extend(games);

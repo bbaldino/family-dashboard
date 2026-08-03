@@ -15,6 +15,12 @@ pub struct EspnCache {
     live_flag: Arc<RwLock<bool>>,
 }
 
+impl Default for EspnCache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EspnCache {
     pub fn new() -> Self {
         Self {

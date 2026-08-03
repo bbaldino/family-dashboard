@@ -234,10 +234,7 @@ pub async fn get_air_quality(
         }
         Err(e) => {
             tracing::warn!("Open-Meteo air-quality fetch failed, falling back: {}", e);
-            match cache.get_stale().await {
-                Some(stale) => stale,
-                None => AirQuality::default(),
-            }
+            cache.get_stale().await.unwrap_or_default()
         }
     }
 }

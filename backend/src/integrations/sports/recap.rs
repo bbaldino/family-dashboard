@@ -105,7 +105,7 @@ pub fn ensure_recap(
 
 fn format_inning(half: &str, number: u32) -> String {
     let suffix = match number % 100 {
-        11 | 12 | 13 => "th",
+        11..=13 => "th",
         _ => match number % 10 {
             1 => "st",
             2 => "nd",

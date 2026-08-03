@@ -23,6 +23,12 @@ struct CacheEntry {
     fetched_at: Instant,
 }
 
+impl Default for JokesCache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl JokesCache {
     pub fn new() -> Self {
         Self {

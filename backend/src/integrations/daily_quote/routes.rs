@@ -21,6 +21,12 @@ pub struct QuoteCache {
     data: RwLock<Option<(QuoteResponse, Instant)>>,
 }
 
+impl Default for QuoteCache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl QuoteCache {
     pub fn new() -> Self {
         Self {
@@ -30,10 +36,10 @@ impl QuoteCache {
 
     async fn get(&self) -> Option<QuoteResponse> {
         let guard = self.data.read().await;
-        if let Some((response, created_at)) = guard.as_ref() {
-            if created_at.elapsed().as_secs() < CACHE_TTL_SECS {
-                return Some(response.clone());
-            }
+        if let Some((response, created_at)) = guard.as_ref()
+            && created_at.elapsed().as_secs() < CACHE_TTL_SECS
+        {
+            return Some(response.clone());
         }
         None
     }

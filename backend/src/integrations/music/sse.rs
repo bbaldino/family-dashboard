@@ -31,12 +31,11 @@ fn proxy_image_url(url: &str) -> String {
 /// HTTPS URLs are left as-is since they don't cause mixed content issues.
 fn rewrite_image_urls(queues: &mut [QueueState]) {
     for q in queues.iter_mut() {
-        if let Some(ref mut item) = q.current_item {
-            if let Some(ref url) = item.image_url {
-                if url.starts_with("http://") {
-                    item.image_url = Some(proxy_image_url(url));
-                }
-            }
+        if let Some(ref mut item) = q.current_item
+            && let Some(ref url) = item.image_url
+            && url.starts_with("http://")
+        {
+            item.image_url = Some(proxy_image_url(url));
         }
     }
 }
@@ -252,8 +251,7 @@ pub async fn events(
     tokio::spawn(ws_relay_loop(pool.clone(), ws_url, token, tx));
 
     // Convert the mpsc receiver into an SSE-compatible stream.
-    let stream =
-        tokio_stream::wrappers::ReceiverStream::new(rx).map(|event| Ok::<_, Infallible>(event));
+    let stream = tokio_stream::wrappers::ReceiverStream::new(rx).map(Ok::<_, Infallible>);
 
     let sse = Sse::new(stream).keep_alive(
         axum::response::sse::KeepAlive::new()
@@ -292,10 +290,11 @@ async fn maybe_log_play(pool: &SqlitePool, state: &SseEvent, last_track_uri: &mu
     }
     *last_track_uri = current_uri.clone();
 
-    if let Some(q) = playing {
-        if let Some(ref item) = q.current_item {
-            if let Some(ref uri) = item.uri {
-                let _ = sqlx::query(
+    if let Some(q) = playing
+        && let Some(ref item) = q.current_item
+        && let Some(ref uri) = item.uri
+    {
+        let _ = sqlx::query(
                     "INSERT INTO music_play_log (uri, name, artist, album, image_url) VALUES (?, ?, ?, ?, ?)",
                 )
                 .bind(uri)
@@ -305,8 +304,6 @@ async fn maybe_log_play(pool: &SqlitePool, state: &SseEvent, last_track_uri: &mu
                 .bind(&item.image_url)
                 .execute(pool)
                 .await;
-            }
-        }
     }
 }
 

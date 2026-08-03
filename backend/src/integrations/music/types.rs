@@ -106,6 +106,18 @@ pub struct TrackInfo {
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "type", rename_all = "camelCase")]
 pub enum SseEvent {
-    State { queues: Vec<QueueState> },
-    QueueUpdated { queue: QueueState },
+    State {
+        queues: Vec<QueueState>,
+    },
+    /// Boxed to keep the enum small: a bare `QueueState` here is 312 bytes
+    /// against `State`'s 24, so every event paid for the largest variant.
+    /// `Box` is transparent to serde, so the wire format is unchanged.
+    ///
+    /// Note this variant is currently never constructed on the backend, while
+    /// the frontend does handle a `queueUpdated` event
+    /// (`data/music/MusicProvider.tsx`). That mismatch predates this change and
+    /// is left alone here rather than resolved as part of a lint pass.
+    QueueUpdated {
+        queue: Box<QueueState>,
+    },
 }

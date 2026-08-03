@@ -22,6 +22,12 @@ pub struct WordCache {
     data: RwLock<Option<(String, WordResponse, Instant)>>,
 }
 
+impl Default for WordCache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl WordCache {
     pub fn new() -> Self {
         Self {
@@ -31,10 +37,11 @@ impl WordCache {
 
     async fn get(&self, key: &str) -> Option<WordResponse> {
         let guard = self.data.read().await;
-        if let Some((cached_key, response, created_at)) = guard.as_ref() {
-            if cached_key == key && created_at.elapsed().as_secs() < CACHE_TTL_SECS {
-                return Some(response.clone());
-            }
+        if let Some((cached_key, response, created_at)) = guard.as_ref()
+            && cached_key == key
+            && created_at.elapsed().as_secs() < CACHE_TTL_SECS
+        {
+            return Some(response.clone());
         }
         None
     }

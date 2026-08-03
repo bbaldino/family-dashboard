@@ -14,6 +14,12 @@ struct CacheEntry {
     created_at: chrono::DateTime<chrono::Utc>,
 }
 
+impl Default for PreviewCache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PreviewCache {
     pub fn new() -> Self {
         Self {

@@ -27,6 +27,12 @@ pub struct OnThisDayCache {
     data: RwLock<Option<(String, OnThisDayResponse, Instant)>>,
 }
 
+impl Default for OnThisDayCache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl OnThisDayCache {
     pub fn new() -> Self {
         Self {
@@ -36,10 +42,11 @@ impl OnThisDayCache {
 
     async fn get(&self, key: &str) -> Option<OnThisDayResponse> {
         let guard = self.data.read().await;
-        if let Some((cached_key, response, created_at)) = guard.as_ref() {
-            if cached_key == key && created_at.elapsed().as_secs() < CACHE_TTL_SECS {
-                return Some(response.clone());
-            }
+        if let Some((cached_key, response, created_at)) = guard.as_ref()
+            && cached_key == key
+            && created_at.elapsed().as_secs() < CACHE_TTL_SECS
+        {
+            return Some(response.clone());
         }
         None
     }
@@ -238,7 +245,7 @@ async fn curate_events(
 
     // Parse the comma-separated numbers
     let picked: Vec<OnThisDayEvent> = answer
-        .split(|c: char| c == ',' || c == ' ' || c == '.')
+        .split([',', ' ', '.'])
         .filter_map(|s| s.trim().parse::<usize>().ok())
         .filter_map(|i| {
             let idx = i.checked_sub(1)?; // 1-based to 0-based
