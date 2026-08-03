@@ -1,0 +1,85 @@
+name: publish-image
+
+# Tags ONLY — deliberately not `branches: [main]`.
+#
+# Triggering on both means a release commit is built twice: once when the
+# release PR merges to main, once when the bot tags that same commit. Two builds
+# of identical source, two digests, and both runs emit sha-<short>, which then
+# lands on whichever finished last — nondeterminism in the one tag whose entire
+# purpose is identifying an exact build.
+#
+# Tag-only gives one build per release, every tag written exactly once, and
+# sha-<short> pointing at the same digest as the version tags. The cost is no
+# image for commits that are never released — with release filtering that means
+# docs/ci/chore commits, which are exactly the changes you would not deploy.
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # There is deliberately no `test` job yet, and `publish` therefore has no
+  # `needs: test`. The standard requires one — an image should never publish
+  # from code that does not build and pass its checks — but this adoption is
+  # seeded on the deployed commit, which predates the project's current lint and
+  # formatting state. Wiring the gate here would fail the first run on
+  # pre-existing drift rather than on anything this change did, and the fix
+  # would land tangled into the adoption commit.
+  #
+  # The gate (cargo +nightly fmt --check, clippy -D warnings, cargo test, and
+  # the Node typecheck/format/test scripts) lands with the theme work that
+  # follows, where the fixes it demands belong. Until then a red main can still
+  # be released: a known, temporary hole rather than an oversight.
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          # No `type=raw,value=latest,...` rule here. metadata-action's default
+          # `flavor: latest=auto` already applies latest to non-prerelease semver
+          # tags, which is exactly what is wanted. A raw rule would set latest
+          # unconditionally — including on any non-release run — which is how
+          # latest ends up meaning "whatever built most recently".
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            # Deliberately unrestricted. This workflow only ever runs on a tag,
+            # so sha-<short> is emitted once, by the same build that emits the
+            # version tags — all four share one digest.
+            #
+            # Do NOT add enable={{is_default_branch}} here. Under tag-only
+            # triggering the run is never on the default branch, so the
+            # condition is always false and sha-<short> is never emitted at
+            # all — no error, no tag.
+            type=sha,prefix=sha-
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          sbom: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
