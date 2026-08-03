@@ -8,6 +8,7 @@ import '@/themes/broadsheet' // side-effect: registers broadsheetTheme
 import { AdminLayout } from './admin/AdminLayout'
 import { SettingsAdmin } from './admin/SettingsAdmin'
 import { getRuntimeConfig } from './lib/ha-client'
+import { useHaUsable } from './lib/useHaUsable'
 import { useTheme } from './palettes/useTheme'
 
 function PaletteApplicator() {
@@ -32,30 +33,6 @@ function useHaConfig(): { haUrl?: string; haToken?: string; loading: boolean } {
   }, [])
 
   return config
-}
-
-/** Check if HA is reachable before mounting HassConnect */
-function useHaReachable(url: string | undefined): boolean {
-  const [reachable, setReachable] = useState(false)
-
-  useEffect(() => {
-    if (!url) return
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 3000)
-
-    // Probe an unauthenticated endpoint so we don't spam the console with 401s.
-    // /manifest.json is always served by HA, no bearer required.
-    fetch(`${url}/manifest.json`, { signal: controller.signal })
-      .then((r) => {
-        if (r.ok) setReachable(true)
-      })
-      .catch(() => {
-        console.warn('HA not reachable, continuing without it')
-      })
-      .finally(() => clearTimeout(timer))
-  }, [url])
-
-  return reachable
 }
 
 function AppRoutes() {
@@ -83,7 +60,7 @@ const queryClient = new QueryClient({
 
 export function App() {
   const { haUrl, haToken, loading } = useHaConfig()
-  const haReachable = useHaReachable(haUrl)
+  const haUsable = useHaUsable(haUrl, haToken)
 
   if (loading) return null
 
@@ -94,7 +71,7 @@ export function App() {
     </QueryClientProvider>
   )
 
-  if (haUrl && haReachable) {
+  if (haUrl && haUsable) {
     return (
       <HassConnect hassUrl={haUrl} hassToken={haToken}>
         {content}
