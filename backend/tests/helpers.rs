@@ -1,5 +1,4 @@
 use axum::Router;
-use dashboard_backend::platform::manifest::Manifest;
 use sqlx::SqlitePool;
 use sqlx::sqlite::SqlitePoolOptions;
 
@@ -15,15 +14,8 @@ pub async fn test_pool() -> SqlitePool {
     pool
 }
 
-fn test_manifest() -> std::sync::Arc<Manifest> {
-    std::sync::Arc::new(
-        Manifest::from_json(r#"{"version":1,"integrations":{}}"#)
-            .expect("empty test manifest parses"),
-    )
-}
-
 pub async fn test_app() -> (Router, SqlitePool) {
     let pool = test_pool().await;
-    let app = dashboard_backend::integrations::router(pool.clone(), test_manifest());
+    let app = dashboard_backend::integrations::router(pool.clone());
     (app, pool)
 }

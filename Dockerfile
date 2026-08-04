@@ -29,7 +29,6 @@ WORKDIR /app
 
 COPY --from=backend-builder /app/backend/target/release/dashboard-backend .
 COPY --from=frontend-builder /app/frontend/dist/ static/
-COPY backend/manifest.json ./manifest.json
 
 ENV PORT=3042
 ENV DATABASE_URL=sqlite:/data/dashboard.db?mode=rwc

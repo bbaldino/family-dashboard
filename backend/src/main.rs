@@ -1,4 +1,4 @@
-use dashboard_backend::{db, integrations, platform};
+use dashboard_backend::{db, integrations};
 use std::net::SocketAddr;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::{ServeDir, ServeFile};
@@ -49,16 +49,7 @@ async fn main() {
     let pool = db::init_pool().await;
     migrate_google_cloud_config(&pool).await;
 
-    // A missing or malformed manifest is a deployment error, not something
-    // to degrade at request time — fail loudly at boot instead of returning
-    // 404s for every /api/fetch call.
-    let manifest_path =
-        std::env::var("MANIFEST_PATH").unwrap_or_else(|_| "manifest.json".to_string());
-    let manifest = std::sync::Arc::new(
-        platform::manifest::Manifest::load(&manifest_path).expect("manifest.json failed to load"),
-    );
-
-    let api_routes = integrations::router(pool.clone(), manifest);
+    let api_routes = integrations::router(pool.clone());
 
     // SPA fallback: serve static files, but fall back to index.html for client-side routes
     let spa_service =
