@@ -312,16 +312,23 @@ async fn resolve_server_placeholders(
 /// unredacted: `.replace(value, …)` alone is a silent no-op on exactly the
 /// secrets most worth protecting. The raw form is still checked too, for an
 /// upstream body that echoes the key back unencoded.
+///
+/// Encoded form first, then raw. Order matters for a secret ending in a
+/// character encoding expands — `"abc%"` encodes to `"abc%25"`, and a
+/// raw-first pass matches the `"abc%"` prefix of that and leaves
+/// `"[redacted]25"` behind. No leak either way (the secret is gone in both
+/// orderings), but the encoded-first pass consumes the whole token and
+/// leaves a message that reads as intended.
 fn redact_secrets(message: &str, resolved: &BTreeMap<String, String>) -> String {
     let mut out = message.to_string();
     for (placeholder, value) in resolved {
         if placeholder.starts_with("secret:") && !value.is_empty() {
-            out = out.replace(value.as_str(), "[redacted]");
-
             let encoded: String = url::form_urlencoded::byte_serialize(value.as_bytes()).collect();
             if encoded != *value {
                 out = out.replace(encoded.as_str(), "[redacted]");
             }
+
+            out = out.replace(value.as_str(), "[redacted]");
         }
     }
     out
@@ -930,6 +937,28 @@ mod tests {
         assert!(!scrubbed.contains(secret));
         assert!(scrubbed.contains("[redacted]"));
         assert!(scrubbed.contains("37.2504"));
+    }
+
+    /// Final review, Minor 7: a secret ending in `%` encodes to
+    /// `…%25`, and replacing the raw form *first* matched only its `…%`
+    /// prefix inside that, leaving a stray `25` glued to the placeholder.
+    /// Never a leak — the secret is gone either way — but
+    /// `[redacted]25` reads like part of a value rather than a redaction,
+    /// which is the kind of thing that sends someone hunting for a bug
+    /// that isn't there.
+    #[test]
+    fn redaction_of_a_secret_containing_a_percent_leaves_no_stray_encoding() {
+        let secret = "abc%";
+        let resolved = BTreeMap::from([("secret:api_key".to_string(), secret.to_string())]);
+
+        let encoded: String = url::form_urlencoded::byte_serialize(secret.as_bytes()).collect();
+        assert_eq!(
+            encoded, "abc%25",
+            "test premise: the encoder must expand '%' for this case to exist"
+        );
+
+        let scrubbed = redact_secrets(&format!("upstream said: appid={encoded}"), &resolved);
+        assert_eq!(scrubbed, "upstream said: appid=[redacted]");
     }
 
     // --- Fix Round 1: the router's client must not follow redirects ---
