@@ -435,6 +435,12 @@ pub struct FetchRequest {
 /// cache. Concurrent misses are *not* single-flighted — each reaches the
 /// upstream — which is fine at one dashboard's request volume but is the
 /// first thing to revisit if a short-TTL endpoint gains several consumers.
+/// Config resolution runs before the cache lookup (see `cache_key`'s doc
+/// comment), so if a `{{cfg:…}}`/`{{secret:…}}` value an endpoint depends on
+/// is removed, the *next* request 500s instead of continuing to serve the
+/// still-cached response for the rest of its TTL. That is deliberate: a
+/// misconfiguration surfaces immediately rather than silently for up to
+/// `ttl_secs` longer.
 pub async fn invoke(
     State(state): State<PlatformState>,
     Path((integration, endpoint)): Path<(String, String)>,

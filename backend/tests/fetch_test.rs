@@ -475,3 +475,76 @@ async fn an_undeclared_param_is_rejected_before_config_is_resolved() {
         "rejected before the upstream is ever contacted"
     );
 }
+
+#[tokio::test]
+async fn a_config_value_removed_after_caching_fails_the_next_request_instead_of_serving_stale() {
+    // Fix Round 1: the flip side of the cache-invalidation test above.
+    // Resolution now runs before the cache lookup on *every* request, not
+    // just the first, so once a config row an endpoint depends on is
+    // deleted, the next request must 500 rather than keep serving the
+    // still-valid cached entry for the remainder of its 600s TTL. Asserting
+    // the hit count stays at 1 is what makes this diagnostic rather than
+    // merely red: it proves the failure happened at resolution, before the
+    // upstream was ever asked again, not somewhere downstream.
+    let (addr, hits, _last_query) = spawn_counting_capturing_upstream().await;
+    let pool = test_pool().await;
+    sqlx::query("INSERT INTO config (key, value) VALUES (?, ?)")
+        .bind("test-integration.lat")
+        .bind("37.2504")
+        .execute(&pool)
+        .await
+        .expect("seed config");
+
+    let manifest_json = format!(
+        r#"{{
+          "version": 1,
+          "integrations": {{
+            "test-integration": {{
+              "endpoints": {{
+                "today": {{
+                  "base": "http://{addr}",
+                  "path": "/data",
+                  "query": {{ "lat": "{{{{cfg:lat}}}}" }},
+                  "ttl_secs": 600
+                }}
+              }}
+            }}
+          }}
+        }}"#
+    );
+    let manifest = Arc::new(Manifest::from_json(&manifest_json).expect("test manifest parses"));
+    let app = dashboard_backend::integrations::router(pool.clone(), manifest);
+    let server = TestServer::new(app);
+
+    let first = server
+        .post("/fetch/test-integration/today")
+        .json(&json!({ "params": {} }))
+        .await;
+    first.assert_status_ok();
+    assert_eq!(
+        hits.load(Ordering::SeqCst),
+        1,
+        "first call must hit the upstream and populate the cache"
+    );
+
+    // An admin clears the config row entirely -- e.g. removing an
+    // integration's setup without removing the manifest entry.
+    sqlx::query("DELETE FROM config WHERE key = ?")
+        .bind("test-integration.lat")
+        .execute(&pool)
+        .await
+        .expect("delete config");
+
+    let second = server
+        .post("/fetch/test-integration/today")
+        .json(&json!({ "params": {} }))
+        .await;
+    second.assert_status(StatusCode::INTERNAL_SERVER_ERROR);
+    assert_eq!(
+        hits.load(Ordering::SeqCst),
+        1,
+        "a missing config value must fail at resolution, before the upstream is contacted \
+         again -- if it were serving the stale cache entry instead, the status would be 200 \
+         and the hit count would still be 1 for the wrong reason"
+    );
+}
