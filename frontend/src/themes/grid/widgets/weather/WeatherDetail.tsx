@@ -13,13 +13,17 @@ const conditionIcons: Record<string, string> = {
 }
 
 export function WeatherDetail() {
-  const { data: forecast, isLoading, isError } = useWeatherForecast()
+  const { data: forecast, isError } = useWeatherForecast()
 
-  if (isError) {
-    return <div className="text-[13px] text-error p-4">Failed to load forecast</div>
-  }
-
-  if (isLoading || !forecast) {
+  // Data wins over a failed background refetch: this hook polls every 30
+  // minutes, and react-query's error state does not clear the last-good
+  // `data` — checking `isError` before `forecast` would replace a still-valid
+  // forecast with an error banner on a transient poll failure nobody is
+  // present to retry. Error only wins when there is nothing to fall back on.
+  if (!forecast) {
+    if (isError) {
+      return <div className="text-[13px] text-error p-4">Failed to load forecast</div>
+    }
     return <div className="text-[13px] text-text-muted p-4">Loading forecast...</div>
   }
 
