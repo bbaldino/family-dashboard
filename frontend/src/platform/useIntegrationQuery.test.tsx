@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import { defineIntegration, useIntegrationQuery } from './index'
 
 const demo = defineIntegration({ id: 'daily-quote', name: 'Daily Quote' })
+const DEMO_URL = 'https://zenquotes.io/api/today'
 
 describe('useIntegrationQuery', () => {
   let fetchMock: ReturnType<typeof vi.fn>
@@ -26,35 +27,27 @@ describe('useIntegrationQuery', () => {
     </QueryClientProvider>
   )
 
-  it('posts to the fetch capability and reshapes via select', async () => {
+  it('posts the url and ttlSecs to /api/fetch and reshapes via select', async () => {
     const { result } = renderHook(
       () =>
-        useIntegrationQuery<{ q: string; a: string }[], { quote: string }>(demo, 'today', {
+        useIntegrationQuery<{ q: string; a: string }[], { quote: string }>(demo, DEMO_URL, {
+          ttlSecs: 86400,
           select: ([f]) => ({ quote: f.q }),
         }),
       { wrapper },
     )
     await waitFor(() => expect(result.current.data).toEqual({ quote: 'hello' }))
     const [url, init] = fetchMock.mock.calls[0]
-    expect(url).toBe('/api/fetch/daily-quote/today')
+    expect(url).toBe('/api/fetch')
     expect(init.method).toBe('POST')
-  })
-
-  it('sends params in the body, never in the URL', async () => {
-    renderHook(() => useIntegrationQuery(demo, 'today', { params: { date: '2026-08-03' } }), {
-      wrapper,
-    })
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
-    const [url, init] = fetchMock.mock.calls[0]
-    expect(url).not.toContain('2026-08-03')
-    expect(JSON.parse(init.body)).toEqual({ params: { date: '2026-08-03' } })
+    expect(JSON.parse(init.body)).toEqual({ url: DEMO_URL, ttl_secs: 86400 })
   })
 
   it('gives a functional refetchInterval the select-derived shape, not the raw payload', async () => {
     const intervalFn = vi.fn().mockReturnValue(false)
     const { result } = renderHook(
       () =>
-        useIntegrationQuery<{ q: string; a: string }[], { quote: string }>(demo, 'today', {
+        useIntegrationQuery<{ q: string; a: string }[], { quote: string }>(demo, DEMO_URL, {
           select: ([f]) => ({ quote: f.q }),
           refetchInterval: intervalFn,
         }),
@@ -80,7 +73,7 @@ describe('useIntegrationQuery', () => {
     const intervalFn = vi.fn().mockReturnValue(false)
     const { result } = renderHook(
       () =>
-        useIntegrationQuery<{ q: string; a: string }[], { quote: string }>(demo, 'today', {
+        useIntegrationQuery<{ q: string; a: string }[], { quote: string }>(demo, DEMO_URL, {
           select: () => {
             throw new Error('malformed payload')
           },
@@ -94,5 +87,22 @@ describe('useIntegrationQuery', () => {
     await waitFor(() => expect(result.current.status).toBe('error'))
     await waitFor(() => expect(intervalFn).toHaveBeenCalled())
     expect(intervalFn).toHaveBeenCalledWith(undefined)
+  })
+
+  it('disables the query when url is null, and lets an explicit enabled: false win even with a url', async () => {
+    const { result: waitingOnConfig } = renderHook(() => useIntegrationQuery(demo, null), {
+      wrapper,
+    })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(waitingOnConfig.current.fetchStatus).toBe('idle')
+
+    const { result: explicitlyDisabled } = renderHook(
+      () => useIntegrationQuery(demo, DEMO_URL, { enabled: false }),
+      { wrapper },
+    )
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(explicitlyDisabled.current.fetchStatus).toBe('idle')
   })
 })

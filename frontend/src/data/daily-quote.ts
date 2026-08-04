@@ -37,8 +37,11 @@ interface ZenQuote {
   a: string
 }
 
+const ZENQUOTES_URL = 'https://zenquotes.io/api/today'
+
 export function useDailyQuote() {
-  return useIntegrationQuery<ZenQuote[], DailyQuoteData>(dailyQuoteIntegration, 'today', {
+  return useIntegrationQuery<ZenQuote[], DailyQuoteData>(dailyQuoteIntegration, ZENQUOTES_URL, {
+    ttlSecs: 86400,
     select: (quotes) => {
       const first = quotes?.[0]
       // Guard the destructure: an empty array (or a payload that isn't the

@@ -1,19 +1,10 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { describe, expect, it, vi, afterEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useDailyQuote } from './daily-quote'
 
 describe('useDailyQuote', () => {
-  let fetchMock: ReturnType<typeof vi.fn>
-  beforeEach(() => {
-    fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      text: async () => JSON.stringify([{ q: 'hello', a: 'someone' }]),
-    })
-    vi.stubGlobal('fetch', fetchMock)
-  })
   afterEach(() => vi.unstubAllGlobals())
 
   const wrapper = ({ children }: { children: ReactNode }) => (
@@ -24,28 +15,31 @@ describe('useDailyQuote', () => {
     </QueryClientProvider>
   )
 
-  // Task 4's /api/fetch handler 400s on any param an endpoint doesn't declare,
-  // and daily-quote/today declares none. Sending anything other than an empty
-  // object here would 400 against the real backend even though this stubbed
-  // test would never catch it — so pin the body shape explicitly.
-  it('sends an empty params object, not an omitted or non-empty one', async () => {
-    renderHook(() => useDailyQuote(), { wrapper })
-    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+  it('posts the ZenQuotes URL to the proxy and reshapes the response', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      text: async () => JSON.stringify([{ q: 'Be here now', a: 'Ram Dass' }]),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const { result } = renderHook(() => useDailyQuote(), { wrapper })
+    await waitFor(() => expect(result.current.data).toBeDefined())
+
+    expect(result.current.data).toEqual({ quote: 'Be here now', author: 'Ram Dass' })
+
     const [url, init] = fetchMock.mock.calls[0]
-    expect(url).toBe('/api/fetch/daily-quote/today')
-    expect(JSON.parse(init.body)).toEqual({ params: {} })
+    expect(url).toBe('/api/fetch')
+    expect(JSON.parse(init.body)).toEqual({
+      url: 'https://zenquotes.io/api/today',
+      ttl_secs: 86400,
+    })
   })
 
-  it('surfaces a clear error instead of a TypeError when ZenQuotes returns an empty array', async () => {
-    fetchMock.mockResolvedValue({
-      ok: true,
-      status: 200,
-      text: async () => JSON.stringify([]),
-    })
+  it('throws a clear error when ZenQuotes returns an empty array', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, text: async () => '[]' }))
+
     const { result } = renderHook(() => useDailyQuote(), { wrapper })
-    await waitFor(() => expect(result.current.status).toBe('error'))
-    expect(result.current.error).toBeInstanceOf(Error)
-    expect((result.current.error as Error).message).not.toMatch(/undefined/i)
-    expect((result.current.error as Error).message).toMatch(/empty|malformed/i)
+    await waitFor(() => expect(result.current.isError).toBe(true))
+    expect(result.current.error?.message).toMatch(/empty or malformed/)
   })
 })

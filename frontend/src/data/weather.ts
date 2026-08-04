@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { defineIntegration } from '@/data/define-integration'
 import { useIntegrationQuery } from '@/platform'
+import { useIntegrationConfig } from '@/data/use-integration-config'
 import { summariseForecast } from './weather/forecast'
 import { computeAirQuality } from './weather/air-quality'
 import type { AqiLevel, UvLevel, PollenLevel, AirQualityData } from './weather/air-quality'
@@ -29,8 +30,8 @@ export const weatherIntegration = defineIntegration({
   name: 'Weather',
   schema: z.object({
     api_key: z.string().min(1, 'API key is required'),
-    lat: z.string().min(1, 'Latitude is required'),
-    lon: z.string().min(1, 'Longitude is required'),
+    lat: z.string().min(1).default('37.2504'),
+    lon: z.string().min(1).default('-121.9000'),
   }),
   fields: {
     api_key: { label: 'OpenWeatherMap API Key', type: 'secret' },
@@ -38,6 +39,32 @@ export const weatherIntegration = defineIntegration({
     lon: { label: 'Longitude' },
   },
 })
+
+type WeatherConfig = z.infer<typeof weatherIntegration.schema>
+
+function openWeatherUrl(path: string, cfg: WeatherConfig): string {
+  const q = new URLSearchParams({
+    lat: cfg.lat,
+    lon: cfg.lon,
+    appid: cfg.api_key,
+    units: 'imperial',
+  })
+  return `https://api.openweathermap.org/data/2.5/${path}?${q}`
+}
+
+/** Open-Meteo needs no key and spells the coordinates differently. */
+function airQualityUrl(cfg: WeatherConfig): string {
+  const q = new URLSearchParams({
+    latitude: cfg.lat,
+    longitude: cfg.lon,
+    // Byte-identical to what the deleted manifest declared. US AQI, not
+    // European — `air-quality.ts` bands on the US scale (50/100/150/200/300),
+    // so swapping this produces plausible but wrong readings.
+    current:
+      'us_aqi,uv_index,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen',
+  })
+  return `https://air-quality-api.open-meteo.com/v1/air-quality?${q}`
+}
 
 /* ─────────── current ─────────── */
 
@@ -87,10 +114,12 @@ interface OpenWeatherCurrentResponse {
 }
 
 export function useWeatherData() {
+  const cfg = useIntegrationConfig(weatherIntegration)
   return useIntegrationQuery<OpenWeatherCurrentResponse, WeatherData>(
     weatherIntegration,
-    'current',
+    cfg ? openWeatherUrl('weather', cfg) : null,
     {
+      ttlSecs: 600,
       select: (d) => ({
         temp: d.main.temp,
         feels_like: d.main.feels_like,
@@ -105,7 +134,7 @@ export function useWeatherData() {
         sunrise: d.sys.sunrise,
         sunset: d.sys.sunset,
       }),
-      refetchInterval: 15 * 60 * 1000, // 15 minutes — looser than the manifest's `current.ttl_secs: 600` (10 min)
+      refetchInterval: 15 * 60 * 1000,
     },
   )
 }
@@ -115,9 +144,11 @@ export function useWeatherData() {
 export type { ForecastDay, ForecastData, HourlyForecast }
 
 export function useWeatherForecast() {
-  return useIntegrationQuery(weatherIntegration, 'forecast', {
+  const cfg = useIntegrationConfig(weatherIntegration)
+  return useIntegrationQuery(weatherIntegration, cfg ? openWeatherUrl('forecast', cfg) : null, {
+    ttlSecs: 900,
     select: summariseForecast,
-    refetchInterval: 30 * 60 * 1000, // 30 minutes
+    refetchInterval: 30 * 60 * 1000,
   })
 }
 
@@ -126,12 +157,10 @@ export function useWeatherForecast() {
 export type { AqiLevel, UvLevel, PollenLevel, AirQualityData }
 
 export function useAirQuality() {
-  return useIntegrationQuery(weatherIntegration, 'air', {
+  const cfg = useIntegrationConfig(weatherIntegration)
+  return useIntegrationQuery(weatherIntegration, cfg ? airQualityUrl(cfg) : null, {
+    ttlSecs: 1800,
     select: computeAirQuality,
-    // The manifest's `air` endpoint caches upstream responses for 1800s
-    // (`backend/manifest.json`'s `weather.air.ttl_secs`) — polling at the
-    // same cadence means most polls land on a cache hit rather than forcing
-    // a fresh Open-Meteo round trip.
     refetchInterval: 30 * 60 * 1000,
   })
 }
