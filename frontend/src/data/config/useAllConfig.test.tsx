@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import type { ReactNode } from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { z } from 'zod'
 import { defineIntegration } from '@/data/define-integration'
@@ -75,7 +75,7 @@ describe('useAllConfig', () => {
     await waitFor(() => expect(screen.getByTestId('scoped')).toHaveTextContent('abc/no-other'))
   })
 
-  it('propagates a settings change to every consumer without a reload', async () => {
+  it('an invalidated query key refreshes every consumer without remounting', async () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     wrap(client, <Consumer label="one" />)
     await waitFor(() => expect(screen.getByTestId('one')).toHaveTextContent('abc'))
@@ -84,5 +84,30 @@ describe('useAllConfig', () => {
     await client.invalidateQueries({ queryKey: CONFIG_QUERY_KEY })
 
     await waitFor(() => expect(screen.getByTestId('one')).toHaveTextContent('zzz'))
+  })
+
+  // The tablet this app runs on is a wall-mounted kiosk: it never regains
+  // window focus and never remounts, so nothing ever calls invalidateQueries
+  // (none of the 10 config-writing save handlers do, nor could a direct
+  // `curl` edit to /api/config/<key>). refetchInterval is what actually
+  // closes the loop on a real device — this proves it does, with no
+  // invalidation in sight.
+  it('propagates a settings change to every consumer via the refetch interval, with no invalidation', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+      wrap(client, <Consumer label="one" />)
+      await waitFor(() => expect(screen.getByTestId('one')).toHaveTextContent('abc'))
+
+      fetchMock.mockResolvedValue({ ok: true, json: async () => ({ 'alpha.token': 'zzz' }) })
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(60_000)
+      })
+
+      await waitFor(() => expect(screen.getByTestId('one')).toHaveTextContent('zzz'))
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
