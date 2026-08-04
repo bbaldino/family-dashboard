@@ -97,9 +97,9 @@ export const conditionIcons: Record<string, string> = {
   Haze: '\u{1F32B}️',
 }
 
-/** The raw OpenWeather `/data/2.5/weather` shape the manifest relays
- *  verbatim — reshaping into `WeatherData` is this hook's job now, not the
- *  Rust route's. */
+/** The raw OpenWeather `/data/2.5/weather` shape — `/api/fetch` relays
+ *  upstream JSON verbatim, so reshaping into `WeatherData` is this hook's
+ *  job now, not the Rust route's. */
 interface OpenWeatherCurrentResponse {
   main: {
     temp: number

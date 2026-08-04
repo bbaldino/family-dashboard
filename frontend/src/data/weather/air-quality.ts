@@ -3,10 +3,10 @@
  * `backend/src/integrations/weather/air_quality.rs` (~330 lines) — domain
  * logic that exists in both schemes, just in a different language, so this
  * file is a relocation, not a saving. The Rust file's `AirQualityCache` and
- * `OpenMeteo*` deserialisation structs genuinely do disappear: the
- * platform's per-endpoint TTL cache (`weather.air`, `ttl_secs: 1800` in
- * `backend/manifest.json`) replaces the cache, and TypeScript's structural
- * typing replaces the deserialisation structs.
+ * `OpenMeteo*` deserialisation structs genuinely do disappear: the fetch
+ * proxy's response cache (`ttlSecs: 1800`, passed by `useAirQuality` in
+ * `weather.ts`) replaces the cache, and TypeScript's structural typing
+ * replaces the deserialisation structs.
  */
 
 /** Qualitative bands, ported from the Rust `aqi_level`/`uv_level`/
@@ -32,10 +32,9 @@ export interface AirQualityData {
   pollen_level: PollenLevel | null
 }
 
-/** The subset of Open-Meteo's `current` block the manifest requests
- *  (`weather.air.endpoints.air.query.current` in `backend/manifest.json`) —
- *  an index signature admits the rest of the live payload (`time`,
- *  `interval`, …) without narrowing what we read from it. */
+/** The subset of Open-Meteo's `current` block `airQualityUrl` in `weather.ts`
+ *  requests — an index signature admits the rest of the live payload
+ *  (`time`, `interval`, …) without narrowing what we read from it. */
 interface OpenMeteoAirCurrent {
   us_aqi?: number | null
   uv_index?: number | null

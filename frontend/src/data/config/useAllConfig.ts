@@ -10,13 +10,22 @@ export const CONFIG_QUERY_KEY = ['config'] as const
  * fixes that fan-out for those consumers — react-query dedupes the
  * concurrent mounts, and invalidating this key updates all of them at once.
  *
- * This does not cover every place the app reads `/api/config`, though: five
- * call sites still do their own raw `useEffect` + `fetch('/api/config')`
- * outside this query, and none of them refetch —
- * `src/shell/ThemeMount.tsx`, `src/palettes/useTheme.ts` (so a theme change
- * still needs a reload), `src/themes/grid/screens/HomeBoard.tsx` (two call
- * sites), and `src/themes/grid/widgets/timers/TimerBanner.tsx`. Migrating
- * those onto this hook is follow-up work, not done here.
+ * This does not cover every place the app reads `/api/config`, though. Each
+ * admin `SettingsComponent` also does its own raw fetch, but that is a
+ * different, one-shot pattern (load current values once to prefill a form)
+ * and out of scope for this hook. Outside the admin surface, seven call
+ * sites across six files still do their own raw `useEffect` +
+ * `fetch('/api/config')`, and none of them refetch — `src/shell/ThemeMount.tsx`,
+ * `src/palettes/useTheme.ts` (so a theme change still needs a reload),
+ * `src/themes/grid/screens/HomeBoard.tsx` (two call sites),
+ * `src/themes/grid/widgets/timers/TimerBanner.tsx`,
+ * `src/themes/grid/screens/CamerasBoard.tsx`, and
+ * `src/themes/grid/overlays/doorbell/DoorbellRingListener.tsx`. One more
+ * bypass, `fetchCalendarIds` in `src/data/google-calendar/config.ts`, also
+ * reads `/api/config` directly rather than through this hook, but it does
+ * see updates — it runs inside `useGoogleCalendar`'s 5-minute `usePolling`
+ * cycle, not a mount-once effect. Migrating all of these onto this hook is
+ * follow-up work, not done here.
  *
  * There are 10 independent places config gets written (`SettingsAdmin` plus
  * nine per-integration `SettingsComponent`s, each with its own save handler),
