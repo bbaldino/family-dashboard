@@ -23,7 +23,7 @@ mod helpers;
 
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use axum::extract::RawQuery;
 use axum::http::StatusCode;
@@ -90,6 +90,42 @@ async fn spawn_capturing_upstream() -> (SocketAddr, Arc<Mutex<Option<String>>>) 
     (addr, last_query)
 }
 
+/// Spawns a local upstream that answers `500` with a body echoing the query
+/// string it received — verbatim (so the body carries the *url-encoded*
+/// secret) and percent-decoded (so it carries the raw one). Real upstreams
+/// echo a rejected credential back like this all the time, and `invoke`
+/// splices that body straight into an `AppError::Internal` message that
+/// `IntoResponse` then logs.
+async fn spawn_echoing_500_upstream() -> (SocketAddr, Arc<Mutex<Option<String>>>) {
+    let last_query: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+    let captured = last_query.clone();
+    let app = Router::new().route(
+        "/data",
+        get(move |RawQuery(query): RawQuery| {
+            let captured = captured.clone();
+            async move {
+                let query = query.unwrap_or_default();
+                *captured.lock().unwrap() = Some(query.clone());
+                let decoded = urlencoding::decode(&query)
+                    .map(|c| c.into_owned())
+                    .unwrap_or_else(|_| query.clone());
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    format!("upstream rejected request: raw={decoded} encoded={query}"),
+                )
+            }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind local upstream");
+    let addr = listener.local_addr().expect("local addr");
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+    (addr, last_query)
+}
+
 /// Combines `spawn_counting_upstream` and `spawn_capturing_upstream`: counts
 /// hits *and* records the most recent query string. Needed for the
 /// cache-invalidation test below, which has to prove both that a second
@@ -121,6 +157,71 @@ async fn spawn_counting_capturing_upstream()
         axum::serve(listener, app).await.unwrap();
     });
     (addr, hits, last_query)
+}
+
+/// A `tracing` writer that appends every formatted event into a shared
+/// buffer, so a test can assert on what this process *logged* rather than
+/// only on what it returned. Needed because `AppError::Internal` renders a
+/// generic body to the caller and puts the real message in a
+/// `tracing::error!` — which is exactly where a leaked secret would land,
+/// and the only place it can be observed.
+#[derive(Clone, Default)]
+struct CapturedLogs(Arc<Mutex<Vec<u8>>>);
+
+impl CapturedLogs {
+    /// Every line logged by this test process so far that mentions
+    /// `marker`. Tests share one global subscriber (only one may be
+    /// installed per process) and run in parallel, so each redaction test
+    /// names its own integration in the manifest and filters on that —
+    /// otherwise an assertion could pass or fail on another test's output.
+    fn lines_mentioning(&self, marker: &str) -> String {
+        let bytes = self.0.lock().expect("log buffer not poisoned");
+        String::from_utf8_lossy(&bytes)
+            .lines()
+            .filter(|line| line.contains(marker))
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+}
+
+impl std::io::Write for CapturedLogs {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.0
+            .lock()
+            .expect("log buffer not poisoned")
+            .extend_from_slice(buf);
+        Ok(buf.len())
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for CapturedLogs {
+    type Writer = CapturedLogs;
+
+    fn make_writer(&'a self) -> Self::Writer {
+        self.clone()
+    }
+}
+
+/// Installs the capturing subscriber the first time it is called and hands
+/// back the shared buffer. `set_global_default` may only succeed once per
+/// process, hence the `OnceLock`.
+fn captured_logs() -> &'static CapturedLogs {
+    static LOGS: OnceLock<CapturedLogs> = OnceLock::new();
+    LOGS.get_or_init(|| {
+        let logs = CapturedLogs::default();
+        let subscriber = tracing_subscriber::fmt()
+            .with_writer(logs.clone())
+            .with_ansi(false)
+            .with_max_level(tracing::Level::TRACE)
+            .finish();
+        tracing::subscriber::set_global_default(subscriber)
+            .expect("no other global tracing subscriber in this test process");
+        logs
+    })
 }
 
 /// A manifest declaring a single `test-integration.today` endpoint pointing
@@ -546,6 +647,152 @@ async fn a_config_value_removed_after_caching_fails_the_next_request_instead_of_
         "a missing config value must fail at resolution, before the upstream is contacted \
          again -- if it were serving the stale cache entry instead, the status would be 200 \
          and the hit count would still be 1 for the wrong reason"
+    );
+}
+
+// --- Final review, Important 1: the three `redact_secrets` call sites in
+// `invoke` (`platform::fetch`) were covered by nothing. Both redaction unit
+// tests call `redact_secrets` directly, so deleting any call site left the
+// suite fully green while the branch's headline property — a secret never
+// reaches a log — was broken. These two tests drive `invoke` end-to-end and
+// assert on captured `tracing` output, so removing a call site turns them
+// red.
+//
+// The third call site (the `resp.json()` parse failure) is deliberately not
+// covered here: reqwest's decode error carries neither the request URL nor
+// the response body, so its message cannot contain a secret in the first
+// place and no assertion could tell the call site's presence from its
+// absence. It stays as defence in depth against a future reqwest that does
+// include one.
+
+/// Deliberately not alphanumeric: `build_url` form-urlencodes a value into
+/// the query string, so a secret of only `[A-Za-z0-9*._-]` has an identical
+/// raw and encoded form and a test using one cannot tell a working
+/// redaction from one that handles just the raw form (the Fix Round 1
+/// Critical). `/`, `+`, `=` and `?` all change under encoding.
+const ENCODING_SENSITIVE_SECRET: &str = "s3cr3t/v1+aG8=?x";
+
+/// The leading run of the secret above, which *no* url-encoding alters — so
+/// asserting a log does not contain this catches a leak of either form
+/// without the test having to reimplement (and therefore agree with) the
+/// encoder under test.
+const SECRET_PREFIX: &str = "s3cr3t";
+
+fn manifest_with_secret(integration: &str, base: &str) -> String {
+    format!(
+        r#"{{
+          "version": 1,
+          "integrations": {{
+            "{integration}": {{
+              "endpoints": {{
+                "today": {{
+                  "base": "{base}",
+                  "path": "/data",
+                  "query": {{ "appid": "{{{{secret:api_key}}}}" }},
+                  "ttl_secs": 0
+                }}
+              }}
+            }}
+          }}
+        }}"#
+    )
+}
+
+#[tokio::test]
+async fn a_secret_is_redacted_from_the_log_when_the_upstream_returns_an_error_body() {
+    let logs = captured_logs();
+    let integration = "redaction-non-2xx";
+    let (addr, last_query) = spawn_echoing_500_upstream().await;
+    let pool = test_pool().await;
+    sqlx::query("INSERT INTO config (key, value) VALUES (?, ?)")
+        .bind(format!("{integration}.api_key"))
+        .bind(ENCODING_SENSITIVE_SECRET)
+        .execute(&pool)
+        .await
+        .expect("seed config");
+
+    let manifest_json = manifest_with_secret(integration, &format!("http://{addr}"));
+    let manifest = Arc::new(Manifest::from_json(&manifest_json).expect("test manifest parses"));
+    let server = TestServer::new(dashboard_backend::integrations::router(pool, manifest));
+
+    let resp = server
+        .post(&format!("/fetch/{integration}/today"))
+        .json(&json!({ "params": {} }))
+        .await;
+    resp.assert_status(StatusCode::INTERNAL_SERVER_ERROR);
+
+    // Premise check: the upstream really did receive (and therefore echo
+    // back) the secret, so there was something to redact.
+    let captured = last_query
+        .lock()
+        .unwrap()
+        .clone()
+        .expect("upstream should have been hit");
+    assert!(
+        captured.contains("appid="),
+        "test premise broken: upstream never saw the secret, got query: {captured}"
+    );
+
+    let logged = logs.lines_mentioning(&format!("{integration}.today upstream returned"));
+    assert!(
+        !logged.is_empty(),
+        "expected the non-2xx path to log something for {integration}"
+    );
+    assert!(
+        !logged.contains(SECRET_PREFIX),
+        "the secret reached the log in some form: {logged}"
+    );
+    assert!(
+        logged.contains("[redacted]"),
+        "the upstream body echoed the secret, so the log should show it redacted: {logged}"
+    );
+}
+
+#[tokio::test]
+async fn a_secret_is_redacted_from_the_log_when_the_upstream_is_unreachable() {
+    let logs = captured_logs();
+    let integration = "redaction-unreachable";
+
+    // Bind then drop, so the port is real, unused, and refuses connections
+    // immediately. reqwest's send error embeds the full request URL — query
+    // string and all — which is exactly how a secret gets into a log.
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind");
+    let addr = listener.local_addr().expect("local addr");
+    drop(listener);
+
+    let pool = test_pool().await;
+    sqlx::query("INSERT INTO config (key, value) VALUES (?, ?)")
+        .bind(format!("{integration}.api_key"))
+        .bind(ENCODING_SENSITIVE_SECRET)
+        .execute(&pool)
+        .await
+        .expect("seed config");
+
+    let manifest_json = manifest_with_secret(integration, &format!("http://{addr}"));
+    let manifest = Arc::new(Manifest::from_json(&manifest_json).expect("test manifest parses"));
+    let server = TestServer::new(dashboard_backend::integrations::router(pool, manifest));
+
+    let resp = server
+        .post(&format!("/fetch/{integration}/today"))
+        .json(&json!({ "params": {} }))
+        .await;
+    resp.assert_status(StatusCode::INTERNAL_SERVER_ERROR);
+
+    let logged = logs.lines_mentioning(&format!("{integration}.today request failed"));
+    assert!(
+        !logged.is_empty(),
+        "expected the request-failure path to log something for {integration}"
+    );
+    assert!(
+        !logged.contains(SECRET_PREFIX),
+        "the secret reached the log in some form: {logged}"
+    );
+    assert!(
+        logged.contains("[redacted]"),
+        "reqwest's error embeds the request URL, so the log should show the secret \
+         redacted out of it: {logged}"
     );
 }
 
