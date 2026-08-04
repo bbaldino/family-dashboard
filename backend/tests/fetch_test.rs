@@ -831,8 +831,11 @@ fn manifest_with_cfg_default(addr: SocketAddr, default: Option<&str>) -> String 
 
 #[tokio::test]
 async fn an_absent_cfg_key_falls_back_to_the_manifest_default() {
-    // No config row seeded at all — the fresh-install case, and the case of
-    // a user clearing the field in the settings UI.
+    // No config row seeded at all — the fresh-install case. Note this is
+    // *not* the settings-UI "cleared the field" case: config writes are
+    // upserts, so clearing leaves an empty-string row, and an empty string
+    // is a present value that wins over the default. Same as the `get_or`
+    // this replaced, so no regression, but the two are not the same state.
     let (addr, last_query) = spawn_capturing_upstream().await;
     let server = test_server_with_manifest(&manifest_with_cfg_default(addr, Some("37.2504"))).await;
 

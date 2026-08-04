@@ -600,15 +600,6 @@ mod tests {
     // without putting the literal at six call sites. ---
 
     #[test]
-    fn accepts_a_cfg_placeholder_with_a_default() {
-        let ok = SAMPLE.replace(
-            "\"query\": {}",
-            "\"query\": {\"lat\": \"{{cfg:lat|37.2504}}\"}",
-        );
-        assert!(Manifest::from_json(&ok).is_ok());
-    }
-
-    #[test]
     fn the_suspicious_key_check_reads_the_key_not_the_default() {
         // The heuristic must look at `lat`, not at the whole
         // `lat|…`. A default that happens to contain "key"/"token"/etc.
