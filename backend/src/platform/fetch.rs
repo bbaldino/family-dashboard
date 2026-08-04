@@ -24,6 +24,14 @@ use crate::error::AppError;
 /// entries too.
 const MAX_CACHE_ENTRIES: usize = 500;
 
+/// Everything `invoke` needs, built once in `router` and shared by every
+/// request.
+///
+/// The three fields are the whole security posture: `manifest` is the
+/// allowlist (the only source of hosts and paths this process will contact),
+/// `client` has redirects disabled so that allowlist binds every hop rather
+/// than just the first, and `cache` collapses repeat requests so N clients
+/// polling the same endpoint cost one upstream call.
 #[derive(Clone)]
 pub struct PlatformState {
     pub manifest: Arc<Manifest>,
@@ -37,6 +45,17 @@ struct CacheEntry {
     ttl: Duration,
 }
 
+/// Per-response TTL cache, keyed by `cache_key` and shared across every
+/// integration and endpoint.
+///
+/// Each entry carries its own TTL because the manifest sets `ttl_secs` per
+/// endpoint. Entries are purged lazily — `get` treats an expired entry as a
+/// miss, and `set` drops expired entries before enforcing
+/// [`MAX_CACHE_ENTRIES`]; nothing sweeps in the background. Eviction is
+/// oldest-insert rather than true LRU, which means a long-TTL entry is
+/// always the first candidate even when it is the most-read one. That is
+/// acceptable while endpoints declare few params, and worth revisiting when
+/// one takes a high-cardinality param.
 #[derive(Default)]
 pub struct ResponseCache {
     entries: RwLock<BTreeMap<String, CacheEntry>>,
@@ -219,12 +238,51 @@ pub fn build_url(
     Ok(url.to_string())
 }
 
+/// The request body: `{"params": {"name": "value", …}}`.
+///
+/// Deliberately the *only* thing a client controls beyond naming an
+/// integration and endpoint. Values here are substituted into
+/// `{{param:name}}` placeholders that the **manifest** declared, and are
+/// url-encoded as query values — they cannot introduce a parameter, a path
+/// segment, a host, or a scheme.
+///
+/// The body is optional; an absent body is equivalent to `{"params": {}}`.
+/// A param the endpoint does not declare is rejected rather than ignored
+/// (see `reject_undeclared_params`), so a typo'd param name fails loudly
+/// instead of silently producing a URL the caller did not intend.
 #[derive(Deserialize, Default)]
 pub struct FetchRequest {
     #[serde(default)]
     pub params: BTreeMap<String, String>,
 }
 
+/// `POST /api/fetch/{integration}/{endpoint}` — the generic upstream call
+/// that replaces per-integration Rust.
+///
+/// A client names an integration and an endpoint and supplies *values*. It
+/// never supplies a URL, a path, or a host: those come only from the
+/// checked-in manifest, which is validated at boot. That is the SSRF
+/// boundary this whole module exists to hold, and it matters because this
+/// process sits on a LAN alongside Home Assistant, the Unraid and Proxmox
+/// admin UIs, and the reverse proxy's own admin API, and is reachable
+/// without authentication.
+///
+/// On success the upstream's JSON body is relayed verbatim.
+///
+/// Errors:
+/// - **404** — no such integration or endpoint in the manifest. Returned
+///   before any URL is built, so an unknown name costs nothing.
+/// - **400** — a param the endpoint does not declare.
+/// - **500** — the upstream was unreachable, returned a non-2xx, or sent a
+///   body that would not parse as JSON. The upstream's own message is
+///   included for the log; `AppError::Internal` renders a generic body to
+///   the caller, so it is not disclosed over the wire.
+///
+/// Caching: when `ttl_secs > 0`, a hit returns immediately and a miss stores
+/// the response. Endpoints with `ttl_secs == 0` neither read nor write the
+/// cache. Concurrent misses are *not* single-flighted — each reaches the
+/// upstream — which is fine at one dashboard's request volume but is the
+/// first thing to revisit if a short-TTL endpoint gains several consumers.
 pub async fn invoke(
     State(state): State<PlatformState>,
     Path((integration, endpoint)): Path<(String, String)>,
@@ -311,6 +369,13 @@ fn build_client() -> reqwest::Client {
         .unwrap_or_else(|_| reqwest::Client::new())
 }
 
+/// Builds the fetch capability's router, mounted by `integrations::router`
+/// under `/fetch` so the full path is `/api/fetch/{integration}/{endpoint}`.
+///
+/// Takes the manifest rather than loading it, because `main` loads it once at
+/// startup and panics on a bad one — a malformed manifest must stop the
+/// process, not surface as a per-request failure. The client and cache are
+/// built here and shared by every request via [`PlatformState`].
 pub fn router(manifest: Arc<Manifest>) -> Router {
     let state = PlatformState {
         manifest,

@@ -13,6 +13,15 @@ use crate::error::AppError;
 /// module exists to prevent.
 const SUPPORTED_MANIFEST_VERSION: u32 = 1;
 
+/// The deserialized `manifest.json` — every upstream this process is
+/// permitted to contact.
+///
+/// Loaded once at startup by `main`, which panics if it will not parse or
+/// validate: a bad manifest must stop the process rather than surface as a
+/// 500 on one endpoint forever. `deny_unknown_fields` is load-bearing here
+/// and on the two structs below — without it a typo like `ttl_sec` or
+/// `querry` deserializes to the field's default, silently disabling caching
+/// or stripping an endpoint's declared params.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Manifest {
@@ -20,20 +29,38 @@ pub struct Manifest {
     pub integrations: BTreeMap<String, IntegrationEntry>,
 }
 
+/// One integration's endpoints, keyed by the name a client passes as
+/// `{endpoint}` in `POST /api/fetch/{integration}/{endpoint}`.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct IntegrationEntry {
     pub endpoints: BTreeMap<String, Endpoint>,
 }
 
+/// A single declared upstream call.
+///
+/// `base` and `path` together are the allowlist: they are the *only* source
+/// of scheme, host, port, and path for an outbound request, and
+/// `validate_endpoint_url` proves at boot that resolving `path` against
+/// `base` cannot leave `base`'s origin.
+///
+/// `query` values may contain `{{param:name}}` placeholders, which is the
+/// one place a client-supplied value enters the URL — url-encoded, as a
+/// query value only. A param name not appearing in some placeholder here is
+/// rejected by `invoke` rather than ignored.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Endpoint {
     /// The allowlist. A request may never influence this value.
     pub base: String,
+    /// Resolved against `base`; validated so it cannot retarget the origin.
     pub path: String,
+    /// Query keys are fixed by the manifest; values may be
+    /// `{{param:name}}` placeholders filled from the request body.
     #[serde(default)]
     pub query: BTreeMap<String, String>,
+    /// Server-side cache lifetime. `0` disables caching for this endpoint
+    /// on both read and write.
     #[serde(default)]
     pub ttl_secs: u64,
 }
