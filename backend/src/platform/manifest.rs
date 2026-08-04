@@ -6,18 +6,28 @@ use url::Url;
 
 use crate::error::AppError;
 
+/// The only `version` this build understands. Bump alongside any breaking
+/// change to the manifest shape, and reject anything else in `from_str` —
+/// silently parsing a manifest written for a different version is exactly
+/// the "degrade at request time instead of failing at boot" outcome this
+/// module exists to prevent.
+const SUPPORTED_MANIFEST_VERSION: u32 = 1;
+
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Manifest {
     pub version: u32,
     pub integrations: BTreeMap<String, IntegrationEntry>,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct IntegrationEntry {
     pub endpoints: BTreeMap<String, Endpoint>,
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Endpoint {
     /// The allowlist. A request may never influence this value.
     pub base: String,
@@ -34,6 +44,14 @@ impl FromStr for Manifest {
     fn from_str(raw: &str) -> Result<Self, Self::Err> {
         let manifest: Manifest = serde_json::from_str(raw)
             .map_err(|e| AppError::Internal(format!("manifest parse failed: {}", e)))?;
+
+        if manifest.version != SUPPORTED_MANIFEST_VERSION {
+            return Err(AppError::Internal(format!(
+                "manifest: unsupported version {} (this build only understands version {}); \
+                 update manifest.json or the build",
+                manifest.version, SUPPORTED_MANIFEST_VERSION
+            )));
+        }
 
         // Validated at load, not at request time: a malformed base or path
         // is a deployment error, and an integration that could reach an
@@ -208,6 +226,57 @@ mod tests {
             err.contains("today"),
             "error should name the endpoint: {err}"
         );
+    }
+
+    // --- deny_unknown_fields + explicit version check (Final review,
+    // "the manifest's boot-time guarantee is defeated by any typo"): a
+    // `ttl_secs` typo used to silently disable caching, and a `query` typo
+    // used to silently strip an endpoint's declared params, both at request
+    // time instead of boot. ---
+
+    #[test]
+    fn rejects_a_typo_d_endpoint_field() {
+        // "ttl_sec" instead of "ttl_secs" — before deny_unknown_fields, this
+        // parsed fine and silently left ttl_secs at its default of 0,
+        // disabling caching for the endpoint with no error anywhere.
+        let typo = SAMPLE.replace("\"ttl_secs\"", "\"ttl_sec\"");
+        assert!(Manifest::from_str(&typo).is_err());
+    }
+
+    #[test]
+    fn rejects_a_typo_d_query_field() {
+        // "querry" instead of "query" — before deny_unknown_fields, this
+        // parsed fine and silently left query empty, stripping the
+        // endpoint's declared params.
+        let typo = SAMPLE.replace("\"query\"", "\"querry\"");
+        assert!(Manifest::from_str(&typo).is_err());
+    }
+
+    #[test]
+    fn rejects_an_unknown_top_level_field() {
+        let bad = SAMPLE.replacen('{', "{\"unexpected\": true,", 1);
+        assert!(Manifest::from_str(&bad).is_err());
+    }
+
+    #[test]
+    fn rejects_an_unsupported_version() {
+        let bad = SAMPLE.replace("\"version\": 1,", "\"version\": 99,");
+        let err = Manifest::from_str(&bad).unwrap_err().to_string();
+        assert!(
+            err.contains("99") && err.contains('1'),
+            "error should name both the given and supported versions: {err}"
+        );
+    }
+
+    // --- the manifest is validated only at process boot, so a bad edit to
+    // the checked-in file leaves `cargo test` green and crash-loops the
+    // container at deploy unless something in the suite actually loads it. ---
+
+    #[test]
+    fn checked_in_manifest_is_valid() {
+        // cargo test's working directory is the package root (backend/),
+        // the same relative path main.rs resolves MANIFEST_PATH against.
+        Manifest::load("manifest.json").unwrap();
     }
 
     // --- path validation happens at boot too, not just per-request in

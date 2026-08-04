@@ -11,14 +11,17 @@ use url::Url;
 use super::manifest::{Endpoint, Manifest, validate_endpoint_url};
 use crate::error::AppError;
 
-/// Hard cap on the number of distinct cache entries a single endpoint's
-/// param values can accumulate. Declared-param validation (see
-/// `declared_params`) bounds *which* param names reach the cache key, but
-/// not the values an attacker can send for a legitimate param (e.g. a
-/// search `q`), so the cache itself still needs a ceiling: without one, a
-/// loop of distinct values is a guaranteed cache miss every time, and each
-/// miss both hits the upstream (defeating the TTL's purpose) and grows an
-/// otherwise-unbounded `BTreeMap` forever.
+/// Hard cap on the number of distinct cache entries the process holds across
+/// *all* endpoints combined — `entries` is one global `BTreeMap`, not one
+/// per endpoint. Declared-param validation (see `declared_params`) bounds
+/// *which* param names reach the cache key, but not the values an attacker
+/// can send for a legitimate param (e.g. a search `q`), so the cache still
+/// needs a ceiling: without one, a loop of distinct values is a guaranteed
+/// cache miss every time and grows an otherwise-unbounded `BTreeMap`
+/// forever. This bounds memory only — it does not protect the upstream from
+/// being hit on every miss, and because the map is shared, a flood of
+/// distinct values against one endpoint can evict another endpoint's
+/// entries too.
 const MAX_CACHE_ENTRIES: usize = 500;
 
 #[derive(Clone)]
@@ -118,6 +121,27 @@ fn declared_params(endpoint: &Endpoint) -> BTreeSet<&str> {
         .collect()
 }
 
+/// Rejects any param name the endpoint's query template doesn't declare.
+/// Called from `invoke` *before* `cache_key` is computed (see the doc
+/// comment on `cache_key` for why an undeclared param must never reach it)
+/// and again from `build_url`, whose own unit tests construct `Endpoint`
+/// values directly and call it without going through `invoke` at all. The
+/// duplication keeps the invariant true in both places rather than relying
+/// on caller ordering alone.
+fn reject_undeclared_params(
+    endpoint: &Endpoint,
+    params: &BTreeMap<String, String>,
+) -> Result<(), AppError> {
+    let declared = declared_params(endpoint);
+    if let Some(bad) = params.keys().find(|k| !declared.contains(k.as_str())) {
+        return Err(AppError::BadRequest(format!(
+            "param '{}' is not declared by this endpoint",
+            bad
+        )));
+    }
+    Ok(())
+}
+
 /// Build the upstream URL from the manifest, substituting only `{{param:…}}`
 /// placeholders in query values. `base` and `path` come from the manifest
 /// and can never be influenced by the request — that is the SSRF boundary.
@@ -149,17 +173,25 @@ pub fn build_url(
         ))
     })?;
 
+    // `Manifest::from_str` already checked this at boot, but this function
+    // re-parses `base` from scratch rather than reusing that validated
+    // `Url`, so without re-checking the scheme here the per-request guard
+    // would be weaker than the boot guard: a manifest field that somehow
+    // changed shape between boot and request (or a caller that builds an
+    // `Endpoint` directly, as the unit tests below do) could otherwise
+    // resolve a `file://` or other non-http(s) base.
+    if !matches!(base.scheme(), "http" | "https") {
+        return Err(AppError::Internal(format!(
+            "endpoint base {:?} must be http or https",
+            endpoint.base
+        )));
+    }
+
     let mut url = validate_endpoint_url(&base, &endpoint.path).map_err(AppError::Internal)?;
     url.set_query(None);
     url.set_fragment(None);
 
-    let declared = declared_params(endpoint);
-    if let Some(bad) = params.keys().find(|k| !declared.contains(k.as_str())) {
-        return Err(AppError::BadRequest(format!(
-            "param '{}' is not declared by this endpoint",
-            bad
-        )));
-    }
+    reject_undeclared_params(endpoint, params)?;
 
     let mut pairs: Vec<(String, String)> = Vec::new();
     for (key, template) in &endpoint.query {
@@ -209,6 +241,13 @@ pub async fn invoke(
                 integration, endpoint
             ))
         })?;
+
+    // Must run before `cache_key` is computed: `cache_key` hashes every
+    // param the client sent, declared or not, and `build_url` silently
+    // ignores anything undeclared. Checking here first keeps that
+    // ordering an invariant of `invoke` itself rather than something that
+    // only happens to hold because `build_url` is called later.
+    reject_undeclared_params(ep, &req.params)?;
 
     let key = cache_key(&integration, &endpoint, &req.params);
     if ep.ttl_secs > 0
@@ -366,6 +405,18 @@ mod tests {
         // resolve to the exact same upstream URL.
         let params = BTreeMap::from([("not_declared".to_string(), "x".to_string())]);
         assert!(build_url(&ep(), &params).is_err());
+    }
+
+    #[test]
+    fn rejects_a_non_http_scheme_base_even_when_it_bypasses_manifest_validation() {
+        // Manifest::from_str already rejects a non-http(s) base at boot, but
+        // build_url re-parses `endpoint.base` from scratch rather than
+        // reusing that validated Url — so a directly-constructed Endpoint
+        // (as every test in this module does) must be re-checked here too,
+        // or the per-request guard would be weaker than the boot guard.
+        let mut e = ep();
+        e.base = "file:///etc/passwd".into();
+        assert!(build_url(&e, &BTreeMap::new()).is_err());
     }
 
     // --- The two gaps deferred from Task 3's review ---

@@ -69,4 +69,30 @@ describe('useIntegrationQuery', () => {
     // this is what it would have seen — assert it never does.
     expect(intervalFn).not.toHaveBeenCalledWith([{ q: 'hello', a: 'someone' }])
   })
+
+  it('does not let a throwing select escape a functional refetchInterval', async () => {
+    // react-query catches a throwing `select` in the observer's derived
+    // result (the query lands in status: 'error'), but the functional
+    // `refetchInterval` path re-derives `select` itself outside that
+    // machinery. Before the fix, a throw here propagates out of
+    // QueryObserver.setOptions -> useBaseQuery as an uncaught exception —
+    // on a kiosk with no error boundary, that's a wedged, blank display.
+    const intervalFn = vi.fn().mockReturnValue(false)
+    const { result } = renderHook(
+      () =>
+        useIntegrationQuery<{ q: string; a: string }[], { quote: string }>(demo, 'today', {
+          select: () => {
+            throw new Error('malformed payload')
+          },
+          refetchInterval: intervalFn,
+        }),
+      { wrapper },
+    )
+
+    // The hook must settle (not hang forever) and the callback must run
+    // without the throw escaping the render.
+    await waitFor(() => expect(result.current.status).toBe('error'))
+    await waitFor(() => expect(intervalFn).toHaveBeenCalled())
+    expect(intervalFn).toHaveBeenCalledWith(undefined)
+  })
 })

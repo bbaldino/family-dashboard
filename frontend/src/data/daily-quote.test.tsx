@@ -35,4 +35,17 @@ describe('useDailyQuote', () => {
     expect(url).toBe('/api/fetch/daily-quote/today')
     expect(JSON.parse(init.body)).toEqual({ params: {} })
   })
+
+  it('surfaces a clear error instead of a TypeError when ZenQuotes returns an empty array', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify([]),
+    })
+    const { result } = renderHook(() => useDailyQuote(), { wrapper })
+    await waitFor(() => expect(result.current.status).toBe('error'))
+    expect(result.current.error).toBeInstanceOf(Error)
+    expect((result.current.error as Error).message).not.toMatch(/undefined/i)
+    expect((result.current.error as Error).message).toMatch(/empty|malformed/i)
+  })
 })
