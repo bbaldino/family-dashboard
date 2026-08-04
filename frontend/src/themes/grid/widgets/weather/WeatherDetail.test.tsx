@@ -3,7 +3,14 @@ import { render, screen } from '@testing-library/react'
 import { WeatherDetail } from './WeatherDetail'
 
 const useWeatherForecast = vi.hoisted(() => vi.fn())
-vi.mock('@/data/weather', () => ({ useWeatherForecast }))
+// Partial mock: only the hook is stubbed. The component also imports the
+// shared `conditionIcons` map from this module, and that is real
+// presentation data — a whole-module mock would have to restate it here and
+// go stale the moment the real one changes.
+vi.mock('@/data/weather', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/data/weather')>()),
+  useWeatherForecast,
+}))
 
 const FORECAST = {
   daily: [

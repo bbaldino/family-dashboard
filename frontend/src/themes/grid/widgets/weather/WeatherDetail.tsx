@@ -1,16 +1,4 @@
-import { useWeatherForecast } from '@/data/weather'
-
-const conditionIcons: Record<string, string> = {
-  Clear: '\u2600\uFE0F',
-  Clouds: '\u2601\uFE0F',
-  Rain: '\u{1F327}\uFE0F',
-  Drizzle: '\u{1F326}\uFE0F',
-  Thunderstorm: '\u26A1',
-  Snow: '\u2744\uFE0F',
-  Mist: '\u{1F32B}\uFE0F',
-  Fog: '\u{1F32B}\uFE0F',
-  Haze: '\u{1F32B}\uFE0F',
-}
+import { conditionIcons, useWeatherForecast } from '@/data/weather'
 
 export function WeatherDetail() {
   const { data: forecast, isError } = useWeatherForecast()
