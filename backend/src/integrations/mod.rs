@@ -11,7 +11,6 @@ pub mod on_this_day;
 pub mod packages;
 pub mod sports;
 pub mod trivia;
-pub mod weather;
 pub mod word_of_the_day;
 
 pub use config_helpers::IntegrationConfig;
@@ -27,7 +26,6 @@ pub fn router(
         .nest("/chores", chores::router(pool.clone()))
         .nest("/config", config::router(pool.clone()))
         .nest("/nutrislice", nutrislice::router(pool.clone()))
-        .nest("/weather", weather::router(pool.clone()))
         .nest("/google-calendar", google_calendar::router(pool.clone()))
         .nest("/google", google_calendar::auth::router(pool.clone()))
         .nest("/health", health::router(pool.clone()))
