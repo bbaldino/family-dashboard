@@ -6,7 +6,6 @@
         "today": {
           "base": "https://zenquotes.io",
           "path": "/api/today",
-          "method": "GET",
           "query": {},
           "ttl_secs": 86400
         }

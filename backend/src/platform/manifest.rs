@@ -22,16 +22,10 @@ pub struct Endpoint {
     /// The allowlist. A request may never influence this value.
     pub base: String,
     pub path: String,
-    #[serde(default = "default_method")]
-    pub method: String,
     #[serde(default)]
     pub query: BTreeMap<String, String>,
     #[serde(default)]
     pub ttl_secs: u64,
-}
-
-fn default_method() -> String {
-    "GET".to_string()
 }
 
 impl FromStr for Manifest {
@@ -41,22 +35,30 @@ impl FromStr for Manifest {
         let manifest: Manifest = serde_json::from_str(raw)
             .map_err(|e| AppError::Internal(format!("manifest parse failed: {}", e)))?;
 
-        // Validated at load, not at request time: a malformed base is a
-        // deployment error, and an integration that could reach an arbitrary
-        // scheme (or an empty host) would turn this service into an open
-        // proxy on the LAN. A prefix check isn't enough here — "https://" on
-        // its own satisfies `starts_with("https://")` while naming no host —
-        // so the base is parsed as a real URL and both the scheme and the
-        // presence of a host are checked explicitly.
+        // Validated at load, not at request time: a malformed base or path
+        // is a deployment error, and an integration that could reach an
+        // arbitrary scheme, host, or off-base path would turn this service
+        // into an open proxy on the LAN. A prefix check isn't enough here —
+        // "https://" on its own satisfies `starts_with("https://")` while
+        // naming no host — so the base is parsed as a real URL and both the
+        // scheme and the presence of a host are checked explicitly. The
+        // path gets the same treatment via `validate_endpoint_url`, shared
+        // with `platform::fetch::build_url`.
         for (id, entry) in &manifest.integrations {
             for (name, ep) in &entry.endpoints {
-                let valid = Url::parse(&ep.base).is_ok_and(|url| {
-                    matches!(url.scheme(), "http" | "https") && url.host().is_some()
-                });
-                if !valid {
+                let base = Url::parse(&ep.base)
+                    .ok()
+                    .filter(|url| matches!(url.scheme(), "http" | "https") && url.host().is_some());
+                let Some(base) = base else {
                     return Err(AppError::Internal(format!(
                         "manifest: {}.{} base must be an absolute http(s) URL with a host, got {:?}",
                         id, name, ep.base
+                    )));
+                };
+                if let Err(msg) = validate_endpoint_url(&base, &ep.path) {
+                    return Err(AppError::Internal(format!(
+                        "manifest: {}.{}: {}",
+                        id, name, msg
                     )));
                 }
             }
@@ -77,6 +79,57 @@ impl Manifest {
     }
 }
 
+/// Resolves `path` against `base` and asserts the result stays on the same
+/// origin (scheme, host, and port) as `base` — the actual SSRF boundary —
+/// after two textual "intent guards" that reject the common mistakes with a
+/// clearer message: a path that isn't root-anchored, and one containing a
+/// `..` segment (checked after percent-decoding, since `%2e%2e` is `..` to
+/// any HTTP server that decodes it, and traversal can't be caught by the
+/// origin check below — it never leaves the host).
+///
+/// The origin check is what actually does the work. It deliberately does
+/// not try to enumerate every way a path string can resolve to a different
+/// authority — a network-path reference (`//host/x`), a backslash treated
+/// as a slash on http(s) URLs by the WHATWG parser, a control character
+/// (tab, CR, LF) stripped before parsing, or some future parser quirk none
+/// of us has thought of yet. Instead it resolves the path with `Url::join`
+/// and then checks whether the *result* landed on the origin the manifest
+/// declared. That's exact regardless of the mechanism a bad path used to
+/// get there.
+///
+/// Shared between `Manifest::from_str` (a bad manifest must fail at boot,
+/// not degrade at request time) and `platform::fetch::build_url`, which
+/// re-validates per request because its own unit tests build `Endpoint`
+/// values directly and bypass `Manifest::from_str` entirely.
+pub fn validate_endpoint_url(base: &Url, path: &str) -> Result<Url, String> {
+    let decoded = urlencoding::decode(path)
+        .map(|c| c.into_owned())
+        .unwrap_or_else(|_| path.to_string());
+
+    if !path.starts_with('/') || decoded.split('/').any(|segment| segment == "..") {
+        return Err(format!(
+            "endpoint path {:?} must be a root-anchored path with no '..' segments",
+            path
+        ));
+    }
+
+    let resolved = base
+        .join(path)
+        .map_err(|e| format!("failed to resolve endpoint path {:?}: {}", path, e))?;
+
+    if resolved.scheme() != base.scheme()
+        || resolved.host_str() != base.host_str()
+        || resolved.port_or_known_default() != base.port_or_known_default()
+    {
+        return Err(format!(
+            "endpoint path {:?} resolves off the declared base host",
+            path
+        ));
+    }
+
+    Ok(resolved)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -86,7 +139,7 @@ mod tests {
       "integrations": {
         "daily-quote": { "endpoints": { "today": {
           "base": "https://zenquotes.io", "path": "/api/today",
-          "method": "GET", "query": {}, "ttl_secs": 86400 } } }
+          "query": {}, "ttl_secs": 86400 } } }
       }
     }"#;
 
@@ -155,5 +208,71 @@ mod tests {
             err.contains("today"),
             "error should name the endpoint: {err}"
         );
+    }
+
+    // --- path validation happens at boot too, not just per-request in
+    // platform::fetch::build_url (Fix Round 1, "path validation runs
+    // per-request, not at boot"). ---
+
+    #[test]
+    fn rejects_a_manifest_whose_path_is_an_absolute_url_to_another_host() {
+        let bad = SAMPLE.replace("/api/today", "https://evil.example.com/steal");
+        assert!(Manifest::from_str(&bad).is_err());
+    }
+
+    #[test]
+    fn rejects_a_manifest_whose_path_is_scheme_relative() {
+        let bad = SAMPLE.replace("/api/today", "//evil.example.com/steal");
+        assert!(Manifest::from_str(&bad).is_err());
+    }
+
+    #[test]
+    fn rejects_a_manifest_path_with_dot_dot_traversal() {
+        let bad = SAMPLE.replace("/api/today", "/api/../../secret");
+        assert!(Manifest::from_str(&bad).is_err());
+    }
+
+    // --- validate_endpoint_url directly: the origin check is the real
+    // boundary, not the textual guards, per Fix Round 1's Critical finding
+    // that the textual guards alone are bypassable. ---
+
+    fn zenquotes() -> Url {
+        Url::parse("https://zenquotes.io").unwrap()
+    }
+
+    #[test]
+    fn origin_check_rejects_backslash_treated_as_slash() {
+        // WHATWG URL parsing treats `\` as `/` for special (http/https)
+        // schemes, so this resolves to the network-path reference
+        // `//evil.example.com/x`, which retargets the host. The leading-`/`
+        // and no-`..` textual guards both pass this string; only the
+        // post-join origin comparison catches it.
+        assert!(validate_endpoint_url(&zenquotes(), "/\\evil.example.com/x").is_err());
+    }
+
+    #[test]
+    fn origin_check_rejects_embedded_control_characters() {
+        // The WHATWG parser strips C0 control characters (tab, CR, LF)
+        // before parsing, so this also collapses to `//evil.example.com/x`.
+        assert!(validate_endpoint_url(&zenquotes(), "/\t/evil.example.com/x").is_err());
+    }
+
+    #[test]
+    fn origin_check_rejects_percent_encoded_dot_dot_traversal() {
+        assert!(validate_endpoint_url(&zenquotes(), "/api/%2e%2e/%2e%2e/secret").is_err());
+    }
+
+    #[test]
+    fn origin_check_accepts_a_normal_path() {
+        let resolved = validate_endpoint_url(&zenquotes(), "/api/today").unwrap();
+        assert_eq!(resolved.as_str(), "https://zenquotes.io/api/today");
+    }
+
+    #[test]
+    fn origin_check_preserves_a_non_default_port() {
+        let base = Url::parse("http://192.168.1.42:8123").unwrap();
+        let resolved = validate_endpoint_url(&base, "/api/states").unwrap();
+        assert_eq!(resolved.port_or_known_default(), Some(8123));
+        assert_eq!(resolved.host_str(), Some("192.168.1.42"));
     }
 }

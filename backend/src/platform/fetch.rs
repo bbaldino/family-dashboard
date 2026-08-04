@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -8,8 +8,18 @@ use serde::Deserialize;
 use tokio::sync::RwLock;
 use url::Url;
 
-use super::manifest::{Endpoint, Manifest};
+use super::manifest::{Endpoint, Manifest, validate_endpoint_url};
 use crate::error::AppError;
+
+/// Hard cap on the number of distinct cache entries a single endpoint's
+/// param values can accumulate. Declared-param validation (see
+/// `declared_params`) bounds *which* param names reach the cache key, but
+/// not the values an attacker can send for a legitimate param (e.g. a
+/// search `q`), so the cache itself still needs a ceiling: without one, a
+/// loop of distinct values is a guaranteed cache miss every time, and each
+/// miss both hits the upstream (defeating the TTL's purpose) and grows an
+/// otherwise-unbounded `BTreeMap` forever.
+const MAX_CACHE_ENTRIES: usize = 500;
 
 #[derive(Clone)]
 pub struct PlatformState {
@@ -18,9 +28,15 @@ pub struct PlatformState {
     pub cache: Arc<ResponseCache>,
 }
 
+struct CacheEntry {
+    value: serde_json::Value,
+    inserted_at: Instant,
+    ttl: Duration,
+}
+
 #[derive(Default)]
 pub struct ResponseCache {
-    entries: RwLock<BTreeMap<String, (serde_json::Value, Instant)>>,
+    entries: RwLock<BTreeMap<String, CacheEntry>>,
 }
 
 impl ResponseCache {
@@ -28,57 +44,100 @@ impl ResponseCache {
         Self::default()
     }
 
-    async fn get(&self, key: &str, ttl: Duration) -> Option<serde_json::Value> {
+    async fn get(&self, key: &str) -> Option<serde_json::Value> {
         let guard = self.entries.read().await;
-        let (value, at) = guard.get(key)?;
-        (at.elapsed() < ttl).then(|| value.clone())
+        let entry = guard.get(key)?;
+        (entry.inserted_at.elapsed() < entry.ttl).then(|| entry.value.clone())
     }
 
-    async fn set(&self, key: String, value: serde_json::Value) {
-        self.entries
-            .write()
-            .await
-            .insert(key, (value, Instant::now()));
+    async fn set(&self, key: String, value: serde_json::Value, ttl: Duration) {
+        let mut guard = self.entries.write().await;
+
+        // Drop anything already expired before considering the cap, so a
+        // slow trickle of distinct params doesn't get artificially capped
+        // while genuinely stale entries linger and take up space for
+        // nothing.
+        guard.retain(|_, entry| entry.inserted_at.elapsed() < entry.ttl);
+
+        if guard.len() >= MAX_CACHE_ENTRIES
+            && let Some(oldest) = guard
+                .iter()
+                .min_by_key(|(_, entry)| entry.inserted_at)
+                .map(|(k, _)| k.clone())
+        {
+            // Evict the single oldest entry to make room. Not a full LRU —
+            // just enough to keep an attacker-driven flood of distinct
+            // param values from growing this map forever, on a service
+            // that sees a handful of low-traffic integrations on a home
+            // LAN.
+            guard.remove(&oldest);
+        }
+
+        guard.insert(
+            key,
+            CacheEntry {
+                value,
+                inserted_at: Instant::now(),
+                ttl,
+            },
+        );
     }
 }
 
+/// Cache key for a request. Built from a JSON encoding of
+/// `(integration, endpoint, params)` rather than a hand-joined string:
+/// `BTreeMap`'s `Serialize` impl always emits keys in sorted order, so the
+/// same params produce the same key regardless of client ordering, and JSON
+/// escaping means no separator collision is possible — a naive
+/// `"{i}::{e}::{k}={v}"` join let `params = {"x": "1::y=2"}` collide with
+/// `params = {"x": "1", "y": "2"}`, letting one client's cached response
+/// leak to another client that sent different params for a different
+/// upstream URL.
 pub fn cache_key(integration: &str, endpoint: &str, params: &BTreeMap<String, String>) -> String {
-    // BTreeMap iterates in key order, so the same params always produce the
-    // same key regardless of the order the client sent them.
-    let mut key = format!("{integration}::{endpoint}");
-    for (k, v) in params {
-        key.push_str(&format!("::{k}={v}"));
-    }
-    key
+    serde_json::to_string(&(integration, endpoint, params))
+        .expect("a tuple of strings and a BTreeMap<String, String> always serializes")
+}
+
+/// The set of param names this endpoint's query template actually
+/// references, e.g. `{"q"}` for a query map containing
+/// `{"q": "{{param:q}}"}`. Used to reject params the manifest doesn't
+/// declare before they can reach `cache_key` — otherwise `build_url`
+/// silently ignores undeclared params while `cache_key` still hashes them
+/// in, so a client could vary an irrelevant param to poison or bypass the
+/// cache despite `build_url` producing the exact same upstream URL either
+/// way.
+fn declared_params(endpoint: &Endpoint) -> BTreeSet<&str> {
+    endpoint
+        .query
+        .values()
+        .filter_map(|template| {
+            template
+                .strip_prefix("{{param:")
+                .and_then(|rest| rest.strip_suffix("}}"))
+        })
+        .collect()
 }
 
 /// Build the upstream URL from the manifest, substituting only `{{param:…}}`
-/// placeholders in query values. `base` and `path` come from the manifest and
-/// can never be influenced by the request — that is the SSRF boundary — but
-/// `path` still gets two checks before it's used:
+/// placeholders in query values. `base` and `path` come from the manifest
+/// and can never be influenced by the request — that is the SSRF boundary.
 ///
-/// 1. It must be a plain, root-anchored path (`/api/today`), never an
-///    absolute URL (`https://evil.example.com/x`) or a network-path
-///    reference (`//evil.example.com/x`). `Url::join` treats both of those
-///    as license to replace the authority — see
-///    `documents_why_join_alone_is_not_enough_for_absolute_paths` below for
-///    a direct demonstration. Rejecting them here means a malformed or
-///    generated manifest entry can retarget the *path* on the declared host
-///    at worst, never the host itself.
-/// 2. It must not contain a `..` segment, so it can't walk the resolved
-///    request outside the sub-path the manifest entry declares (it still
-///    can't leave the host — dot-segment removal is bounded by the URL
-///    root — but a manifest bug or generator could otherwise aim a
-///    "daily-quote" entry at an unrelated path on the same host).
-///
-/// `base` may also already carry its own path or query
+/// `path` is resolved against `base` and origin-checked by
+/// `validate_endpoint_url` (see its doc comment in `manifest.rs` for why the
+/// check is a post-resolution origin comparison rather than a blacklist of
+/// path shapes). `base` may also already carry its own path or query
 /// (`https://host/a?b=c`), which is a well-formed URL and passes Task 3's
-/// manifest validation. Naive `base + path` string concatenation against
-/// that produces a malformed URL. `Url::join` with a root-anchored path
-/// reference instead *replaces* the base's path, query, and fragment
-/// entirely (RFC 3986 §5.3) — the base's own path/query never leaks into
-/// the result. `url.set_query(None)` right after is defense in depth for
-/// that same property, not load-bearing on its own.
+/// manifest validation; `Url::join` with a root-anchored path reference
+/// *replaces* the base's path, query, and fragment entirely (RFC 3986
+/// §5.3), so the base's own path/query never leaks into the result. The
+/// explicit `set_query(None)` / `set_fragment(None)` below are not
+/// redundant, though: if `path` itself embeds a literal `?` or `#` (e.g.
+/// `path = "/a?b=c"`, which passes `validate_endpoint_url` — a query string
+/// in the *reference* is not an origin change), those become part of the
+/// resolved URL's query/fragment via the same §5.3 resolution and need to
+/// be stripped explicitly before this function appends its own query pairs,
+/// or the manifest's `path` field could smuggle extra query parameters past
+/// the declared `query` map.
 pub fn build_url(
     endpoint: &Endpoint,
     params: &BTreeMap<String, String>,
@@ -90,22 +149,17 @@ pub fn build_url(
         ))
     })?;
 
-    if endpoint.path.contains("://")
-        || endpoint.path.starts_with("//")
-        || !endpoint.path.starts_with('/')
-        || endpoint.path.split('/').any(|segment| segment == "..")
-    {
-        return Err(AppError::Internal(format!(
-            "endpoint path {:?} must be a plain, root-anchored path with no \
-             scheme, no network-path reference, and no '..' segments",
-            endpoint.path
+    let mut url = validate_endpoint_url(&base, &endpoint.path).map_err(AppError::Internal)?;
+    url.set_query(None);
+    url.set_fragment(None);
+
+    let declared = declared_params(endpoint);
+    if let Some(bad) = params.keys().find(|k| !declared.contains(k.as_str())) {
+        return Err(AppError::BadRequest(format!(
+            "param '{}' is not declared by this endpoint",
+            bad
         )));
     }
-
-    let mut url = base
-        .join(&endpoint.path)
-        .map_err(|e| AppError::Internal(format!("failed to resolve endpoint url: {}", e)))?;
-    url.set_query(None);
 
     let mut pairs: Vec<(String, String)> = Vec::new();
     for (key, template) in &endpoint.query {
@@ -158,10 +212,7 @@ pub async fn invoke(
 
     let key = cache_key(&integration, &endpoint, &req.params);
     if ep.ttl_secs > 0
-        && let Some(hit) = state
-            .cache
-            .get(&key, Duration::from_secs(ep.ttl_secs))
-            .await
+        && let Some(hit) = state.cache.get(&key).await
     {
         return Ok(Json(hit));
     }
@@ -188,20 +239,43 @@ pub async fn invoke(
     })?;
 
     if ep.ttl_secs > 0 {
-        state.cache.set(key, data.clone()).await;
+        state
+            .cache
+            .set(key, data.clone(), Duration::from_secs(ep.ttl_secs))
+            .await;
     }
     Ok(Json(data))
 }
 
-pub fn router(manifest: Arc<Manifest>) -> Router {
-    let client = reqwest::Client::builder()
+/// Builds the `reqwest::Client` used for every outbound `/api/fetch` call.
+/// Pulled out of `router` so the test below exercises the exact
+/// construction path rather than a copy of it.
+fn build_client() -> reqwest::Client {
+    reqwest::Client::builder()
         .timeout(Duration::from_secs(8))
+        // The manifest allowlists a *base host*, not "wherever that host's
+        // first response points next." Without this, a 3xx from an
+        // otherwise-allowlisted upstream (reqwest 0.13's default is to
+        // follow up to 10 redirects) could steer the request to any host on
+        // the LAN — including Home Assistant, Unraid, Proxmox, or the
+        // reverse-proxy admin API — and the response would be relayed
+        // verbatim to an unauthenticated caller. Disabling redirects
+        // entirely (rather than re-checking the origin on each hop) keeps
+        // the allowlist meaning what it says: every request this process
+        // makes goes to a host named in the checked-in manifest, full stop.
+        // If a real upstream ever needs a redirect followed, the fix is to
+        // point `base`/`path` at the destination directly, which is an
+        // auditable manifest change instead of a runtime decision made by
+        // whatever the upstream happens to return today.
+        .redirect(reqwest::redirect::Policy::none())
         .build()
-        .unwrap_or_else(|_| reqwest::Client::new());
+        .unwrap_or_else(|_| reqwest::Client::new())
+}
 
+pub fn router(manifest: Arc<Manifest>) -> Router {
     let state = PlatformState {
         manifest,
-        client,
+        client: build_client(),
         cache: Arc::new(ResponseCache::new()),
     };
 
@@ -219,7 +293,6 @@ mod tests {
         Endpoint {
             base: "https://zenquotes.io".into(),
             path: "/api/today".into(),
-            method: "GET".into(),
             query: BTreeMap::from([("units".to_string(), "imperial".to_string())]),
             ttl_secs: 60,
         }
@@ -259,6 +332,40 @@ mod tests {
             &BTreeMap::from([("x".to_string(), "1".to_string())]),
         );
         assert_ne!(a, b);
+    }
+
+    #[test]
+    fn cache_key_does_not_collide_across_a_naive_separator() {
+        // Under a hand-joined "{i}::{e}::{k}={v}" scheme, these two param
+        // maps produced the identical string "daily-quote::today::x=1::y=2"
+        // -- one client's cached response would leak to another client who
+        // sent different params. The JSON encoding can't collide like this
+        // because param count and boundaries are structural, not textual.
+        let a = cache_key(
+            "daily-quote",
+            "today",
+            &BTreeMap::from([("x".to_string(), "1::y=2".to_string())]),
+        );
+        let b = cache_key(
+            "daily-quote",
+            "today",
+            &BTreeMap::from([
+                ("x".to_string(), "1".to_string()),
+                ("y".to_string(), "2".to_string()),
+            ]),
+        );
+        assert_ne!(a, b);
+    }
+
+    #[test]
+    fn rejects_a_param_the_endpoint_does_not_declare() {
+        // build_url ignores params that don't match a `{{param:…}}`
+        // template, but they must never reach the cache key or the request
+        // is accepted at all -- otherwise an attacker can vary an
+        // irrelevant param name to grow the cache with entries that all
+        // resolve to the exact same upstream URL.
+        let params = BTreeMap::from([("not_declared".to_string(), "x".to_string())]);
+        assert!(build_url(&ep(), &params).is_err());
     }
 
     // --- The two gaps deferred from Task 3's review ---
@@ -304,6 +411,29 @@ mod tests {
     }
 
     #[test]
+    fn a_path_with_an_embedded_query_string_does_not_survive() {
+        // `path = "/a?b=c"` passes validate_endpoint_url (a query string in
+        // the *reference* isn't an origin change), so `set_query(None)`
+        // right after the join is genuinely load-bearing, not defensive
+        // dead code: without it, the manifest's path field could smuggle
+        // an extra query parameter past the declared `query` map.
+        let mut e = ep();
+        e.path = "/a?b=c".into();
+        e.query = BTreeMap::new();
+        let url = build_url(&e, &BTreeMap::new()).unwrap();
+        assert_eq!(url, "https://zenquotes.io/a");
+    }
+
+    #[test]
+    fn a_path_with_an_embedded_fragment_does_not_survive() {
+        let mut e = ep();
+        e.path = "/a#b".into();
+        e.query = BTreeMap::new();
+        let url = build_url(&e, &BTreeMap::new()).unwrap();
+        assert_eq!(url, "https://zenquotes.io/a");
+    }
+
+    #[test]
     fn documents_why_join_alone_is_not_enough_for_absolute_paths() {
         // build_url rejects these paths outright (see the two tests above),
         // so this documents *why*: plugging them straight into `Url::join`
@@ -316,5 +446,58 @@ mod tests {
 
         let joined = base.join("//evil.example.com/steal").unwrap();
         assert_eq!(joined.host_str(), Some("evil.example.com"));
+    }
+
+    // --- Fix Round 1: the router's client must not follow redirects ---
+
+    #[tokio::test]
+    async fn the_platform_client_does_not_follow_a_redirect_to_another_host() {
+        // Two local servers: an "internal" one standing in for something on
+        // the LAN that must never be reachable through the fetch proxy
+        // (Home Assistant, Unraid, etc.), and an "allowlisted" one standing
+        // in for a real manifest base that 302s to it. If build_client()
+        // followed redirects (reqwest's default), this test would observe
+        // the internal server's body. It must not.
+        use axum::response::Redirect;
+        use axum::routing::get;
+
+        let internal_listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let internal_addr = internal_listener.local_addr().unwrap();
+        let internal_app = Router::new().route(
+            "/secret",
+            get(|| async { Json(serde_json::json!({"leaked": true})) }),
+        );
+        tokio::spawn(async move {
+            axum::serve(internal_listener, internal_app).await.unwrap();
+        });
+
+        let redirect_target = format!("http://{internal_addr}/secret");
+        let allowlisted_listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let allowlisted_addr = allowlisted_listener.local_addr().unwrap();
+        let allowlisted_app = Router::new().route(
+            "/redirect",
+            get(move || {
+                let target = redirect_target.clone();
+                async move { Redirect::temporary(&target) }
+            }),
+        );
+        tokio::spawn(async move {
+            axum::serve(allowlisted_listener, allowlisted_app)
+                .await
+                .unwrap();
+        });
+
+        let client = build_client();
+        let resp = client
+            .get(format!("http://{allowlisted_addr}/redirect"))
+            .send()
+            .await
+            .unwrap();
+
+        assert!(
+            resp.status().is_redirection(),
+            "client followed the redirect instead of stopping at it; got status {}",
+            resp.status()
+        );
     }
 }
