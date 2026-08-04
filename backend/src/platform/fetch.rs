@@ -9,6 +9,13 @@
 //! Credentials travel in query strings, so error messages carry the origin
 //! and path only. That is what replaced the old `redact_secrets`, and it is
 //! strictly safer: there is no encoding variant to miss.
+//!
+//! That rule has one trap: `reqwest::Error`'s own `Display` appends
+//! `" for url (...)"` -- full query string included -- to any error that
+//! carries a URL, which a `send()` failure always does. Every `map_err` on a
+//! `reqwest::Error` in [`invoke`] must call `.without_url()` first, or the
+//! error's own formatting silently reintroduces exactly what `safe_label`
+//! was built to avoid.
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -141,7 +148,12 @@ pub async fn invoke(
         .get(url.clone())
         .send()
         .await
-        .map_err(|e| AppError::Internal(format!("{label} request failed: {e}")))?;
+        // reqwest's `Error::Display` appends `" for url (...)"` -- including
+        // the query string -- whenever the error carries one, which a send
+        // failure always does. `without_url()` strips it so `label` (origin
+        // + path only) is genuinely the only URL information in this
+        // message, not undone by the error's own formatting.
+        .map_err(|e| AppError::Internal(format!("{label} request failed: {}", e.without_url())))?;
 
     if !resp.status().is_success() {
         return Err(AppError::Internal(format!(
@@ -153,7 +165,12 @@ pub async fn invoke(
     let data: serde_json::Value = resp
         .json()
         .await
-        .map_err(|e| AppError::Internal(format!("{label} parse failed: {e}")))?;
+        // `resp.json()`'s error is `Kind::Decode`, which reqwest never
+        // attaches a URL to today, so `without_url()` is a no-op here right
+        // now -- kept anyway so this call site can't start leaking on some
+        // future reqwest version that changes that, without anyone having to
+        // notice and come back to add it.
+        .map_err(|e| AppError::Internal(format!("{label} parse failed: {}", e.without_url())))?;
 
     if req.ttl_secs > 0 {
         state

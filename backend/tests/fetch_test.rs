@@ -326,3 +326,47 @@ async fn the_query_string_never_reaches_the_error_message() {
         "the log should still carry origin and path: {logged}"
     );
 }
+
+#[tokio::test]
+async fn the_query_string_never_reaches_the_log_when_the_upstream_is_unreachable() {
+    // Regression coverage for a leak the non-2xx test above could not catch:
+    // reqwest's `Error::Display` appends `" for url (...)"` -- full query
+    // string included -- to a send failure, which happens on exactly this
+    // path (nothing listens on port 1, so the connection is refused
+    // immediately) and nowhere else in `invoke`. Without `.without_url()` on
+    // that `map_err`, `safe_label` would be built correctly and then undone
+    // by the error's own formatting. The secret below deliberately contains
+    // `/`, `+`, `=`, and `?` -- percent-encoded into the URL -- so this is
+    // sensitive to a leak of either the raw or the encoded form, not just
+    // one.
+    let logs = captured_logs();
+    let marker = "/unreachable-leak-check";
+    let server = test_server().await;
+    let resp = server
+        .post("/fetch")
+        .json(&json!({
+            "url": format!(
+                "http://127.0.0.1:1{marker}?appid=s3cr3t%2Fv1%2BaG8%3D%3Fx&units=imperial"
+            )
+        }))
+        .await;
+    resp.assert_status(StatusCode::INTERNAL_SERVER_ERROR);
+
+    let logged = logs.lines_mentioning(marker);
+    assert!(
+        !logged.is_empty(),
+        "expected the request-failure path to log something for {marker}"
+    );
+    assert!(
+        !logged.contains("s3cr3t"),
+        "the secret reached the log: {logged}"
+    );
+    assert!(
+        !logged.contains("appid"),
+        "the query string reached the log: {logged}"
+    );
+    assert!(
+        logged.contains(&format!("http://127.0.0.1:1{marker}")),
+        "the log should still carry origin and path: {logged}"
+    );
+}
