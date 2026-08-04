@@ -12,20 +12,84 @@ use crate::error::AppError;
 /// module exists to prevent.
 const SUPPORTED_MANIFEST_VERSION: u32 = 1;
 
-/// The deserialized `manifest.json` — every upstream this process is
-/// permitted to contact.
+/// A validated `manifest.json` — every upstream this process is permitted
+/// to contact.
 ///
 /// Loaded once at startup by `main`, which panics if it will not parse or
 /// validate: a bad manifest must stop the process rather than surface as a
-/// 500 on one endpoint forever. `deny_unknown_fields` is load-bearing here
-/// and on the two structs below — without it a typo like `ttl_sec` or
-/// `querry` deserializes to the field's default, silently disabling caching
-/// or stripping an endpoint's declared params.
+/// 500 on one endpoint forever.
+///
+/// The type is a newtype over the private [`RawManifest`] rather than a
+/// plain struct with `Deserialize` derived, so that *existing* is the proof
+/// of validity. Deriving `Deserialize` directly would have let any caller
+/// write `serde_json::from_str::<Manifest>` and obtain an unchecked value,
+/// making the guarantee a convention rather than a fact. Validation happens
+/// in [`TryFrom<RawManifest> for Manifest`], which `#[serde(try_from)]`
+/// routes every deserialization through.
+///
+/// `deny_unknown_fields` on `RawManifest` and the two structs below is
+/// load-bearing: without it a typo like `ttl_sec` or `querry` deserializes
+/// to the field's default, silently disabling caching or stripping an
+/// endpoint's declared params.
+#[derive(Debug, Deserialize)]
+#[serde(try_from = "RawManifest")]
+pub struct Manifest(RawManifest);
+
+/// The on-disk shape, deserialized then handed to
+/// [`TryFrom<RawManifest> for Manifest`] for validation. Private, and never
+/// escapes this module: holding a `RawManifest` means "parsed but not yet
+/// checked", which is a state no caller should be able to observe.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct Manifest {
-    pub version: u32,
-    pub integrations: BTreeMap<String, IntegrationEntry>,
+struct RawManifest {
+    version: u32,
+    integrations: BTreeMap<String, IntegrationEntry>,
+}
+
+impl TryFrom<RawManifest> for Manifest {
+    type Error = String;
+
+    /// Where the invariant is actually enforced. Because `Manifest` is
+    /// `#[serde(try_from = "RawManifest")]`, this runs on *every*
+    /// deserialization path — `Manifest::from_json`, `Manifest::load`, or a
+    /// direct `serde_json::from_str::<Manifest>` somewhere in a future
+    /// caller. There is no way to construct a `Manifest` that skipped it.
+    fn try_from(raw: RawManifest) -> Result<Self, Self::Error> {
+        if raw.version != SUPPORTED_MANIFEST_VERSION {
+            return Err(format!(
+                "unsupported version {} (this build only understands version {}); \
+                 update manifest.json or the build",
+                raw.version, SUPPORTED_MANIFEST_VERSION
+            ));
+        }
+
+        // Validated at load, not at request time: a malformed base or path
+        // is a deployment error, and an integration that could reach an
+        // arbitrary scheme, host, or off-base path would turn this service
+        // into an open proxy on the LAN. A prefix check isn't enough here —
+        // "https://" on its own satisfies `starts_with("https://")` while
+        // naming no host — so the base is parsed as a real URL and both the
+        // scheme and the presence of a host are checked explicitly. The
+        // path gets the same treatment via `validate_endpoint_url`, shared
+        // with `platform::fetch::build_url`.
+        for (id, entry) in &raw.integrations {
+            for (name, ep) in &entry.endpoints {
+                let base = Url::parse(&ep.base)
+                    .ok()
+                    .filter(|url| matches!(url.scheme(), "http" | "https") && url.host().is_some());
+                let Some(base) = base else {
+                    return Err(format!(
+                        "{}.{} base must be an absolute http(s) URL with a host, got {:?}",
+                        id, name, ep.base
+                    ));
+                };
+                if let Err(msg) = validate_endpoint_url(&base, &ep.path) {
+                    return Err(format!("{}.{}: {}", id, name, msg));
+                }
+            }
+        }
+        Ok(Manifest(raw))
+    }
 }
 
 /// One integration's endpoints, keyed by the name a client passes as
@@ -65,63 +129,22 @@ pub struct Endpoint {
 }
 
 impl Manifest {
-    /// Deserialize **and validate** a manifest.
+    /// Deserialize and validate a manifest from JSON.
     ///
-    /// This is the only way to obtain a `Manifest`, which is the point: the
-    /// type carries the invariant that every endpoint's `base` is an
-    /// absolute http(s) URL with a host, and that resolving its `path`
-    /// against that base cannot leave the base's origin. A bare
-    /// `serde_json::from_str::<Manifest>` would hand back an unchecked value
-    /// and lose that guarantee, so `Deserialize` is deliberately not the
-    /// public entry point.
+    /// A convenience over `serde_json::from_str` that maps the error into
+    /// [`AppError`] — **not** the thing that enforces the invariant. That
+    /// lives in [`TryFrom<RawManifest> for Manifest`] and runs on every
+    /// deserialization path, so a caller who reaches for
+    /// `serde_json::from_str::<Manifest>` directly gets the same checks
+    /// rather than a silently unvalidated value.
     ///
-    /// Named `from_json` rather than `from_str` on purpose. An inherent
+    /// Named `from_json` rather than `from_str` deliberately: an inherent
     /// `from_str` trips clippy's `should_implement_trait`, and implementing
-    /// `std::str::FromStr` to satisfy it would be worse: `FromStr` means
-    /// lexical parsing of a value, not "parse JSON and run security
-    /// validation", and it would let anything call `.parse::<Manifest>()`
-    /// for no benefit — nothing needs the trait generically.
+    /// `std::str::FromStr` to satisfy it would be worse — `FromStr` means
+    /// lexical parsing of a value, not "parse JSON and validate", and
+    /// nothing needs the trait generically.
     pub fn from_json(raw: &str) -> Result<Self, AppError> {
-        let manifest: Manifest = serde_json::from_str(raw)
-            .map_err(|e| AppError::Internal(format!("manifest parse failed: {}", e)))?;
-
-        if manifest.version != SUPPORTED_MANIFEST_VERSION {
-            return Err(AppError::Internal(format!(
-                "manifest: unsupported version {} (this build only understands version {}); \
-                 update manifest.json or the build",
-                manifest.version, SUPPORTED_MANIFEST_VERSION
-            )));
-        }
-
-        // Validated at load, not at request time: a malformed base or path
-        // is a deployment error, and an integration that could reach an
-        // arbitrary scheme, host, or off-base path would turn this service
-        // into an open proxy on the LAN. A prefix check isn't enough here —
-        // "https://" on its own satisfies `starts_with("https://")` while
-        // naming no host — so the base is parsed as a real URL and both the
-        // scheme and the presence of a host are checked explicitly. The
-        // path gets the same treatment via `validate_endpoint_url`, shared
-        // with `platform::fetch::build_url`.
-        for (id, entry) in &manifest.integrations {
-            for (name, ep) in &entry.endpoints {
-                let base = Url::parse(&ep.base)
-                    .ok()
-                    .filter(|url| matches!(url.scheme(), "http" | "https") && url.host().is_some());
-                let Some(base) = base else {
-                    return Err(AppError::Internal(format!(
-                        "manifest: {}.{} base must be an absolute http(s) URL with a host, got {:?}",
-                        id, name, ep.base
-                    )));
-                };
-                if let Err(msg) = validate_endpoint_url(&base, &ep.path) {
-                    return Err(AppError::Internal(format!(
-                        "manifest: {}.{}: {}",
-                        id, name, msg
-                    )));
-                }
-            }
-        }
-        Ok(manifest)
+        serde_json::from_str(raw).map_err(|e| AppError::Internal(format!("manifest: {}", e)))
     }
 
     /// Read and validate a manifest from disk. `main` calls this at startup
@@ -137,7 +160,11 @@ impl Manifest {
     /// `None` means the client named something that does not exist, which
     /// becomes a 404.
     pub fn endpoint(&self, integration: &str, endpoint: &str) -> Option<&Endpoint> {
-        self.integrations.get(integration)?.endpoints.get(endpoint)
+        self.0
+            .integrations
+            .get(integration)?
+            .endpoints
+            .get(endpoint)
     }
 }
 
@@ -315,6 +342,28 @@ mod tests {
     // --- the manifest is validated only at process boot, so a bad edit to
     // the checked-in file leaves `cargo test` green and crash-loops the
     // container at deploy unless something in the suite actually loads it. ---
+
+    /// The point of `#[serde(try_from = "RawManifest")]`: validation is not
+    /// something `from_json` does on the way past, it is a property of
+    /// deserializing a `Manifest` at all. If this ever fails, someone has
+    /// removed the attribute and the invariant is back to being a
+    /// convention that any `serde_json::from_str` call site can ignore.
+    #[test]
+    fn deserializing_directly_still_validates() {
+        let hostile = SAMPLE.replace("https://zenquotes.io", "file:///etc/passwd");
+        let direct: Result<Manifest, _> = serde_json::from_str(&hostile);
+        assert!(
+            direct.is_err(),
+            "serde_json::from_str::<Manifest> must not bypass validation"
+        );
+
+        let wrong_version = SAMPLE.replace("\"version\": 1", "\"version\": 99");
+        let direct: Result<Manifest, _> = serde_json::from_str(&wrong_version);
+        assert!(direct.is_err(), "the version check must run on every path");
+
+        // ...and the same input through the convenience wrapper agrees.
+        assert!(Manifest::from_json(&hostile).is_err());
+    }
 
     #[test]
     fn checked_in_manifest_is_valid() {
