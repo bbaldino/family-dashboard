@@ -1,5 +1,4 @@
 use std::collections::BTreeMap;
-use std::str::FromStr;
 
 use serde::Deserialize;
 use url::Url;
@@ -7,7 +6,7 @@ use url::Url;
 use crate::error::AppError;
 
 /// The only `version` this build understands. Bump alongside any breaking
-/// change to the manifest shape, and reject anything else in `from_str` —
+/// change to the manifest shape, and reject anything else in `from_json` —
 /// silently parsing a manifest written for a different version is exactly
 /// the "degrade at request time instead of failing at boot" outcome this
 /// module exists to prevent.
@@ -65,10 +64,24 @@ pub struct Endpoint {
     pub ttl_secs: u64,
 }
 
-impl FromStr for Manifest {
-    type Err = AppError;
-
-    fn from_str(raw: &str) -> Result<Self, Self::Err> {
+impl Manifest {
+    /// Deserialize **and validate** a manifest.
+    ///
+    /// This is the only way to obtain a `Manifest`, which is the point: the
+    /// type carries the invariant that every endpoint's `base` is an
+    /// absolute http(s) URL with a host, and that resolving its `path`
+    /// against that base cannot leave the base's origin. A bare
+    /// `serde_json::from_str::<Manifest>` would hand back an unchecked value
+    /// and lose that guarantee, so `Deserialize` is deliberately not the
+    /// public entry point.
+    ///
+    /// Named `from_json` rather than `from_str` on purpose. An inherent
+    /// `from_str` trips clippy's `should_implement_trait`, and implementing
+    /// `std::str::FromStr` to satisfy it would be worse: `FromStr` means
+    /// lexical parsing of a value, not "parse JSON and run security
+    /// validation", and it would let anything call `.parse::<Manifest>()`
+    /// for no benefit — nothing needs the trait generically.
+    pub fn from_json(raw: &str) -> Result<Self, AppError> {
         let manifest: Manifest = serde_json::from_str(raw)
             .map_err(|e| AppError::Internal(format!("manifest parse failed: {}", e)))?;
 
@@ -110,15 +123,19 @@ impl FromStr for Manifest {
         }
         Ok(manifest)
     }
-}
 
-impl Manifest {
+    /// Read and validate a manifest from disk. `main` calls this at startup
+    /// and panics on failure — a bad manifest must stop the process, not
+    /// surface as a 500 on one endpoint forever.
     pub fn load(path: &str) -> Result<Self, AppError> {
         let raw = std::fs::read_to_string(path)
             .map_err(|e| AppError::Internal(format!("manifest {} unreadable: {}", path, e)))?;
-        Self::from_str(&raw)
+        Self::from_json(&raw)
     }
 
+    /// The manifest lookup `invoke` performs before doing any URL work.
+    /// `None` means the client named something that does not exist, which
+    /// becomes a 404.
     pub fn endpoint(&self, integration: &str, endpoint: &str) -> Option<&Endpoint> {
         self.integrations.get(integration)?.endpoints.get(endpoint)
     }
@@ -142,10 +159,10 @@ impl Manifest {
 /// declared. That's exact regardless of the mechanism a bad path used to
 /// get there.
 ///
-/// Shared between `Manifest::from_str` (a bad manifest must fail at boot,
+/// Shared between `Manifest::from_json` (a bad manifest must fail at boot,
 /// not degrade at request time) and `platform::fetch::build_url`, which
 /// re-validates per request because its own unit tests build `Endpoint`
-/// values directly and bypass `Manifest::from_str` entirely.
+/// values directly and bypass `Manifest::from_json` entirely.
 pub fn validate_endpoint_url(base: &Url, path: &str) -> Result<Url, String> {
     let decoded = urlencoding::decode(path)
         .map(|c| c.into_owned())
@@ -190,7 +207,7 @@ mod tests {
 
     #[test]
     fn resolves_a_declared_endpoint() {
-        let m = Manifest::from_str(SAMPLE).expect("parses");
+        let m = Manifest::from_json(SAMPLE).expect("parses");
         let ep = m.endpoint("daily-quote", "today").expect("found");
         assert_eq!(ep.base, "https://zenquotes.io");
         assert_eq!(ep.ttl_secs, 86400);
@@ -198,7 +215,7 @@ mod tests {
 
     #[test]
     fn unknown_integration_or_endpoint_is_none() {
-        let m = Manifest::from_str(SAMPLE).unwrap();
+        let m = Manifest::from_json(SAMPLE).unwrap();
         assert!(m.endpoint("daily-quote", "nope").is_none());
         assert!(m.endpoint("nope", "today").is_none());
     }
@@ -206,22 +223,22 @@ mod tests {
     #[test]
     fn rejects_a_base_that_is_not_absolute_https_or_http() {
         let bad = SAMPLE.replace("https://zenquotes.io", "/etc/passwd");
-        assert!(Manifest::from_str(&bad).is_err());
+        assert!(Manifest::from_json(&bad).is_err());
     }
 
     #[test]
     fn rejects_a_non_http_scheme() {
         let file_scheme = SAMPLE.replace("https://zenquotes.io", "file:///etc/passwd");
-        assert!(Manifest::from_str(&file_scheme).is_err());
+        assert!(Manifest::from_json(&file_scheme).is_err());
 
         let gopher_scheme = SAMPLE.replace("https://zenquotes.io", "gopher://evil.example");
-        assert!(Manifest::from_str(&gopher_scheme).is_err());
+        assert!(Manifest::from_json(&gopher_scheme).is_err());
     }
 
     #[test]
     fn rejects_an_empty_base() {
         let empty = SAMPLE.replace("https://zenquotes.io", "");
-        assert!(Manifest::from_str(&empty).is_err());
+        assert!(Manifest::from_json(&empty).is_err());
     }
 
     #[test]
@@ -232,19 +249,19 @@ mod tests {
         // that would otherwise resolve to nothing (or, with a differently
         // malformed value, somewhere unintended).
         let hostless = SAMPLE.replace("https://zenquotes.io", "https://");
-        assert!(Manifest::from_str(&hostless).is_err());
+        assert!(Manifest::from_json(&hostless).is_err());
     }
 
     #[test]
     fn rejects_a_scheme_relative_base() {
         let scheme_relative = SAMPLE.replace("https://zenquotes.io", "//evil.example.com");
-        assert!(Manifest::from_str(&scheme_relative).is_err());
+        assert!(Manifest::from_json(&scheme_relative).is_err());
     }
 
     #[test]
     fn error_message_names_the_integration_and_endpoint() {
         let bad = SAMPLE.replace("https://zenquotes.io", "/etc/passwd");
-        let err = Manifest::from_str(&bad).unwrap_err().to_string();
+        let err = Manifest::from_json(&bad).unwrap_err().to_string();
         assert!(
             err.contains("daily-quote"),
             "error should name the integration: {err}"
@@ -267,7 +284,7 @@ mod tests {
         // parsed fine and silently left ttl_secs at its default of 0,
         // disabling caching for the endpoint with no error anywhere.
         let typo = SAMPLE.replace("\"ttl_secs\"", "\"ttl_sec\"");
-        assert!(Manifest::from_str(&typo).is_err());
+        assert!(Manifest::from_json(&typo).is_err());
     }
 
     #[test]
@@ -276,19 +293,19 @@ mod tests {
         // parsed fine and silently left query empty, stripping the
         // endpoint's declared params.
         let typo = SAMPLE.replace("\"query\"", "\"querry\"");
-        assert!(Manifest::from_str(&typo).is_err());
+        assert!(Manifest::from_json(&typo).is_err());
     }
 
     #[test]
     fn rejects_an_unknown_top_level_field() {
         let bad = SAMPLE.replacen('{', "{\"unexpected\": true,", 1);
-        assert!(Manifest::from_str(&bad).is_err());
+        assert!(Manifest::from_json(&bad).is_err());
     }
 
     #[test]
     fn rejects_an_unsupported_version() {
         let bad = SAMPLE.replace("\"version\": 1,", "\"version\": 99,");
-        let err = Manifest::from_str(&bad).unwrap_err().to_string();
+        let err = Manifest::from_json(&bad).unwrap_err().to_string();
         assert!(
             err.contains("99") && err.contains('1'),
             "error should name both the given and supported versions: {err}"
@@ -313,19 +330,19 @@ mod tests {
     #[test]
     fn rejects_a_manifest_whose_path_is_an_absolute_url_to_another_host() {
         let bad = SAMPLE.replace("/api/today", "https://evil.example.com/steal");
-        assert!(Manifest::from_str(&bad).is_err());
+        assert!(Manifest::from_json(&bad).is_err());
     }
 
     #[test]
     fn rejects_a_manifest_whose_path_is_scheme_relative() {
         let bad = SAMPLE.replace("/api/today", "//evil.example.com/steal");
-        assert!(Manifest::from_str(&bad).is_err());
+        assert!(Manifest::from_json(&bad).is_err());
     }
 
     #[test]
     fn rejects_a_manifest_path_with_dot_dot_traversal() {
         let bad = SAMPLE.replace("/api/today", "/api/../../secret");
-        assert!(Manifest::from_str(&bad).is_err());
+        assert!(Manifest::from_json(&bad).is_err());
     }
 
     // --- validate_endpoint_url directly: the origin check is the real

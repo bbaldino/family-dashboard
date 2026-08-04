@@ -21,7 +21,6 @@
 mod helpers;
 
 use std::net::SocketAddr;
-use std::str::FromStr;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -85,7 +84,7 @@ fn manifest_for(addr: SocketAddr) -> String {
 
 async fn test_server_with_manifest(manifest_json: &str) -> TestServer {
     let pool = test_pool().await;
-    let manifest = Arc::new(Manifest::from_str(manifest_json).expect("test manifest parses"));
+    let manifest = Arc::new(Manifest::from_json(manifest_json).expect("test manifest parses"));
     let app = dashboard_backend::integrations::router(pool, manifest);
     TestServer::new(app)
 }

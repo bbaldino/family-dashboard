@@ -192,7 +192,7 @@ pub fn build_url(
         ))
     })?;
 
-    // `Manifest::from_str` already checked this at boot, but this function
+    // `Manifest::from_json` already checked this at boot, but this function
     // re-parses `base` from scratch rather than reusing that validated
     // `Url`, so without re-checking the scheme here the per-request guard
     // would be weaker than the boot guard: a manifest field that somehow
@@ -474,7 +474,7 @@ mod tests {
 
     #[test]
     fn rejects_a_non_http_scheme_base_even_when_it_bypasses_manifest_validation() {
-        // Manifest::from_str already rejects a non-http(s) base at boot, but
+        // Manifest::from_json already rejects a non-http(s) base at boot, but
         // build_url re-parses `endpoint.base` from scratch rather than
         // reusing that validated Url — so a directly-constructed Endpoint
         // (as every test in this module does) must be re-checked here too,

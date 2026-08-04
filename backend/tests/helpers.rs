@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use axum::Router;
 use dashboard_backend::platform::manifest::Manifest;
 use sqlx::SqlitePool;
@@ -19,7 +17,7 @@ pub async fn test_pool() -> SqlitePool {
 
 fn test_manifest() -> std::sync::Arc<Manifest> {
     std::sync::Arc::new(
-        Manifest::from_str(r#"{"version":1,"integrations":{}}"#)
+        Manifest::from_json(r#"{"version":1,"integrations":{}}"#)
             .expect("empty test manifest parses"),
     )
 }
