@@ -132,6 +132,18 @@ impl ResponseCache {
 /// `params = {"x": "1", "y": "2"}`, letting one client's cached response
 /// leak to another client that sent different params for a different
 /// upstream URL.
+///
+/// Deliberately excludes resolved `{{cfg:…}}`/`{{secret:…}}` values, and
+/// `invoke` checks the cache *before* calling `resolve_server_placeholders`
+/// (resolution needs a DB round-trip; a cache hit should avoid paying for
+/// it). The known consequence: editing a `cfg:`/`secret:` config value does
+/// not invalidate an already-cached response for that endpoint — it waits
+/// out the existing entry's `ttl_secs` like any other cache entry would.
+/// Acceptable for now because nothing yet migrated onto `{{cfg:…}}` reacts
+/// to config changes faster than its TTL; a later task that needs
+/// immediate invalidation on config change will need to fold `resolved`
+/// into this key (or bypass the cache) rather than assume this ordering
+/// still holds.
 pub fn cache_key(integration: &str, endpoint: &str, params: &BTreeMap<String, String>) -> String {
     serde_json::to_string(&(integration, endpoint, params))
         .expect("a tuple of strings and a BTreeMap<String, String> always serializes")
@@ -141,6 +153,16 @@ pub fn cache_key(integration: &str, endpoint: &str, params: &BTreeMap<String, St
 /// Kept separate from `declared_params` on purpose: that function answers
 /// "what may a client send", and a value drawn from config must never appear
 /// in its answer.
+///
+/// The `cfg:`/`secret:` split is advisory, not enforced by anything at
+/// request time: both prefixes read the identical config row, and the
+/// prefix is the *sole* signal `redact_secrets` uses to decide what to
+/// scrub from a logged error. A manifest entry that writes `cfg:api_key`
+/// for a real secret gets it logged in plaintext on every upstream
+/// failure. `Manifest`'s boot-time validation (`manifest.rs`) rejects a
+/// `cfg:` placeholder whose key name looks like a secret as a best-effort
+/// backstop, but that is a name-substring heuristic, not a proof — choose
+/// `secret:` for anything actually sensitive.
 const SERVER_PREFIXES: [&str; 2] = ["cfg:", "secret:"];
 
 /// The set of param names this endpoint's query template actually
@@ -213,11 +235,23 @@ async fn resolve_server_placeholders(
             continue;
         }
         let key = inner.split_once(':').map(|(_, k)| k).unwrap_or(inner);
-        // A missing value is a configuration error, not a request error:
-        // `get` already returns "Config 'x.y' not set. Configure in admin
-        // settings.", which is exactly the message that was missing the day
-        // a stale music.service_url read as "never configured".
-        resolved.insert(inner.to_string(), config.get(key).await?);
+        // A missing value is a configuration error, not a request error, so
+        // it must not reach the caller as `get`'s own 400 — that would hand
+        // an unauthenticated LAN caller the config namespace and "not set"
+        // reasoning of a home server's admin settings. Mapped to
+        // `AppError::Internal` instead: the caller gets a generic 500, and
+        // the actionable "Config 'x.y' not set. Configure in admin
+        // settings." message still reaches the log via `Internal`'s
+        // `tracing::error!` — the message that was missing the day a stale
+        // music.service_url read as "never configured".
+        resolved.insert(
+            inner.to_string(),
+            config.get(key).await.map_err(|e| {
+                AppError::Internal(format!(
+                    "resolving placeholder '{{{{{inner}}}}}' for integration '{integration}': {e}"
+                ))
+            })?,
+        );
     }
     Ok(resolved)
 }
@@ -226,11 +260,27 @@ async fn resolve_server_placeholders(
 /// message derived from a URL before it reaches an `AppError`, because
 /// `reqwest` embeds the full request URL — query string included — in its
 /// own error text, and `AppError` messages are logged.
+///
+/// Scrubs both the raw value and its form-urlencoded form. `build_url` puts
+/// `value` into the URL via `query_pairs_mut().append_pair`, which
+/// form-urlencodes it — so a `reqwest` error, which embeds the *encoded*
+/// request URL, contains the raw value only when it happens to consist
+/// entirely of `[A-Za-z0-9*._-]`. OpenWeather's key is hex today, but this
+/// is a general-purpose capability, and a base64 token, a JWT, or anything
+/// containing `/ + = : ~ !` or a space would otherwise sail through
+/// unredacted: `.replace(value, …)` alone is a silent no-op on exactly the
+/// secrets most worth protecting. The raw form is still checked too, for an
+/// upstream body that echoes the key back unencoded.
 fn redact_secrets(message: &str, resolved: &BTreeMap<String, String>) -> String {
     let mut out = message.to_string();
     for (placeholder, value) in resolved {
         if placeholder.starts_with("secret:") && !value.is_empty() {
             out = out.replace(value.as_str(), "[redacted]");
+
+            let encoded: String = url::form_urlencoded::byte_serialize(value.as_bytes()).collect();
+            if encoded != *value {
+                out = out.replace(encoded.as_str(), "[redacted]");
+            }
         }
     }
     out
@@ -359,10 +409,13 @@ pub struct FetchRequest {
 ///   before any URL is built, so an unknown name costs nothing.
 /// - **400** — a param the endpoint does not declare, or a
 ///   `{{param:…}}` placeholder the request did not supply a value for.
-/// - **500** — the upstream was unreachable, returned a non-2xx, or sent a
-///   body that would not parse as JSON. The upstream's own message is
-///   included for the log; `AppError::Internal` renders a generic body to
-///   the caller, so it is not disclosed over the wire.
+/// - **500** — a `{{cfg:…}}`/`{{secret:…}}` placeholder this endpoint
+///   references has no config value set, or the upstream was unreachable,
+///   returned a non-2xx, or sent a body that would not parse as JSON. The
+///   underlying message is included for the log — with any resolved secret
+///   scrubbed by `redact_secrets` first — and `AppError::Internal` renders
+///   only a generic body to the caller, so neither the secret nor (for the
+///   missing-config case) the config key name is disclosed over the wire.
 ///
 /// Caching: when `ttl_secs > 0`, a hit returns immediately and a miss stores
 /// the response. Endpoints with `ttl_secs == 0` neither read nor write the
@@ -746,6 +799,48 @@ mod tests {
         assert!(scrubbed.contains("[redacted]"));
         // Non-secret config is not scrubbed — it is useful in a log and is
         // not sensitive.
+        assert!(scrubbed.contains("37.2504"));
+    }
+
+    /// Fix Round 1, Critical 1: `build_url` form-urlencodes a secret's
+    /// value on the way into the URL, but `reqwest`'s own error text embeds
+    /// that *encoded* URL — so a raw-value-only `.replace` is a no-op for
+    /// any secret containing a character urlencoding changes (`/ + = : ~ !`,
+    /// a space, …), which a base64 token or a JWT very much does. Built
+    /// from a real `build_url` output rather than a hand-written literal so
+    /// this test tracks the actual encoder instead of an assumption about
+    /// it — `SUPERSECRET` above is alphanumeric and would pass even with
+    /// the bug present.
+    #[test]
+    fn redaction_removes_a_secret_that_needed_url_encoding() {
+        let ep = Endpoint {
+            base: "https://api.openweathermap.org".into(),
+            path: "/data/2.5/weather".into(),
+            query: BTreeMap::from([
+                ("appid".to_string(), "{{secret:api_key}}".to_string()),
+                ("lat".to_string(), "{{cfg:lat}}".to_string()),
+            ]),
+            ttl_secs: 600,
+        };
+        let secret = "aGVsbG8rd29ybGQ/Zm9v=";
+        let resolved = BTreeMap::from([
+            ("secret:api_key".to_string(), secret.to_string()),
+            ("cfg:lat".to_string(), "37.2504".to_string()),
+        ]);
+        let url = build_url(&ep, &BTreeMap::new(), &resolved).unwrap();
+        // Sanity check on the premise: the built URL must actually carry
+        // the *encoded* form, not the raw secret, or this test isn't
+        // exercising the bug it exists to catch.
+        assert!(
+            !url.contains(secret),
+            "test premise broken: build_url did not encode the secret, so this test cannot \
+             distinguish the fix from its absence"
+        );
+
+        let msg = format!("error sending request for url ({url})");
+        let scrubbed = redact_secrets(&msg, &resolved);
+        assert!(!scrubbed.contains(secret));
+        assert!(scrubbed.contains("[redacted]"));
         assert!(scrubbed.contains("37.2504"));
     }
 

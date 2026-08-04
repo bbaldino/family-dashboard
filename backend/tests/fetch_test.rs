@@ -21,9 +21,10 @@
 mod helpers;
 
 use std::net::SocketAddr;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 
+use axum::extract::RawQuery;
 use axum::http::StatusCode;
 use axum::routing::get;
 use axum::{Json, Router};
@@ -57,6 +58,35 @@ async fn spawn_counting_upstream() -> (SocketAddr, Arc<AtomicUsize>) {
         axum::serve(listener, app).await.unwrap();
     });
     (addr, hits)
+}
+
+/// Spawns a local upstream that records the query string of the most
+/// recent request it received (`None` until first hit) and returns a small
+/// JSON body. Standing in for a real upstream so a test can assert *what
+/// value it actually received* — the only way to prove a
+/// `{{secret:…}}`/`{{cfg:…}}` placeholder resolved to the household's
+/// configured value and not something a client supplied.
+async fn spawn_capturing_upstream() -> (SocketAddr, Arc<Mutex<Option<String>>>) {
+    let last_query: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+    let captured = last_query.clone();
+    let app = Router::new().route(
+        "/data",
+        get(move |RawQuery(query): RawQuery| {
+            let captured = captured.clone();
+            async move {
+                *captured.lock().unwrap() = Some(query.unwrap_or_default());
+                Json(json!({ "value": "ok" }))
+            }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind local upstream");
+    let addr = listener.local_addr().expect("local addr");
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+    (addr, last_query)
 }
 
 /// A manifest declaring a single `test-integration.today` endpoint pointing
@@ -159,5 +189,121 @@ async fn an_identical_second_call_is_served_from_cache() {
     assert_eq!(
         first.json::<serde_json::Value>(),
         second.json::<serde_json::Value>()
+    );
+}
+
+// --- Fix Round 1, Important 5: `resolve_server_placeholders` exercised at
+// the actual HTTP boundary, not just via the pure `build_url`/helper-level
+// unit tests in `platform::fetch`. This is the whole slice's invariant in
+// one place: the upstream receives the *configured* secret, and a client
+// cannot substitute its own value for it. ---
+
+#[tokio::test]
+async fn a_secret_placeholder_is_filled_from_config_and_a_client_cannot_override_it() {
+    let (addr, last_query) = spawn_capturing_upstream().await;
+    let pool = test_pool().await;
+    sqlx::query("INSERT INTO config (key, value) VALUES (?, ?)")
+        .bind("test-integration.api_key")
+        .bind("HOUSEHOLD_KEY")
+        .execute(&pool)
+        .await
+        .expect("seed config");
+
+    let manifest_json = format!(
+        r#"{{
+          "version": 1,
+          "integrations": {{
+            "test-integration": {{
+              "endpoints": {{
+                "today": {{
+                  "base": "http://{addr}",
+                  "path": "/data",
+                  "query": {{ "appid": "{{{{secret:api_key}}}}" }},
+                  "ttl_secs": 0
+                }}
+              }}
+            }}
+          }}
+        }}"#
+    );
+    let manifest = Arc::new(Manifest::from_json(&manifest_json).expect("test manifest parses"));
+    let app = dashboard_backend::integrations::router(pool, manifest);
+    let server = TestServer::new(app);
+
+    // A client attempting to supply the secret's own key name is rejected
+    // as an undeclared param -- `appid`'s placeholder is `secret:api_key`,
+    // not `param:api_key`, so nothing declares `api_key` as client input.
+    let attack = server
+        .post("/fetch/test-integration/today")
+        .json(&json!({ "params": { "api_key": "evil" } }))
+        .await;
+    attack.assert_status(StatusCode::BAD_REQUEST);
+    assert!(
+        last_query.lock().unwrap().is_none(),
+        "an attacker's rejected request must never reach the upstream at all"
+    );
+
+    // A legitimate request with no params still resolves the secret from
+    // config and the upstream receives the household's configured value.
+    let ok = server
+        .post("/fetch/test-integration/today")
+        .json(&json!({ "params": {} }))
+        .await;
+    ok.assert_status_ok();
+    let captured = last_query
+        .lock()
+        .unwrap()
+        .clone()
+        .expect("upstream should have been hit");
+    assert!(
+        captured.contains("appid=HOUSEHOLD_KEY"),
+        "upstream should receive the configured secret, got query: {captured}"
+    );
+}
+
+#[tokio::test]
+async fn a_missing_config_value_for_a_secret_placeholder_is_a_generic_internal_error() {
+    // No config row seeded for `test-integration.api_key` -- this is the
+    // Fix Round 1, Minor 6 case: a missing config value must not surface
+    // to an unauthenticated caller as a 400 naming the config key.
+    let (addr, last_query) = spawn_capturing_upstream().await;
+    let pool = test_pool().await;
+
+    let manifest_json = format!(
+        r#"{{
+          "version": 1,
+          "integrations": {{
+            "test-integration": {{
+              "endpoints": {{
+                "today": {{
+                  "base": "http://{addr}",
+                  "path": "/data",
+                  "query": {{ "appid": "{{{{secret:api_key}}}}" }},
+                  "ttl_secs": 0
+                }}
+              }}
+            }}
+          }}
+        }}"#
+    );
+    let manifest = Arc::new(Manifest::from_json(&manifest_json).expect("test manifest parses"));
+    let app = dashboard_backend::integrations::router(pool, manifest);
+    let server = TestServer::new(app);
+
+    let resp = server
+        .post("/fetch/test-integration/today")
+        .json(&json!({ "params": {} }))
+        .await;
+
+    resp.assert_status(StatusCode::INTERNAL_SERVER_ERROR);
+    let body = resp.json::<serde_json::Value>();
+    let message = body["error"].as_str().unwrap_or_default();
+    assert!(
+        !message.contains("test-integration.api_key") && !message.contains("Configure in admin"),
+        "the generic 500 body must not disclose the config namespace: {message}"
+    );
+    assert!(
+        last_query.lock().unwrap().is_none(),
+        "resolution must fail before the upstream is ever contacted"
     );
 }

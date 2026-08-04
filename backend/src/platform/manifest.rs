@@ -20,6 +20,41 @@ use crate::error::AppError;
 /// module exists to prevent.
 const SUPPORTED_MANIFEST_VERSION: u32 = 1;
 
+/// Key-name substrings that mean a `{{cfg:…}}` placeholder is almost
+/// certainly holding something sensitive.
+///
+/// `{{cfg:…}}` and `{{secret:…}}` (`platform::fetch`) read the identical
+/// config row — the prefix's only effect is whether
+/// `platform::fetch::redact_secrets` scrubs the resolved value out of a
+/// logged error. A manifest author who reaches for `cfg:` instead of
+/// `secret:` for a real key gets it logged in plaintext on every upstream
+/// failure, with nothing to catch it at request time. This is a
+/// name-substring heuristic, not a proof — it catches `cfg:api_key` but not
+/// a secret hiding behind an unrelated-looking name — so it exists as a
+/// backstop alongside code review, not instead of it.
+const SUSPICIOUS_CFG_KEY_SUBSTRINGS: [&str; 4] = ["key", "secret", "token", "password"];
+
+/// Whether `key` (the part after `cfg:`) looks like it names a secret,
+/// per [`SUSPICIOUS_CFG_KEY_SUBSTRINGS`]. Case-insensitive, since a
+/// manifest author is just as likely to write `apiKey` or `API_KEY`.
+fn looks_like_a_secret_key(key: &str) -> bool {
+    let lower = key.to_ascii_lowercase();
+    SUSPICIOUS_CFG_KEY_SUBSTRINGS
+        .iter()
+        .any(|substring| lower.contains(substring))
+}
+
+/// Extracts the key name from a `{{cfg:key}}` query-value template, or
+/// `None` if `template` isn't one. Deliberately matches only `cfg:` —
+/// `{{secret:…}}` is already redacted by `platform::fetch::redact_secrets`,
+/// so this check exists solely to catch a real secret mislabeled as
+/// non-sensitive config.
+fn cfg_placeholder_key(template: &str) -> Option<&str> {
+    template
+        .strip_prefix("{{cfg:")
+        .and_then(|rest| rest.strip_suffix("}}"))
+}
+
 /// A validated `manifest.json` — every upstream this process is permitted
 /// to contact.
 ///
@@ -94,6 +129,23 @@ impl TryFrom<RawManifest> for Manifest {
                 };
                 if let Err(msg) = validate_endpoint_url(&base, &ep.path) {
                     return Err(format!("{}.{}: {}", id, name, msg));
+                }
+
+                // A `cfg:` placeholder whose key name looks like a secret
+                // is checked at boot, not request time, for the same
+                // reason as the URL checks above: a manifest mistake here
+                // silently under-redacts every future error log for this
+                // endpoint rather than failing loudly once, up front.
+                for template in ep.query.values() {
+                    if let Some(key) = cfg_placeholder_key(template)
+                        && looks_like_a_secret_key(key)
+                    {
+                        return Err(format!(
+                            "{}.{}: {{{{cfg:{}}}}} looks like a secret (matches one of {:?}) \
+                             — use {{{{secret:{}}}}} instead so it is redacted from logs",
+                            id, name, key, SUSPICIOUS_CFG_KEY_SUBSTRINGS, key
+                        ));
+                    }
                 }
             }
         }
@@ -445,5 +497,50 @@ mod tests {
         let resolved = validate_endpoint_url(&base, "/api/states").unwrap();
         assert_eq!(resolved.port_or_known_default(), Some(8123));
         assert_eq!(resolved.host_str(), Some("192.168.1.42"));
+    }
+
+    // --- Fix Round 1, Important 3: `cfg:` and `secret:` read the same
+    // config row, and only the prefix decides whether an error log gets
+    // scrubbed — a manifest author who mislabels a real secret as `cfg:`
+    // must fail at boot, not leak in plaintext later. ---
+
+    #[test]
+    fn rejects_a_cfg_placeholder_whose_key_name_looks_like_a_secret() {
+        for key in [
+            "api_key",
+            "apiKey",
+            "API_KEY",
+            "secret",
+            "auth_token",
+            "password",
+        ] {
+            let bad = SAMPLE.replace(
+                "\"query\": {}",
+                &format!("\"query\": {{\"appid\": \"{{{{cfg:{key}}}}}\"}}"),
+            );
+            let err = Manifest::from_json(&bad).unwrap_err().to_string();
+            assert!(
+                err.contains(key) && err.contains("secret:"),
+                "key '{key}' should be rejected and told to use secret: instead, got: {err}"
+            );
+        }
+    }
+
+    #[test]
+    fn accepts_a_cfg_placeholder_with_an_innocuous_key_name() {
+        let ok = SAMPLE.replace("\"query\": {}", "\"query\": {\"lat\": \"{{cfg:lat}}\"}");
+        assert!(Manifest::from_json(&ok).is_ok());
+    }
+
+    #[test]
+    fn does_not_flag_a_secret_placeholder_with_the_same_key_name() {
+        // `{{secret:api_key}}` is already the correctly-redacted form —
+        // the boot check exists to catch `cfg:` mislabeling, not to
+        // second-guess a manifest author who used `secret:` correctly.
+        let ok = SAMPLE.replace(
+            "\"query\": {}",
+            "\"query\": {\"appid\": \"{{secret:api_key}}\"}",
+        );
+        assert!(Manifest::from_json(&ok).is_ok());
     }
 }
