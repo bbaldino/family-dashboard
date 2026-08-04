@@ -36,7 +36,17 @@ export function useIntegrationQuery<Raw, Out = Raw>(
     select,
     refetchInterval:
       typeof refetchInterval === 'function'
-        ? (q) => refetchInterval(q.state.data as Out | undefined)
+        ? (q) => {
+            // react-query applies `select` only in the observer's derived
+            // result — `Query.state.data` here is always the raw, unselected
+            // payload (TQueryData defaults to TQueryFnData since we don't
+            // pass an explicit generic). Re-derive `select` ourselves so the
+            // callback actually receives what its type promises.
+            const raw = q.state.data as Raw | undefined
+            const value =
+              raw !== undefined && select ? select(raw) : (raw as unknown as Out | undefined)
+            return refetchInterval(value)
+          }
         : refetchInterval,
     enabled,
   })

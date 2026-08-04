@@ -49,4 +49,24 @@ describe('useIntegrationQuery', () => {
     expect(url).not.toContain('2026-08-03')
     expect(JSON.parse(init.body)).toEqual({ params: { date: '2026-08-03' } })
   })
+
+  it('gives a functional refetchInterval the select-derived shape, not the raw payload', async () => {
+    const intervalFn = vi.fn().mockReturnValue(false)
+    const { result } = renderHook(
+      () =>
+        useIntegrationQuery<{ q: string; a: string }[], { quote: string }>(demo, 'today', {
+          select: ([f]) => ({ quote: f.q }),
+          refetchInterval: intervalFn,
+        }),
+      { wrapper },
+    )
+    await waitFor(() => expect(result.current.data).toEqual({ quote: 'hello' }))
+    await waitFor(() => {
+      const lastCall = intervalFn.mock.calls.at(-1)
+      expect(lastCall?.[0]).toEqual({ quote: 'hello' })
+    })
+    // If the implementation ever hands the callback the raw payload instead,
+    // this is what it would have seen — assert it never does.
+    expect(intervalFn).not.toHaveBeenCalledWith([{ q: 'hello', a: 'someone' }])
+  })
 })
