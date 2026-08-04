@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::str::FromStr;
 
 use serde::Deserialize;
+use url::Url;
 
 use crate::error::AppError;
 
@@ -42,12 +43,19 @@ impl FromStr for Manifest {
 
         // Validated at load, not at request time: a malformed base is a
         // deployment error, and an integration that could reach an arbitrary
-        // scheme would turn this service into an open proxy on the LAN.
+        // scheme (or an empty host) would turn this service into an open
+        // proxy on the LAN. A prefix check isn't enough here — "https://" on
+        // its own satisfies `starts_with("https://")` while naming no host —
+        // so the base is parsed as a real URL and both the scheme and the
+        // presence of a host are checked explicitly.
         for (id, entry) in &manifest.integrations {
             for (name, ep) in &entry.endpoints {
-                if !(ep.base.starts_with("https://") || ep.base.starts_with("http://")) {
+                let valid = Url::parse(&ep.base).is_ok_and(|url| {
+                    matches!(url.scheme(), "http" | "https") && url.host().is_some()
+                });
+                if !valid {
                     return Err(AppError::Internal(format!(
-                        "manifest: {}.{} base must be an absolute http(s) URL, got {:?}",
+                        "manifest: {}.{} base must be an absolute http(s) URL with a host, got {:?}",
                         id, name, ep.base
                     )));
                 }
@@ -116,6 +124,23 @@ mod tests {
     fn rejects_an_empty_base() {
         let empty = SAMPLE.replace("https://zenquotes.io", "");
         assert!(Manifest::from_str(&empty).is_err());
+    }
+
+    #[test]
+    fn rejects_a_hostless_base() {
+        // "https://" alone satisfies a naive `starts_with("https://")` check
+        // while naming no host at all — the case this module exists to
+        // catch, since it's indistinguishable from a typo'd manifest entry
+        // that would otherwise resolve to nothing (or, with a differently
+        // malformed value, somewhere unintended).
+        let hostless = SAMPLE.replace("https://zenquotes.io", "https://");
+        assert!(Manifest::from_str(&hostless).is_err());
+    }
+
+    #[test]
+    fn rejects_a_scheme_relative_base() {
+        let scheme_relative = SAMPLE.replace("https://zenquotes.io", "//evil.example.com");
+        assert!(Manifest::from_str(&scheme_relative).is_err());
     }
 
     #[test]
