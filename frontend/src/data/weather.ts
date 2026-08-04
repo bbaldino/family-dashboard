@@ -40,7 +40,32 @@ export const weatherIntegration = defineIntegration({
   },
 })
 
+/**
+ * Air quality (Open-Meteo) needs no API key — only coordinates, which
+ * already default. Gating `useAirQuality` on `weatherIntegration`'s full
+ * schema (which requires `api_key`) would silently disable AQI/UV/pollen on
+ * any install that hasn't configured an OpenWeatherMap key, even though
+ * nothing about the Open-Meteo call needs one: `useIntegrationConfig` would
+ * return `null` for the whole thing, the URL would be `null`, and the query
+ * would just be disabled with no error state to notice by. Same `id` as
+ * `weatherIntegration` — it reads the same `weather.*` config keys, just
+ * validated against a narrower schema.
+ */
+const weatherCoordsIntegration = defineIntegration({
+  id: 'weather',
+  name: 'Weather',
+  schema: z.object({
+    lat: z.string().min(1).default('37.2504'),
+    lon: z.string().min(1).default('-121.9000'),
+  }),
+  fields: {
+    lat: { label: 'Latitude' },
+    lon: { label: 'Longitude' },
+  },
+})
+
 type WeatherConfig = z.infer<typeof weatherIntegration.schema>
+type WeatherCoords = z.infer<typeof weatherCoordsIntegration.schema>
 
 function openWeatherUrl(path: string, cfg: WeatherConfig): string {
   const q = new URLSearchParams({
@@ -53,7 +78,7 @@ function openWeatherUrl(path: string, cfg: WeatherConfig): string {
 }
 
 /** Open-Meteo needs no key and spells the coordinates differently. */
-function airQualityUrl(cfg: WeatherConfig): string {
+function airQualityUrl(cfg: WeatherCoords): string {
   const q = new URLSearchParams({
     latitude: cfg.lat,
     longitude: cfg.lon,
@@ -157,7 +182,7 @@ export function useWeatherForecast() {
 export type { AqiLevel, UvLevel, PollenLevel, AirQualityData }
 
 export function useAirQuality() {
-  const cfg = useIntegrationConfig(weatherIntegration)
+  const cfg = useIntegrationConfig(weatherCoordsIntegration)
   return useIntegrationQuery(weatherIntegration, cfg ? airQualityUrl(cfg) : null, {
     ttlSecs: 1800,
     select: computeAirQuality,

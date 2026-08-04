@@ -105,4 +105,11 @@ describe('useIntegrationQuery', () => {
     expect(fetchMock).not.toHaveBeenCalled()
     expect(explicitlyDisabled.current.fetchStatus).toBe('idle')
   })
+
+  it('sends ttl_secs: 0 when ttlSecs is omitted', async () => {
+    const { result } = renderHook(() => useIntegrationQuery(demo, DEMO_URL), { wrapper })
+    await waitFor(() => expect(result.current.data).toBeDefined())
+    const [, init] = fetchMock.mock.calls[0]
+    expect(JSON.parse(init.body)).toEqual({ url: DEMO_URL, ttl_secs: 0 })
+  })
 })
