@@ -22,10 +22,7 @@ import type { ForecastDay, ForecastData, HourlyForecast } from './weather/foreca
  * which `useIntegrationQuery` ignores) — passing it straight to
  * `useIntegrationQuery` typechecks because TypeScript only excess-property
  * checks object *literals*, not variables, so no second `defineIntegration`
- * object was needed for the platform's world. `WeatherDetail.tsx` also still
- * calls `weatherIntegration.api.get('/forecast')` directly against the old
- * Rust route (untouched, coexists until task 5) — this same object supports
- * that unchanged.
+ * object was needed for the platform's world.
  */
 export const weatherIntegration = defineIntegration({
   id: 'weather',
@@ -108,7 +105,7 @@ export function useWeatherData() {
         sunrise: d.sys.sunrise,
         sunset: d.sys.sunset,
       }),
-      refetchInterval: 15 * 60 * 1000, // 15 minutes — matches the manifest's `current.ttl_secs: 600`-ish cadence
+      refetchInterval: 15 * 60 * 1000, // 15 minutes — looser than the manifest's `current.ttl_secs: 600` (10 min)
     },
   )
 }

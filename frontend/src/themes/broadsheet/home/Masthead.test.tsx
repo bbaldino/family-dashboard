@@ -20,7 +20,7 @@ function renderMasthead(overrides: Partial<Parameters<typeof Masthead>[0]> = {})
 describe('Masthead', () => {
   beforeEach(() => {
     // useHeroWeather returns the HeroWeather object directly (or null) —
-    // not a react-query result. See src/data/weather/useHeroWeather.ts.
+    // not a react-query result. See src/data/weather.ts.
     useHeroWeather.mockReturnValue({
       temperature: '75',
       high: '78',

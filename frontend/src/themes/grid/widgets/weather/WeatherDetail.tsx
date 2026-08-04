@@ -1,31 +1,4 @@
-import { useState, useEffect } from 'react'
-import { weatherIntegration } from '@/data/weather'
-
-interface ForecastDay {
-  date: string
-  temp_max: number
-  temp_min: number
-  humidity: number
-  pop: number
-  condition: string
-  description: string
-  icon: string
-}
-
-interface HourlyEntry {
-  dt: number
-  temp: number
-  condition: string
-  description: string
-  icon: string
-  pop: number
-  humidity: number
-}
-
-interface ForecastData {
-  daily: ForecastDay[]
-  hourly: HourlyEntry[]
-}
+import { useWeatherForecast } from '@/data/weather'
 
 const conditionIcons: Record<string, string> = {
   Clear: '\u2600\uFE0F',
@@ -40,21 +13,13 @@ const conditionIcons: Record<string, string> = {
 }
 
 export function WeatherDetail() {
-  const [forecast, setForecast] = useState<ForecastData | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const { data: forecast, isLoading, isError } = useWeatherForecast()
 
-  useEffect(() => {
-    weatherIntegration.api
-      .get<ForecastData>('/forecast')
-      .then(setForecast)
-      .catch((e: Error) => setError(e.message))
-  }, [])
-
-  if (error) {
+  if (isError) {
     return <div className="text-[13px] text-error p-4">Failed to load forecast</div>
   }
 
-  if (!forecast) {
+  if (isLoading || !forecast) {
     return <div className="text-[13px] text-text-muted p-4">Loading forecast...</div>
   }
 
