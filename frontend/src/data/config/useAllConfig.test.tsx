@@ -110,4 +110,35 @@ describe('useAllConfig', () => {
       vi.useRealTimers()
     }
   })
+
+  it('names the integration and the failing field when config is invalid', async () => {
+    const strict = defineIntegration({
+      id: 'strict',
+      name: 'Strict',
+      schema: z.object({ port: z.string().regex(/^\d+$/, 'must be digits') }),
+      fields: { port: { label: 'Port' } },
+    })
+    function StrictConsumer() {
+      const c = useIntegrationConfig(strict)
+      return <div data-testid="strict">{c ? 'ok' : 'null'}</div>
+    }
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ 'strict.port': 'banana' }) })
+
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    wrap(client, <StrictConsumer />)
+
+    // The consumer renders 'null' both before the fetch resolves and after a
+    // failed parse, so asserting on text content alone would pass trivially
+    // at the loading state, before the parse (and the log) ever runs. Wait
+    // for the log too, so this actually observes the invalid-config path.
+    await waitFor(() => {
+      expect(screen.getByTestId('strict')).toHaveTextContent('null')
+      expect(spy).toHaveBeenCalled()
+    })
+    const logged = spy.mock.calls.map((c) => c.join(' ')).join('\n')
+    expect(logged).toContain('strict')
+    expect(logged).toContain('port')
+    spy.mockRestore()
+  })
 })

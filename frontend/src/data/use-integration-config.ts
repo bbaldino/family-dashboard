@@ -22,6 +22,18 @@ export function useIntegrationConfig<T extends z.ZodObject<z.ZodRawShape>>(
       if (key.startsWith(prefix)) scoped[key.slice(prefix.length)] = value
     }
     const result = integration.schema.safeParse(scoped)
-    return result.success ? result.data : null
+    if (!result.success) {
+      // A misconfigured integration used to be indistinguishable from an
+      // unconfigured one: this returned null, and callers render nothing for
+      // null. That is how a dead `music.service_url` presented as "music was
+      // never set up". Returning null is still correct (callers depend on it),
+      // but the reason is no longer invisible.
+      const where = result.error.issues
+        .map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`)
+        .join('; ')
+      console.error(`config: ${integration.id} is misconfigured — ${where}`)
+      return null
+    }
+    return result.data
   }, [data, integration])
 }
