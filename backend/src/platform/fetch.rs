@@ -22,7 +22,7 @@ use sqlx::SqlitePool;
 use tokio::sync::RwLock;
 use url::Url;
 
-use super::manifest::{Endpoint, Manifest, validate_endpoint_url};
+use super::manifest::{Endpoint, Manifest, split_cfg_default, validate_endpoint_url};
 use crate::error::AppError;
 use crate::integrations::IntegrationConfig;
 
@@ -221,7 +221,21 @@ fn reject_undeclared_params(
 
 /// Reads every `{{cfg:…}}` / `{{secret:…}}` an endpoint references out of the
 /// config table, keyed by the placeholder's inner text (`"cfg:lat"`,
-/// `"secret:api_key"`).
+/// `"cfg:lat|37.2504"`, `"secret:api_key"`).
+///
+/// A `cfg:` placeholder may declare a default after a `|` (see
+/// `manifest::split_cfg_default`), which is used when the config table has
+/// no row for the key — restoring the `IntegrationConfig::get_or` behaviour
+/// the per-integration Rust routes had, so an install that has only set
+/// `weather.api_key` gets the fallback coordinates rather than a generic 500
+/// and a blank widget. A *database* error still propagates either way; only
+/// "no such row" takes the default, and only when one is declared.
+/// `secret:` never takes a default (the manifest rejects one at boot).
+///
+/// The resolved value — default or not — reaches the URL through exactly one
+/// path, `build_url`'s `query_pairs_mut().append_pair`, so a default is a
+/// url-encoded query *value* and no more able to introduce a host, scheme,
+/// or extra parameter than a value read from the database.
 ///
 /// Done here rather than inside `build_url` so that `build_url` stays sync
 /// and pure — its tests construct `Endpoint`s directly and must not need a
@@ -247,7 +261,13 @@ async fn resolve_server_placeholders(
         if resolved.contains_key(inner) {
             continue;
         }
-        let key = inner.split_once(':').map(|(_, k)| k).unwrap_or(inner);
+        // `cfg:` may carry a `|default`; `secret:` may not, so its key is
+        // taken whole (a `|` there is rejected at boot, not silently read as
+        // part of the key name).
+        let (key, default) = match inner.strip_prefix("cfg:") {
+            Some(after) => split_cfg_default(after),
+            None => (inner.split_once(':').map(|(_, k)| k).unwrap_or(inner), None),
+        };
         // A missing value is a configuration error, not a request error, so
         // it must not reach the caller as `get`'s own 400 — that would hand
         // an unauthenticated LAN caller the config namespace and "not set"
@@ -257,14 +277,22 @@ async fn resolve_server_placeholders(
         // settings." message still reaches the log via `Internal`'s
         // `tracing::error!` — the message that was missing the day a stale
         // music.service_url read as "never configured".
-        resolved.insert(
-            inner.to_string(),
-            config.get(key).await.map_err(|e| {
-                AppError::Internal(format!(
-                    "resolving placeholder '{{{{{inner}}}}}' for integration '{integration}': {e}"
-                ))
-            })?,
-        );
+        //
+        // `get_or` rather than `get` when the manifest declared a default:
+        // it distinguishes "no row" (take the default) from a real database
+        // error (still propagates), which a `get(...).unwrap_or(default)`
+        // would flatten into "silently use the fallback whenever SQLite is
+        // unhappy".
+        let value = match default {
+            Some(default) => config.get_or(key, default).await,
+            None => config.get(key).await,
+        }
+        .map_err(|e| {
+            AppError::Internal(format!(
+                "resolving placeholder '{{{{{inner}}}}}' for integration '{integration}': {e}"
+            ))
+        })?;
+        resolved.insert(inner.to_string(), value);
     }
     Ok(resolved)
 }
@@ -423,7 +451,8 @@ pub struct FetchRequest {
 /// - **400** — a param the endpoint does not declare, or a
 ///   `{{param:…}}` placeholder the request did not supply a value for.
 /// - **500** — a `{{cfg:…}}`/`{{secret:…}}` placeholder this endpoint
-///   references has no config value set, or the upstream was unreachable,
+///   references has no config value set and declares no manifest default
+///   (`{{cfg:key|default}}`), or the upstream was unreachable,
 ///   returned a non-2xx, or sent a body that would not parse as JSON. The
 ///   underlying message is included for the log — with any resolved secret
 ///   scrubbed by `redact_secrets` first — and `AppError::Internal` renders

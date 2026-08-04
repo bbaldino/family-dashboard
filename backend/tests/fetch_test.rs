@@ -548,3 +548,153 @@ async fn a_config_value_removed_after_caching_fails_the_next_request_instead_of_
          and the hit count would still be 1 for the wrong reason"
     );
 }
+
+// --- Final review, Important 2: `{{cfg:key|default}}`. The deleted weather
+// routes used `config.get_or("lat", "37.2504")`, so an install that had set
+// only `weather.api_key` still worked; `{{cfg:lat}}` alone turned that into
+// a 500 on every weather endpoint and a blank widget. The default lives in
+// the manifest — one checked-in place, rather than the six call sites the
+// Rust had. ---
+
+/// A manifest whose single `lat` query slot is filled from `cfg:lat`, with
+/// `default` appended after a `|` when one is given.
+fn manifest_with_cfg_default(addr: SocketAddr, default: Option<&str>) -> String {
+    let placeholder = match default {
+        Some(default) => format!("{{{{cfg:lat|{default}}}}}"),
+        None => "{{cfg:lat}}".to_string(),
+    };
+    format!(
+        r#"{{
+          "version": 1,
+          "integrations": {{
+            "test-integration": {{
+              "endpoints": {{
+                "today": {{
+                  "base": "http://{addr}",
+                  "path": "/data",
+                  "query": {{ "lat": "{placeholder}" }},
+                  "ttl_secs": 0
+                }}
+              }}
+            }}
+          }}
+        }}"#
+    )
+}
+
+#[tokio::test]
+async fn an_absent_cfg_key_falls_back_to_the_manifest_default() {
+    // No config row seeded at all — the fresh-install case, and the case of
+    // a user clearing the field in the settings UI.
+    let (addr, last_query) = spawn_capturing_upstream().await;
+    let server = test_server_with_manifest(&manifest_with_cfg_default(addr, Some("37.2504"))).await;
+
+    let resp = server
+        .post("/fetch/test-integration/today")
+        .json(&json!({ "params": {} }))
+        .await;
+
+    resp.assert_status_ok();
+    let captured = last_query
+        .lock()
+        .unwrap()
+        .clone()
+        .expect("upstream should have been hit");
+    assert!(
+        captured.contains("lat=37.2504"),
+        "an absent config key should fall back to the manifest default, got: {captured}"
+    );
+}
+
+#[tokio::test]
+async fn a_configured_value_wins_over_the_manifest_default() {
+    let (addr, last_query) = spawn_capturing_upstream().await;
+    let pool = test_pool().await;
+    sqlx::query("INSERT INTO config (key, value) VALUES (?, ?)")
+        .bind("test-integration.lat")
+        .bind("51.5072")
+        .execute(&pool)
+        .await
+        .expect("seed config");
+
+    let manifest_json = manifest_with_cfg_default(addr, Some("37.2504"));
+    let manifest = Arc::new(Manifest::from_json(&manifest_json).expect("test manifest parses"));
+    let server = TestServer::new(dashboard_backend::integrations::router(pool, manifest));
+
+    let resp = server
+        .post("/fetch/test-integration/today")
+        .json(&json!({ "params": {} }))
+        .await;
+
+    resp.assert_status_ok();
+    let captured = last_query
+        .lock()
+        .unwrap()
+        .clone()
+        .expect("upstream should have been hit");
+    assert!(
+        captured.contains("lat=51.5072"),
+        "a configured value must win over the default, not be shadowed by it: {captured}"
+    );
+}
+
+#[tokio::test]
+async fn an_absent_cfg_key_with_no_declared_default_is_still_an_error() {
+    // The default is opt-in per placeholder: without a `|`, an absent key
+    // stays a loud configuration error rather than silently becoming an
+    // empty query value.
+    let (addr, last_query) = spawn_capturing_upstream().await;
+    let server = test_server_with_manifest(&manifest_with_cfg_default(addr, None)).await;
+
+    let resp = server
+        .post("/fetch/test-integration/today")
+        .json(&json!({ "params": {} }))
+        .await;
+
+    resp.assert_status(StatusCode::INTERNAL_SERVER_ERROR);
+    assert!(
+        last_query.lock().unwrap().is_none(),
+        "resolution must fail before the upstream is ever contacted"
+    );
+}
+
+#[tokio::test]
+async fn a_url_structural_default_cannot_escape_the_allowlist() {
+    // A default is a manifest literal, but it must still be *only a value*.
+    // It reaches the URL through the same `query_pairs_mut().append_pair`
+    // call as a value read from the config table, so it is url-encoded into
+    // the declared `lat` slot and can add neither a host, a scheme, nor an
+    // extra query parameter — the same guarantee `{{param:…}}` values get.
+    for hostile in [
+        "//evil.example.com",
+        "?x=1",
+        "https://evil.example.com/steal",
+    ] {
+        let (addr, last_query) = spawn_capturing_upstream().await;
+        let server =
+            test_server_with_manifest(&manifest_with_cfg_default(addr, Some(hostile))).await;
+
+        let resp = server
+            .post("/fetch/test-integration/today")
+            .json(&json!({ "params": {} }))
+            .await;
+
+        resp.assert_status_ok();
+        let captured = last_query
+            .lock()
+            .unwrap()
+            .clone()
+            .expect("the request must still have gone to the allowlisted upstream");
+        // The allowlisted upstream is the one that answered — a retargeted
+        // request could not have reached it at all — and the hostile default
+        // arrived as a single encoded value in the declared slot.
+        assert!(
+            captured.starts_with("lat=") && !captured.contains('&'),
+            "a hostile default must stay one encoded query value, got: {captured}"
+        );
+        assert!(
+            !captured.contains("//evil") && !captured.contains("?x=1"),
+            "a hostile default must not survive unencoded, got: {captured}"
+        );
+    }
+}

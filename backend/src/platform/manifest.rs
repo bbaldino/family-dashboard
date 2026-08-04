@@ -44,14 +44,56 @@ fn looks_like_a_secret_key(key: &str) -> bool {
         .any(|substring| lower.contains(substring))
 }
 
-/// Extracts the key name from a `{{cfg:key}}` query-value template, or
-/// `None` if `template` isn't one. Deliberately matches only `cfg:` —
-/// `{{secret:…}}` is already redacted by `platform::fetch::redact_secrets`,
-/// so this check exists solely to catch a real secret mislabeled as
-/// non-sensitive config.
+/// Splits the text *after* a `cfg:` prefix into the config key and the
+/// optional manifest-declared default that stands in when that key has no
+/// row in the config table: `"lat|37.2504"` → `("lat", Some("37.2504"))`,
+/// `"lat"` → `("lat", None)`.
+///
+/// Shared with `platform::fetch::resolve_server_placeholders` for the same
+/// reason [`validate_endpoint_url`] is: the boot-time check and the
+/// request-time resolution must agree on where the key ends, or a manifest
+/// entry the boot heuristic reads as `lat` could resolve as something else
+/// at request time.
+///
+/// A default is a literal from the checked-in manifest, and it is *only* a
+/// value: it lands in the URL through the same
+/// `query_pairs_mut().append_pair` call as a value read from config, so it
+/// is form-urlencoded into a declared query slot and cannot introduce a
+/// scheme, host, authority, path segment, or extra query parameter. See
+/// `platform::fetch::build_url`.
+///
+/// Deliberately `cfg:`-only. A `{{secret:…}}` placeholder gets no default —
+/// a credential that silently falls back to a manifest literal would send
+/// the wrong key upstream and look like an upstream problem, where the
+/// missing-config error names the actual cause. `try_from` below rejects a
+/// `secret:` placeholder that tries to declare one rather than letting it
+/// read as part of the key name.
+pub fn split_cfg_default(after_prefix: &str) -> (&str, Option<&str>) {
+    match after_prefix.split_once('|') {
+        Some((key, default)) => (key, Some(default)),
+        None => (after_prefix, None),
+    }
+}
+
+/// Extracts the key name from a `{{cfg:key}}` / `{{cfg:key|default}}`
+/// query-value template, or `None` if `template` isn't one. Deliberately
+/// matches only `cfg:` — `{{secret:…}}` is already redacted by
+/// `platform::fetch::redact_secrets`, so this check exists solely to catch a
+/// real secret mislabeled as non-sensitive config. The default is stripped
+/// so the heuristic reads the key name and not a literal that happens to
+/// contain one of its substrings.
 fn cfg_placeholder_key(template: &str) -> Option<&str> {
     template
         .strip_prefix("{{cfg:")
+        .and_then(|rest| rest.strip_suffix("}}"))
+        .map(|rest| split_cfg_default(rest).0)
+}
+
+/// The text after `secret:` in a `{{secret:key}}` query-value template, or
+/// `None` if `template` isn't one.
+fn secret_placeholder_key(template: &str) -> Option<&str> {
+    template
+        .strip_prefix("{{secret:")
         .and_then(|rest| rest.strip_suffix("}}"))
 }
 
@@ -146,6 +188,24 @@ impl TryFrom<RawManifest> for Manifest {
                             id, name, key, SUSPICIOUS_CFG_KEY_SUBSTRINGS, key
                         ));
                     }
+
+                    // `|` means "default" for `cfg:` (see `split_cfg_default`)
+                    // and nothing at all for `secret:`. Without this, a
+                    // `{{secret:api_key|fallback}}` would quietly read the
+                    // config key *named* `api_key|fallback` — never set — and
+                    // fail at request time with a message naming a key that
+                    // does not exist, instead of at boot with the real
+                    // problem: secrets do not take defaults.
+                    if let Some(key) = secret_placeholder_key(template)
+                        && key.contains('|')
+                    {
+                        return Err(format!(
+                            "{}.{}: {{{{secret:{}}}}} declares a default — only {{{{cfg:…}}}} \
+                             may. A secret that silently falls back to a manifest literal \
+                             sends the wrong credential upstream instead of failing loudly.",
+                            id, name, key
+                        ));
+                    }
                 }
             }
         }
@@ -171,7 +231,10 @@ struct IntegrationEntry {
 /// `query` values may contain `{{param:name}}` placeholders, which is the
 /// one place a client-supplied value enters the URL — url-encoded, as a
 /// query value only. A param name not appearing in some placeholder here is
-/// rejected by `invoke` rather than ignored.
+/// rejected by `invoke` rather than ignored. They may also contain
+/// `{{cfg:key}}` / `{{cfg:key|default}}` and `{{secret:key}}` placeholders,
+/// filled server-side from the config table (see
+/// `platform::fetch::resolve_server_placeholders` and [`split_cfg_default`]).
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Endpoint {
@@ -530,6 +593,65 @@ mod tests {
     fn accepts_a_cfg_placeholder_with_an_innocuous_key_name() {
         let ok = SAMPLE.replace("\"query\": {}", "\"query\": {\"lat\": \"{{cfg:lat}}\"}");
         assert!(Manifest::from_json(&ok).is_ok());
+    }
+
+    // --- Final review, Important 2: `{{cfg:key|default}}` restores the
+    // `IntegrationConfig::get_or` fallback the deleted weather routes had,
+    // without putting the literal at six call sites. ---
+
+    #[test]
+    fn accepts_a_cfg_placeholder_with_a_default() {
+        let ok = SAMPLE.replace(
+            "\"query\": {}",
+            "\"query\": {\"lat\": \"{{cfg:lat|37.2504}}\"}",
+        );
+        assert!(Manifest::from_json(&ok).is_ok());
+    }
+
+    #[test]
+    fn the_suspicious_key_check_reads_the_key_not_the_default() {
+        // The heuristic must look at `lat`, not at the whole
+        // `lat|…`. A default that happens to contain "key"/"token"/etc.
+        // is a literal value, not a config key name.
+        let ok = SAMPLE.replace(
+            "\"query\": {}",
+            "\"query\": {\"lat\": \"{{cfg:lat|monkey-token}}\"}",
+        );
+        assert!(Manifest::from_json(&ok).is_ok());
+
+        // ...and a genuinely mislabeled secret is still caught when it
+        // carries a default.
+        let bad = SAMPLE.replace(
+            "\"query\": {}",
+            "\"query\": {\"appid\": \"{{cfg:api_key|fallback}}\"}",
+        );
+        assert!(Manifest::from_json(&bad).is_err());
+    }
+
+    #[test]
+    fn rejects_a_secret_placeholder_that_declares_a_default() {
+        // Defaults are `cfg:`-only. Silently reading this as the config key
+        // *named* `api_key|fallback` would fail later, at request time, with
+        // a message naming a key nobody ever set.
+        let bad = SAMPLE.replace(
+            "\"query\": {}",
+            "\"query\": {\"appid\": \"{{secret:api_key|fallback}}\"}",
+        );
+        let err = Manifest::from_json(&bad).unwrap_err().to_string();
+        assert!(
+            err.contains("default") && err.contains("api_key"),
+            "error should say a secret may not declare a default: {err}"
+        );
+    }
+
+    #[test]
+    fn splits_a_cfg_default_at_the_first_pipe_only() {
+        assert_eq!(split_cfg_default("lat"), ("lat", None));
+        assert_eq!(split_cfg_default("lat|37.2504"), ("lat", Some("37.2504")));
+        // A default may itself contain a `|`; only the first one delimits.
+        assert_eq!(split_cfg_default("k|a|b"), ("k", Some("a|b")));
+        // An explicitly empty default is a default, not an absent one.
+        assert_eq!(split_cfg_default("k|"), ("k", Some("")));
     }
 
     #[test]
