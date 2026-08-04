@@ -93,10 +93,9 @@ function compassDirection(deg: number): string {
   return COMPASS_POINTS[index]
 }
 
-/** Display words for the backend's level slugs — a presentation concern
- *  (fitting the strip's tight mono cells), while the *thresholds* that
- *  decide which slug a reading gets live in one place server-side
- *  (`backend/src/integrations/weather/air_quality.rs`). */
+/** Display words for the level slugs — a presentation concern (fitting the
+ *  strip's tight mono cells), while the *thresholds* that decide which slug
+ *  a reading gets live in one place, `@/data/weather/air-quality`. */
 const AQI_LABELS: Record<AqiLevel, string> = {
   good: 'GOOD',
   moderate: 'MODERATE',
