@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { ReactNode } from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 // MusicProvider reads its scenario fixture once, at module load (see the
 // comment above `fixtureQueues` in MusicProvider.tsx) — activeScenario never
@@ -32,6 +34,11 @@ async function freshMusicModules() {
   return { MusicProvider, useMusic }
 }
 
+function wrapInQueryClient(ui: ReactNode) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
+}
+
 describe('MusicProvider scenario wiring', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) }))
@@ -60,9 +67,11 @@ describe('MusicProvider scenario wiring', () => {
     const { MusicProvider, useMusic } = await freshMusicModules()
 
     render(
-      <MusicProvider>
-        <MusicProbe useMusic={useMusic} />
-      </MusicProvider>,
+      wrapInQueryClient(
+        <MusicProvider>
+          <MusicProbe useMusic={useMusic} />
+        </MusicProvider>,
+      ),
     )
 
     expect(screen.getByTestId('queue-count')).toHaveTextContent('1')
@@ -74,9 +83,11 @@ describe('MusicProvider scenario wiring', () => {
     const { MusicProvider, useMusic } = await freshMusicModules()
 
     render(
-      <MusicProvider>
-        <MusicProbe useMusic={useMusic} />
-      </MusicProvider>,
+      wrapInQueryClient(
+        <MusicProvider>
+          <MusicProbe useMusic={useMusic} />
+        </MusicProvider>,
+      ),
     )
 
     // useIntegrationConfig resolves asynchronously to {} (stubbed fetch
@@ -108,9 +119,11 @@ describe('MusicProvider scenario wiring', () => {
     const { MusicProvider, useMusic } = await freshMusicModules()
 
     render(
-      <MusicProvider>
-        <MusicProbe useMusic={useMusic} />
-      </MusicProvider>,
+      wrapInQueryClient(
+        <MusicProvider>
+          <MusicProbe useMusic={useMusic} />
+        </MusicProvider>,
+      ),
     )
 
     // The first render sees config still loading (isConfigured false, no
@@ -169,9 +182,11 @@ describe('MusicProvider action failures', () => {
     )
     const { MusicProvider, useMusic } = await freshMusicModules()
     render(
-      <MusicProvider>
-        <ErrorProbe useMusic={useMusic as never} />
-      </MusicProvider>,
+      wrapInQueryClient(
+        <MusicProvider>
+          <ErrorProbe useMusic={useMusic as never} />
+        </MusicProvider>,
+      ),
     )
 
     screen.getByText('play').click()
@@ -182,9 +197,11 @@ describe('MusicProvider action failures', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) }))
     const { MusicProvider, useMusic } = await freshMusicModules()
     render(
-      <MusicProvider>
-        <ErrorProbe useMusic={useMusic as never} />
-      </MusicProvider>,
+      wrapInQueryClient(
+        <MusicProvider>
+          <ErrorProbe useMusic={useMusic as never} />
+        </MusicProvider>,
+      ),
     )
 
     screen.getByText('play').click()

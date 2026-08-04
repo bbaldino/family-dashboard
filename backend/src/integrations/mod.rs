@@ -1,7 +1,6 @@
 pub mod chores;
 pub mod config;
 pub mod config_helpers;
-pub mod daily_quote;
 pub mod driving_time;
 pub mod google_calendar;
 pub mod health;
@@ -20,7 +19,10 @@ pub use config_helpers::IntegrationConfig;
 use axum::Router;
 use sqlx::SqlitePool;
 
-pub fn router(pool: SqlitePool) -> Router {
+pub fn router(
+    pool: SqlitePool,
+    manifest: std::sync::Arc<crate::platform::manifest::Manifest>,
+) -> Router {
     Router::new()
         .nest("/chores", chores::router(pool.clone()))
         .nest("/config", config::router(pool.clone()))
@@ -35,8 +37,8 @@ pub fn router(pool: SqlitePool) -> Router {
         .nest("/music", music::router(pool.clone()))
         .nest("/llm", crate::llm::router(pool.clone()))
         .nest("/on-this-day", on_this_day::router(pool.clone()))
-        .nest("/daily-quote", daily_quote::router())
         .nest("/jokes", jokes::router())
         .nest("/trivia", trivia::router())
         .nest("/word-of-the-day", word_of_the_day::router())
+        .nest("/fetch", crate::platform::fetch::router(manifest))
 }

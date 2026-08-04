@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "integrations": {
+    "daily-quote": {
+      "endpoints": {
+        "today": {
+          "base": "https://zenquotes.io",
+          "path": "/api/today",
+          "query": {},
+          "ttl_secs": 86400
+        }
+      }
+    }
+  }
+}

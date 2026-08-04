@@ -31,6 +31,10 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./vitest.setup.ts'],
     globals: true,
+    // Auto-restore spies (mockImplementation, mockReturnValue, etc.) between
+    // tests so one test's vi.spyOn(...) can't leak its stubbed behavior into
+    // the next test in the same file.
+    restoreMocks: true,
     // Pin the timezone so local-date bucketing (e.g. src/data/google-calendar)
     // is deterministic regardless of where the suite runs.
     env: { TZ: 'America/Los_Angeles' },
