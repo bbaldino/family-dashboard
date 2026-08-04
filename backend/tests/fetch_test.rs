@@ -10,8 +10,9 @@
 //! same technique `platform::fetch`'s redirect test uses.
 //!
 //! Scope is deliberately narrow: unknown integration/endpoint, an undeclared
-//! param, and a cache hit. TTL expiry, eviction, and exhaustive error-mapping
-//! coverage are out of scope for this pass.
+//! param, a cache hit, a config change invalidating the cache, and the
+//! reject-before-resolve ordering `invoke` depends on. TTL expiry, eviction,
+//! and exhaustive error-mapping coverage are out of scope for this pass.
 
 // This file only needs `test_pool` from the shared helpers module — the
 // other exports (`test_app`, backed by an empty manifest) are unused here by
