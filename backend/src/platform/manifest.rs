@@ -1,3 +1,11 @@
+//! The endpoint manifest: the allowlist of upstreams this process may
+//! contact, loaded and validated once at boot.
+//!
+//! [`Manifest`] can only exist in a validated state — see its docs for
+//! how that is enforced rather than merely conventional.
+//! [`validate_endpoint_url`] is shared with `super::fetch` so the
+//! boot-time and per-request checks cannot diverge.
+
 use std::collections::BTreeMap;
 
 use serde::Deserialize;
@@ -53,7 +61,8 @@ impl TryFrom<RawManifest> for Manifest {
     /// `#[serde(try_from = "RawManifest")]`, this runs on *every*
     /// deserialization path — `Manifest::from_json`, `Manifest::load`, or a
     /// direct `serde_json::from_str::<Manifest>` somewhere in a future
-    /// caller. There is no way to construct a `Manifest` that skipped it.
+    /// caller. No code outside this module can construct a `Manifest` that
+    /// skipped it — the tuple constructor and `RawManifest` are both private.
     fn try_from(raw: RawManifest) -> Result<Self, Self::Error> {
         if raw.version != SUPPORTED_MANIFEST_VERSION {
             return Err(format!(
@@ -96,7 +105,7 @@ impl TryFrom<RawManifest> for Manifest {
 /// `{endpoint}` in `POST /api/fetch/{integration}/{endpoint}`.
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub struct IntegrationEntry {
+struct IntegrationEntry {
     pub endpoints: BTreeMap<String, Endpoint>,
 }
 
@@ -186,7 +195,7 @@ impl Manifest {
 /// declared. That's exact regardless of the mechanism a bad path used to
 /// get there.
 ///
-/// Shared between `Manifest::from_json` (a bad manifest must fail at boot,
+/// Shared between `TryFrom<RawManifest> for Manifest` (a bad manifest must fail at boot,
 /// not degrade at request time) and `platform::fetch::build_url`, which
 /// re-validates per request because its own unit tests build `Endpoint`
 /// values directly and bypass `Manifest::from_json` entirely.

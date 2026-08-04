@@ -1,3 +1,16 @@
+//! The `fetch` capability: `POST /api/fetch/{integration}/{endpoint}`.
+//!
+//! This module is the SSRF boundary. The service it runs in is reachable
+//! without authentication from a home LAN that also hosts Home Assistant,
+//! the Unraid and Proxmox admin UIs, and the reverse proxy's own admin
+//! API, so "which host does this process contact" must never be a
+//! function of request data. It isn't: hosts and paths come only from
+//! `super::manifest`, and a request contributes names (looked up) and
+//! values (url-encoded into manifest-declared query slots).
+//!
+//! See [`invoke`] for the request contract and [`build_url`] for how a
+//! declared endpoint becomes a URL.
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -62,6 +75,7 @@ pub struct ResponseCache {
 }
 
 impl ResponseCache {
+    /// An empty cache. Built once per process in [`router`].
     pub fn new() -> Self {
         Self::default()
     }
@@ -169,7 +183,7 @@ fn reject_undeclared_params(
 /// `validate_endpoint_url` (see its doc comment in `manifest.rs` for why the
 /// check is a post-resolution origin comparison rather than a blacklist of
 /// path shapes). `base` may also already carry its own path or query
-/// (`https://host/a?b=c`), which is a well-formed URL and passes Task 3's
+/// (`https://host/a?b=c`), which is a well-formed URL and passes the
 /// manifest validation; `Url::join` with a root-anchored path reference
 /// *replaces* the base's path, query, and fragment entirely (RFC 3986
 /// §5.3), so the base's own path/query never leaks into the result. The
@@ -272,7 +286,8 @@ pub struct FetchRequest {
 /// Errors:
 /// - **404** — no such integration or endpoint in the manifest. Returned
 ///   before any URL is built, so an unknown name costs nothing.
-/// - **400** — a param the endpoint does not declare.
+/// - **400** — a param the endpoint does not declare, or a
+///   `{{param:…}}` placeholder the request did not supply a value for.
 /// - **500** — the upstream was unreachable, returned a non-2xx, or sent a
 ///   body that would not parse as JSON. The upstream's own message is
 ///   included for the log; `AppError::Internal` renders a generic body to
@@ -474,7 +489,7 @@ mod tests {
 
     #[test]
     fn rejects_a_non_http_scheme_base_even_when_it_bypasses_manifest_validation() {
-        // Manifest::from_json already rejects a non-http(s) base at boot, but
+        // Manifest deserialization already rejects a non-http(s) base at boot, but
         // build_url re-parses `endpoint.base` from scratch rather than
         // reusing that validated Url — so a directly-constructed Endpoint
         // (as every test in this module does) must be re-checked here too,
@@ -484,7 +499,7 @@ mod tests {
         assert!(build_url(&e, &BTreeMap::new()).is_err());
     }
 
-    // --- The two gaps deferred from Task 3's review ---
+    // --- Paths that resolve off the declared origin ---
 
     #[test]
     fn rejects_a_path_that_is_actually_an_absolute_url_to_another_host() {
