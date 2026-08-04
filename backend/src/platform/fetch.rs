@@ -18,11 +18,13 @@ use std::time::{Duration, Instant};
 use axum::extract::{Path, State};
 use axum::{Json, Router};
 use serde::Deserialize;
+use sqlx::SqlitePool;
 use tokio::sync::RwLock;
 use url::Url;
 
 use super::manifest::{Endpoint, Manifest, validate_endpoint_url};
 use crate::error::AppError;
+use crate::integrations::IntegrationConfig;
 
 /// Hard cap on the number of distinct cache entries the process holds across
 /// *all* endpoints combined — `entries` is one global `BTreeMap`, not one
@@ -50,6 +52,7 @@ pub struct PlatformState {
     pub manifest: Arc<Manifest>,
     pub client: reqwest::Client,
     pub cache: Arc<ResponseCache>,
+    pub pool: SqlitePool,
 }
 
 struct CacheEntry {
@@ -134,6 +137,12 @@ pub fn cache_key(integration: &str, endpoint: &str, params: &BTreeMap<String, St
         .expect("a tuple of strings and a BTreeMap<String, String> always serializes")
 }
 
+/// Placeholder kinds the *manifest* may use that the client may not supply.
+/// Kept separate from `declared_params` on purpose: that function answers
+/// "what may a client send", and a value drawn from config must never appear
+/// in its answer.
+const SERVER_PREFIXES: [&str; 2] = ["cfg:", "secret:"];
+
 /// The set of param names this endpoint's query template actually
 /// references, e.g. `{"q"}` for a query map containing
 /// `{"q": "{{param:q}}"}`. Used to reject params the manifest doesn't
@@ -175,9 +184,64 @@ fn reject_undeclared_params(
     Ok(())
 }
 
-/// Build the upstream URL from the manifest, substituting only `{{param:…}}`
-/// placeholders in query values. `base` and `path` come from the manifest
-/// and can never be influenced by the request — that is the SSRF boundary.
+/// Reads every `{{cfg:…}}` / `{{secret:…}}` an endpoint references out of the
+/// config table, keyed by the placeholder's inner text (`"cfg:lat"`,
+/// `"secret:api_key"`).
+///
+/// Done here rather than inside `build_url` so that `build_url` stays sync
+/// and pure — its tests construct `Endpoint`s directly and must not need a
+/// database.
+async fn resolve_server_placeholders(
+    endpoint: &Endpoint,
+    integration: &str,
+    pool: &SqlitePool,
+) -> Result<BTreeMap<String, String>, AppError> {
+    let config = IntegrationConfig::new(pool, integration);
+    let mut resolved = BTreeMap::new();
+
+    for template in endpoint.query.values() {
+        let Some(inner) = template
+            .strip_prefix("{{")
+            .and_then(|r| r.strip_suffix("}}"))
+        else {
+            continue;
+        };
+        if !SERVER_PREFIXES.iter().any(|p| inner.starts_with(p)) {
+            continue;
+        }
+        if resolved.contains_key(inner) {
+            continue;
+        }
+        let key = inner.split_once(':').map(|(_, k)| k).unwrap_or(inner);
+        // A missing value is a configuration error, not a request error:
+        // `get` already returns "Config 'x.y' not set. Configure in admin
+        // settings.", which is exactly the message that was missing the day
+        // a stale music.service_url read as "never configured".
+        resolved.insert(inner.to_string(), config.get(key).await?);
+    }
+    Ok(resolved)
+}
+
+/// Replaces any resolved **secret** value with `[redacted]`. Applied to every
+/// message derived from a URL before it reaches an `AppError`, because
+/// `reqwest` embeds the full request URL — query string included — in its
+/// own error text, and `AppError` messages are logged.
+fn redact_secrets(message: &str, resolved: &BTreeMap<String, String>) -> String {
+    let mut out = message.to_string();
+    for (placeholder, value) in resolved {
+        if placeholder.starts_with("secret:") && !value.is_empty() {
+            out = out.replace(value.as_str(), "[redacted]");
+        }
+    }
+    out
+}
+
+/// Build the upstream URL from the manifest, substituting `{{param:…}}`
+/// placeholders from the request and `{{cfg:…}}` / `{{secret:…}}`
+/// placeholders from `resolved` (values already read from the config table
+/// by [`resolve_server_placeholders`]). `base` and `path` come from the
+/// manifest and can never be influenced by the request — that is the SSRF
+/// boundary.
 ///
 /// `path` is resolved against `base` and origin-checked by
 /// `validate_endpoint_url` (see its doc comment in `manifest.rs` for why the
@@ -198,6 +262,7 @@ fn reject_undeclared_params(
 pub fn build_url(
     endpoint: &Endpoint,
     params: &BTreeMap<String, String>,
+    resolved: &BTreeMap<String, String>,
 ) -> Result<String, AppError> {
     let base = Url::parse(&endpoint.base).map_err(|e| {
         AppError::Internal(format!(
@@ -228,16 +293,22 @@ pub fn build_url(
 
     let mut pairs: Vec<(String, String)> = Vec::new();
     for (key, template) in &endpoint.query {
-        let value = if let Some(name) = template
-            .strip_prefix("{{param:")
-            .and_then(|r| r.strip_suffix("}}"))
-        {
-            params
+        let inner = template
+            .strip_prefix("{{")
+            .and_then(|r| r.strip_suffix("}}"));
+
+        let value = match inner {
+            Some(name) if name.starts_with("param:") => {
+                let name = &name["param:".len()..];
+                params.get(name).cloned().ok_or_else(|| {
+                    AppError::BadRequest(format!("missing required param '{}'", name))
+                })?
+            }
+            Some(name) if SERVER_PREFIXES.iter().any(|p| name.starts_with(p)) => resolved
                 .get(name)
                 .cloned()
-                .ok_or_else(|| AppError::BadRequest(format!("missing required param '{}'", name)))?
-        } else {
-            template.clone()
+                .ok_or_else(|| AppError::Internal(format!("unresolved placeholder '{}'", name)))?,
+            _ => template.clone(),
         };
         pairs.push((key.clone(), value));
     }
@@ -329,11 +400,15 @@ pub async fn invoke(
         return Ok(Json(hit));
     }
 
-    let url = build_url(ep, &req.params)?;
+    let resolved = resolve_server_placeholders(ep, &integration, &state.pool).await?;
+    let url = build_url(ep, &req.params, &resolved)?;
+
     let resp = state.client.get(&url).send().await.map_err(|e| {
         AppError::Internal(format!(
             "{}.{} request failed: {}",
-            integration, endpoint, e
+            integration,
+            endpoint,
+            redact_secrets(&e.to_string(), &resolved)
         ))
     })?;
 
@@ -342,12 +417,20 @@ pub async fn invoke(
         let text = resp.text().await.unwrap_or_default();
         return Err(AppError::Internal(format!(
             "{}.{} upstream returned {}: {}",
-            integration, endpoint, status, text
+            integration,
+            endpoint,
+            status,
+            redact_secrets(&text, &resolved)
         )));
     }
 
     let data: serde_json::Value = resp.json().await.map_err(|e| {
-        AppError::Internal(format!("{}.{} parse failed: {}", integration, endpoint, e))
+        AppError::Internal(format!(
+            "{}.{} parse failed: {}",
+            integration,
+            endpoint,
+            redact_secrets(&e.to_string(), &resolved)
+        ))
     })?;
 
     if ep.ttl_secs > 0 {
@@ -390,12 +473,15 @@ fn build_client() -> reqwest::Client {
 /// Takes the manifest rather than loading it, because `main` loads it once at
 /// startup and panics on a bad one — a malformed manifest must stop the
 /// process, not surface as a per-request failure. The client and cache are
-/// built here and shared by every request via [`PlatformState`].
-pub fn router(manifest: Arc<Manifest>) -> Router {
+/// built here and shared by every request via [`PlatformState`]. `pool` is
+/// threaded through so `invoke` can resolve `{{cfg:…}}` / `{{secret:…}}`
+/// placeholders from the config table.
+pub fn router(manifest: Arc<Manifest>, pool: SqlitePool) -> Router {
     let state = PlatformState {
         manifest,
         client: build_client(),
         cache: Arc::new(ResponseCache::new()),
+        pool,
     };
 
     Router::new()
@@ -419,7 +505,7 @@ mod tests {
 
     #[test]
     fn builds_the_url_from_the_manifest_only() {
-        let url = build_url(&ep(), &BTreeMap::new()).unwrap();
+        let url = build_url(&ep(), &BTreeMap::new(), &BTreeMap::new()).unwrap();
         assert_eq!(url, "https://zenquotes.io/api/today?units=imperial");
     }
 
@@ -428,7 +514,7 @@ mod tests {
         let mut e = ep();
         e.query.insert("q".to_string(), "{{param:q}}".to_string());
         let params = BTreeMap::from([("q".to_string(), "a b&c=d".to_string())]);
-        let url = build_url(&e, &params).unwrap();
+        let url = build_url(&e, &params, &BTreeMap::new()).unwrap();
         assert!(url.contains("q=a+b%26c%3Dd") || url.contains("q=a%20b%26c%3Dd"));
         // The critical property: an injected value cannot add a parameter.
         assert_eq!(url.matches('?').count(), 1);
@@ -439,7 +525,7 @@ mod tests {
         let mut e = ep();
         e.query
             .insert("q".to_string(), "{{param:missing}}".to_string());
-        assert!(build_url(&e, &BTreeMap::new()).is_err());
+        assert!(build_url(&e, &BTreeMap::new(), &BTreeMap::new()).is_err());
     }
 
     #[test]
@@ -484,7 +570,7 @@ mod tests {
         // irrelevant param name to grow the cache with entries that all
         // resolve to the exact same upstream URL.
         let params = BTreeMap::from([("not_declared".to_string(), "x".to_string())]);
-        assert!(build_url(&ep(), &params).is_err());
+        assert!(build_url(&ep(), &params, &BTreeMap::new()).is_err());
     }
 
     #[test]
@@ -496,7 +582,7 @@ mod tests {
         // or the per-request guard would be weaker than the boot guard.
         let mut e = ep();
         e.base = "file:///etc/passwd".into();
-        assert!(build_url(&e, &BTreeMap::new()).is_err());
+        assert!(build_url(&e, &BTreeMap::new(), &BTreeMap::new()).is_err());
     }
 
     // --- Paths that resolve off the declared origin ---
@@ -505,21 +591,21 @@ mod tests {
     fn rejects_a_path_that_is_actually_an_absolute_url_to_another_host() {
         let mut e = ep();
         e.path = "https://evil.example.com/steal".into();
-        assert!(build_url(&e, &BTreeMap::new()).is_err());
+        assert!(build_url(&e, &BTreeMap::new(), &BTreeMap::new()).is_err());
     }
 
     #[test]
     fn rejects_a_scheme_relative_path_that_would_retarget_the_host() {
         let mut e = ep();
         e.path = "//evil.example.com/steal".into();
-        assert!(build_url(&e, &BTreeMap::new()).is_err());
+        assert!(build_url(&e, &BTreeMap::new(), &BTreeMap::new()).is_err());
     }
 
     #[test]
     fn rejects_a_path_with_dot_dot_traversal() {
         let mut e = ep();
         e.path = "/api/../../secret".into();
-        assert!(build_url(&e, &BTreeMap::new()).is_err());
+        assert!(build_url(&e, &BTreeMap::new(), &BTreeMap::new()).is_err());
     }
 
     #[test]
@@ -529,7 +615,7 @@ mod tests {
         // not the semantics build_url promises.
         let mut e = ep();
         e.path = "api/today".into();
-        assert!(build_url(&e, &BTreeMap::new()).is_err());
+        assert!(build_url(&e, &BTreeMap::new(), &BTreeMap::new()).is_err());
     }
 
     #[test]
@@ -537,7 +623,7 @@ mod tests {
         let mut e = ep();
         e.base = "https://host.example.com/existing/path?already=here".into();
         e.query = BTreeMap::new();
-        let url = build_url(&e, &BTreeMap::new()).unwrap();
+        let url = build_url(&e, &BTreeMap::new(), &BTreeMap::new()).unwrap();
         assert_eq!(url, "https://host.example.com/api/today");
     }
 
@@ -551,7 +637,7 @@ mod tests {
         let mut e = ep();
         e.path = "/a?b=c".into();
         e.query = BTreeMap::new();
-        let url = build_url(&e, &BTreeMap::new()).unwrap();
+        let url = build_url(&e, &BTreeMap::new(), &BTreeMap::new()).unwrap();
         assert_eq!(url, "https://zenquotes.io/a");
     }
 
@@ -560,7 +646,7 @@ mod tests {
         let mut e = ep();
         e.path = "/a#b".into();
         e.query = BTreeMap::new();
-        let url = build_url(&e, &BTreeMap::new()).unwrap();
+        let url = build_url(&e, &BTreeMap::new(), &BTreeMap::new()).unwrap();
         assert_eq!(url, "https://zenquotes.io/a");
     }
 
@@ -577,6 +663,90 @@ mod tests {
 
         let joined = base.join("//evil.example.com/steal").unwrap();
         assert_eq!(joined.host_str(), Some("evil.example.com"));
+    }
+
+    // --- Task 1: server-resolved {{cfg:}} / {{secret:}} placeholders ---
+
+    /// The whole risk of this slice in one test. `appid` is filled from a
+    /// *secret*, not a param — a client that sends `api_key` must be
+    /// rejected, not quietly allowed to substitute its own value for the
+    /// household's OpenWeather key.
+    #[test]
+    fn a_client_cannot_supply_a_value_for_a_secret_slot() {
+        let ep = Endpoint {
+            base: "https://api.openweathermap.org".into(),
+            path: "/data/2.5/weather".into(),
+            query: BTreeMap::from([
+                ("appid".to_string(), "{{secret:api_key}}".to_string()),
+                ("lat".to_string(), "{{cfg:lat}}".to_string()),
+            ]),
+            ttl_secs: 600,
+        };
+        // Nothing in this endpoint declares a param, so every one of these is
+        // an undeclared param and must be refused.
+        for name in ["api_key", "lat", "appid"] {
+            let params = BTreeMap::from([(name.to_string(), "attacker".to_string())]);
+            assert!(
+                reject_undeclared_params(&ep, &params).is_err(),
+                "client-supplied '{}' must be rejected, not substituted",
+                name
+            );
+        }
+        assert!(declared_params(&ep).is_empty());
+    }
+
+    #[test]
+    fn cfg_and_secret_placeholders_are_substituted_from_resolved_values() {
+        let ep = Endpoint {
+            base: "https://api.openweathermap.org".into(),
+            path: "/data/2.5/weather".into(),
+            query: BTreeMap::from([
+                ("appid".to_string(), "{{secret:api_key}}".to_string()),
+                ("lat".to_string(), "{{cfg:lat}}".to_string()),
+                ("units".to_string(), "imperial".to_string()),
+            ]),
+            ttl_secs: 600,
+        };
+        let resolved = BTreeMap::from([
+            ("secret:api_key".to_string(), "KEY123".to_string()),
+            ("cfg:lat".to_string(), "37.2504".to_string()),
+        ]);
+        let url = build_url(&ep, &BTreeMap::new(), &resolved).unwrap();
+        assert!(url.contains("appid=KEY123"));
+        assert!(url.contains("lat=37.2504"));
+        assert!(url.contains("units=imperial"));
+    }
+
+    #[test]
+    fn an_unresolved_server_placeholder_is_an_error_not_a_literal() {
+        let ep = Endpoint {
+            base: "https://example.com".into(),
+            path: "/x".into(),
+            query: BTreeMap::from([("appid".to_string(), "{{secret:api_key}}".to_string())]),
+            ttl_secs: 0,
+        };
+        let err = build_url(&ep, &BTreeMap::new(), &BTreeMap::new()).unwrap_err();
+        // Must not send the literal "{{secret:api_key}}" upstream.
+        assert!(format!("{:?}", err).contains("api_key"));
+    }
+
+    /// A resolved secret must never appear in an error, because `AppError`
+    /// messages are logged. `reqwest` puts the whole URL in its own errors,
+    /// so anything derived from a URL has to be scrubbed first.
+    #[test]
+    fn redaction_removes_secret_values_from_a_message() {
+        let resolved = BTreeMap::from([
+            ("secret:api_key".to_string(), "SUPERSECRET".to_string()),
+            ("cfg:lat".to_string(), "37.2504".to_string()),
+        ]);
+        let msg = "error sending request for url \
+                   (https://api.openweathermap.org/data/2.5/weather?appid=SUPERSECRET&lat=37.2504)";
+        let scrubbed = redact_secrets(msg, &resolved);
+        assert!(!scrubbed.contains("SUPERSECRET"));
+        assert!(scrubbed.contains("[redacted]"));
+        // Non-secret config is not scrubbed — it is useful in a log and is
+        // not sensitive.
+        assert!(scrubbed.contains("37.2504"));
     }
 
     // --- Fix Round 1: the router's client must not follow redirects ---
