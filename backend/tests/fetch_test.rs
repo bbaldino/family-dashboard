@@ -89,6 +89,39 @@ async fn spawn_capturing_upstream() -> (SocketAddr, Arc<Mutex<Option<String>>>) 
     (addr, last_query)
 }
 
+/// Combines `spawn_counting_upstream` and `spawn_capturing_upstream`: counts
+/// hits *and* records the most recent query string. Needed for the
+/// cache-invalidation test below, which has to prove both that a second
+/// request reached the upstream at all (the count) and that it carried the
+/// *new* config value (the query), not just that a second call was made.
+async fn spawn_counting_capturing_upstream()
+-> (SocketAddr, Arc<AtomicUsize>, Arc<Mutex<Option<String>>>) {
+    let hits = Arc::new(AtomicUsize::new(0));
+    let hits_for_route = hits.clone();
+    let last_query: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+    let captured = last_query.clone();
+    let app = Router::new().route(
+        "/data",
+        get(move |RawQuery(query): RawQuery| {
+            let hits = hits_for_route.clone();
+            let captured = captured.clone();
+            async move {
+                hits.fetch_add(1, Ordering::SeqCst);
+                *captured.lock().unwrap() = Some(query.unwrap_or_default());
+                Json(json!({ "value": "ok" }))
+            }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind local upstream");
+    let addr = listener.local_addr().expect("local addr");
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+    (addr, hits, last_query)
+}
+
 /// A manifest declaring a single `test-integration.today` endpoint pointing
 /// at `addr`, with `ttl_secs: 60` so caching is exercised, and no declared
 /// query params.
@@ -305,5 +338,139 @@ async fn a_missing_config_value_for_a_secret_placeholder_is_a_generic_internal_e
     assert!(
         last_query.lock().unwrap().is_none(),
         "resolution must fail before the upstream is ever contacted"
+    );
+}
+
+// --- Task 2: a config change must invalidate the cache ---
+
+#[tokio::test]
+async fn a_changed_config_value_produces_a_fresh_upstream_call_not_a_stale_hit() {
+    // The scenario `cache_key`'s doc comment exists for: a corrected
+    // `weather.lat`-style config value must be visible on the very next
+    // request, not after `ttl_secs` (600 for weather) elapses. Proven at the
+    // HTTP boundary, not just via the `cache_key` unit test, so it also
+    // exercises `invoke`'s reordering (resolve before cache lookup).
+    let (addr, hits, last_query) = spawn_counting_capturing_upstream().await;
+    let pool = test_pool().await;
+    sqlx::query("INSERT INTO config (key, value) VALUES (?, ?)")
+        .bind("test-integration.lat")
+        .bind("37.2504")
+        .execute(&pool)
+        .await
+        .expect("seed config");
+
+    let manifest_json = format!(
+        r#"{{
+          "version": 1,
+          "integrations": {{
+            "test-integration": {{
+              "endpoints": {{
+                "today": {{
+                  "base": "http://{addr}",
+                  "path": "/data",
+                  "query": {{ "lat": "{{{{cfg:lat}}}}" }},
+                  "ttl_secs": 600
+                }}
+              }}
+            }}
+          }}
+        }}"#
+    );
+    let manifest = Arc::new(Manifest::from_json(&manifest_json).expect("test manifest parses"));
+    let app = dashboard_backend::integrations::router(pool.clone(), manifest);
+    let server = TestServer::new(app);
+
+    let first = server
+        .post("/fetch/test-integration/today")
+        .json(&json!({ "params": {} }))
+        .await;
+    first.assert_status_ok();
+    assert_eq!(
+        hits.load(Ordering::SeqCst),
+        1,
+        "first call must hit the upstream"
+    );
+    assert!(
+        last_query
+            .lock()
+            .unwrap()
+            .clone()
+            .unwrap_or_default()
+            .contains("lat=37.2504"),
+        "first call should carry the original configured latitude"
+    );
+
+    // An admin corrects the latitude, exactly as the config UI would.
+    sqlx::query("UPDATE config SET value = ? WHERE key = ?")
+        .bind("51.5072")
+        .bind("test-integration.lat")
+        .execute(&pool)
+        .await
+        .expect("update config");
+
+    let second = server
+        .post("/fetch/test-integration/today")
+        .json(&json!({ "params": {} }))
+        .await;
+    second.assert_status_ok();
+    assert_eq!(
+        hits.load(Ordering::SeqCst),
+        2,
+        "a changed config value must miss the cache, not serve the stale entry for the \
+         remaining 600s TTL"
+    );
+    assert!(
+        last_query
+            .lock()
+            .unwrap()
+            .clone()
+            .unwrap_or_default()
+            .contains("lat=51.5072"),
+        "second call should carry the corrected latitude, not the stale one"
+    );
+}
+
+#[tokio::test]
+async fn an_undeclared_param_is_rejected_before_config_is_resolved() {
+    // No config row is seeded for `test-integration.api_key`. If
+    // `resolve_server_placeholders` ran before `reject_undeclared_params`,
+    // this request would fail with a generic 500 (missing config, per
+    // `a_missing_config_value_for_a_secret_placeholder_is_a_generic_internal_error`
+    // above) instead of the 400 an undeclared param produces. Asserting 400
+    // here pins `invoke`'s ordering — reject-then-resolve — rather than
+    // leaving it true only because of source order nothing enforces.
+    let (addr, last_query) = spawn_capturing_upstream().await;
+    let pool = test_pool().await;
+
+    let manifest_json = format!(
+        r#"{{
+          "version": 1,
+          "integrations": {{
+            "test-integration": {{
+              "endpoints": {{
+                "today": {{
+                  "base": "http://{addr}",
+                  "path": "/data",
+                  "query": {{ "appid": "{{{{secret:api_key}}}}" }},
+                  "ttl_secs": 0
+                }}
+              }}
+            }}
+          }}
+        }}"#
+    );
+    let manifest = Arc::new(Manifest::from_json(&manifest_json).expect("test manifest parses"));
+    let app = dashboard_backend::integrations::router(pool, manifest);
+    let server = TestServer::new(app);
+
+    let resp = server
+        .post("/fetch/test-integration/today")
+        .json(&json!({ "params": { "not_declared": "x" } }))
+        .await;
+
+    resp.assert_status(StatusCode::BAD_REQUEST);
+    assert!(
+        last_query.lock().unwrap().is_none(),
+        "rejected before the upstream is ever contacted"
     );
 }

@@ -124,7 +124,7 @@ impl ResponseCache {
 }
 
 /// Cache key for a request. Built from a JSON encoding of
-/// `(integration, endpoint, params)` rather than a hand-joined string:
+/// `(integration, endpoint, params, cfg)` rather than a hand-joined string:
 /// `BTreeMap`'s `Serialize` impl always emits keys in sorted order, so the
 /// same params produce the same key regardless of client ordering, and JSON
 /// escaping means no separator collision is possible — a naive
@@ -133,20 +133,33 @@ impl ResponseCache {
 /// leak to another client that sent different params for a different
 /// upstream URL.
 ///
-/// Deliberately excludes resolved `{{cfg:…}}`/`{{secret:…}}` values, and
-/// `invoke` checks the cache *before* calling `resolve_server_placeholders`
-/// (resolution needs a DB round-trip; a cache hit should avoid paying for
-/// it). The known consequence: editing a `cfg:`/`secret:` config value does
-/// not invalidate an already-cached response for that endpoint — it waits
-/// out the existing entry's `ttl_secs` like any other cache entry would.
-/// Acceptable for now because nothing yet migrated onto `{{cfg:…}}` reacts
-/// to config changes faster than its TTL; a later task that needs
-/// immediate invalidation on config change will need to fold `resolved`
-/// into this key (or bypass the cache) rather than assume this ordering
-/// still holds.
-pub fn cache_key(integration: &str, endpoint: &str, params: &BTreeMap<String, String>) -> String {
-    serde_json::to_string(&(integration, endpoint, params))
-        .expect("a tuple of strings and a BTreeMap<String, String> always serializes")
+/// `resolved` is every `{{cfg:…}}`/`{{secret:…}}` value `invoke` read from
+/// the config table for this request (see `resolve_server_placeholders`).
+/// Folding the **non-secret** half into the key is what makes a config edit
+/// (e.g. a corrected `weather.lat`) take effect immediately instead of
+/// waiting out the entry's `ttl_secs` — two requests with identical params
+/// but a different resolved `cfg:` value must land on different cache
+/// entries, or the corrected value is invisible until the stale entry
+/// expires. Secrets are deliberately excluded: a cache key lives in memory
+/// and is exactly the kind of thing that ends up in a debug log or a metric
+/// label, so a rotated secret changing the key would put the credential
+/// somewhere it doesn't belong. The cost is that a rotated secret's cache
+/// entry, if pre-existing, is served stale until its TTL expires — bounded,
+/// and the right trade against leaking a credential.
+pub fn cache_key(
+    integration: &str,
+    endpoint: &str,
+    params: &BTreeMap<String, String>,
+    resolved: &BTreeMap<String, String>,
+) -> String {
+    // Secrets are deliberately excluded — see this function's doc comment.
+    let cfg: BTreeMap<&str, &str> = resolved
+        .iter()
+        .filter(|(k, _)| !k.starts_with("secret:"))
+        .map(|(k, v)| (k.as_str(), v.as_str()))
+        .collect();
+    serde_json::to_string(&(integration, endpoint, params, &cfg))
+        .expect("strings and BTreeMaps of strings always serialize")
 }
 
 /// Placeholder kinds the *manifest* may use that the client may not supply.
@@ -439,21 +452,30 @@ pub async fn invoke(
             ))
         })?;
 
-    // Must run before `cache_key` is computed: `cache_key` hashes every
-    // param the client sent, declared or not, and `build_url` silently
-    // ignores anything undeclared. Checking here first keeps that
-    // ordering an invariant of `invoke` itself rather than something that
-    // only happens to hold because `build_url` is called later.
+    // Must run before `resolve_server_placeholders` and `cache_key`: both of
+    // those trust every param the client sent, and `build_url` silently
+    // ignores anything undeclared. Checking here first keeps that ordering
+    // an invariant of `invoke` itself rather than something that only
+    // happens to hold because `build_url` is called later.
     reject_undeclared_params(ep, &req.params)?;
 
-    let key = cache_key(&integration, &endpoint, &req.params);
+    // Resolution now happens *before* the cache lookup, not after. `cache_key`
+    // folds the resolved (non-secret) config into the key so that a changed
+    // `cfg:` value — e.g. a corrected `weather.lat` — misses the cache
+    // instead of serving a stale entry for up to `ttl_secs`. That means
+    // every request, including a cache hit, now pays for a config read. On a
+    // local SQLite file that's cheap, and it's the whole point: don't
+    // "optimize" this back to resolving after the cache check, or a config
+    // edit goes back to silently waiting out the TTL again.
+    let resolved = resolve_server_placeholders(ep, &integration, &state.pool).await?;
+
+    let key = cache_key(&integration, &endpoint, &req.params, &resolved);
     if ep.ttl_secs > 0
         && let Some(hit) = state.cache.get(&key).await
     {
         return Ok(Json(hit));
     }
 
-    let resolved = resolve_server_placeholders(ep, &integration, &state.pool).await?;
     let url = build_url(ep, &req.params, &resolved)?;
 
     let resp = state.client.get(&url).send().await.map_err(|e| {
@@ -583,11 +605,12 @@ mod tests {
 
     #[test]
     fn cache_key_varies_with_params() {
-        let a = cache_key("daily-quote", "today", &BTreeMap::new());
+        let a = cache_key("daily-quote", "today", &BTreeMap::new(), &BTreeMap::new());
         let b = cache_key(
             "daily-quote",
             "today",
             &BTreeMap::from([("x".to_string(), "1".to_string())]),
+            &BTreeMap::new(),
         );
         assert_ne!(a, b);
     }
@@ -603,6 +626,7 @@ mod tests {
             "daily-quote",
             "today",
             &BTreeMap::from([("x".to_string(), "1::y=2".to_string())]),
+            &BTreeMap::new(),
         );
         let b = cache_key(
             "daily-quote",
@@ -611,8 +635,37 @@ mod tests {
                 ("x".to_string(), "1".to_string()),
                 ("y".to_string(), "2".to_string()),
             ]),
+            &BTreeMap::new(),
         );
         assert_ne!(a, b);
+    }
+
+    #[test]
+    fn cache_key_varies_with_resolved_config_but_not_with_secrets() {
+        let a = BTreeMap::from([
+            ("cfg:lat".to_string(), "37.2504".to_string()),
+            ("secret:api_key".to_string(), "KEY_ONE".to_string()),
+        ]);
+        let moved = BTreeMap::from([
+            ("cfg:lat".to_string(), "51.5072".to_string()),
+            ("secret:api_key".to_string(), "KEY_ONE".to_string()),
+        ]);
+        let rotated = BTreeMap::from([
+            ("cfg:lat".to_string(), "37.2504".to_string()),
+            ("secret:api_key".to_string(), "KEY_TWO".to_string()),
+        ]);
+        let p = BTreeMap::new();
+
+        assert_ne!(
+            cache_key("weather", "current", &p, &a),
+            cache_key("weather", "current", &p, &moved),
+            "a changed config value must not hit a stale entry"
+        );
+        assert_eq!(
+            cache_key("weather", "current", &p, &a),
+            cache_key("weather", "current", &p, &rotated),
+            "a rotated secret must not enter the cache key"
+        );
     }
 
     #[test]
