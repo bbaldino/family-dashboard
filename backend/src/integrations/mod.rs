@@ -20,7 +20,10 @@ pub use config_helpers::IntegrationConfig;
 use axum::Router;
 use sqlx::SqlitePool;
 
-pub fn router(pool: SqlitePool) -> Router {
+pub fn router(
+    pool: SqlitePool,
+    manifest: std::sync::Arc<crate::platform::manifest::Manifest>,
+) -> Router {
     Router::new()
         .nest("/chores", chores::router(pool.clone()))
         .nest("/config", config::router(pool.clone()))
@@ -39,4 +42,5 @@ pub fn router(pool: SqlitePool) -> Router {
         .nest("/jokes", jokes::router())
         .nest("/trivia", trivia::router())
         .nest("/word-of-the-day", word_of_the_day::router())
+        .nest("/fetch", crate::platform::fetch::router(manifest))
 }
