@@ -4,7 +4,6 @@ import { defineIntegration } from '@/platform'
 export const googleCloudIntegration = defineIntegration({
   id: 'google-cloud',
   name: 'Google Cloud',
-  hasBackend: false,
   schema: z.object({
     client_id: z.string().optional(),
     client_secret: z.string().optional(),

@@ -6,27 +6,12 @@ export interface FieldMeta {
   description?: string
 }
 
-interface IntegrationDefBase<T extends z.ZodObject<z.ZodRawShape>> {
+export interface IntegrationDef<T extends z.ZodObject<z.ZodRawShape>> {
   id: string
   name: string
   schema: T
   fields: Record<keyof z.infer<T>, FieldMeta>
 }
-
-export interface BackendIntegrationDef<
-  T extends z.ZodObject<z.ZodRawShape>,
-> extends IntegrationDefBase<T> {
-  hasBackend?: true // default, can be omitted
-}
-
-export interface ClientIntegrationDef<
-  T extends z.ZodObject<z.ZodRawShape>,
-> extends IntegrationDefBase<T> {
-  hasBackend: false
-}
-
-export type IntegrationDef<T extends z.ZodObject<z.ZodRawShape>> =
-  BackendIntegrationDef<T> | ClientIntegrationDef<T>
 
 export interface IntegrationApi {
   get: <R>(path: string) => Promise<R>
@@ -35,20 +20,9 @@ export interface IntegrationApi {
   del: (path: string) => Promise<void>
 }
 
-export interface BackendIntegration<
-  T extends z.ZodObject<z.ZodRawShape>,
-> extends IntegrationDefBase<T> {
+export interface Integration<T extends z.ZodObject<z.ZodRawShape>> extends IntegrationDef<T> {
   api: IntegrationApi
 }
-
-export interface ClientIntegration<
-  T extends z.ZodObject<z.ZodRawShape>,
-> extends IntegrationDefBase<T> {
-  api?: undefined
-}
-
-export type Integration<T extends z.ZodObject<z.ZodRawShape>> =
-  BackendIntegration<T> | ClientIntegration<T>
 
 async function apiRequest<R>(baseUrl: string, path: string, options?: RequestInit): Promise<R> {
   const resp = await fetch(`${baseUrl}${path}`, options)
@@ -62,20 +36,9 @@ async function apiRequest<R>(baseUrl: string, path: string, options?: RequestIni
   return JSON.parse(text)
 }
 
-// Overloads for type-safe return
-export function defineIntegration<T extends z.ZodObject<z.ZodRawShape>>(
-  def: BackendIntegrationDef<T>,
-): BackendIntegration<T>
-export function defineIntegration<T extends z.ZodObject<z.ZodRawShape>>(
-  def: ClientIntegrationDef<T>,
-): ClientIntegration<T>
 export function defineIntegration<T extends z.ZodObject<z.ZodRawShape>>(
   def: IntegrationDef<T>,
 ): Integration<T> {
-  if (def.hasBackend === false) {
-    return { ...def, api: undefined }
-  }
-
   const baseUrl = `/api/${def.id}`
   return {
     ...def,

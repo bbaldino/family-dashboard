@@ -22,13 +22,12 @@ import { defineIntegration, useIntegrationData } from '@/platform'
  * `TypeError` instead.
  */
 
+// No Rust half — its routes were deleted when it moved onto the platform.
+// The `.api` client this integration carries would 404 against
+// `/api/daily-quote`; nothing here uses it.
 export const dailyQuoteIntegration = defineIntegration({
   id: 'daily-quote',
   name: 'Daily Quote',
-  // No Rust half — its routes were deleted when it moved onto the platform.
-  // Without this, `defineIntegration` hands it an `api` client pointed at
-  // `/api/daily-quote`, which would 404 on first use.
-  hasBackend: false,
   schema: z.object({}),
   fields: {},
 })

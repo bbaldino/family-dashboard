@@ -16,14 +16,14 @@ import type { ForecastDay, ForecastData, HourlyForecast } from './weather/foreca
  * `weatherIntegration` carries real `schema`/`fields` because it's registered
  * in the admin settings UI (`data/integrations-registry.ts`), which reads
  * both to render the settings form.
+ *
+ * No Rust half — `integrations/weather/` was deleted in slice 2a. The `.api`
+ * client this integration carries points at `/api/weather`, a route that no
+ * longer exists; nothing here uses it.
  */
 export const weatherIntegration = defineIntegration({
   id: 'weather',
   name: 'Weather',
-  // No Rust half — `integrations/weather/` was deleted in slice 2a. Without
-  // this, `defineIntegration` hands it an `api` client pointed at
-  // `/api/weather`, a route that no longer exists.
-  hasBackend: false,
   schema: z.object({
     api_key: z.string().min(1, 'API key is required'),
     lat: z.string().min(1).default('37.2504'),

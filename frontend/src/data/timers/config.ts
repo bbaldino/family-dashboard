@@ -4,7 +4,6 @@ import { defineIntegration } from '@/platform'
 export const timersIntegration = defineIntegration({
   id: 'timers',
   name: 'Timers',
-  hasBackend: false,
   schema: z.object({
     service_url: z.string().optional(),
     alarm_sound: z.string().optional(),

@@ -4,7 +4,6 @@ import { defineIntegration } from '@/platform'
 export const llmIntegration = defineIntegration({
   id: 'llm',
   name: 'LLM',
-  hasBackend: false,
   schema: z.object({
     provider: z.string().optional().default('ollama'),
     url: z.string().optional().default(''),

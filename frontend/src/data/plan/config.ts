@@ -4,7 +4,6 @@ import { defineIntegration } from '@/platform'
 export const planIntegration = defineIntegration({
   id: 'plan',
   name: 'PLAN',
-  hasBackend: false,
   schema: z.object({
     service_url: z.string().optional().default('http://localhost:4000'),
   }),

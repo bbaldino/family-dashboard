@@ -4,7 +4,6 @@ import { defineIntegration } from '@/platform'
 export const doorbellIntegration = defineIntegration({
   id: 'doorbell',
   name: 'Doorbell Camera',
-  hasBackend: false,
   schema: z.object({
     camera_url: z.string().optional().default('https://cast.baldino.me/webrtc-doorbell.html'),
     press_sensor_entity: z.string().default('binary_sensor.frontdoordoorbell_visitor'),
