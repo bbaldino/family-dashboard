@@ -32,6 +32,7 @@ export default defineConfig([
       // Lets boundaries resolve extensionless imports and the `@/*` tsconfig alias.
       'import/resolver': { typescript: { alwaysTryTypes: true } },
       'boundaries/elements': [
+        { type: 'platform', pattern: 'src/platform/**' },
         { type: 'data', pattern: 'src/data/**' },
         { type: 'shell', pattern: 'src/shell/**' },
         { type: 'palettes', pattern: 'src/palettes/**' },
@@ -49,6 +50,16 @@ export default defineConfig([
         {
           default: 'allow',
           policies: [
+            // The platform is the lowest layer: integrations build on it, it
+            // knows nothing about them.
+            {
+              from: { element: { type: 'platform' } },
+              disallow: {
+                to: {
+                  element: { types: { anyOf: ['data', 'theme', 'admin', 'shell', 'palettes'] } },
+                },
+              },
+            },
             // Data layer is pure — must not know about presentation.
             {
               from: { element: { type: 'data' } },
