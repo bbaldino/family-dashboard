@@ -48,8 +48,14 @@ describe('isOngoing', () => {
 })
 
 describe('formatIncidentWhen', () => {
+  /** `now` is pinned rather than left to default to the real clock: the
+   *  weekday form only applies inside the 6-day window, so relying on the
+   *  wall clock made this pass until the fixture aged out of it and then fail
+   *  every run thereafter. The sibling test below always pinned `now`. */
   it('reads as weekday and clock time, as the mock does', () => {
-    expect(formatIncidentWhen(incident())).toMatch(/^[A-Z]{3} \d{2}:\d{2}$/)
+    expect(formatIncidentWhen(incident(), at('2026-07-30T12:00:00Z'))).toMatch(
+      /^[A-Z]{3} \d{2}:\d{2}$/,
+    )
   })
 
   /** An incident is returned whole, so a 7-day ledger can contain a row that
