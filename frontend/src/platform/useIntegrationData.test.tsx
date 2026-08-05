@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
-import { renderHook, waitFor } from '@testing-library/react'
+import { renderHook, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { z } from 'zod'
@@ -248,5 +248,89 @@ describe('useIntegrationData', () => {
     // this one now that both run through the same hook.
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(fetchMock).not.toHaveBeenCalledWith('/api/fetch', expect.anything())
+  })
+
+  it('derives refetchInterval from config, matching the same source as ttlSecs', async () => {
+    // The design's headline property: ttlSecs (server cache) and
+    // refetchInterval (client poll) both come from one config value here,
+    // so they cannot drift apart the way two hardcoded constants could —
+    // this project has already shipped a comment claiming a 15-minute
+    // interval "matched" a 600-second TTL, which is exactly that drift.
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      const fetchMock = mockFetchOk({ ok: 1 })
+      seedConfig({ 'demo.api_key': 'k', 'demo.refresh_minutes': '5' })
+
+      renderHook(
+        () =>
+          useIntegrationData(demoIntegration, (cfg) => ({
+            url: `https://x/${cfg.api_key}`,
+            ttlSecs: cfg.refresh_minutes * 60,
+            refetchInterval: cfg.refresh_minutes * 60 * 1000,
+          })),
+        { wrapper },
+      )
+
+      const fetchCalls = () =>
+        fetchMock.mock.calls.filter(([input]) => String(input) === '/api/fetch')
+      await waitFor(() => expect(fetchCalls().length).toBeGreaterThan(0))
+
+      // ttl_secs in the posted body comes from the same `refresh_minutes`
+      // config value the interval below is derived from.
+      const [, firstInit] = fetchCalls()[0]
+      expect(JSON.parse(firstInit.body)).toMatchObject({ ttl_secs: 300 })
+
+      const callsBeforeAdvance = fetchCalls().length
+
+      // 5 minutes = 300_000ms. Short of that, no refetch.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(299_000)
+      })
+      expect(fetchCalls().length).toBe(callsBeforeAdvance)
+
+      // Crossing the config-derived interval triggers exactly one more.
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2_000)
+      })
+      expect(fetchCalls().length).toBe(callsBeforeAdvance + 1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('lets opts.refetchInterval (the data-dependent form) win over the builder-derived one', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      const fetchMock = mockFetchOk({ ok: 1 })
+      seedConfig({ 'demo.api_key': 'k', 'demo.refresh_minutes': '5' })
+
+      renderHook(
+        () =>
+          useIntegrationData(
+            demoIntegration,
+            (cfg) => ({
+              url: `https://x/${cfg.api_key}`,
+              // 5 minutes — if this won, nothing would fire within 10s below.
+              refetchInterval: cfg.refresh_minutes * 60 * 1000,
+            }),
+            // The data-dependent opts form — what `sports` needs to poll
+            // faster during a live game — must take precedence.
+            { refetchInterval: 10_000 },
+          ),
+        { wrapper },
+      )
+
+      const fetchCalls = () =>
+        fetchMock.mock.calls.filter(([input]) => String(input) === '/api/fetch')
+      await waitFor(() => expect(fetchCalls().length).toBeGreaterThan(0))
+      const callsBeforeAdvance = fetchCalls().length
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10_000)
+      })
+      expect(fetchCalls().length).toBe(callsBeforeAdvance + 1)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
