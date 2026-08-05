@@ -1,7 +1,6 @@
 import { z } from 'zod'
 import { defineIntegration } from '@/data/define-integration'
-import { useIntegrationQuery } from '@/platform'
-import { useIntegrationConfig } from '@/data/use-integration-config'
+import { useIntegrationData } from '@/platform'
 import { summariseForecast } from './weather/forecast'
 import { computeAirQuality } from './weather/air-quality'
 import type { AqiLevel, UvLevel, PollenLevel, AirQualityData } from './weather/air-quality'
@@ -20,10 +19,10 @@ import type { ForecastDay, ForecastData, HourlyForecast } from './weather/foreca
  * `@/data/define-integration`'s config-schema `defineIntegration`, not the
  * platform's simpler `{id, name}` one. `PlatformIntegration` is structurally
  * just `{id, name}`, and this object has both (plus `schema`/`fields`/`api`,
- * which `useIntegrationQuery` ignores) — passing it straight to
- * `useIntegrationQuery` typechecks because TypeScript only excess-property
- * checks object *literals*, not variables, so no second `defineIntegration`
- * object was needed for the platform's world.
+ * which `useIntegrationData`/`useIntegrationQuery` ignore) — passing it
+ * straight through typechecks because TypeScript only excess-property checks
+ * object *literals*, not variables, so no second `defineIntegration` object
+ * was needed for the platform's world.
  */
 export const weatherIntegration = defineIntegration({
   id: 'weather',
@@ -139,13 +138,19 @@ interface OpenWeatherCurrentResponse {
 }
 
 export function useWeatherData() {
-  const cfg = useIntegrationConfig(weatherIntegration)
-  return useIntegrationQuery<OpenWeatherCurrentResponse, WeatherData>(
+  // Explicit `<Raw, Out>` type args here would leave `T` unfilled (TS does
+  // not infer the remainder of a partially-supplied type argument list, so
+  // it would fall back to `T`'s `never` default and fail to match
+  // `weatherIntegration`'s schema) — annotate `select`'s parameter instead
+  // and let everything infer from the arguments.
+  return useIntegrationData(
     weatherIntegration,
-    cfg ? openWeatherUrl('weather', cfg) : null,
-    {
+    (cfg) => ({
+      url: openWeatherUrl('weather', cfg),
       ttlSecs: 600,
-      select: (d) => ({
+    }),
+    {
+      select: (d: OpenWeatherCurrentResponse): WeatherData => ({
         temp: d.main.temp,
         feels_like: d.main.feels_like,
         temp_min: d.main.temp_min,
@@ -169,12 +174,17 @@ export function useWeatherData() {
 export type { ForecastDay, ForecastData, HourlyForecast }
 
 export function useWeatherForecast() {
-  const cfg = useIntegrationConfig(weatherIntegration)
-  return useIntegrationQuery(weatherIntegration, cfg ? openWeatherUrl('forecast', cfg) : null, {
-    ttlSecs: 900,
-    select: summariseForecast,
-    refetchInterval: 30 * 60 * 1000,
-  })
+  return useIntegrationData(
+    weatherIntegration,
+    (cfg) => ({
+      url: openWeatherUrl('forecast', cfg),
+      ttlSecs: 900,
+    }),
+    {
+      select: summariseForecast,
+      refetchInterval: 30 * 60 * 1000,
+    },
+  )
 }
 
 /* ─────────── air quality ─────────── */
@@ -182,12 +192,17 @@ export function useWeatherForecast() {
 export type { AqiLevel, UvLevel, PollenLevel, AirQualityData }
 
 export function useAirQuality() {
-  const cfg = useIntegrationConfig(weatherCoordsIntegration)
-  return useIntegrationQuery(weatherIntegration, cfg ? airQualityUrl(cfg) : null, {
-    ttlSecs: 1800,
-    select: computeAirQuality,
-    refetchInterval: 30 * 60 * 1000,
-  })
+  return useIntegrationData(
+    weatherCoordsIntegration,
+    (cfg) => ({
+      url: airQualityUrl(cfg),
+      ttlSecs: 1800,
+    }),
+    {
+      select: computeAirQuality,
+      refetchInterval: 30 * 60 * 1000,
+    },
+  )
 }
 
 /* ─────────── derived ─────────── */

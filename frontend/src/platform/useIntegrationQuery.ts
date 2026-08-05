@@ -2,6 +2,9 @@ import { useQuery } from '@tanstack/react-query'
 import type { PlatformIntegration } from './defineIntegration'
 
 export interface IntegrationQueryOptions<Raw, Out> {
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+  headers?: Record<string, string>
+  body?: unknown
   /** Seconds the backend should cache this URL's response. 0 = no caching. */
   ttlSecs?: number
   select?: (raw: Raw) => Out
@@ -22,15 +25,29 @@ export function useIntegrationQuery<Raw, Out = Raw>(
   url: string | null,
   opts: IntegrationQueryOptions<Raw, Out> = {},
 ) {
-  const { ttlSecs = 0, select, refetchInterval, enabled } = opts
+  const { method, headers, body, ttlSecs = 0, select, refetchInterval, enabled } = opts
 
   return useQuery({
-    queryKey: ['integration', integration.id, url],
+    queryKey: ['integration', integration.id, url, method, headers, body, ttlSecs],
     queryFn: async (): Promise<Raw> => {
+      // Omit absent fields rather than sending them as `undefined` — a plain
+      // GET must still post exactly `{url, ttl_secs}`, the shape the backend
+      // tests assert.
+      const payload: {
+        url: string | null
+        method?: string
+        headers?: Record<string, string>
+        body?: unknown
+        ttl_secs: number
+      } = { url, ttl_secs: ttlSecs }
+      if (method) payload.method = method
+      if (headers) payload.headers = headers
+      if (body !== undefined) payload.body = body
+
       const resp = await fetch('/api/fetch', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, ttl_secs: ttlSecs }),
+        body: JSON.stringify(payload),
       })
       if (!resp.ok) {
         const err = await resp.json().catch(() => ({ error: 'Request failed' }))
