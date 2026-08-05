@@ -49,6 +49,66 @@ async fn spawn_upstream(status: u16, body: &'static str) -> (SocketAddr, Arc<Mut
     (addr, hits)
 }
 
+/// A single request as the stub upstream in [`spawn_capturing_upstream`] saw
+/// it: method, lower-cased header names, the raw body, and `Content-Type`.
+#[derive(Clone, Debug, Default)]
+struct CapturedRequest {
+    method: String,
+    headers: std::collections::HashMap<String, String>,
+    body: String,
+    content_type: Option<String>,
+}
+
+/// Spawns a local upstream that records the last request it received —
+/// method, headers (names lower-cased, matching HTTP's case-insensitivity),
+/// body, and `Content-Type` — and always answers 200 with a small JSON body.
+/// Standing in for a real integration's upstream when a test needs to
+/// inspect what `invoke` actually sent, not just count hits.
+async fn spawn_capturing_upstream() -> (SocketAddr, Arc<Mutex<Option<CapturedRequest>>>) {
+    let captured = Arc::new(Mutex::new(None));
+    let captured_for_route = captured.clone();
+    let app = axum::Router::new().fallback(move |req: axum::extract::Request| {
+        let captured = captured_for_route.clone();
+        async move {
+            let method = req.method().to_string();
+            let content_type = req
+                .headers()
+                .get(axum::http::header::CONTENT_TYPE)
+                .and_then(|v| v.to_str().ok())
+                .map(str::to_string);
+            let headers = req
+                .headers()
+                .iter()
+                .map(|(name, value)| {
+                    (
+                        name.as_str().to_ascii_lowercase(),
+                        value.to_str().unwrap_or_default().to_string(),
+                    )
+                })
+                .collect();
+            let body_bytes = axum::body::to_bytes(req.into_body(), usize::MAX)
+                .await
+                .unwrap_or_default();
+            let body = String::from_utf8_lossy(&body_bytes).to_string();
+            *captured.lock().expect("capture mutex not poisoned") = Some(CapturedRequest {
+                method,
+                headers,
+                body,
+                content_type,
+            });
+            (StatusCode::OK, r#"{"ok":true}"#)
+        }
+    });
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind local upstream");
+    let addr = listener.local_addr().expect("local addr");
+    tokio::spawn(async move {
+        axum::serve(listener, app).await.unwrap();
+    });
+    (addr, captured)
+}
+
 /// Spawns a local upstream that 303s any request to `target`, counting how
 /// many times it was hit itself. Used to prove a redirect is never followed
 /// — the second server (`target`) should never see a request at all.
@@ -368,5 +428,165 @@ async fn the_query_string_never_reaches_the_log_when_the_upstream_is_unreachable
     assert!(
         logged.contains(&format!("http://127.0.0.1:1{marker}")),
         "the log should still carry origin and path: {logged}"
+    );
+}
+
+#[tokio::test]
+async fn issues_a_post_with_a_json_body() {
+    let (addr, captured) = spawn_capturing_upstream().await;
+    let server = test_server().await;
+    let resp = server
+        .post("/fetch")
+        .json(&json!({
+            "url": format!("http://{addr}/compute"),
+            "method": "POST",
+            "body": { "origin": "a", "destination": "b" }
+        }))
+        .await;
+    resp.assert_status_ok();
+    let req = captured
+        .lock()
+        .unwrap()
+        .clone()
+        .expect("upstream was called");
+    assert_eq!(req.method, "POST");
+    assert_eq!(req.body, r#"{"destination":"b","origin":"a"}"#);
+    assert_eq!(req.content_type.as_deref(), Some("application/json"));
+}
+
+#[tokio::test]
+async fn forwards_declared_headers() {
+    let (addr, captured) = spawn_capturing_upstream().await;
+    let server = test_server().await;
+    server
+        .post("/fetch")
+        .json(&json!({
+            "url": format!("http://{addr}/x"),
+            "headers": { "X-Goog-Api-Key": "k123", "X-Goog-FieldMask": "routes.duration" }
+        }))
+        .await
+        .assert_status_ok();
+    let req = captured.lock().unwrap().clone().unwrap();
+    assert_eq!(
+        req.headers.get("x-goog-api-key").map(String::as_str),
+        Some("k123")
+    );
+    assert_eq!(
+        req.headers.get("x-goog-fieldmask").map(String::as_str),
+        Some("routes.duration")
+    );
+}
+
+#[tokio::test]
+async fn defaults_to_get_with_no_body() {
+    let (addr, captured) = spawn_capturing_upstream().await;
+    let server = test_server().await;
+    server
+        .post("/fetch")
+        .json(&json!({ "url": format!("http://{addr}/x") }))
+        .await
+        .assert_status_ok();
+    let req = captured.lock().unwrap().clone().unwrap();
+    assert_eq!(req.method, "GET");
+    assert!(req.body.is_empty());
+}
+
+#[tokio::test]
+async fn rejects_an_unsupported_method() {
+    let server = test_server().await;
+    let resp = server
+        .post("/fetch")
+        .json(&json!({ "url": "https://example.com/x", "method": "TRACE" }))
+        .await;
+    resp.assert_status(StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn rejects_an_invalid_header_name() {
+    let server = test_server().await;
+    let resp = server
+        .post("/fetch")
+        .json(&json!({
+            "url": "https://example.com/x",
+            "headers": { "Bad\nName": "v" }
+        }))
+        .await;
+    resp.assert_status(StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn the_cache_key_distinguishes_method_and_body() {
+    // Same URL, different request => must not serve one from the other's entry.
+    let (addr, hits) = spawn_upstream(200, r#"{"n":1}"#).await;
+    let server = test_server().await;
+    let url = format!("http://{addr}/x");
+
+    server
+        .post("/fetch")
+        .json(&json!({ "url": url, "ttl_secs": 60 }))
+        .await
+        .assert_status_ok();
+    server
+        .post("/fetch")
+        .json(&json!({ "url": url, "method": "POST", "ttl_secs": 60 }))
+        .await
+        .assert_status_ok();
+    server
+        .post("/fetch")
+        .json(&json!({ "url": url, "method": "POST", "body": {"a":1}, "ttl_secs": 60 }))
+        .await
+        .assert_status_ok();
+    server
+        .post("/fetch")
+        .json(&json!({ "url": url, "method": "POST", "body": {"a":1}, "ttl_secs": 60 }))
+        .await
+        .assert_status_ok();
+
+    assert_eq!(
+        *hits.lock().unwrap(),
+        3,
+        "only the identical repeat may be a cache hit"
+    );
+}
+
+#[tokio::test]
+async fn headers_and_body_never_reach_the_log() {
+    // The reason redaction was removed: nothing composes credentials into a
+    // log line. Headers and bodies carry them just as query strings do.
+    let logs = captured_logs();
+    let (addr, _) = spawn_upstream(503, "upstream sad").await;
+    let server = test_server().await;
+    let resp = server
+        .post("/fetch")
+        .json(&json!({
+            "url": format!("http://{addr}/x"),
+            "method": "POST",
+            "headers": { "Authorization": "Bearer s3cr3t/v1+aG8=?x" },
+            "body": { "api_key": "b0dy-s3cr3t" }
+        }))
+        .await;
+    resp.assert_status(StatusCode::INTERNAL_SERVER_ERROR);
+
+    let marker = addr.to_string();
+    let logged = logs.lines_mentioning(&marker);
+    assert!(
+        !logged.is_empty(),
+        "log capture produced nothing — the assertion below would be vacuous"
+    );
+    assert!(
+        !logged.contains("s3cr3t"),
+        "header secret leaked into the log"
+    );
+    assert!(
+        !logged.contains("b0dy-s3cr3t"),
+        "body secret leaked into the log"
+    );
+    assert!(
+        !logged.contains("Authorization"),
+        "header name leaked into the log"
+    );
+    assert!(
+        logged.contains(&format!("http://{addr}/x")),
+        "origin+path should still be logged"
     );
 }

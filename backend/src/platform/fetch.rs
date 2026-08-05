@@ -90,16 +90,55 @@ impl ResponseCache {
     }
 }
 
-/// The request body: `{"url": "https://…", "ttl_secs": 600}`.
+/// The request body: `{"url", "method"?, "headers"?, "body"?, "ttl_secs"?}`.
 ///
-/// `ttl_secs` is optional and defaults to `0`, which means "do not cache".
-/// Caching is opt-in per request because the caller knows how fast its
-/// upstream changes and this module does not.
+/// `method` defaults to GET and is restricted to the verbs an integration
+/// legitimately needs — an upstream API call, not arbitrary HTTP. `headers`
+/// and `body` exist because real APIs need them: `driving_time` calls Google
+/// Routes with `POST`, two `X-Goog-*` headers, and a JSON body.
 #[derive(Deserialize)]
 pub struct FetchRequest {
     pub url: String,
     #[serde(default)]
+    pub method: Option<String>,
+    #[serde(default)]
+    pub headers: BTreeMap<String, String>,
+    #[serde(default)]
+    pub body: Option<serde_json::Value>,
+    #[serde(default)]
     pub ttl_secs: u64,
+}
+
+/// Verbs an integration may ask for. Deliberately not `TRACE`/`CONNECT`, and
+/// not an open passthrough: this is for calling upstream APIs.
+fn parse_method(raw: Option<&str>) -> Result<reqwest::Method, AppError> {
+    match raw.unwrap_or("GET").to_ascii_uppercase().as_str() {
+        "GET" => Ok(reqwest::Method::GET),
+        "POST" => Ok(reqwest::Method::POST),
+        "PUT" => Ok(reqwest::Method::PUT),
+        "PATCH" => Ok(reqwest::Method::PATCH),
+        "DELETE" => Ok(reqwest::Method::DELETE),
+        other => Err(AppError::BadRequest(format!(
+            "unsupported method {other:?}"
+        ))),
+    }
+}
+
+/// Cache key for a request. JSON rather than a hand-joined string so no
+/// separator collision is possible, and `BTreeMap` serialises in sorted order
+/// so header ordering does not produce distinct keys for identical requests.
+///
+/// Method and body are part of the key because a GET and a POST to the same
+/// URL are different resources; without them the second would be served the
+/// first's cached response.
+fn cache_key(
+    url: &Url,
+    method: &reqwest::Method,
+    headers: &BTreeMap<String, String>,
+    body: Option<&serde_json::Value>,
+) -> String {
+    serde_json::to_string(&(method.as_str(), url.as_str(), headers, body))
+        .unwrap_or_else(|_| url.to_string())
 }
 
 /// A log-safe rendering of a URL: scheme, host, port, and path — never the
@@ -116,7 +155,8 @@ fn safe_label(url: &Url) -> String {
 ///   body that would not parse as JSON. `AppError::Internal` renders a
 ///   generic body to the caller; the log carries origin and path only.
 ///
-/// Caching: `ttl_secs > 0` reads and writes the cache, keyed on the full URL.
+/// Caching: `ttl_secs > 0` reads and writes the cache, keyed on the full
+/// request (method, URL, headers, and body — see [`cache_key`]).
 /// Concurrent misses are not single-flighted — each reaches the upstream.
 pub async fn invoke(
     State(state): State<PlatformState>,
@@ -137,15 +177,33 @@ pub async fn invoke(
 
     let label = safe_label(&url);
 
+    let method = parse_method(req.method.as_deref())?;
+
+    // Build the header map up front so an invalid name or value is a 400
+    // rather than a surprise at send time.
+    let mut headers = reqwest::header::HeaderMap::new();
+    for (name, value) in &req.headers {
+        let name = reqwest::header::HeaderName::from_bytes(name.as_bytes())
+            .map_err(|_| AppError::BadRequest(format!("invalid header name {name:?}")))?;
+        let value = reqwest::header::HeaderValue::from_str(value)
+            // Deliberately does NOT echo the value — it may be a credential.
+            .map_err(|_| AppError::BadRequest(format!("invalid value for header {name}")))?;
+        headers.insert(name, value);
+    }
+
+    let key = cache_key(&url, &method, &req.headers, req.body.as_ref());
+
     if req.ttl_secs > 0
-        && let Some(hit) = state.cache.get(url.as_str()).await
+        && let Some(hit) = state.cache.get(&key).await
     {
         return Ok(Json(hit));
     }
 
-    let resp = state
-        .client
-        .get(url.clone())
+    let mut builder = state.client.request(method, url.clone()).headers(headers);
+    if let Some(body) = &req.body {
+        builder = builder.json(body);
+    }
+    let resp = builder
         .send()
         .await
         // reqwest's `Error::Display` appends `" for url (...)"` -- including
@@ -175,11 +233,7 @@ pub async fn invoke(
     if req.ttl_secs > 0 {
         state
             .cache
-            .set(
-                url.as_str().to_string(),
-                data.clone(),
-                Duration::from_secs(req.ttl_secs),
-            )
+            .set(key, data.clone(), Duration::from_secs(req.ttl_secs))
             .await;
     }
     Ok(Json(data))
