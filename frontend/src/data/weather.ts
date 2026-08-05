@@ -20,6 +20,10 @@ import type { ForecastDay, ForecastData, HourlyForecast } from './weather/foreca
 export const weatherIntegration = defineIntegration({
   id: 'weather',
   name: 'Weather',
+  // No Rust half — `integrations/weather/` was deleted in slice 2a. Without
+  // this, `defineIntegration` hands it an `api` client pointed at
+  // `/api/weather`, a route that no longer exists.
+  hasBackend: false,
   schema: z.object({
     api_key: z.string().min(1, 'API key is required'),
     lat: z.string().min(1).default('37.2504'),

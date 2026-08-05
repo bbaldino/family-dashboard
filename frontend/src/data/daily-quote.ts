@@ -25,6 +25,10 @@ import { defineIntegration, useIntegrationData } from '@/platform'
 export const dailyQuoteIntegration = defineIntegration({
   id: 'daily-quote',
   name: 'Daily Quote',
+  // No Rust half — its routes were deleted when it moved onto the platform.
+  // Without this, `defineIntegration` hands it an `api` client pointed at
+  // `/api/daily-quote`, which would 404 on first use.
+  hasBackend: false,
   schema: z.object({}),
   fields: {},
 })
