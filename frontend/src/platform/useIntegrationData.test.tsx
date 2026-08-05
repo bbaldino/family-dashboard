@@ -160,19 +160,57 @@ describe('useIntegrationData', () => {
     })
   })
 
-  it('applies select and honours an explicit enabled: false', async () => {
-    const fetchMock = mockFetchOk({ n: 2 })
+  it('lets an explicit enabled: false win once config is available', async () => {
+    const fetchMock = mockFetchOk({ ok: 1 })
     seedConfig({ 'demo.api_key': 'k', 'demo.refresh_minutes': '5' })
 
-    const { result } = renderHook(
+    // One shared QueryClient for both renders below, not the module-level
+    // `wrapper` (which hands each renderHook its own fresh client/cache).
+    // Sharing one means `disabled`'s own `useAllConfig` call reads config
+    // from cache rather than re-fetching it, so there is no second
+    // in-flight config fetch left to confound the result — the control
+    // having data already proves config is resolved for both.
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const sharedWrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    )
+
+    // Control: identical config and builder, `enabled` omitted — this one
+    // must fetch. Without a control that actually does fetch, an idle
+    // `disabled` result is indistinguishable from config simply not having
+    // arrived yet (see 'stays disabled until config is available' above),
+    // which is exactly how this guard went untested the first time: the
+    // previous version of this test asserted synchronously, before
+    // `/api/config` could possibly have resolved, so it passed whether or
+    // not `enabled: false` was even wired up.
+    const { result: control } = renderHook(
+      () => useIntegrationData(demoIntegration, (cfg) => ({ url: `https://x/${cfg.api_key}` })),
+      { wrapper: sharedWrapper },
+    )
+    await waitFor(() => expect(control.current.data).toBeDefined())
+    const callsBeforeDisabled = fetchMock.mock.calls.filter(
+      ([input]) => String(input) === '/api/fetch',
+    ).length
+    expect(callsBeforeDisabled).toBeGreaterThan(0)
+
+    const { result: disabled } = renderHook(
       () =>
         useIntegrationData(demoIntegration, (cfg) => ({ url: `https://x/${cfg.api_key}` }), {
           enabled: false,
         }),
-      { wrapper },
+      { wrapper: sharedWrapper },
     )
-    expect(result.current.fetchStatus).toBe('idle')
-    expect(fetchMock).not.toHaveBeenCalledWith('/api/fetch', expect.anything())
+    // Config is already resolved and cached on the shared client (proven by
+    // `control` above), so `disabled` reads it from cache immediately — no
+    // config fetch of its own left in flight to explain an idle result away.
+    // If it's idle, it's because `enabled: false` won.
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(disabled.current.fetchStatus).toBe('idle')
+
+    const callsAfterDisabled = fetchMock.mock.calls.filter(
+      ([input]) => String(input) === '/api/fetch',
+    ).length
+    expect(callsAfterDisabled).toBe(callsBeforeDisabled)
   })
 
   it('fires immediately for a schema-less integration, without waiting on /api/config', async () => {
@@ -188,6 +226,11 @@ describe('useIntegrationData', () => {
     // yet the request still reaches the proxy — a schema-less integration
     // has nothing to wait on and must not gate on it.
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/fetch', expect.anything()))
+
+    // The point of this fix round was avoiding the network dependency
+    // outright, not just declining to wait on it — assert `/api/config` was
+    // never requested at all, not merely that it didn't block.
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/config')
   })
 
   it('still gates a schema-carrying integration on config, even sharing a code path with the schema-less case', async () => {
