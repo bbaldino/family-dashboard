@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { defineIntegration } from '@/data/define-integration'
+import { defineIntegration } from '@/platform'
 
 export const packagesIntegration = defineIntegration({
   id: 'packages',

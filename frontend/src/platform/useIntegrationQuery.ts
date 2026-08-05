@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query'
-import type { PlatformIntegration } from './defineIntegration'
 
 export interface IntegrationQueryOptions<Raw, Out> {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
@@ -21,7 +20,7 @@ export interface IntegrationQueryOptions<Raw, Out> {
  * URL to fetch, which is why there is no separate "config ready" flag.
  */
 export function useIntegrationQuery<Raw, Out = Raw>(
-  integration: PlatformIntegration,
+  integration: { id: string },
   url: string | null,
   opts: IntegrationQueryOptions<Raw, Out> = {},
 ) {

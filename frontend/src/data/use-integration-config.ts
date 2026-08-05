@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { z } from 'zod'
-import type { Integration } from '@/data/define-integration'
+import type { Integration } from '@/platform'
 import { useAllConfig } from '@/data/config/useAllConfig'
 
 /**

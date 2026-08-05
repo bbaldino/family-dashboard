@@ -2,9 +2,15 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
+import { z } from 'zod'
 import { defineIntegration, useIntegrationQuery } from './index'
 
-const demo = defineIntegration({ id: 'daily-quote', name: 'Daily Quote' })
+const demo = defineIntegration({
+  id: 'daily-quote',
+  name: 'Daily Quote',
+  schema: z.object({}),
+  fields: {},
+})
 const DEMO_URL = 'https://zenquotes.io/api/today'
 
 describe('useIntegrationQuery', () => {

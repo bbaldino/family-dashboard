@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { defineIntegration, useIntegrationData } from '@/platform'
 
 /**
@@ -24,6 +25,8 @@ import { defineIntegration, useIntegrationData } from '@/platform'
 export const dailyQuoteIntegration = defineIntegration({
   id: 'daily-quote',
   name: 'Daily Quote',
+  schema: z.object({}),
+  fields: {},
 })
 
 export interface DailyQuoteData {

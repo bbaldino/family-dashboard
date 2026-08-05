@@ -1,4 +1,4 @@
-import type { Integration } from './define-integration'
+import type { Integration } from '@/platform'
 import { choresIntegration } from '@/data/chores'
 import { countdownsIntegration } from '@/data/countdowns'
 import { doorbellIntegration } from '@/data/doorbell'

@@ -1,6 +1,5 @@
 import { z } from 'zod'
-import { defineIntegration } from '@/data/define-integration'
-import { useIntegrationData } from '@/platform'
+import { defineIntegration, useIntegrationData } from '@/platform'
 import { summariseForecast } from './weather/forecast'
 import { computeAirQuality } from './weather/air-quality'
 import type { AqiLevel, UvLevel, PollenLevel, AirQualityData } from './weather/air-quality'
@@ -14,15 +13,9 @@ import type { ForecastDay, ForecastData, HourlyForecast } from './weather/foreca
  * domain logic (daily bucketing, AQI/UV/pollen banding) that was ported, not
  * saved — see those files' own headers.
  *
- * `weatherIntegration` still needs `schema`/`fields`: it's registered in the
- * admin settings UI (`data/integrations-registry.ts`), which requires
- * `@/data/define-integration`'s config-schema `defineIntegration`, not the
- * platform's simpler `{id, name}` one. `PlatformIntegration` is structurally
- * just `{id, name}`, and this object has both (plus `schema`/`fields`/`api`,
- * which `useIntegrationData`/`useIntegrationQuery` ignore) — passing it
- * straight through typechecks because TypeScript only excess-property checks
- * object *literals*, not variables, so no second `defineIntegration` object
- * was needed for the platform's world.
+ * `weatherIntegration` carries real `schema`/`fields` because it's registered
+ * in the admin settings UI (`data/integrations-registry.ts`), which reads
+ * both to render the settings form.
  */
 export const weatherIntegration = defineIntegration({
   id: 'weather',
