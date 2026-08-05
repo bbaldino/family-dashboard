@@ -5,10 +5,12 @@
 //! `docs/superpowers/specs/2026-08-04-fetch-proxy-trust-model.md` for what
 //! that accepts, why, and the triggers that should make us revisit it.
 //!
-//! The one rule kept here is that **no composed URL is ever logged**.
-//! Credentials travel in query strings, so error messages carry the origin
-//! and path only. That is what replaced the old `redact_secrets`, and it is
-//! strictly safer: there is no encoding variant to miss.
+//! The one rule kept here is that **no composed URL, header, or body is ever
+//! logged**. Credentials travel in query strings, headers, and request
+//! bodies alike, so error messages carry the origin and path only — never
+//! the query, never a header name/value, never the body. That is what
+//! replaced the old `redact_secrets`, and it is strictly safer: there is no
+//! encoding variant to miss.
 //!
 //! That rule has one trap: `reqwest::Error`'s own `Display` appends
 //! `" for url (...)"` -- full query string included -- to any error that
@@ -45,7 +47,8 @@ struct CacheEntry {
     ttl: Duration,
 }
 
-/// Per-response TTL cache keyed by the full request URL.
+/// Per-response TTL cache keyed by the full request — method, URL, headers,
+/// and body (see [`cache_key`]), not the URL alone.
 ///
 /// Entries are purged lazily — `get` treats an expired entry as a miss, and
 /// `set` drops expired entries before enforcing [`MAX_CACHE_ENTRIES`].

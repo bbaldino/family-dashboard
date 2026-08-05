@@ -515,6 +515,32 @@ async fn rejects_an_invalid_header_name() {
 }
 
 #[tokio::test]
+async fn rejects_an_invalid_header_value() {
+    // Also pins that the error names the header without echoing the value:
+    // the value here is deliberately not valid UTF-8/visible-ASCII (a bare
+    // newline), so if the handler ever started interpolating it, this would
+    // be the test to catch that.
+    let server = test_server().await;
+    let resp = server
+        .post("/fetch")
+        .json(&json!({
+            "url": "https://example.com/x",
+            "headers": { "X-Custom": "bad\nvalue" }
+        }))
+        .await;
+    resp.assert_status(StatusCode::BAD_REQUEST);
+    let body = resp.text();
+    assert!(
+        body.contains("X-Custom") || body.to_ascii_lowercase().contains("x-custom"),
+        "error should name the header: {body}"
+    );
+    assert!(
+        !body.contains("bad\nvalue") && !body.contains("bad"),
+        "error should not echo the header value: {body}"
+    );
+}
+
+#[tokio::test]
 async fn the_cache_key_distinguishes_method_and_body() {
     // Same URL, different request => must not serve one from the other's entry.
     let (addr, hits) = spawn_upstream(200, r#"{"n":1}"#).await;
@@ -588,5 +614,47 @@ async fn headers_and_body_never_reach_the_log() {
     assert!(
         logged.contains(&format!("http://{addr}/x")),
         "origin+path should still be logged"
+    );
+}
+
+#[tokio::test]
+async fn headers_and_body_never_reach_the_log_when_the_upstream_is_unreachable() {
+    // The test above only exercises the non-2xx arm. This mirrors
+    // `the_query_string_never_reaches_the_log_when_the_upstream_is_unreachable`
+    // but for headers/body: reqwest's `Error::Display` reattaching the full
+    // URL to a `send()` failure is exactly where the previous round's leak
+    // lived, and it is untouched by the non-2xx test above. Secrets
+    // deliberately contain `/`, `+`, `=`, and `?` so this is sensitive to a
+    // leak of either the raw or the percent-encoded form, not just one.
+    let logs = captured_logs();
+    let marker = "/unreachable-leak-check-headers-body";
+    let server = test_server().await;
+    let resp = server
+        .post("/fetch")
+        .json(&json!({
+            "url": format!("http://127.0.0.1:1{marker}"),
+            "method": "POST",
+            "headers": { "Authorization": "Bearer s3cr3t/v1+aG8=?x" },
+            "body": { "api_key": "b0dy-s3cr3t/v1+aG8=?x" }
+        }))
+        .await;
+    resp.assert_status(StatusCode::INTERNAL_SERVER_ERROR);
+
+    let logged = logs.lines_mentioning(marker);
+    assert!(
+        !logged.is_empty(),
+        "expected the request-failure path to log something for {marker}"
+    );
+    assert!(
+        !logged.contains("s3cr3t"),
+        "a secret reached the log: {logged}"
+    );
+    assert!(
+        !logged.contains("Authorization"),
+        "the header name reached the log: {logged}"
+    );
+    assert!(
+        logged.contains(&format!("http://127.0.0.1:1{marker}")),
+        "the log should still carry origin and path: {logged}"
     );
 }
