@@ -1,4 +1,4 @@
-import { defineIntegration, useIntegrationQuery } from '@/platform'
+import { defineIntegration, useIntegrationData } from '@/platform'
 
 /**
  * Daily quote — the whole integration.
@@ -40,18 +40,21 @@ interface ZenQuote {
 const ZENQUOTES_URL = 'https://zenquotes.io/api/today'
 
 export function useDailyQuote() {
-  return useIntegrationQuery<ZenQuote[], DailyQuoteData>(dailyQuoteIntegration, ZENQUOTES_URL, {
-    ttlSecs: 86400,
-    select: (quotes) => {
-      const first = quotes?.[0]
-      // Guard the destructure: an empty array (or a payload that isn't the
-      // shape ZenQuotes promises) must produce a clear thrown error here,
-      // not a `TypeError` from destructuring `undefined`.
-      if (!first || typeof first.q !== 'string' || typeof first.a !== 'string') {
-        throw new Error('ZenQuotes returned an empty or malformed response')
-      }
-      return { quote: first.q, author: first.a }
+  return useIntegrationData<ZenQuote[], DailyQuoteData>(
+    dailyQuoteIntegration,
+    () => ({ url: ZENQUOTES_URL, ttlSecs: 86400 }),
+    {
+      select: (quotes) => {
+        const first = quotes?.[0]
+        // Guard the destructure: an empty array (or a payload that isn't the
+        // shape ZenQuotes promises) must produce a clear thrown error here,
+        // not a `TypeError` from destructuring `undefined`.
+        if (!first || typeof first.q !== 'string' || typeof first.a !== 'string') {
+          throw new Error('ZenQuotes returned an empty or malformed response')
+        }
+        return { quote: first.q, author: first.a }
+      },
+      refetchInterval: 60 * 60 * 1000,
     },
-    refetchInterval: 60 * 60 * 1000,
-  })
+  )
 }

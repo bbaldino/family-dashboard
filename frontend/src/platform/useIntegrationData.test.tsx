@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { z } from 'zod'
 import { defineIntegration } from '@/data/define-integration'
+import { defineIntegration as definePlatformIntegration } from './defineIntegration'
 import { useIntegrationData } from './useIntegrationData'
 
 const demoIntegration = defineIntegration({
@@ -17,6 +18,13 @@ const demoIntegration = defineIntegration({
     api_key: { label: 'API Key', type: 'secret' },
     refresh_minutes: { label: 'Refresh interval (minutes)' },
   },
+})
+
+/** No config schema at all — `@/platform`'s `defineIntegration`, the shape
+ *  `daily-quote` uses. Nothing for `useIntegrationData` to gate on. */
+const demoNoConfigIntegration = definePlatformIntegration({
+  id: 'demo-no-config',
+  name: 'Demo (no config)',
 })
 
 /**
@@ -164,6 +172,38 @@ describe('useIntegrationData', () => {
       { wrapper },
     )
     expect(result.current.fetchStatus).toBe('idle')
+    expect(fetchMock).not.toHaveBeenCalledWith('/api/fetch', expect.anything())
+  })
+
+  it('fires immediately for a schema-less integration, without waiting on /api/config', async () => {
+    const fetchMock = mockFetchOk({ ok: 1 })
+    seedConfigLoading()
+
+    renderHook(
+      () => useIntegrationData(demoNoConfigIntegration, () => ({ url: 'https://x/no-config' })),
+      { wrapper },
+    )
+
+    // `/api/config` is stuck loading (seedConfigLoading never resolves it),
+    // yet the request still reaches the proxy — a schema-less integration
+    // has nothing to wait on and must not gate on it.
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/fetch', expect.anything()))
+  })
+
+  it('still gates a schema-carrying integration on config, even sharing a code path with the schema-less case', async () => {
+    const fetchMock = mockFetchOk({ ok: 1 })
+    seedConfigLoading()
+
+    renderHook(
+      () => useIntegrationData(demoIntegration, (cfg) => ({ url: `https://x/${cfg.api_key}` })),
+      { wrapper },
+    )
+
+    // Give any pending microtasks a chance to run, then confirm the
+    // schema-carrying path still never reaches the proxy while config is
+    // loading — the schema-less fast path above must not have leaked into
+    // this one now that both run through the same hook.
+    await new Promise((resolve) => setTimeout(resolve, 0))
     expect(fetchMock).not.toHaveBeenCalledWith('/api/fetch', expect.anything())
   })
 })

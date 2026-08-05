@@ -36,8 +36,14 @@ export const CONFIG_QUERY_KEY = ['config'] as const
  * the loop for the consumers this hook does cover: `refetchInterval`
  * guarantees they see a config change within 60s, with no reload and no
  * per-save-handler wiring.
+ *
+ * `enabled` (default `true`) exists for `useIntegrationData`'s schema-less
+ * path: a schema-less integration has nothing to read from `/api/config`, so
+ * that hook always calls this hook (same hook, same order, every render —
+ * required either way) but passes `enabled: false` for it, which skips the
+ * fetch entirely rather than just declining to wait on it.
  */
-export function useAllConfig() {
+export function useAllConfig(opts: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: CONFIG_QUERY_KEY,
     queryFn: async (): Promise<Record<string, string>> => {
@@ -47,5 +53,6 @@ export function useAllConfig() {
     },
     staleTime: 30_000,
     refetchInterval: 60_000,
+    enabled: opts.enabled ?? true,
   })
 }
