@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { useIntegrationConfig } from '@/data/use-integration-config'
+import { useIntegrationConfig } from '@/platform'
 import { activeScenario } from '@/data/scenario'
 import { musicIntegration } from './config'
 import type { MusicState, QueueState } from './types'

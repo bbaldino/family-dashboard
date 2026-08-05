@@ -37,8 +37,8 @@ export const CONFIG_QUERY_KEY = ['config'] as const
  * guarantees they see a config change within 60s, with no reload and no
  * per-save-handler wiring.
  *
- * `enabled` (default `true`) exists for `useIntegrationData`'s schema-less
- * path: a schema-less integration has nothing to read from `/api/config`, so
+ * `enabled` (default `true`) exists for `useIntegrationData`'s config-less
+ * path: a config-less integration has nothing to read from `/api/config`, so
  * that hook always calls this hook (same hook, same order, every render —
  * required either way) but passes `enabled: false` for it, which skips the
  * fetch entirely rather than just declining to wait on it.

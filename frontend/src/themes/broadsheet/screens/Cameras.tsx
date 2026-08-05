@@ -1,5 +1,5 @@
 import { useMemo, useRef } from 'react'
-import { useIntegrationConfig } from '@/data/use-integration-config'
+import { useIntegrationConfig } from '@/platform'
 import {
   doorbellIntegration,
   useDoorbellTheme,

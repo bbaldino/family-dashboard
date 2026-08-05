@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useIntegrationConfig } from '@/data/use-integration-config'
+import { useIntegrationConfig } from '@/platform'
 import { activeScenario } from '@/data/scenario'
 import { musicIntegration } from './config'
 import { usePlayers, normalizePlayer } from './usePlayers'

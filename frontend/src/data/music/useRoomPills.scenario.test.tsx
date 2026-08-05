@@ -27,7 +27,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 vi.mock('@/data/scenario', () => ({ activeScenario: 'packed' }))
 
 const useIntegrationConfig = vi.hoisted(() => vi.fn())
-vi.mock('@/data/use-integration-config', () => ({ useIntegrationConfig }))
+vi.mock('@/platform', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/platform')>()),
+  useIntegrationConfig,
+}))
 
 const useGroupMutations = vi.hoisted(() => vi.fn())
 vi.mock('./useGroupMutations', () => ({ useGroupMutations }))

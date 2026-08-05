@@ -7,7 +7,10 @@ import { renderHook, act } from '@testing-library/react'
 // this file (same convention `scenario-wiring.test.tsx` uses), so
 // `useRoomPills` itself resolves against these mocks once imported below.
 const useIntegrationConfig = vi.hoisted(() => vi.fn())
-vi.mock('@/data/use-integration-config', () => ({ useIntegrationConfig }))
+vi.mock('@/platform', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/platform')>()),
+  useIntegrationConfig,
+}))
 
 const usePlayers = vi.hoisted(() => vi.fn())
 vi.mock('./usePlayers', async (importOriginal) => ({

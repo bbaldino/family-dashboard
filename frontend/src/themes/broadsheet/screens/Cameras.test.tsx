@@ -3,7 +3,10 @@ import { render, screen } from '@testing-library/react'
 import { Cameras } from './Cameras'
 
 const useIntegrationConfig = vi.hoisted(() => vi.fn())
-vi.mock('@/data/use-integration-config', () => ({ useIntegrationConfig }))
+vi.mock('@/platform', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/platform')>()),
+  useIntegrationConfig,
+}))
 
 const DEFAULT_CAMERA_URL = 'https://cast.baldino.me/webrtc-doorbell.html'
 

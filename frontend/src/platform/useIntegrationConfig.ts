@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { z } from 'zod'
-import type { Integration } from '@/platform'
-import { useAllConfig } from '@/data/config/useAllConfig'
+import type { Integration } from './defineIntegration'
+import { useAllConfig } from './useAllConfig'
 
 /**
  * Scope raw `/api/config` data by an integration's id prefix and validate it

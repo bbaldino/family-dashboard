@@ -3,8 +3,8 @@ import type { ReactNode } from 'react'
 import { render, screen, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { z } from 'zod'
-import { defineIntegration } from '@/platform'
-import { useIntegrationConfig } from '@/data/use-integration-config'
+import { defineIntegration } from './defineIntegration'
+import { useIntegrationConfig } from './useIntegrationConfig'
 import { CONFIG_QUERY_KEY } from './useAllConfig'
 
 const alpha = defineIntegration({

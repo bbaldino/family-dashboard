@@ -2,8 +2,8 @@ import { useMemo } from 'react'
 import type { UseQueryResult } from '@tanstack/react-query'
 import type { z } from 'zod'
 import type { Integration } from './defineIntegration'
-import { parseIntegrationConfig } from '@/data/use-integration-config'
-import { useAllConfig } from '@/data/config/useAllConfig'
+import { parseIntegrationConfig } from './useIntegrationConfig'
+import { useAllConfig } from './useAllConfig'
 import { useIntegrationQuery } from './useIntegrationQuery'
 
 export interface IntegrationRequest {
