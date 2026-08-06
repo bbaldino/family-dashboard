@@ -1,10 +1,9 @@
 import { useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { musicIntegration } from './config'
+import { PLAYERS_QUERY_KEY } from './usePlayers'
 import type { RawPlayer } from './usePlayers'
 import type { Player } from './types'
-
-const PLAYERS_QUERY_KEY = ['music', 'players']
 
 // How long to keep confirming after a group/ungroup/group-volume POST
 // resolves, and how often. Measured repeatedly against the real service, and

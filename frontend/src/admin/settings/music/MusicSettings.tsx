@@ -1,22 +1,21 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/ui/Button'
-import { musicIntegration } from '@/integrations/music'
-
-interface Player {
-  player_id: string
-  display_name: string
-  name: string
-}
+import { usePlayerList } from '@/integrations/music'
 
 export function MusicSettings() {
   const [serviceUrl, setServiceUrl] = useState('')
   const [apiToken, setApiToken] = useState('')
   const [defaultPlayer, setDefaultPlayer] = useState('')
-  const [players, setPlayers] = useState<Player[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
-  const [loadingPlayers, setLoadingPlayers] = useState(false)
+
+  const {
+    data: players = [],
+    isFetching: loadingPlayers,
+    isError: playersFailed,
+    refetch: fetchPlayers,
+  } = usePlayerList()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -37,17 +36,9 @@ export function MusicSettings() {
     load()
   }, [load])
 
-  const loadPlayers = async () => {
-    setLoadingPlayers(true)
+  const loadPlayers = () => {
     setError(null)
-    try {
-      const data = await musicIntegration.api.get<Player[]>('/players')
-      setPlayers(Array.isArray(data) ? data : [])
-    } catch {
-      setError('Failed to load players — check URL and token')
-    } finally {
-      setLoadingPlayers(false)
-    }
+    fetchPlayers()
   }
 
   const handleSave = async () => {
@@ -78,9 +69,18 @@ export function MusicSettings() {
 
   const canLoadPlayers = serviceUrl.trim() !== '' && apiToken.trim() !== ''
 
+  // One banner for both the config/save errors this screen owns and the
+  // player fetch's. Suppressed while a load is in flight, so a retry clears
+  // the previous failure the moment it starts rather than when it lands.
+  const displayedError =
+    error ??
+    (playersFailed && !loadingPlayers ? 'Failed to load players — check URL and token' : null)
+
   return (
     <div className="space-y-6">
-      {error && <div className="bg-error/10 text-error rounded-lg p-3 text-sm">{error}</div>}
+      {displayedError && (
+        <div className="bg-error/10 text-error rounded-lg p-3 text-sm">{displayedError}</div>
+      )}
 
       <div>
         <label className="text-xs text-text-muted block mb-1">Music Assistant Url</label>
@@ -114,9 +114,12 @@ export function MusicSettings() {
               className="flex-1 px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
             >
               <option value="">Select a player...</option>
+              {/* `value` is the player **id** — that is what
+                  `music.default_player` stores and what every playback call
+                  resolves. `displayName` is the label only. */}
               {players.map((p) => (
-                <option key={p.player_id} value={p.player_id}>
-                  {p.display_name || p.name || p.player_id}
+                <option key={p.playerId} value={p.playerId}>
+                  {p.displayName}
                 </option>
               ))}
             </select>
