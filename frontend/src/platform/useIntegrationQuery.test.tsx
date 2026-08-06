@@ -112,6 +112,42 @@ describe('useIntegrationQuery', () => {
     expect(explicitlyDisabled.current.fetchStatus).toBe('idle')
   })
 
+  it('does not let a text and a json fetch of the same url share a cache entry', async () => {
+    // Both hooks share one QueryClient on purpose — that shared cache is
+    // the thing under test. `staleTime: Infinity` so a cache *hit* stays a
+    // hit: with the default staleTime of 0, a second observer mounting on
+    // an existing entry refetches anyway, and the call count would be 2
+    // whether or not `expect` is in the key.
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    })
+    const sharedCache = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+
+    const { result: asJson } = renderHook(
+      () => useIntegrationQuery(demo, DEMO_URL, { expect: 'json' }),
+      { wrapper: sharedCache },
+    )
+    await waitFor(() => expect(asJson.current.data).toBeDefined())
+
+    const { result: asText } = renderHook(
+      () => useIntegrationQuery(demo, DEMO_URL, { expect: 'text' }),
+      { wrapper: sharedCache },
+    )
+    await waitFor(() => expect(asText.current.data).toBeDefined())
+
+    // Two separate requests, not one entry served to both — a `text`
+    // caller handed a `json` caller's parsed payload gets `{text}` where it
+    // expected the upstream shape, which is a throwing `select`, not stale
+    // data.
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls.map(([, init]) => JSON.parse(init.body).expect)).toEqual([
+      'json',
+      'text',
+    ])
+  })
+
   it('sends ttl_secs: 0 when ttlSecs is omitted', async () => {
     const { result } = renderHook(() => useIntegrationQuery(demo, DEMO_URL), { wrapper })
     await waitFor(() => expect(result.current.data).toBeDefined())

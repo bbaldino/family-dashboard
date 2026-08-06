@@ -29,6 +29,17 @@ interface FetchTextResponse {
   text: string
 }
 
+/**
+ * Module scope, not an inline arrow: react-query memoizes `select` against
+ * the function's identity, so an inline one is a new identity every render
+ * and re-runs the transform each time — here two full `DOMParser` passes
+ * over a ~40 KB feed. `now` still defaults at call time, so hoisting doesn't
+ * freeze the date.
+ */
+function selectWord(raw: FetchTextResponse): WordOfTheDayData {
+  return parseWordOfTheDay(raw.text)
+}
+
 export function useWordOfTheDay() {
   return useIntegrationData<FetchTextResponse, WordOfTheDayData>(
     wordOfTheDayIntegration,
@@ -39,8 +50,6 @@ export function useWordOfTheDay() {
       ttlSecs: REFRESH_SECS,
       refetchInterval: REFRESH_SECS * 1000,
     }),
-    {
-      select: (raw) => parseWordOfTheDay(raw.text),
-    },
+    { select: selectWord },
   )
 }

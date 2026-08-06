@@ -48,6 +48,7 @@ function parseFeedXml(xml: string): FeedItem[] {
   })
 }
 
+/** The viewer's own calendar date, `YYYY-MM-DD`. */
 function localDateKey(d: Date): string {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
@@ -56,17 +57,44 @@ function localDateKey(d: Date): string {
 }
 
 /**
- * Today's item by local date, falling back to the newest item when today's
- * has not published yet. The feed posts at 01:00 US Eastern, so there is a
- * window — evening through just after midnight Eastern, depending on the
- * viewer's own timezone — where the newest item is still yesterday's word.
- * Picked as the max by `pubDate` rather than trusting the feed's stated
- * newest-first order, so a re-ordered feed can't make this return a stale
- * item silently.
+ * `en-CA` formats as `YYYY-MM-DD` directly, so no part-reassembly is needed.
+ * The named zone (rather than a fixed `-0400`/`-0500` offset) is what makes
+ * this survive a DST transition.
+ */
+const easternDate = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/New_York',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+
+/**
+ * The date an item is Merriam-Webster's word *for*. MW stamps `pubDate` at
+ * 01:00 US Eastern on the word's own nominal date, so converting the instant
+ * back to Eastern recovers that date — e.g. `torpor`, the word for August 6,
+ * carries `Thu, 06 Aug 2026 01:00:01 -0400` and yields `2026-08-06`. Reading
+ * the instant in the *viewer's* zone instead would put every item a day early
+ * anywhere west of Eastern.
+ */
+function nominalDateKey(d: Date): string {
+  return easternDate.format(d)
+}
+
+/**
+ * The item whose nominal date is the viewer's own calendar date, falling back
+ * to the newest item when today's has not published yet — MW posts at 01:00
+ * Eastern, which is after local midnight for viewers west of Eastern, so
+ * there is a morning window with no match. Matching a nominal date against a
+ * local date is deliberate: MW's word for calendar date D should be on
+ * screen on date D locally, and the word flips at local midnight.
+ *
+ * The fallback picks the max by `pubDate` rather than trusting the feed's
+ * stated newest-first order, so a re-ordered feed can't make this return a
+ * stale item silently.
  */
 function pickTodaysItem(items: FeedItem[], now: Date): FeedItem {
   const todayKey = localDateKey(now)
-  const todays = items.find((item) => localDateKey(item.pubDate) === todayKey)
+  const todays = items.find((item) => nominalDateKey(item.pubDate) === todayKey)
   if (todays) return todays
   return items.reduce((newest, item) => (item.pubDate > newest.pubDate ? item : newest))
 }
@@ -111,11 +139,15 @@ function parseDescription(html: string): ParsedDescription {
 
   const definition = paragraphs[headerIndex + 1].textContent?.trim() ?? ''
 
-  // The example sentence isn't always the very next paragraph — `inveigle`
-  // in the fixture has two "// ..." lines in a row — so scan forward for
-  // the first one instead of assuming a fixed offset. Stop at the "See the
-  // entry >" link: everything past it is unrelated prose ("Examples:",
-  // "Did you know?"), not the curated example.
+  // Defensive, not fixture-driven: in all ten captured items the first
+  // "// ..." example sits at exactly `headerIndex + 2`, so this scan and the
+  // `<a>` break below are both currently unexercised — replacing either with
+  // a fixed offset keeps every test green. They're kept because the feed is
+  // hand-curated upstream and a shifted or absent example is a plausible
+  // one-off; scanning degrades to a null example where a fixed offset would
+  // silently return the wrong paragraph. Stopping at the "See the entry >"
+  // link matters for that degraded case: everything past it is unrelated
+  // prose ("Examples:", "Did you know?"), not the curated example.
   let example: string | null = null
   for (let i = headerIndex + 2; i < paragraphs.length; i++) {
     const text = paragraphs[i].textContent?.trim() ?? ''

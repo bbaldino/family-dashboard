@@ -10,21 +10,26 @@ import { parseWordOfTheDay } from './feed'
  * (2026-07-29) is the one item with two "// " example paragraphs in a
  * row, which is why it's used below to pin the "first one wins" rule.
  *
- * `pubDate` is stamped US Eastern (`-0400`); this suite runs with `TZ`
- * pinned to `America/Los_Angeles` (see `vitest.config.ts`), three hours
- * behind. A 01:00:01 Eastern post is therefore still the *previous*
- * calendar day in Pacific local time — e.g. `mitigate`'s "Mon, 03 Aug
- * 2026 01:00:01 -0400" is 2026-08-02 22:00 Pacific, so it's "today" for a
- * `now` of 2026-08-02 Pacific, not 08-03. The dates below are chosen with
- * that shift already applied, which is exactly the local-date bucketing
- * the parser is supposed to do — the point of pinning `TZ` at all.
+ * MW stamps `pubDate` at 01:00 US Eastern (`-0400` here) on the word's own
+ * nominal date, so each item's date is exactly the one in its `<link>` slug
+ * — `torpor` is the word *for* 2026-08-06. The parser recovers that by
+ * reading `pubDate` back in `America/New_York`, then matches it against the
+ * viewer's own local date, so MW's word for date D is on screen on date D
+ * locally and flips at local midnight.
+ *
+ * This suite runs with `TZ` pinned to `America/Los_Angeles` (see
+ * `vite.config.ts`), three hours behind Eastern. That gap is what the
+ * 23:30 boundary case below exists to pin: reading `pubDate` in Pacific
+ * instead would bucket every item a day early, which is the bug this
+ * replaced. Every `now` below is therefore a Pacific wall-clock time, and
+ * every expected word is MW's word for that Pacific calendar date.
  */
 
 describe('parseWordOfTheDay', () => {
   it('parses all four fields from a captured feed, for the item matching the given date', () => {
-    // torpor's Eastern pubDate (Aug 6, 01:00:01 -0400) is Pacific-local
-    // Aug 5 — an exact local-date match, not the newest-item fallback.
-    const data = parseWordOfTheDay(feedXml, new Date('2026-08-05T12:00:00'))
+    // torpor is MW's word for Aug 6 — an exact date match, not the
+    // newest-item fallback.
+    const data = parseWordOfTheDay(feedXml, new Date('2026-08-06T12:00:00'))
 
     expect(data.word).toBe('torpor')
     expect(data.partOfSpeech).toBe('noun')
@@ -37,14 +42,24 @@ describe('parseWordOfTheDay', () => {
   })
 
   it('carries the pronunciation as an optional extra field', () => {
-    const data = parseWordOfTheDay(feedXml, new Date('2026-08-05T12:00:00'))
+    const data = parseWordOfTheDay(feedXml, new Date('2026-08-06T12:00:00'))
     expect(data.pronunciation).toBe('TOR-per')
   })
 
-  it('picks the item whose feed date matches the given local date', () => {
-    // mitigate's Eastern pubDate (Aug 3) is Pacific-local Aug 2.
-    const data = parseWordOfTheDay(feedXml, new Date('2026-08-02T08:00:00'))
-    expect(data.word).toBe('mitigate')
+  it("picks the item MW published for the viewer's local date", () => {
+    expect(parseWordOfTheDay(feedXml, new Date('2026-08-02T08:00:00')).word).toBe('highfalutin')
+    expect(parseWordOfTheDay(feedXml, new Date('2026-08-03T08:00:00')).word).toBe('mitigate')
+  })
+
+  it("does not jump to tomorrow's word late on the previous evening", () => {
+    // 23:30 Pacific on Aug 5 is already 02:30 Eastern on Aug 6, so torpor
+    // (MW's word for Aug 6) has published and is the newest item — and it
+    // is present in this static fixture regardless of the `now` passed,
+    // which is what makes the assertion meaningful. It is still Aug 5 for
+    // the viewer, so colloquial is the right answer; the word must flip at
+    // local midnight, not at 21:00 when the next item appears.
+    const data = parseWordOfTheDay(feedXml, new Date('2026-08-05T23:30:00'))
+    expect(data.word).toBe('colloquial')
   })
 
   it('falls back to the newest item when nothing matches the given date', () => {
@@ -55,9 +70,9 @@ describe('parseWordOfTheDay', () => {
   })
 
   it('takes the first "// " example when an item has more than one', () => {
-    // inveigle's Eastern pubDate (Jul 29) is Pacific-local Jul 28, the one
-    // item in the fixture with two example paragraphs back to back.
-    const data = parseWordOfTheDay(feedXml, new Date('2026-07-28T08:00:00'))
+    // inveigle is MW's word for Jul 29, the one item in the fixture with
+    // two example paragraphs back to back.
+    const data = parseWordOfTheDay(feedXml, new Date('2026-07-29T08:00:00'))
     expect(data.word).toBe('inveigle')
     expect(data.example).toBe(
       'According to rumors, the company inveigled employees into signing the agreement.',
