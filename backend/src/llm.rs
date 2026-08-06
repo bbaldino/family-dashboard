@@ -129,9 +129,9 @@ async fn generate_route(
 /// Generate a single-prompt completion against the configured openai-compatible
 /// endpoint (`llm.url`, hit at `/v1/chat/completions`).
 ///
-/// The internal entry point: `on_this_day` and `sports` call this directly,
-/// in-process. `POST /generate` is the HTTP-reachable wrapper over the same
-/// function, for a client-side integration that can't call Rust directly.
+/// The internal entry point: `sports` calls this directly, in-process.
+/// `POST /generate` is the HTTP-reachable wrapper over the same function,
+/// for a browser-side client integration that can't call Rust directly.
 ///
 /// Never logs `prompt` or the returned text. On failure the error carries
 /// the model name and, for a non-2xx response, the upstream status code —
