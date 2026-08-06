@@ -5,7 +5,7 @@ import { countdownsIntegration } from '@/integrations/countdowns'
 import { doorbellIntegration } from '@/integrations/doorbell'
 import { nutrisliceIntegration } from '@/integrations/nutrislice'
 import { weatherIntegration } from '@/integrations/weather'
-import { googleCloudIntegration } from '@/providers/google-cloud'
+import { googleCloudProvider } from '@/providers/google-cloud'
 import { googleCalendarIntegration } from '@/integrations/google-calendar'
 import { sportsIntegration } from '@/integrations/sports'
 import { packagesIntegration } from '@/integrations/packages'
@@ -14,7 +14,7 @@ import { themeIntegration } from '@/palettes/config'
 import { drivingTimeIntegration } from '@/integrations/driving-time'
 import { planIntegration } from '@/integrations/plan'
 import { musicIntegration } from '@/integrations/music'
-import { llmIntegration } from '@/providers/llm'
+import { llmProvider } from '@/providers/llm'
 import { onThisDayIntegration } from '@/integrations/on-this-day'
 import { wordOfTheDayIntegration } from '@/integrations/word-of-the-day'
 import { SportsSettings } from '@/admin/settings/sports/SportsSettings'
@@ -41,7 +41,7 @@ export const settingsEntries: Integration<any>[] = [
   doorbellIntegration,
   nutrisliceIntegration,
   weatherIntegration,
-  googleCloudIntegration,
+  googleCloudProvider,
   googleCalendarIntegration,
   sportsIntegration,
   packagesIntegration,
@@ -50,7 +50,7 @@ export const settingsEntries: Integration<any>[] = [
   drivingTimeIntegration,
   planIntegration,
   musicIntegration,
-  llmIntegration,
+  llmProvider,
   onThisDayIntegration,
   wordOfTheDayIntegration,
 ]

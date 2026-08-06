@@ -1,1 +1,1 @@
-export { googleCloudIntegration } from './config'
+export { googleCloudProvider } from './config'

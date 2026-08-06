@@ -1,1 +1,1 @@
-export { llmIntegration } from './config'
+export { llmProvider } from './config'

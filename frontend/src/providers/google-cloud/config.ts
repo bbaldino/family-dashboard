@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { defineIntegration } from '@/platform'
 
-export const googleCloudIntegration = defineIntegration({
+export const googleCloudProvider = defineIntegration({
   id: 'google-cloud',
   name: 'Google Cloud',
   schema: z.object({

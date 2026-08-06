@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { defineIntegration } from '@/platform'
 
-export const llmIntegration = defineIntegration({
+export const llmProvider = defineIntegration({
   id: 'llm',
   name: 'LLM',
   schema: z.object({
