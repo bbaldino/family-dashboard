@@ -4,7 +4,6 @@ pub mod config_helpers;
 pub mod driving_time;
 pub mod google_calendar;
 pub mod health;
-pub mod jokes;
 pub mod music;
 pub mod nutrislice;
 pub mod on_this_day;
@@ -32,7 +31,6 @@ pub fn router(pool: SqlitePool) -> Router {
         .nest("/music", music::router(pool.clone()))
         .nest("/llm", crate::llm::router(pool.clone()))
         .nest("/on-this-day", on_this_day::router(pool.clone()))
-        .nest("/jokes", jokes::router())
         .nest("/trivia", trivia::router())
         .nest("/word-of-the-day", word_of_the_day::router())
         .nest("/fetch", crate::platform::fetch::router())
