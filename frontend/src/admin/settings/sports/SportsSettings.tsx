@@ -1,7 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/ui/Button'
 import { ModelSelect } from '@/admin/settings/llm/ModelSelect'
-import { sportsIntegration, type TeamInfo, type TrackedTeam } from '@/integrations/sports'
+import {
+  useLeagueTeams,
+  useLeagueTeamsFetcher,
+  useTeamSearch,
+  type TeamInfo,
+  type TrackedTeam,
+} from '@/integrations/sports'
 
 const LEAGUES = [
   { id: 'nba', name: 'NBA' },
@@ -12,11 +18,8 @@ const LEAGUES = [
 
 export function SportsSettings() {
   const [trackedTeams, setTrackedTeams] = useState<TrackedTeam[]>([])
-  const [leagueTeams, setLeagueTeams] = useState<Record<string, TeamInfo[]>>({})
   const [expandedLeague, setExpandedLeague] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [searchResults, setSearchResults] = useState<TeamInfo[]>([])
-  const [searching, setSearching] = useState(false)
   const [pollLive, setPollLive] = useState('5')
   const [pollIdle, setPollIdle] = useState('900')
   const [windowHours, setWindowHours] = useState('24')
@@ -24,6 +27,17 @@ export function SportsSettings() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
+
+  // Only the expanded league is ever rendered, so one query covers the panel.
+  const { data: expandedTeams, isError: expandedTeamsFailed } = useLeagueTeams(expandedLeague)
+  const { data: searchResults, isFetching: searching } = useTeamSearch(searchQuery)
+  const fetchLeagueTeams = useLeagueTeamsFetcher()
+
+  useEffect(() => {
+    if (expandedTeamsFailed && expandedLeague) {
+      setError(`Failed to load ${expandedLeague.toUpperCase()} teams`)
+    }
+  }, [expandedTeamsFailed, expandedLeague])
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -46,16 +60,15 @@ export function SportsSettings() {
         await Promise.all(
           leagueIds.map(async (leagueId) => {
             try {
-              const data = await sportsIntegration.api.get<{ teams: TeamInfo[] }>(
-                `/teams?league=${leagueId}`,
-              )
-              teamsByLeague[leagueId] = data.teams
+              teamsByLeague[leagueId] = await fetchLeagueTeams(leagueId)
             } catch {
               // skip — pills will just show the ID
             }
           }),
         )
-        setLeagueTeams((prev) => ({ ...prev, ...teamsByLeague }))
+        // No local copy to keep: `fetchLeagueTeams` filled the same cache
+        // entries `useLeagueTeams` reads, so these leagues now expand without
+        // a second request.
         const enriched = tracked.map((t) => {
           if (t.name) return t
           const info = teamsByLeague[t.league]?.find((team) => team.id === t.teamId)
@@ -71,31 +84,15 @@ export function SportsSettings() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [fetchLeagueTeams])
 
   useEffect(() => {
     load()
   }, [load])
 
-  const loadLeagueTeams = async (leagueId: string) => {
-    if (leagueTeams[leagueId]) return
-    try {
-      const data = await sportsIntegration.api.get<{ teams: TeamInfo[] }>(
-        `/teams?league=${leagueId}`,
-      )
-      setLeagueTeams((prev) => ({ ...prev, [leagueId]: data.teams }))
-    } catch {
-      setError(`Failed to load ${leagueId.toUpperCase()} teams`)
-    }
-  }
-
   const toggleLeague = (leagueId: string) => {
-    if (expandedLeague === leagueId) {
-      setExpandedLeague(null)
-    } else {
-      setExpandedLeague(leagueId)
-      loadLeagueTeams(leagueId)
-    }
+    // Expanding is the whole trigger — `useLeagueTeams` fetches off this state.
+    setExpandedLeague(expandedLeague === leagueId ? null : leagueId)
   }
 
   const isTracked = (league: string, teamId: string) =>
@@ -112,25 +109,6 @@ export function SportsSettings() {
 
   const removeTeam = (league: string, teamId: string) => {
     setTrackedTeams((prev) => prev.filter((t) => !(t.league === league && t.teamId === teamId)))
-  }
-
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query)
-    if (query.length < 2) {
-      setSearchResults([])
-      return
-    }
-    setSearching(true)
-    try {
-      const data = await sportsIntegration.api.get<{ teams: TeamInfo[] }>(
-        `/teams/search?q=${encodeURIComponent(query)}`,
-      )
-      setSearchResults(data.teams)
-    } catch {
-      // Silently fail search
-    } finally {
-      setSearching(false)
-    }
   }
 
   const handleSave = async () => {
@@ -196,12 +174,12 @@ export function SportsSettings() {
         <input
           type="text"
           value={searchQuery}
-          onChange={(e) => handleSearch(e.target.value)}
+          onChange={(e) => setSearchQuery(e.target.value)}
           placeholder="Search by team name..."
           className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
         />
         {searching && <div className="text-xs text-text-muted mt-1">Searching...</div>}
-        {searchResults.length > 0 && (
+        {searchResults && searchResults.length > 0 && (
           <div className="mt-2 border border-border rounded-lg overflow-hidden">
             {searchResults.map((team) => (
               <label
@@ -244,10 +222,10 @@ export function SportsSettings() {
               </button>
               {expandedLeague === league.id && (
                 <div className="border-t border-border max-h-[300px] overflow-y-auto">
-                  {!leagueTeams[league.id] ? (
+                  {!expandedTeams ? (
                     <div className="p-3 text-xs text-text-muted">Loading teams...</div>
                   ) : (
-                    leagueTeams[league.id].map((team) => (
+                    expandedTeams.map((team) => (
                       <label
                         key={team.id}
                         className="flex items-center gap-3 px-3 py-2 hover:bg-bg-card-hover cursor-pointer border-b border-border last:border-b-0"
