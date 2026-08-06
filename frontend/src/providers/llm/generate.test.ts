@@ -39,12 +39,15 @@ describe('generate', () => {
 
     await expect(generate('haiku', 'a very secret prompt')).rejects.toThrow(/haiku.*503|503.*haiku/)
 
-    try {
-      await generate('haiku', 'a very secret prompt')
-      throw new Error('expected generate to reject')
-    } catch (err) {
-      const message = (err as Error).message
-      expect(message).not.toContain('a very secret prompt')
-    }
+    // Caught via .catch rather than try/catch: a `throw` placed in the try
+    // block to assert "it should have rejected" lands in its own adjacent
+    // catch, and that message passes the not-to-contain check — leaving a
+    // guard that cannot fail. This form has no such hole.
+    const err = await generate('haiku', 'a very secret prompt').then(
+      () => new Error('generate resolved, but a non-2xx response must reject'),
+      (e: Error) => e,
+    )
+    expect(err.message).toContain('503')
+    expect(err.message).not.toContain('a very secret prompt')
   })
 })
