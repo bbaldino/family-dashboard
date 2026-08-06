@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useModels } from '@/providers/llm'
 
 interface ModelSelectProps {
   value: string
@@ -7,40 +7,11 @@ interface ModelSelectProps {
   description?: string
 }
 
-interface ModelsResponse {
-  models: { name: string }[]
-}
-
 export function ModelSelect({ value, onChange, label, description }: ModelSelectProps) {
-  const [models, setModels] = useState<string[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    // loading/error already default to true/null on mount; this effect only
-    // ever runs once (empty deps), so there's no need to reset them here.
-    fetch('/api/llm/models')
-      .then(async (r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`)
-        return r.json() as Promise<ModelsResponse>
-      })
-      .then((data) => {
-        if (cancelled) return
-        setModels(data.models.map((m) => m.name))
-      })
-      .catch((e) => {
-        if (cancelled) return
-        setError(e.message)
-      })
-      .finally(() => {
-        if (cancelled) return
-        setLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const modelsQuery = useModels()
+  const models = modelsQuery.data ?? []
+  const loading = modelsQuery.isPending
+  const error = modelsQuery.error?.message ?? null
 
   const inputClass =
     'w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm'
