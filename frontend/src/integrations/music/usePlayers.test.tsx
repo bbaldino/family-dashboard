@@ -2,11 +2,11 @@ import { describe, expect, it, vi, afterEach } from 'vitest'
 import type { ReactNode } from 'react'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { usePlayerList, PLAYERS_QUERY_KEY } from './usePlayers'
+import { usePlayerOptions, PLAYERS_QUERY_KEY } from './usePlayers'
 import type { RawPlayer } from './usePlayers'
 
 /**
- * `usePlayerList` is the settings-side view of the same `/players` cache
+ * `usePlayerOptions` is the settings-side view of the same `/players` cache
  * entry `usePlayers` polls for the player picker. What's pinned here is the
  * three things that differ from the picker's hook — on-demand rather than
  * on-mount, no polling, and camelCase `Player`s rather than the raw wire
@@ -58,7 +58,7 @@ function createWrapper(
   return { Wrapper, queryClient }
 }
 
-describe('usePlayerList', () => {
+describe('usePlayerOptions', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
@@ -68,7 +68,7 @@ describe('usePlayerList', () => {
     const fetchMock = mockFetch(RAW_PLAYERS)
     const { Wrapper } = createWrapper()
 
-    const { result } = renderHook(() => usePlayerList(), { wrapper: Wrapper })
+    const { result } = renderHook(() => usePlayerOptions(), { wrapper: Wrapper })
 
     // Let any microtasks that would fire an unwanted mount-time request drain.
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -82,7 +82,7 @@ describe('usePlayerList', () => {
     const fetchMock = mockFetch(RAW_PLAYERS)
     const { Wrapper } = createWrapper()
 
-    const { result } = renderHook(() => usePlayerList(), { wrapper: Wrapper })
+    const { result } = renderHook(() => usePlayerOptions(), { wrapper: Wrapper })
 
     result.current.refetch()
 
@@ -100,7 +100,7 @@ describe('usePlayerList', () => {
     const fetchMock = mockFetch(RAW_PLAYERS)
     const { Wrapper } = createWrapper()
 
-    const { result } = renderHook(() => usePlayerList(), { wrapper: Wrapper })
+    const { result } = renderHook(() => usePlayerOptions(), { wrapper: Wrapper })
     result.current.refetch()
     await waitFor(() => expect(result.current.data).toBeDefined())
 
@@ -115,7 +115,7 @@ describe('usePlayerList', () => {
     const { Wrapper, queryClient } = createWrapper()
     queryClient.setQueryData(PLAYERS_QUERY_KEY, RAW_PLAYERS)
 
-    const { result } = renderHook(() => usePlayerList(), { wrapper: Wrapper })
+    const { result } = renderHook(() => usePlayerOptions(), { wrapper: Wrapper })
 
     await waitFor(() => expect(result.current.data).toHaveLength(3))
     expect(result.current.data?.[0].playerId).toBe('kitchen')
@@ -126,7 +126,7 @@ describe('usePlayerList', () => {
     mockFetch({ error: 'connection refused' }, false)
     const { Wrapper } = createWrapper()
 
-    const { result } = renderHook(() => usePlayerList(), { wrapper: Wrapper })
+    const { result } = renderHook(() => usePlayerOptions(), { wrapper: Wrapper })
 
     result.current.refetch()
 

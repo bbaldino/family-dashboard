@@ -66,11 +66,16 @@ export function usePlayers({ isOpen, pollingPaused }: UsePlayersOptions) {
 }
 
 /**
- * The same `/players` list, for admin's default-player picker: fetched on
- * demand (a "Load Players" button, so opening the settings page never dials
- * Music Assistant on its own), never polled, and normalized to camelCase
- * `Player`s — settings only reads names and ids, and has no optimistic cache
- * writes to keep in the raw wire shape.
+ * The same `/players` list as options for admin's default-player picker:
+ * fetched on demand (a "Load Players" button, so opening the settings page
+ * never dials Music Assistant on its own), never polled, and normalized to
+ * camelCase `Player`s — settings only reads names and ids, and has no
+ * optimistic cache writes to keep in the raw wire shape.
+ *
+ * Named for the *use*, not the shape: `usePlayers` and a `usePlayerList`
+ * would read as the same thing, and nothing in either name would tell you
+ * which to reach for. Pick this one when you want something to choose from;
+ * pick `usePlayers` when you want live player state.
  *
  * Deliberately a second hook over the *same* query rather than options on
  * `usePlayers`: the two callers differ only in `enabled`/`refetchInterval`,
@@ -78,7 +83,7 @@ export function usePlayers({ isOpen, pollingPaused }: UsePlayersOptions) {
  * and `fetchPlayers` is what matters — one endpoint, one cache entry, one
  * `normalizePlayer` — while each caller keeps its own fetch policy.
  */
-export function usePlayerList() {
+export function usePlayerOptions() {
   return useQuery({
     queryKey: PLAYERS_QUERY_KEY,
     queryFn: fetchPlayers,

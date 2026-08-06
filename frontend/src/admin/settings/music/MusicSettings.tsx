@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/ui/Button'
-import { usePlayerList } from '@/integrations/music'
+import { usePlayerOptions } from '@/integrations/music'
 
 export function MusicSettings() {
   const [serviceUrl, setServiceUrl] = useState('')
@@ -15,7 +15,7 @@ export function MusicSettings() {
     isFetching: loadingPlayers,
     isError: playersFailed,
     refetch: fetchPlayers,
-  } = usePlayerList()
+  } = usePlayerOptions()
 
   const load = useCallback(async () => {
     setLoading(true)
