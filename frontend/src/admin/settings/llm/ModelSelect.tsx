@@ -65,9 +65,7 @@ export function ModelSelect({ value, onChange, label, description }: ModelSelect
       ) : (
         <>
           <select value={value} onChange={(e) => onChange(e.target.value)} className={inputClass}>
-            {valueMissingFromList && (
-              <option value={value}>{value} (not in current provider)</option>
-            )}
+            {valueMissingFromList && <option value={value}>{value} (not in model list)</option>}
             {models.length === 0 && <option value="">(no models reported)</option>}
             {models.map((name) => (
               <option key={name} value={name}>
@@ -77,7 +75,7 @@ export function ModelSelect({ value, onChange, label, description }: ModelSelect
           </select>
           {valueMissingFromList && (
             <div className="text-xs text-role-warning mt-1">
-              Current value isn't in the active provider's model list.
+              Current value isn't in the LLM's reported model list.
             </div>
           )}
         </>

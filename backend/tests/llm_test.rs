@@ -79,18 +79,41 @@ async fn a_non_2xx_upstream_is_a_500() {
 }
 
 #[tokio::test]
-async fn a_non_2xx_upstream_error_names_the_model_and_status_not_the_body() {
+async fn a_non_2xx_upstream_error_names_the_model_and_status_not_the_body_in_the_log() {
+    // `AppError::Internal` always renders the same constant body to the
+    // caller (`error.rs`), so the response can never prove what the error
+    // message actually contained — only the log, where `IntoResponse` puts
+    // the real message via `tracing::error!`, can. See
+    // `the_prompt_and_response_text_never_reach_the_log`'s failure-path
+    // assertions for the general leak check; this pins the positive half —
+    // that the model name and status *do* still make it into the log, so a
+    // future change can't accidentally scrub those along with the body.
+    let logs = captured_logs();
     let (addr, _) = spawn_upstream(503, "sensitive upstream diagnostic text").await;
     let server = test_server_with_llm_url(&format!("http://{addr}")).await;
+    let marker = "model-name-status-check";
     let resp = server
         .post("/llm/generate")
-        .json(&json!({ "model": "my-special-model", "prompt": "hello" }))
+        .json(&json!({ "model": marker, "prompt": "hello" }))
         .await;
     resp.assert_status(StatusCode::INTERNAL_SERVER_ERROR);
-    let body = resp.text();
+
+    let logged = logs.lines_mentioning(marker);
     assert!(
-        !body.contains("sensitive upstream diagnostic text"),
-        "upstream body leaked into the response: {body}"
+        !logged.is_empty(),
+        "expected the non-2xx path to log something for {marker}"
+    );
+    assert!(
+        logged.contains(marker),
+        "the model name should be in the log: {logged}"
+    );
+    assert!(
+        logged.contains("503"),
+        "the upstream status should be in the log: {logged}"
+    );
+    assert!(
+        !logged.contains("sensitive upstream diagnostic text"),
+        "the upstream body reached the log: {logged}"
     );
 }
 

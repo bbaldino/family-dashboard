@@ -7,6 +7,9 @@
 //! is ever logged — errors carry the model name and upstream status only,
 //! never response content.
 
+use std::sync::LazyLock;
+use std::time::Duration;
+
 use axum::{
     Json, Router,
     extract::State,
@@ -17,6 +20,22 @@ use sqlx::SqlitePool;
 
 use crate::error::AppError;
 use crate::integrations::IntegrationConfig;
+
+/// Shared client for both requests this module makes. `platform::fetch`'s
+/// 8s timeout is wrong here: that is a budget for a JSON API responding
+/// immediately, not for text generation, which can legitimately run for tens
+/// of seconds on a slow/local model. 120s is a generous ceiling that still
+/// bounds a request — the reason a bound is required at all: `POST
+/// /generate` is unauthenticated and LAN-reachable, so with no timeout any
+/// caller could open a request that never returns and pin a connection.
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(120);
+
+static CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
+    reqwest::Client::builder()
+        .timeout(REQUEST_TIMEOUT)
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new())
+});
 
 pub fn router(pool: SqlitePool) -> Router {
     Router::new()
@@ -36,19 +55,18 @@ pub struct ModelsResponse {
 }
 
 async fn list_models(State(pool): State<SqlitePool>) -> Result<Json<ModelsResponse>, AppError> {
-    let models = list_openai_compat_models(&pool).await?;
+    let models = list_upstream_models(&pool).await?;
     Ok(Json(ModelsResponse { models }))
 }
 
-async fn list_openai_compat_models(pool: &SqlitePool) -> Result<Vec<ModelInfo>, AppError> {
+async fn list_upstream_models(pool: &SqlitePool) -> Result<Vec<ModelInfo>, AppError> {
     let llm = IntegrationConfig::new(pool, "llm");
     let url = llm
         .get("url")
         .await
         .map_err(|_| AppError::BadRequest("llm.url not configured".to_string()))?;
 
-    let client = reqwest::Client::new();
-    let resp = client
+    let resp = CLIENT
         .get(format!("{}/v1/models", url.trim_end_matches('/')))
         .send()
         .await
@@ -125,8 +143,7 @@ pub async fn generate(pool: &SqlitePool, model: &str, prompt: &str) -> Result<St
         .await
         .map_err(|_| AppError::BadRequest("llm.url not configured".to_string()))?;
 
-    let client = reqwest::Client::new();
-    let resp = client
+    let resp = CLIENT
         .post(format!("{}/v1/chat/completions", url.trim_end_matches('/')))
         .json(&serde_json::json!({
             "model": model,
