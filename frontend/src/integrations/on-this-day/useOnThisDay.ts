@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useIntegrationConfig, useIntegrationData } from '@/platform'
 import { generate } from '@/providers/llm'
@@ -43,13 +43,64 @@ const USER_AGENT = 'DashboardApp/1.0 (family kitchen dashboard)'
 const CACHE_TTL_SECS = 6 * 60 * 60
 
 /**
- * The old hook's poll cadence, kept. Its job is no longer to re-read a
- * server-side cache — `ttlSecs` covers that, so an hourly refetch of an
- * unchanged day is served from the backend cache — but to re-render, which is
- * what recomputes the date below. Without it a wall display that never
- * remounts would still be showing yesterday's events tomorrow.
+ * The old hook's poll cadence, kept — but *not* as the day-rollover mechanism
+ * it used to be documented as. It cannot be: a refetch of an unchanged day
+ * returns byte-identical JSON, react-query's structural sharing keeps the same
+ * reference, and under v5's tracked-property notification a hook that reads
+ * only `.data`/`.isPending` never re-renders. `useLocalDateKey` handles the
+ * date; this is the recovery path. With `retry: 1` app-wide a feed that fails
+ * its two attempts would otherwise stay failed until the page reloaded, which
+ * on a wall display is never — the hourly poll is what eventually heals it.
+ * Cheap in the happy case: `ttlSecs` means an unchanged day is served from the
+ * backend cache rather than from Wikipedia.
  */
 const REFRESH_MS = 60 * 60 * 1000
+
+/**
+ * How often we re-read the wall clock to see whether the local calendar date
+ * has turned over. Deliberately a poll rather than a `setTimeout` aimed at
+ * midnight: a backgrounded tab has its timers throttled and a one-shot timer
+ * aimed hours ahead can fire arbitrarily late (or, if the machine slept,
+ * long after the fact), whereas a poll that compares against the *current*
+ * clock self-corrects the moment it next runs.
+ */
+const DATE_CHECK_MS = 60 * 1000
+
+/**
+ * Local, and zero-padded — the Rust used `chrono::Local` with `{:02}`, and
+ * Wikipedia 404s on `3/9`.
+ */
+function localDateKey(now: Date): string {
+  return `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
+
+/**
+ * The local `MM-DD`, as state rather than a render-time `new Date()`.
+ *
+ * A render-time computation only changes when something *else* re-renders the
+ * hook, which nothing here does: see `REFRESH_MS`. Holding it in state and
+ * advancing it from a timer is what makes midnight recompose both feed URLs
+ * and the curation query key on a wall display that never remounts, with no
+ * help from the consumer.
+ *
+ * The updater returns the previous string when the date has not changed, so
+ * React bails out and the once-a-minute tick costs no render.
+ */
+function useLocalDateKey(): string {
+  const [dateKey, setDateKey] = useState(() => localDateKey(new Date()))
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setDateKey((prev) => {
+        const next = localDateKey(new Date())
+        return next === prev ? prev : next
+      })
+    }, DATE_CHECK_MS)
+    return () => clearInterval(timer)
+  }, [])
+
+  return dateKey
+}
 
 interface WikiSelectedResponse {
   selected?: WikiEvent[] | null
@@ -100,13 +151,10 @@ async function curate(pool: WikiEvent[], model: string): Promise<OnThisDayEvent[
 }
 
 export function useOnThisDay(): { data: OnThisDayData | undefined; isLoading: boolean } {
-  // Read once per render so the two feeds and the curation key can never
-  // straddle midnight between them. Local, and zero-padded — the Rust used
-  // `chrono::Local` with `{:02}`, and Wikipedia 404s on `3/9`.
-  const now = new Date()
-  const mm = String(now.getMonth() + 1).padStart(2, '0')
-  const dd = String(now.getDate()).padStart(2, '0')
-  const dateKey = `${mm}-${dd}`
+  // One state value behind all three, so the two feed URLs and the curation
+  // key can never straddle midnight between them.
+  const dateKey = useLocalDateKey()
+  const [mm, dd] = dateKey.split('-')
 
   const selectedQuery = useIntegrationData<WikiSelectedResponse | undefined, WikiEvent[]>(
     onThisDayIntegration,

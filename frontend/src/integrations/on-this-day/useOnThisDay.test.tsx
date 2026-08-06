@@ -21,18 +21,21 @@ import { CONFIG_QUERY_KEY } from '@/platform/useAllConfig'
 const CONFIG = { 'on-this-day.model': 'haiku', 'on-this-day.cycle_minutes': '30' }
 
 const USER_AGENT = 'DashboardApp/1.0 (family kitchen dashboard)'
-const SELECTED_URL = 'https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/selected/03/09'
-const EVENTS_URL = 'https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/events/03/09'
+const WIKI_BASE = 'https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday'
+const SELECTED_URL = `${WIKI_BASE}/selected/03/09`
+const EVENTS_URL = `${WIKI_BASE}/events/03/09`
 
 const MOON_TEXT = 'Apollo 11 (pictured) lands on the Moon'
 const MOON_IMAGE = 'https://upload.wikimedia.org/moon.jpg'
 
 /**
- * Three selected, four general. One general entry duplicates a selected one
+ * Three selected, nine general. One general entry duplicates a selected one
  * (dropped by `mergeFeeds`) and two entries trip the keyword filter, so the
- * surviving pool is four — a number that is neither the raw total (7), the
- * merged total (6), nor the five the prompt asks the model for. That is what
- * lets the LLM-failure test assert "the whole filtered list" unambiguously.
+ * surviving pool is nine — a number that is neither the raw total (12), the
+ * merged total (11), nor the five the prompt asks the model for. Crucially it
+ * is *larger* than five: a pool of four would let `pool.slice(0, 5)` in the
+ * LLM-failure path pass as a no-op, which is exactly the bug the "uncapped"
+ * test below exists to catch.
  */
 const SELECTED_PAYLOAD = {
   selected: [
@@ -48,11 +51,19 @@ const EVENTS_PAYLOAD = {
     { text: 'The transistor is invented', year: 1947 },
     { text: 'A new species of frog is named', year: 2001 },
     { text: 'The bridge collapsed', year: 1940 },
+    { text: 'The first public library opens', year: 1833 },
+    { text: 'A comet is observed from Earth', year: 1682 },
+    { text: 'The symphony premieres in Vienna', year: 1824 },
+    { text: 'The lighthouse is lit for the first time', year: 1716 },
+    { text: 'A new opera house opens its doors', year: 1875 },
   ],
 }
 
-/** Pool order after merge + filter: moon, warehouse, transistor, frog. */
-const POOL_SIZE = 4
+/**
+ * Pool order after merge + filter: moon, warehouse, transistor, frog, library,
+ * comet, symphony, lighthouse, opera.
+ */
+const POOL_SIZE = 9
 
 interface StubOptions {
   /** LLM reply. `null` makes `/api/llm/generate` return a 500. */
@@ -78,11 +89,13 @@ function stubFetch(opts: StubOptions = {}) {
     }
     if (url === '/api/fetch') {
       const body = JSON.parse(init!.body as string) as { url: string }
-      if (body.url === SELECTED_URL) {
+      // Matched by feed rather than by exact URL so the same stub serves any
+      // date — the midnight-rollover test needs both 03/09 and 03/10.
+      if (body.url.startsWith(`${WIKI_BASE}/selected/`)) {
         selectedServed = true
         return { ok: true, text: async () => JSON.stringify(SELECTED_PAYLOAD) } as Response
       }
-      if (body.url === EVENTS_URL) {
+      if (body.url.startsWith(`${WIKI_BASE}/events/`)) {
         await eventsGate
         if (eventsFails) {
           return { ok: false, json: async () => ({ error: 'upstream 500' }) } as Response
@@ -183,7 +196,9 @@ describe('useOnThisDay', () => {
     // The whole filtered list, not the five the prompt asks for: the widget
     // cycles one event at a time, so a long list degrades gracefully.
     expect(result.current.data!.events).toHaveLength(POOL_SIZE)
-    expect(result.current.data!.events.map((e) => e.year)).toEqual([1969, 1900, 1947, 2001])
+    expect(result.current.data!.events.map((e) => e.year)).toEqual([
+      1969, 1900, 1947, 2001, 1833, 1682, 1824, 1716, 1875,
+    ])
   })
 
   it('still produces events when one feed fails outright', async () => {
@@ -236,6 +251,37 @@ describe('useOnThisDay', () => {
     // than serving the previous model's picks forever.
     await waitFor(() => expect(stub.generateBodies()).toHaveLength(2))
     expect(stub.generateBodies()[1]).toEqual(expect.objectContaining({ model: 'sonnet' }))
+  })
+
+  it('rolls the feed URLs over at midnight with no re-render from outside', async () => {
+    // 23:59 local. Nothing but the hook's own date timer touches this render
+    // tree for the rest of the test — in particular the consumer's cycle timer
+    // (`OnThisDayWidget`) is absent, which is the case that used to pin a
+    // one-event day to yesterday's date forever.
+    vi.setSystemTime(new Date('2026-03-09T23:59:00'))
+    const stub = stubFetch({ answer: '1' })
+    const { result } = renderHook(() => useOnThisDay(), { wrapper: wrapperFor(newClient()) })
+
+    await waitFor(() => expect(result.current.data).toBeDefined())
+    expect(
+      stub
+        .proxyBodies()
+        .map((b) => b.url)
+        .sort(),
+    ).toEqual([EVENTS_URL, SELECTED_URL])
+
+    // Cross midnight, then advance well past the date-check cadence but nowhere
+    // near the hourly `refetchInterval` — the rollover must come from the date
+    // state, not from a poll.
+    vi.setSystemTime(new Date('2026-03-10T00:00:30'))
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3 * 60 * 1000)
+    })
+
+    await waitFor(() =>
+      expect(stub.proxyBodies().map((b) => b.url)).toContain(`${WIKI_BASE}/selected/03/10`),
+    )
+    expect(stub.proxyBodies().map((b) => b.url)).toContain(`${WIKI_BASE}/events/03/10`)
   })
 
   it('does not curate until both feeds have settled', async () => {
