@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/ui/Button'
-import { integrations } from '@/integrations/registry'
 import { ModelSelect } from '@/admin/settings/llm/ModelSelect'
-import { settingsRegistry } from './settings-registry'
+import { settingsEntries, settingsRegistry } from './settings-registry'
 
 /** Get default values from all integrations' Zod schemas, prefixed with integration ID */
 function getSchemaDefaults(): Record<string, string> {
   const defaults: Record<string, string> = {}
-  for (const integration of integrations) {
+  for (const integration of settingsEntries) {
     try {
       const parsed = integration.schema.parse({})
       for (const [key, val] of Object.entries(parsed as Record<string, string>)) {
@@ -24,7 +23,7 @@ function getSchemaDefaults(): Record<string, string> {
 
 export function SettingsAdmin() {
   const [selectedId, setSelectedId] = useState<string | null>(
-    integrations.length > 0 ? integrations[0].id : null,
+    settingsEntries.length > 0 ? settingsEntries[0].id : null,
   )
   const [allConfig, setAllConfig] = useState<Record<string, string>>({})
   const [localConfig, setLocalConfig] = useState<Record<string, string>>({})
@@ -55,7 +54,7 @@ export function SettingsAdmin() {
     setLocalConfig((prev) => ({ ...prev, [fullKey]: value }))
   }
 
-  const selectedIntegration = integrations.find((i) => i.id === selectedId)
+  const selectedIntegration = settingsEntries.find((i) => i.id === selectedId)
 
   const SettingsComponent = selectedIntegration
     ? settingsRegistry[selectedIntegration.id]
@@ -107,7 +106,7 @@ export function SettingsAdmin() {
       {/* Sidebar */}
       <nav className="w-48 flex-shrink-0">
         <ul className="space-y-1">
-          {integrations.map((integration) => (
+          {settingsEntries.map((integration) => (
             <li key={integration.id}>
               <button
                 onClick={() => {

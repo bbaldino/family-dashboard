@@ -14,7 +14,7 @@ import type { ForecastDay, ForecastData, HourlyForecast } from './forecast'
  * saved — see those files' own headers.
  *
  * `weatherIntegration` carries real `schema`/`fields` because it's registered
- * in the admin settings UI (`integrations/registry.ts`), which reads both to
+ * in the admin settings UI (`admin/settings-registry.ts`), which reads both to
  * render the settings form.
  *
  * No Rust half — `integrations/weather/` was deleted in slice 2a. The `.api`

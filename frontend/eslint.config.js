@@ -34,6 +34,7 @@ export default defineConfig([
       'boundaries/elements': [
         { type: 'platform', pattern: 'src/platform/**' },
         { type: 'integrations', pattern: 'src/integrations/**' },
+        { type: 'providers', pattern: 'src/providers/**' },
         { type: 'shell', pattern: 'src/shell/**' },
         { type: 'palettes', pattern: 'src/palettes/**' },
         { type: 'admin', pattern: 'src/admin/**' },
@@ -67,6 +68,17 @@ export default defineConfig([
               from: { element: { type: 'integrations' } },
               disallow: {
                 to: { element: { types: { anyOf: ['theme', 'admin', 'shell'] } } },
+              },
+            },
+            // Providers are consumed, not consumers — configured once and read
+            // by integrations, never the other way around, so they must not
+            // reach into integrations or presentation either.
+            {
+              from: { element: { type: 'providers' } },
+              disallow: {
+                to: {
+                  element: { types: { anyOf: ['integrations', 'theme', 'admin', 'shell'] } },
+                },
               },
             },
             // Admin stays theme-neutral.
