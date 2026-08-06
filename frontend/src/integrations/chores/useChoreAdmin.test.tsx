@@ -17,6 +17,7 @@ import {
   useDeletePerson,
   usePeople,
   useRotateWeek,
+  useSavePerson,
   useUpdateChore,
 } from './useChoreAdmin'
 import type { AssignmentResponse, Chore, Person } from './types'
@@ -83,13 +84,25 @@ function responseFor(url: string): unknown {
   return {}
 }
 
+/** Multipart bodies decode to a plain object, a File to its filename, so a
+ *  form write can be asserted the same way a JSON one is. */
+function readBody(body: BodyInit | null | undefined): unknown {
+  if (body === undefined || body === null) return undefined
+  if (!(body instanceof FormData)) return JSON.parse(String(body))
+  const out: Record<string, unknown> = {}
+  body.forEach((value, key) => {
+    out[key] = value instanceof File ? value.name : value
+  })
+  return out
+}
+
 function mockFetch(ok = true) {
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input)
     calls.push({
       url,
       method: init?.method ?? 'GET',
-      body: init?.body === undefined ? undefined : JSON.parse(String(init.body)),
+      body: readBody(init?.body),
     })
     const body = ok ? responseFor(url) : { error: 'boom' }
     return Promise.resolve({
@@ -145,6 +158,79 @@ describe('people', () => {
 
     await waitFor(() => expect(result.current.data).toEqual(PEOPLE))
     expect(calls).toEqual([{ url: '/api/chores/people', method: 'GET', body: undefined }])
+  })
+
+  it('creates with a multipart POST /api/chores/people', async () => {
+    mockFetch()
+    const { result } = setup(() => useSavePerson())
+
+    await result.current.mutateAsync({
+      id: null,
+      input: { name: 'Kai', color: '#e88a6a', avatar: null },
+    })
+
+    expect(calls).toEqual([
+      { url: '/api/chores/people', method: 'POST', body: { name: 'Kai', color: '#e88a6a' } },
+    ])
+  })
+
+  it('updates with a multipart PUT /api/chores/people/{id}', async () => {
+    mockFetch()
+    const { result } = setup(() => useSavePerson())
+
+    await result.current.mutateAsync({
+      id: 1,
+      input: { name: 'Ben', color: '#6a9aba', avatar: null },
+    })
+
+    expect(calls).toEqual([
+      { url: '/api/chores/people/1', method: 'PUT', body: { name: 'Ben', color: '#6a9aba' } },
+    ])
+  })
+
+  it('appends the avatar file only when one was picked', async () => {
+    mockFetch()
+    const { result } = setup(() => useSavePerson())
+
+    await result.current.mutateAsync({
+      id: null,
+      input: {
+        name: 'Kai',
+        color: '#e88a6a',
+        avatar: new File(['bytes'], 'kai.png', { type: 'image/png' }),
+      },
+    })
+
+    expect(calls[0].body).toEqual({ name: 'Kai', color: '#e88a6a', avatar: 'kai.png' })
+  })
+
+  it('invalidates the roster, the week and the dashboard after a save', async () => {
+    mockFetch()
+    const queryClient = newClient()
+    seedCaches(queryClient)
+    const { result } = setup(() => useSavePerson(), queryClient)
+
+    await result.current.mutateAsync({
+      id: 1,
+      input: { name: 'Benjamin', color: '#e88a6a', avatar: null },
+    })
+
+    expect(isInvalidated(queryClient, PEOPLE_KEY)).toBe(true)
+    // A renamed person is embedded in every assignment, grid and wall alike.
+    expect(isInvalidated(queryClient, assignmentsKey(WEEK))).toBe(true)
+    expect(isInvalidated(queryClient, TODAY_KEY)).toBe(true)
+  })
+
+  it('surfaces a failed save to the caller', async () => {
+    mockFetch(false)
+    const { result } = setup(() => useSavePerson())
+
+    await expect(
+      result.current.mutateAsync({
+        id: null,
+        input: { name: 'Kai', color: '#e88a6a', avatar: null },
+      }),
+    ).rejects.toThrow('boom')
   })
 
   it('deletes with DELETE /api/chores/people/{id}', async () => {

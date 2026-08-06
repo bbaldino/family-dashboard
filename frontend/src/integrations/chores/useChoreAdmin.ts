@@ -47,6 +47,38 @@ export function usePeople() {
   })
 }
 
+/** The person form's payload. `avatar` is the newly picked file, or `null`
+ *  when the existing image (or lack of one) is being kept. */
+export interface PersonInput {
+  name: string
+  color: string
+  avatar: File | null
+}
+
+/**
+ * Create (`id: null`) or update a person.
+ *
+ * Multipart rather than JSON, because the avatar is a file — this is the one
+ * write in the integration that `post`/`put` cannot carry. A name or colour
+ * change shows on the week grids and the wall display as well as the roster,
+ * since assignments embed the person they belong to.
+ */
+export function useSavePerson() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, input }: { id: number | null; input: PersonInput }) => {
+      const form = new FormData()
+      form.append('name', input.name)
+      form.append('color', input.color)
+      if (input.avatar) form.append('avatar', input.avatar)
+      return id === null
+        ? choresIntegration.api.postForm<Person>('/people', form)
+        : choresIntegration.api.putForm<Person>('/people/' + id, form)
+    },
+    onSuccess: () => invalidate(queryClient, [PEOPLE_KEY, ASSIGNMENTS_PREFIX]),
+  })
+}
+
 /**
  * Removing a person takes their assignments with them, so the week grids and
  * the dashboard both change — not just the roster.

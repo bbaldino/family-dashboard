@@ -1,13 +1,21 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Button } from '@/ui/Button'
-import { choresIntegration } from '@/integrations/chores'
+import { useDeletePerson, usePeople, useSavePerson } from '@/integrations/chores'
 import type { Person } from '@/integrations/chores'
 import { ColorPicker } from './ColorPicker'
 
 export function PeopleTab() {
-  const [people, setPeople] = useState<Person[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const peopleQuery = usePeople()
+  const savePerson = useSavePerson()
+  const deletePerson = useDeletePerson()
+
+  // The banner shows whichever failed most recently, so an action's error takes
+  // precedence over a stale load error, and a successful reload clears the load
+  // error on its own.
+  const [actionError, setActionError] = useState<string | null>(null)
+  const people = peopleQuery.data ?? []
+  const error = actionError ?? peopleQuery.error?.message ?? null
+
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
 
@@ -16,23 +24,6 @@ export function PeopleTab() {
   const [formColor, setFormColor] = useState('#e88a6a')
   const [formAvatarFile, setFormAvatarFile] = useState<File | null>(null)
   const [formAvatarPreview, setFormAvatarPreview] = useState<string | null>(null)
-
-  async function loadPeople() {
-    setLoading(true)
-    setError(null)
-    try {
-      const data = await choresIntegration.api.get<Person[]>('/people')
-      setPeople(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load people')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    loadPeople()
-  }, [])
 
   function resetForm() {
     setFormName('')
@@ -75,32 +66,24 @@ export function PeopleTab() {
 
   async function handleSave() {
     if (!formName.trim()) return
-    setError(null)
+    setActionError(null)
     try {
-      const formData = new FormData()
-      formData.append('name', formName.trim())
-      formData.append('color', formColor)
-      if (formAvatarFile) formData.append('avatar', formAvatarFile)
-
-      if (editingId !== null) {
-        await fetch(`/api/chores/people/${editingId}`, { method: 'PUT', body: formData })
-      } else {
-        await fetch('/api/chores/people', { method: 'POST', body: formData })
-      }
+      await savePerson.mutateAsync({
+        id: editingId,
+        input: { name: formName.trim(), color: formColor, avatar: formAvatarFile },
+      })
       cancelForm()
-      await loadPeople()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save person')
+      setActionError(err instanceof Error ? err.message : 'Failed to save person')
     }
   }
 
   async function handleDelete(id: number) {
-    setError(null)
+    setActionError(null)
     try {
-      await choresIntegration.api.del('/people/' + id)
-      setPeople((prev) => prev.filter((p) => p.id !== id))
+      await deletePerson.mutateAsync(id)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete person')
+      setActionError(err instanceof Error ? err.message : 'Failed to delete person')
     }
   }
 
@@ -156,7 +139,7 @@ export function PeopleTab() {
     )
   }
 
-  if (loading) {
+  if (peopleQuery.isPending) {
     return <p className="text-text-secondary">Loading people...</p>
   }
 

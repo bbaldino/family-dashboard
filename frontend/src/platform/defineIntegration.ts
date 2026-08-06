@@ -17,6 +17,17 @@ export interface IntegrationApi {
   get: <R>(path: string) => Promise<R>
   post: <R>(path: string, body: unknown) => Promise<R>
   put: <R>(path: string, body: unknown) => Promise<R>
+  /**
+   * The multipart siblings of `post`/`put`, for the endpoints that take a file.
+   *
+   * They exist because a client that cannot express the content types its own
+   * integration needs is a client callers route around: chore-admin uploaded
+   * avatars with a hand-written `fetch('/api/chores/people')` precisely
+   * because `post` JSON-encodes, which quietly put a second, unprefixed path
+   * back in the codebase.
+   */
+  postForm: <R>(path: string, body: FormData) => Promise<R>
+  putForm: <R>(path: string, body: FormData) => Promise<R>
   del: (path: string) => Promise<void>
 }
 
@@ -56,6 +67,14 @@ export function defineIntegration<T extends z.ZodObject<z.ZodRawShape>>(
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body),
         }),
+      // No `Content-Type` header on either of these, deliberately. multipart
+      // needs a boundary parameter alongside the type, and only the browser
+      // knows the boundary it generated; setting the header by hand drops it
+      // and the server has no way to split the parts.
+      postForm: <R>(path: string, body: FormData) =>
+        apiRequest<R>(baseUrl, path, { method: 'POST', body }),
+      putForm: <R>(path: string, body: FormData) =>
+        apiRequest<R>(baseUrl, path, { method: 'PUT', body }),
       del: (path: string) => apiRequest<void>(baseUrl, path, { method: 'DELETE' }),
     },
   }

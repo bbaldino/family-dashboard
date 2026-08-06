@@ -10,8 +10,9 @@ export {
   useDeletePerson,
   usePeople,
   useRotateWeek,
+  useSavePerson,
   useUpdateChore,
 } from './useChoreAdmin'
-export type { ChoreInput, NewAssignment } from './useChoreAdmin'
+export type { ChoreInput, NewAssignment, PersonInput } from './useChoreAdmin'
 export { choresIntegration } from './config'
 export type * from './types'
