@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/ui/Button'
+import { gridSettingsFields } from './settingsFields'
 
 const WIDGETS = [
   { id: 'calendar', label: 'Calendar' },
@@ -99,7 +100,9 @@ export function GridSettingsPanel() {
       {error && <div className="bg-error/10 text-error rounded-lg p-3 text-sm">{error}</div>}
 
       <div>
-        <label className="text-xs text-text-muted block mb-2">Grid columns</label>
+        <label className="text-xs text-text-muted block mb-2">
+          {gridSettingsFields.columns.label}
+        </label>
         <input
           type="number"
           min="2"
@@ -114,7 +117,9 @@ export function GridSettingsPanel() {
       </div>
 
       <div>
-        <label className="text-xs text-text-muted block mb-2">Grid rows</label>
+        <label className="text-xs text-text-muted block mb-2">
+          {gridSettingsFields.rows.label}
+        </label>
         <input
           type="number"
           min="2"
@@ -129,7 +134,9 @@ export function GridSettingsPanel() {
       </div>
 
       <div>
-        <label className="text-xs text-text-muted block mb-2">Visible widgets</label>
+        <label className="text-xs text-text-muted block mb-2">
+          {gridSettingsFields.hidden.label}
+        </label>
         <div className="space-y-2">
           {WIDGETS.map((w) => (
             <label key={w.id} className="flex items-center gap-3 cursor-pointer">

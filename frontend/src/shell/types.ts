@@ -17,9 +17,10 @@ export type CanvasSpec =
 export interface ThemeSettings<T extends z.ZodObject<z.ZodRawShape> = z.ZodObject<z.ZodRawShape>> {
   schema: T
   fields: Record<keyof z.infer<T>, FieldMeta>
-  /** Optional: replaces the generic form entirely, for settings the theme
-   *  knows how to render better than a schema does. */
-  Component?: ComponentType
+  /** The schema is the source of truth for validation and defaults, but
+   *  there is no generic renderer — every theme that declares `settings`
+   *  supplies the component that renders it. */
+  Component: ComponentType
 }
 
 export interface ThemeModule {
