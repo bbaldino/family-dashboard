@@ -16,8 +16,14 @@ const WIDGETS = [
 /** The same defaults `HomeBoard` falls back to, read off the schema rather
  *  than copied as literals — the whole point of a shared declaration is
  *  that the form and the renderer can't drift apart on what "default"
- *  means. */
+ *  means. The number inputs' `min`/`max` are read off the same schema below,
+ *  for the same reason: a bound the input doesn't enforce is exactly what
+ *  let the old `DashboardSettings` form accept a value (like 30) that
+ *  single-key parsing then silently rejected. */
 const DEFAULTS = gridSettingsSchema.parse({})
+
+const COLUMNS_JSON_SCHEMA = gridSettingsSchema.shape.columns.toJSONSchema()
+const ROWS_JSON_SCHEMA = gridSettingsSchema.shape.rows.toJSONSchema()
 
 export function GridSettingsPanel() {
   const [columns, setColumns] = useState(String(DEFAULTS.columns))
@@ -111,8 +117,8 @@ export function GridSettingsPanel() {
         </label>
         <input
           type="number"
-          min="2"
-          max="12"
+          min={COLUMNS_JSON_SCHEMA.minimum}
+          max={COLUMNS_JSON_SCHEMA.maximum}
           value={columns}
           onChange={(e) => setColumns(e.target.value)}
           className="w-24 px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
@@ -128,8 +134,8 @@ export function GridSettingsPanel() {
         </label>
         <input
           type="number"
-          min="2"
-          max="8"
+          min={ROWS_JSON_SCHEMA.minimum}
+          max={ROWS_JSON_SCHEMA.maximum}
           value={rows}
           onChange={(e) => setRows(e.target.value)}
           className="w-24 px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"

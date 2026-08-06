@@ -11,18 +11,21 @@ export const CONFIG_QUERY_KEY = ['config'] as const
  * concurrent mounts, and invalidating this key updates all of them at once.
  *
  * This does not cover every place the app reads `/api/config`, though. Each
- * admin `SettingsComponent` also does its own raw fetch, but that is a
- * different, one-shot pattern (load current values once to prefill a form)
- * and out of scope for this hook. Outside the admin surface, five call
- * sites across five files still do their own raw `useEffect` +
- * `fetch('/api/config')`, and none of them refetch — `src/shell/ThemeMount.tsx`,
- * `src/palettes/useTheme.ts` (so a theme change still needs a reload),
- * `src/themes/grid/widgets/timers/TimerBanner.tsx`,
- * `src/themes/grid/screens/CamerasBoard.tsx`, and
- * `src/themes/grid/overlays/doorbell/DoorbellRingListener.tsx`.
- * (`src/themes/grid/screens/HomeBoard.tsx` used to be two more call sites
- * here; it now reads through this hook.) One more bypass, `fetchCalendarIds`
- * in `src/data/google-calendar/config.ts`, also
+ * admin `SettingsComponent` registered in `settingsRegistry` also does its
+ * own raw fetch, but that is a different, one-shot pattern (load current
+ * values once to prefill a form) and out of scope for this hook. Outside
+ * that registry, six call sites across six files still do their own raw
+ * `useEffect` + `fetch('/api/config')`, and none of them refetch —
+ * `src/shell/ThemeMount.tsx`, `src/palettes/useTheme.ts` (so a theme change
+ * still needs a reload), `src/themes/grid/widgets/timers/TimerBanner.tsx`,
+ * `src/themes/grid/screens/CamerasBoard.tsx`,
+ * `src/themes/grid/overlays/doorbell/DoorbellRingListener.tsx`, and
+ * `src/themes/grid/GridSettingsPanel.tsx` — the last one is the same
+ * one-shot prefill pattern as a `SettingsComponent`, but it lives under
+ * `src/themes/grid/` rather than the registry, so the exemption above
+ * doesn't cover it either. (`src/themes/grid/screens/HomeBoard.tsx` used to
+ * be two more call sites here; it now reads through this hook.) One more
+ * bypass, `fetchCalendarIds` in `src/data/google-calendar/config.ts`, also
  * reads `/api/config` directly rather than through this hook, but it does
  * see updates — it runs inside `useGoogleCalendar`'s 5-minute `usePolling`
  * cycle, not a mount-once effect. Migrating all of these onto this hook is
