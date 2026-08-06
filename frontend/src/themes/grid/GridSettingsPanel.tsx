@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/ui/Button'
-import { gridSettingsFields } from './settings-declaration'
+import { gridSettingsFields, gridSettingsSchema } from './settings-declaration'
 
 const WIDGETS = [
   { id: 'calendar', label: 'Calendar' },
@@ -13,9 +13,15 @@ const WIDGETS = [
   { id: 'word-of-the-day', label: 'Word of the Day' },
 ]
 
+/** The same defaults `HomeBoard` falls back to, read off the schema rather
+ *  than copied as literals — the whole point of a shared declaration is
+ *  that the form and the renderer can't drift apart on what "default"
+ *  means. */
+const DEFAULTS = gridSettingsSchema.parse({})
+
 export function GridSettingsPanel() {
-  const [columns, setColumns] = useState('8')
-  const [rows, setRows] = useState('6')
+  const [columns, setColumns] = useState(String(DEFAULTS.columns))
+  const [rows, setRows] = useState(String(DEFAULTS.rows))
   const [hidden, setHidden] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [status, setStatus] = useState<string | null>(null)
@@ -25,9 +31,9 @@ export function GridSettingsPanel() {
     setLoading(true)
     try {
       const config = (await fetch('/api/config').then((r) => r.json())) as Record<string, string>
-      setColumns(config['theme.grid.columns'] ?? '8')
-      setRows(config['theme.grid.rows'] ?? '6')
-      const hiddenStr = config['theme.grid.hidden'] ?? ''
+      setColumns(config['theme.grid.columns'] ?? String(DEFAULTS.columns))
+      setRows(config['theme.grid.rows'] ?? String(DEFAULTS.rows))
+      const hiddenStr = config['theme.grid.hidden'] ?? DEFAULTS.hidden
       setHidden(
         new Set(
           hiddenStr
@@ -112,7 +118,7 @@ export function GridSettingsPanel() {
           className="w-24 px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
         />
         <div className="text-xs text-text-muted mt-1">
-          Number of columns in the widget grid (default: 8)
+          Number of columns in the widget grid (default: {DEFAULTS.columns})
         </div>
       </div>
 
@@ -129,7 +135,7 @@ export function GridSettingsPanel() {
           className="w-24 px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
         />
         <div className="text-xs text-text-muted mt-1">
-          Number of rows in the widget grid (default: 6)
+          Number of rows in the widget grid (default: {DEFAULTS.rows})
         </div>
       </div>
 
