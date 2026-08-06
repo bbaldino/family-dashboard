@@ -10,6 +10,7 @@ import { AlbumPage } from '@/themes/grid/screens/media/AlbumPage'
 import { CamerasBoard } from '@/themes/grid/screens/CamerasBoard'
 import { HealthBoard } from '@/themes/grid/screens/HealthBoard'
 import { gridCanvas } from './canvas'
+import { gridSettings } from './settings'
 
 export const gridTheme: ThemeModule = {
   id: 'grid',
@@ -26,6 +27,7 @@ export const gridTheme: ThemeModule = {
     health: HealthBoard,
   },
   overlays: [DoorbellRingListener],
+  settings: gridSettings,
 }
 
 registerTheme(gridTheme)

@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { ThemePicker } from './ThemePicker'
@@ -12,10 +13,26 @@ const stub = (id: string, name: string): ThemeModule => ({
   overlays: [],
 })
 
+const gridStub = (): ThemeModule => ({
+  ...stub('grid', 'Cards Grid'),
+  settings: {
+    schema: z.object({ columns: z.coerce.number().int().default(8) }),
+    fields: { columns: { label: 'Grid columns' } },
+    Component: () => <div>Grid columns</div>,
+  },
+})
+
+function seedConfig(config: Record<string, string>) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(config) }),
+  )
+}
+
 describe('ThemePicker', () => {
   beforeEach(() => {
     _resetRegistry()
-    registerTheme(stub('grid', 'Cards Grid'))
+    registerTheme(gridStub())
     registerTheme(stub('broadsheet', 'Broadsheet'))
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) }))
   })
@@ -87,5 +104,29 @@ describe('ThemePicker', () => {
     await waitFor(() => expect(screen.getByText(/couldn.t save/i)).toBeInTheDocument())
     expect(screen.getByRole('radio', { name: /Cards Grid/ })).toBeChecked()
     expect(screen.getByRole('radio', { name: /Broadsheet/ })).not.toBeChecked()
+  })
+
+  it("renders the selected theme's settings", async () => {
+    seedConfig({ 'theme.presentation': 'grid' })
+    render(<ThemePicker />)
+    expect(await screen.findByText('Grid columns')).toBeInTheDocument()
+  })
+
+  it('renders no settings section for a theme that declares none', async () => {
+    seedConfig({ 'theme.presentation': 'broadsheet' })
+    render(<ThemePicker />)
+    expect(await screen.findByText('Broadsheet')).toBeInTheDocument()
+    expect(screen.queryByText('Grid columns')).not.toBeInTheDocument()
+  })
+
+  it('swaps the settings when a different theme is selected', async () => {
+    seedConfig({ 'theme.presentation': 'broadsheet' })
+    render(<ThemePicker />)
+    await screen.findByText('Broadsheet')
+    expect(screen.queryByText('Grid columns')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('radio', { name: /Cards Grid/ }))
+
+    expect(await screen.findByText('Grid columns')).toBeInTheDocument()
   })
 })
