@@ -111,7 +111,12 @@ async function fetchRouteDuration(
   if (!resp.ok) {
     throw new Error(`routes request failed: ${resp.status}`)
   }
-  const data = (await resp.json()) as RoutesResponse
+  // `.text()` + `JSON.parse`, not `.json()` — matches `useIntegrationQuery`'s
+  // fetch-capability call, which reads the body this way so an empty
+  // response doesn't throw. Kept consistent so both call sites treat the
+  // `/api/fetch` response the same way.
+  const text = await resp.text()
+  const data = (text ? JSON.parse(text) : {}) as RoutesResponse
   // Mirrors the Rust's `.unwrap_or("0s")` — an upstream success with no
   // route in the response still produces a (zero) duration rather than
   // being treated as a failure. Only a non-2xx or network error should
@@ -208,13 +213,18 @@ export function useDrivingTime(events: CalendarEvent[]) {
       }
     }
 
-    // Nothing may fire until both the driving-time config and the
-    // google-cloud provider's config have resolved. Without this guard, the
-    // first request after a cold load would go out with an empty
+    // Nothing may fire until the driving-time config has resolved *and* the
+    // google-cloud provider's api_key is actually set. `googleCloudProvider`'s
+    // schema is all-optional (other consumers read only a subset of its
+    // keys), so `gcConfig` itself turns non-null the instant `/api/config`
+    // resolves, whether or not `api_key` was ever configured — checking the
+    // object is not checking the value this hook needs. Without gating on
+    // `api_key` specifically, the first request after a cold load (or an
+    // install that never set the key) would go out with an empty
     // `X-Goog-Api-Key` header — Google's Routes API returns a 403 for that,
-    // which reads like a bad key rather than the load-order race it
-    // actually is.
-    if (relevantEvents.length > 0 && dtConfig && gcConfig) {
+    // which reads like a bad key rather than the load-order race, or missing
+    // config, it actually is.
+    if (relevantEvents.length > 0 && dtConfig && gcConfig?.api_key) {
       fetchAll()
     }
     return () => {

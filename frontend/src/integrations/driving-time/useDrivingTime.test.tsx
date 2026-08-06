@@ -3,6 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useDrivingTime, formatDuration } from './useDrivingTime'
+import { drivingTimeIntegration } from './config'
 import type { CalendarEvent } from '@/integrations/google-calendar'
 
 /**
@@ -80,6 +81,19 @@ describe('formatDuration', () => {
   })
 })
 
+describe('drivingTimeIntegration.schema buffer_minutes', () => {
+  it('defaults an absent key to 5, and does not zero a blank one', () => {
+    expect(drivingTimeIntegration.schema.parse({ home_address: 'x' }).buffer_minutes).toBe(5)
+    expect(
+      drivingTimeIntegration.schema.parse({ home_address: 'x', buffer_minutes: '' }).buffer_minutes,
+    ).toBe(5)
+    expect(
+      drivingTimeIntegration.schema.parse({ home_address: 'x', buffer_minutes: '10' })
+        .buffer_minutes,
+    ).toBe(10)
+  })
+})
+
 describe('useDrivingTime', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
@@ -140,5 +154,58 @@ describe('useDrivingTime', () => {
     await waitFor(() => {
       expect(fetchMock.mock.calls.some(([input]) => String(input) === '/api/fetch')).toBe(true)
     })
+  })
+
+  it('does not fire when the google-cloud config has resolved but api_key is unset', async () => {
+    // `driving-time.*` is fully configured; `google-cloud.api_key` is
+    // absent. `googleCloudProvider`'s schema is all-optional, so this still
+    // parses to a non-null config object once `/api/config` resolves — the
+    // guard must check the key's value, not merely that the object exists.
+    const fetchMock = stubFetch({
+      configData: {
+        'driving-time.home_address': '1 Infinite Loop, Cupertino, CA',
+        'driving-time.buffer_minutes': '5',
+      },
+    })
+    const events = [makeEvent('evt-1', 60, '1 Apple Park Way, Cupertino, CA')]
+
+    renderHook(() => useDrivingTime(events), { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(fetchMock.mock.calls.some(([input]) => String(input) === '/api/config')).toBe(true)
+    })
+
+    // Give the now-resolved (but key-less) config a chance to reach the
+    // fetch effect before asserting it never fired.
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(fetchMock.mock.calls.some(([input]) => String(input) === '/api/fetch')).toBe(false)
+  })
+
+  it('populates driveInfo with duration text and a leave-by time honoring buffer_minutes', async () => {
+    stubFetch({}) // FULL_CONFIG: buffer_minutes '5'; /api/fetch resolves "650s"
+
+    // `leaveByTime` is computed as `eventStart - durationMs - bufferMs` with
+    // no dependency on when the hook happens to run, so a fixed, absolute
+    // event start makes the expected value exact rather than a tolerance —
+    // no fake-timer machinery needed.
+    const event = makeEvent('evt-1', 60, '1 Apple Park Way, Cupertino, CA')
+    const eventStart = new Date(event.start.dateTime!)
+
+    const { result } = renderHook(() => useDrivingTime([event]), { wrapper: createWrapper() })
+
+    await waitFor(() => expect(result.current['evt-1']).toBeDefined())
+
+    const info = result.current['evt-1']
+    // 650s -> Math.floor((650 + 59) / 60) = 11 min.
+    expect(info.durationSeconds).toBe(650)
+    expect(info.durationText).toBe('11 min')
+
+    // leaveByTime = event start - drive duration - buffer_minutes (5).
+    const expectedLeaveBy = new Date(eventStart.getTime() - 650 * 1000 - 5 * 60 * 1000)
+    expect(info.leaveByTime.getTime()).toBe(expectedLeaveBy.getTime())
   })
 })
