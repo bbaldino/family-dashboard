@@ -115,14 +115,22 @@ describe('ThemePicker', () => {
   it('renders no settings section for a theme that declares none', async () => {
     seedConfig({ 'theme.presentation': 'broadsheet' })
     render(<ThemePicker />)
-    expect(await screen.findByText('Broadsheet')).toBeInTheDocument()
+    // 'Broadsheet' is the radio label — present at first render regardless
+    // of whether config has resolved, since `selected` starts as 'grid'.
+    // Wait on the radio actually being checked, which only happens once the
+    // fetched config has been applied, or this assertion can run before
+    // grid's own settings (whose Component renders "Grid columns") have
+    // been swapped out.
+    await waitFor(() => expect(screen.getByRole('radio', { name: /Broadsheet/ })).toBeChecked())
     expect(screen.queryByText('Grid columns')).not.toBeInTheDocument()
   })
 
   it('swaps the settings when a different theme is selected', async () => {
     seedConfig({ 'theme.presentation': 'broadsheet' })
     render(<ThemePicker />)
-    await screen.findByText('Broadsheet')
+    // Same reasoning as above: wait for the config-driven selection, not for
+    // the always-present radio label.
+    await waitFor(() => expect(screen.getByRole('radio', { name: /Broadsheet/ })).toBeChecked())
     expect(screen.queryByText('Grid columns')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('radio', { name: /Cards Grid/ }))
