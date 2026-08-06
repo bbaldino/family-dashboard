@@ -5,7 +5,6 @@ import { gridSettingsFields, gridSettingsSchema } from './settings-declaration'
 const WIDGETS = [
   { id: 'calendar', label: 'Calendar' },
   { id: 'sports', label: 'Sports' },
-  { id: 'packages', label: 'Packages' },
   { id: 'countdowns', label: 'Coming Up' },
   { id: 'chores', label: 'Chores' },
   { id: 'lunch', label: 'Lunch Menu' },

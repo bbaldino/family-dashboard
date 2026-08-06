@@ -39,9 +39,6 @@ vi.mock('@/themes/grid/widgets/nutrislice/LunchMenuWidget', () => ({
 vi.mock('@/themes/grid/widgets/sports/SportsWidget', () => ({
   SportsWidget: () => <div data-testid="widget-sports" />,
 }))
-vi.mock('@/themes/grid/widgets/packages/PackagesWidget', () => ({
-  PackagesWidget: () => <div data-testid="widget-packages" />,
-}))
 vi.mock('@/themes/grid/widgets/on-this-day/OnThisDayWidget', () => ({
   OnThisDayWidget: () => <div data-testid="widget-on-this-day" />,
 }))
@@ -53,9 +50,6 @@ vi.mock('@/themes/grid/widget-meta/google-calendar', () => ({
 }))
 vi.mock('@/themes/grid/widget-meta/sports', () => ({
   useSportsWidgetMeta: () => smallMeta,
-}))
-vi.mock('@/themes/grid/widget-meta/packages', () => ({
-  usePackagesWidgetMeta: () => smallMeta,
 }))
 vi.mock('@/themes/grid/widget-meta/chores', () => ({
   useChoresWidgetMeta: () => smallMeta,

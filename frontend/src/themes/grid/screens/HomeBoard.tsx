@@ -15,7 +15,6 @@ import { LunchMenuWidget } from '@/themes/grid/widgets/nutrislice/LunchMenuWidge
 import { useHeroWeather } from '@/integrations/weather'
 import { WeatherDetail } from '@/themes/grid/widgets/weather/WeatherDetail'
 import { SportsWidget } from '@/themes/grid/widgets/sports/SportsWidget'
-import { PackagesWidget } from '@/themes/grid/widgets/packages/PackagesWidget'
 import { TimerBanner } from '@/themes/grid/widgets/timers/TimerBanner'
 import { useDrivingTime } from '@/integrations/driving-time'
 import type { EventDriveInfo } from '@/integrations/driving-time'
@@ -23,7 +22,6 @@ import { OnThisDayWidget } from '@/themes/grid/widgets/on-this-day/OnThisDayWidg
 import { WordOfTheDayWidget } from '@/themes/grid/widgets/word-of-the-day/WordOfTheDayWidget'
 import { useWordOfTheDayWidgetMeta } from '@/themes/grid/widget-meta/word-of-the-day'
 import { useSportsWidgetMeta } from '@/themes/grid/widget-meta/sports'
-import { usePackagesWidgetMeta } from '@/themes/grid/widget-meta/packages'
 import { useChoresWidgetMeta } from '@/themes/grid/widget-meta/chores'
 import { useCountdownsWidgetMeta } from '@/themes/grid/widget-meta/countdowns'
 import { useLunchWidgetMeta } from '@/themes/grid/widget-meta/nutrislice'
@@ -161,7 +159,6 @@ function Widgets({
 }) {
   const calendarMeta = useCalendarWidgetMeta()
   const sportsMeta = useSportsWidgetMeta()
-  const packagesMeta = usePackagesWidgetMeta()
   const choresMeta = useChoresWidgetMeta()
   const countdownsMeta = useCountdownsWidgetMeta()
   const lunchMeta = useLunchWidgetMeta()
@@ -180,7 +177,6 @@ function Widgets({
   const allContent: CellGridWidget[] = [
     { key: 'calendar', element: calendarElement, meta: calendarMeta },
     { key: 'sports', element: <SportsWidget />, meta: sportsMeta },
-    { key: 'packages', element: <PackagesWidget />, meta: packagesMeta },
     { key: 'countdowns', element: <CountdownsWidget />, meta: countdownsMeta },
     { key: 'chores', element: <ChoresWidget />, meta: choresMeta },
     { key: 'lunch', element: <LunchMenuWidget />, meta: lunchMeta },

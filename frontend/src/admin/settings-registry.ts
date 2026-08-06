@@ -8,7 +8,6 @@ import { weatherIntegration } from '@/integrations/weather'
 import { googleCloudProvider } from '@/providers/google-cloud'
 import { googleCalendarIntegration } from '@/integrations/google-calendar'
 import { sportsIntegration } from '@/integrations/sports'
-import { packagesIntegration } from '@/integrations/packages'
 import { timersIntegration } from '@/integrations/timers'
 import { themeIntegration } from '@/palettes/config'
 import { drivingTimeIntegration } from '@/integrations/driving-time'
@@ -43,7 +42,6 @@ export const settingsEntries: Integration<any>[] = [
   googleCloudProvider,
   googleCalendarIntegration,
   sportsIntegration,
-  packagesIntegration,
   timersIntegration,
   themeIntegration,
   drivingTimeIntegration,
