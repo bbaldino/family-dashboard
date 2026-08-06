@@ -1,17 +1,8 @@
-import { useState, useEffect, useCallback } from 'react'
-import { googleCalendarIntegration } from '@/integrations/google-calendar'
-
-interface CalendarListEntry {
-  id: string
-  summary: string
-  primary?: boolean
-}
+import { useState, useEffect } from 'react'
+import { useCalendarList } from '@/integrations/google-calendar'
 
 export function GoogleCalendarSettings() {
   const [calendarIds, setCalendarIds] = useState<string[]>([])
-  const [calendars, setCalendars] = useState<CalendarListEntry[]>([])
-  const [calendarsLoading, setCalendarsLoading] = useState(false)
-  const [calendarsError, setCalendarsError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
 
@@ -31,18 +22,17 @@ export function GoogleCalendarSettings() {
       .catch(() => {})
   }, [])
 
-  const fetchCalendars = useCallback(async () => {
-    setCalendarsLoading(true)
-    setCalendarsError(null)
-    try {
-      const list = await googleCalendarIntegration.api.get<CalendarListEntry[]>('/calendars')
-      setCalendars(list)
-    } catch (e) {
-      setCalendarsError(e instanceof Error ? e.message : 'Failed to fetch calendars')
-    } finally {
-      setCalendarsLoading(false)
-    }
-  }, [])
+  const {
+    data: calendars = [],
+    isFetching: calendarsLoading,
+    error: calendarsQueryError,
+    refetch: fetchCalendars,
+  } = useCalendarList()
+  const calendarsError = calendarsQueryError
+    ? calendarsQueryError instanceof Error
+      ? calendarsQueryError.message
+      : 'Failed to fetch calendars'
+    : null
 
   const toggleCalendar = (id: string) => {
     setCalendarIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]))
@@ -76,7 +66,7 @@ export function GoogleCalendarSettings() {
         <div className="flex items-center gap-2 mb-2">
           <span className="text-sm font-medium text-text-secondary">Calendar Selection</span>
           <button
-            onClick={fetchCalendars}
+            onClick={() => fetchCalendars()}
             disabled={calendarsLoading}
             className="text-xs px-2 py-1 bg-surface border border-border rounded text-text-primary hover:bg-border"
           >
