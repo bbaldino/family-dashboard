@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -20,7 +20,7 @@ import {
 } from '@/integrations/chores'
 import type { AssignmentResponse, Chore } from '@/integrations/chores'
 import { ChorePool } from './ChorePool'
-import { googleCalendarIntegration, type CalendarEvent } from '@/integrations/google-calendar'
+import { useCalendarEvents, type CalendarEvent } from '@/integrations/google-calendar'
 import { eventLocalDateStr, parseLocalDate, toLocalDateStr } from '@/utils/date'
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -43,6 +43,37 @@ function getTodayDayIndex(): number {
   // Returns 0=Mon, 1=Tue, ..., 6=Sun
   const day = new Date().getDay()
   return day === 0 ? 6 : day - 1
+}
+
+/**
+ * Slot the week's events into the seven grid columns. Which calendars supply
+ * them is the integration's business; where they land is this grid's, because
+ * only it knows the Monday the columns start from.
+ */
+function bucketByDay(events: CalendarEvent[], weekOf: Date): Record<number, CalendarEvent[]> {
+  const byDay: Record<number, CalendarEvent[]> = {}
+  for (let i = 0; i < 7; i++) byDay[i] = []
+
+  for (const event of events) {
+    // Bucket relative to Monday (weekOf is local-midnight Monday) so
+    // all-day events parse as local — not UTC — to avoid off-by-one.
+    const eventDate = parseLocalDate(eventLocalDateStr(event))
+    const dayIdx = Math.floor((eventDate.getTime() - weekOf.getTime()) / (1000 * 60 * 60 * 24))
+    if (dayIdx >= 0 && dayIdx < 7) {
+      byDay[dayIdx].push(event)
+    }
+  }
+
+  // Sort each day's events by time
+  for (const day of Object.values(byDay)) {
+    day.sort((a, b) => {
+      const aTime = a.start.dateTime ?? a.start.date ?? ''
+      const bTime = b.start.dateTime ?? b.start.date ?? ''
+      return new Date(aTime).getTime() - new Date(bTime).getTime()
+    })
+  }
+
+  return byDay
 }
 
 interface DroppableCellProps {
@@ -128,62 +159,20 @@ export function AssignmentsTab() {
   const loadError = assignmentsQuery.error ?? peopleQuery.error ?? choreListQuery.error
   const error = actionError ?? loadError?.message ?? null
 
-  const [calendarEvents, setCalendarEvents] = useState<Record<number, CalendarEvent[]>>({})
-
-  // Fetch calendar events for the week
-  useEffect(() => {
-    async function fetchCalendar() {
-      try {
-        const allConfig: Record<string, string> = await fetch('/api/config').then((r) => r.json())
-        const saved = allConfig['google-calendar.calendar_ids']
-        const calendarIds: string[] = saved ? JSON.parse(saved) : ['primary']
-
-        const startDate = new Date(weekOf)
-        const endDate = new Date(weekOf)
-        endDate.setDate(endDate.getDate() + 7)
-
-        const results = await Promise.all(
-          calendarIds.map((id) =>
-            googleCalendarIntegration.api
-              .get<CalendarEvent[]>(
-                `/events?calendar=${encodeURIComponent(id)}&start=${encodeURIComponent(startDate.toISOString())}&end=${encodeURIComponent(endDate.toISOString())}`,
-              )
-              .catch(() => []),
-          ),
-        )
-
-        const allEvents = results.flat()
-        const byDay: Record<number, CalendarEvent[]> = {}
-        for (let i = 0; i < 7; i++) byDay[i] = []
-
-        for (const event of allEvents) {
-          // Bucket relative to Monday (weekOf is local-midnight Monday) so
-          // all-day events parse as local — not UTC — to avoid off-by-one.
-          const eventDate = parseLocalDate(eventLocalDateStr(event))
-          const dayIdx = Math.floor(
-            (eventDate.getTime() - weekOf.getTime()) / (1000 * 60 * 60 * 24),
-          )
-          if (dayIdx >= 0 && dayIdx < 7) {
-            byDay[dayIdx].push(event)
-          }
-        }
-
-        // Sort each day's events by time
-        for (const day of Object.values(byDay)) {
-          day.sort((a, b) => {
-            const aTime = a.start.dateTime ?? a.start.date ?? ''
-            const bTime = b.start.dateTime ?? b.start.date ?? ''
-            return new Date(aTime).getTime() - new Date(bTime).getTime()
-          })
-        }
-
-        setCalendarEvents(byDay)
-      } catch {
-        // Calendar not available — no problem
-      }
-    }
-    fetchCalendar()
+  // The calendar row is decoration on top of the grid: if it cannot load, the
+  // week still renders with an empty row, and the error banner above stays for
+  // chore failures only. That was true of the hand-rolled version's swallowed
+  // catch and stays true here — the query's error is deliberately unread.
+  const weekEnd = useMemo(() => {
+    const d = new Date(weekOf)
+    d.setDate(d.getDate() + 7)
+    return d
   }, [weekOf])
+  const calendarQuery = useCalendarEvents(weekOf, weekEnd)
+  const calendarEvents = useMemo(
+    () => bucketByDay(calendarQuery.data ?? [], weekOf),
+    [calendarQuery.data, weekOf],
+  )
 
   function prevWeek() {
     setWeekOf((prev) => {

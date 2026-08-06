@@ -1,6 +1,7 @@
 import { usePolling } from '@/hooks/usePolling'
 import { activeScenario } from '@/lib/scenario'
-import { fetchCalendarIds, googleCalendarIntegration } from './config'
+import { fetchCalendarIds } from './config'
+import { fetchEventsForCalendars } from './events'
 import { monthFixtureFor } from './fixtures'
 import type { CalendarEvent } from './types'
 import { eventLocalDateStr, parseLocalDate, toLocalDateStr } from '@/utils/date'
@@ -25,17 +26,7 @@ async function fetchMonthEvents(year: number, month: number): Promise<MonthEvent
   const startStr = gridStart.toISOString()
   const endStr = gridEnd.toISOString()
 
-  const results = await Promise.all(
-    calendarIds.map((id) =>
-      googleCalendarIntegration.api
-        .get<CalendarEvent[]>(
-          `/events?calendar=${encodeURIComponent(id)}&start=${encodeURIComponent(startStr)}&end=${encodeURIComponent(endStr)}`,
-        )
-        .catch(() => []),
-    ),
-  )
-
-  const allEvents = results.flat()
+  const allEvents = await fetchEventsForCalendars(calendarIds, startStr, endStr)
   const byDate: Record<string, CalendarEvent[]> = {}
 
   for (const event of allEvents) {
