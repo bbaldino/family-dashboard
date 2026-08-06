@@ -1,9 +1,3 @@
-export interface DrivingTimeResult {
-  durationSeconds: number | null
-  durationText: string | null
-  bufferMinutes: number
-}
-
 export type DriveUrgency = 'ok' | 'soon' | 'urgent'
 
 export interface EventDriveInfo {

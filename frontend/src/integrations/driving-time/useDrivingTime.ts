@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { drivingTimeIntegration } from './config'
+import { googleCloudProvider } from '@/providers/google-cloud'
+import { useIntegrationConfig } from '@/platform'
 import type { CalendarEvent } from '@/integrations/google-calendar'
-import type { DrivingTimeResult, EventDriveInfo, DriveUrgency } from './types'
+import type { EventDriveInfo, DriveUrgency } from './types'
 
 function computeUrgency(minutesUntilLeave: number): DriveUrgency {
   if (minutesUntilLeave > 30) return 'ok'
@@ -37,9 +39,98 @@ function computeRefreshInterval(events: CalendarEvent[]): number {
   return 5 * 60000
 }
 
+/** The only field this hook reads out of Google's Routes API response. */
+interface RoutesResponse {
+  routes?: { duration?: string }[]
+}
+
+/**
+ * Cache the Routes API response for as long as the hook's tightest poll
+ * cadence — `computeRefreshInterval`'s 5-minute floor, which kicks in once a
+ * journey is imminent. Long enough to absorb re-renders within one poll
+ * window; never so long that a refetch triggered by the tightened
+ * imminent-departure cadence could be served a duration older than that
+ * cadence itself.
+ */
+const ROUTE_TTL_SECS = 5 * 60
+
+/**
+ * Parse "1080s" -> 1080, mirroring the deleted Rust route's
+ * `duration_str.trim_end_matches('s').parse().unwrap_or(0)`.
+ */
+function parseDurationSecs(raw: string): number {
+  const n = parseInt(raw.replace(/s+$/, ''), 10)
+  return Number.isFinite(n) ? n : 0
+}
+
+/**
+ * Format seconds the same way the deleted Rust route did: >=3600s as hours
+ * (plus minutes when the remainder isn't a whole hour), otherwise minutes —
+ * rounded *up*, matching the Rust's `(duration_secs + 59) / 60` integer
+ * division, so 59s reads "1 min" rather than "0 min".
+ */
+export function formatDuration(durationSecs: number): string {
+  if (durationSecs >= 3600) {
+    const hours = Math.floor(durationSecs / 3600)
+    const mins = Math.floor((durationSecs % 3600) / 60)
+    return mins > 0 ? `${hours} hr ${mins} min` : `${hours} hr`
+  }
+  return `${Math.floor((durationSecs + 59) / 60)} min`
+}
+
+/**
+ * POST to the fetch capability, composed exactly like the deleted Rust
+ * route's outbound call to Google Routes — method, both `X-Goog-*` headers,
+ * and the request body — so the composed shape is stable enough to pin in a
+ * test.
+ */
+async function fetchRouteDuration(
+  homeAddress: string,
+  apiKey: string,
+  destination: string,
+): Promise<number> {
+  const resp = await fetch('/api/fetch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      url: 'https://routes.googleapis.com/directions/v2:computeRoutes',
+      method: 'POST',
+      headers: {
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'routes.duration',
+      },
+      body: {
+        origin: { address: homeAddress },
+        destination: { address: destination },
+        travelMode: 'DRIVE',
+        routingPreference: 'TRAFFIC_AWARE',
+      },
+      ttl_secs: ROUTE_TTL_SECS,
+    }),
+  })
+  if (!resp.ok) {
+    throw new Error(`routes request failed: ${resp.status}`)
+  }
+  const data = (await resp.json()) as RoutesResponse
+  // Mirrors the Rust's `.unwrap_or("0s")` — an upstream success with no
+  // route in the response still produces a (zero) duration rather than
+  // being treated as a failure. Only a non-2xx or network error should
+  // skip the update, and the caller's try/catch handles that.
+  const raw = data.routes?.[0]?.duration ?? '0s'
+  return parseDurationSecs(raw)
+}
+
 export function useDrivingTime(events: CalendarEvent[]) {
   const [driveInfo, setDriveInfo] = useState<Record<string, EventDriveInfo>>({})
   const [fetchTick, setFetchTick] = useState(0)
+
+  // The two config sources this hook depends on. `useIntegrationData` only
+  // resolves an integration's *own* config, and a dynamic fan-out over N
+  // destinations can't be N hooks (hooks can't run in a loop) — so this
+  // integration reads both configs itself and calls `POST /api/fetch`
+  // directly. See `fetchRouteDuration` and the effect below.
+  const dtConfig = useIntegrationConfig(drivingTimeIntegration)
+  const gcConfig = useIntegrationConfig(googleCloudProvider)
 
   // Filter to events within 24 hours with a location
   const now = new Date()
@@ -90,6 +181,10 @@ export function useDrivingTime(events: CalendarEvent[]) {
     let cancelled = false
 
     async function fetchAll() {
+      const homeAddress = dtConfig?.home_address ?? ''
+      const apiKey = gcConfig?.api_key ?? ''
+      const bufferMinutes = dtConfig?.buffer_minutes ?? 5
+
       const destinations = new Map<string, string>()
 
       for (const event of relevantEvents) {
@@ -105,34 +200,28 @@ export function useDrivingTime(events: CalendarEvent[]) {
         if (cancelled) break
 
         try {
-          const params = new URLSearchParams({ destination })
-
-          const result = await drivingTimeIntegration.api.get<DrivingTimeResult>(
-            `?${params.toString()}`,
-          )
-
-          if (result.durationSeconds != null && result.durationText != null) {
-            updateDriveInfo(
-              destination,
-              result.durationSeconds,
-              result.durationText,
-              result.bufferMinutes,
-            )
-          }
+          const durationSecs = await fetchRouteDuration(homeAddress, apiKey, destination)
+          updateDriveInfo(destination, durationSecs, formatDuration(durationSecs), bufferMinutes)
         } catch {
           // Don't block other destinations on failure
         }
       }
     }
 
-    if (relevantEvents.length > 0) {
+    // Nothing may fire until both the driving-time config and the
+    // google-cloud provider's config have resolved. Without this guard, the
+    // first request after a cold load would go out with an empty
+    // `X-Goog-Api-Key` header — Google's Routes API returns a 403 for that,
+    // which reads like a bad key rather than the load-order race it
+    // actually is.
+    if (relevantEvents.length > 0 && dtConfig && gcConfig) {
       fetchAll()
     }
     return () => {
       cancelled = true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [relevantKey, fetchTick, updateDriveInfo])
+  }, [relevantKey, fetchTick, updateDriveInfo, dtConfig, gcConfig])
 
   // Adaptive polling: refresh driving times based on proximity to nearest event
   useEffect(() => {

@@ -5,8 +5,8 @@ export const drivingTimeIntegration = defineIntegration({
   id: 'driving-time',
   name: 'Driving Time',
   schema: z.object({
-    home_address: z.string().optional(),
-    buffer_minutes: z.string().optional().default('5'),
+    home_address: z.string().min(1, 'Home address is required'),
+    buffer_minutes: z.coerce.number().int().nonnegative().default(5),
   }),
   fields: {
     home_address: {
