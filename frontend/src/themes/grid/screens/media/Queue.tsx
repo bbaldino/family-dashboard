@@ -1,6 +1,6 @@
 import { Music } from 'lucide-react'
-import { useMusic, useQueue } from '@/data/music'
-import type { QueueItem } from '@/data/music'
+import { useMusic, useQueue } from '@/integrations/music'
+import type { QueueItem } from '@/integrations/music'
 
 function imageFor(item: QueueItem): string | null {
   return item.media_item.image?.path ?? item.media_item.metadata?.images?.[0]?.path ?? null

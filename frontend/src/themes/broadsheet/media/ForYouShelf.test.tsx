@@ -6,7 +6,7 @@ import { ForYouShelf } from './ForYouShelf'
 const useForYou = vi.hoisted(() => vi.fn())
 const useMusic = vi.hoisted(() => vi.fn())
 const getImageUrl = vi.hoisted(() => vi.fn(() => null))
-vi.mock('@/data/music', () => ({ useForYou, useMusic, getImageUrl }))
+vi.mock('@/integrations/music', () => ({ useForYou, useMusic, getImageUrl }))
 
 const play = vi.fn()
 const noopMenu = { openMenuUri: null, onToggleMenu: vi.fn(), onCloseMenu: vi.fn() }

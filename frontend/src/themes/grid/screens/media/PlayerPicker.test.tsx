@@ -4,7 +4,7 @@ import { PlayerPicker } from './PlayerPicker'
 
 // This file verifies PlayerPicker still *renders* correctly after its
 // group/ungroup/group-volume mutations were lifted into
-// `@/data/music/useGroupMutations` (see the room-grouping brief). It
+// `@/integrations/music/useGroupMutations` (see the room-grouping brief). It
 // deliberately never taps an Add/Remove/Ungroup button or calls a mutation
 // function — these are real Sonos units in someone's house, and the brief
 // is explicit that PlayerPicker's mutations stay unexercised here the same
@@ -27,7 +27,12 @@ const normalizePlayer = vi.hoisted(() =>
     groupVolume: raw.group_volume ?? null,
   })),
 )
-vi.mock('@/data/music', () => ({ useMusic, usePlayers, normalizePlayer, useGroupMutations }))
+vi.mock('@/integrations/music', () => ({
+  useMusic,
+  usePlayers,
+  normalizePlayer,
+  useGroupMutations,
+}))
 
 const rawPlayers = [
   {

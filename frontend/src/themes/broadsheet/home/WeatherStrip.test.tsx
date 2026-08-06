@@ -5,7 +5,7 @@ import { WeatherStrip } from './WeatherStrip'
 const useWeatherData = vi.hoisted(() => vi.fn())
 const useWeatherForecast = vi.hoisted(() => vi.fn())
 const useAirQuality = vi.hoisted(() => vi.fn())
-vi.mock('@/data/weather', () => ({ useWeatherData, useWeatherForecast, useAirQuality }))
+vi.mock('@/integrations/weather', () => ({ useWeatherData, useWeatherForecast, useAirQuality }))
 
 const CURRENT = {
   temp: 91.2,

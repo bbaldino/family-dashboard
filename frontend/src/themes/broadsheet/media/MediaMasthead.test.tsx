@@ -4,7 +4,7 @@ import { MediaMasthead } from './MediaMasthead'
 
 const useMusic = vi.hoisted(() => vi.fn())
 const useRoomPills = vi.hoisted(() => vi.fn())
-vi.mock('@/data/music', () => ({ useMusic, useRoomPills }))
+vi.mock('@/integrations/music', () => ({ useMusic, useRoomPills }))
 
 const kitchen = {
   playerId: 'kitchen',

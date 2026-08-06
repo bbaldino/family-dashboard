@@ -8,8 +8,8 @@ import {
   CloudFog,
   type LucideIcon,
 } from 'lucide-react'
-import { useWeatherData, useWeatherForecast, useAirQuality } from '@/data/weather'
-import type { AqiLevel, UvLevel, PollenLevel } from '@/data/weather'
+import { useWeatherData, useWeatherForecast, useAirQuality } from '@/integrations/weather'
+import type { AqiLevel, UvLevel, PollenLevel } from '@/integrations/weather'
 
 /** A step deeper than `--paper` for the strip's background — the mock's
  *  `C.paperDeep`. No token for it (see the design brief's guidance on
@@ -95,7 +95,7 @@ function compassDirection(deg: number): string {
 
 /** Display words for the level slugs — a presentation concern (fitting the
  *  strip's tight mono cells), while the *thresholds* that decide which slug
- *  a reading gets live in one place, `@/data/weather/air-quality`. */
+ *  a reading gets live in one place, `@/integrations/weather/air-quality`. */
 const AQI_LABELS: Record<AqiLevel, string> = {
   good: 'GOOD',
   moderate: 'MODERATE',

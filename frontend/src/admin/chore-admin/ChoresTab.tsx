@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Button } from '@/ui/Button'
-import { choresIntegration } from '@/data/chores'
-import type { Chore } from '@/data/chores'
+import { choresIntegration } from '@/integrations/chores'
+import type { Chore } from '@/integrations/chores'
 
 export function ChoresTab() {
   const [chores, setChores] = useState<Chore[]>([])

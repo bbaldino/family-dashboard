@@ -1,5 +1,5 @@
 import type { WidgetMeta } from '@/lib/widget-types'
-import { useChores } from '@/data/chores'
+import { useChores } from '@/integrations/chores'
 
 export function useChoresWidgetMeta(): WidgetMeta {
   const { data } = useChores()

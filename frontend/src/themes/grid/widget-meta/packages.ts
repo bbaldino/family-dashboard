@@ -1,5 +1,5 @@
 import type { WidgetMeta } from '@/lib/widget-types'
-import { usePackages, type ShipmentStatus } from '@/data/packages'
+import { usePackages, type ShipmentStatus } from '@/integrations/packages'
 
 const HIDDEN_STATUSES: ShipmentStatus[] = ['cancelled', 'returned']
 

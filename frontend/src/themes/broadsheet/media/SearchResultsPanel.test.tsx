@@ -6,7 +6,7 @@ import { SearchResultsPanel } from './SearchResultsPanel'
 const useSearch = vi.hoisted(() => vi.fn())
 const useMusic = vi.hoisted(() => vi.fn())
 const getImageUrl = vi.hoisted(() => vi.fn(() => null))
-vi.mock('@/data/music', () => ({ useSearch, useMusic, getImageUrl }))
+vi.mock('@/integrations/music', () => ({ useSearch, useMusic, getImageUrl }))
 
 const play = vi.fn()
 const emptyResults = { tracks: [], artists: [], albums: [], playlists: [] }

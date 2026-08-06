@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { Home } from './Home'
-import type { GamesResponse, GameState } from '@/data/sports'
+import type { GamesResponse, GameState } from '@/integrations/sports'
 
 // Mock shapes are derived from the sibling column tests (ScheduleColumn.test.tsx,
 // SportsColumn.test.tsx, HouseholdColumn.test.tsx, Masthead.test.tsx), which were
@@ -17,35 +17,37 @@ import type { GamesResponse, GameState } from '@/data/sports'
 //   - useCountdowns().data is CountdownItem[] directly, not { items: [...] }.
 //   - useWeatherForecast()/useAirQuality() are also usePolling's
 //     { data, isLoading } shape (WeatherStrip's forecast/air-quality hooks).
-vi.mock('@/data/weather', () => ({
+vi.mock('@/integrations/weather', () => ({
   useHeroWeather: () => null,
   useWeatherData: () => ({ data: undefined, isLoading: true }),
   useWeatherForecast: () => ({ data: undefined, isLoading: true }),
   useAirQuality: () => ({ data: undefined, isLoading: true }),
 }))
-vi.mock('@/data/google-calendar', () => ({
+vi.mock('@/integrations/google-calendar', () => ({
   useGoogleCalendar: () => ({ data: undefined, isLoading: true }),
 }))
-vi.mock('@/data/driving-time', () => ({ useDrivingTime: () => ({}) }))
+vi.mock('@/integrations/driving-time', () => ({ useDrivingTime: () => ({}) }))
 const useSportsGames = vi.hoisted(() =>
   vi.fn<() => { data: GamesResponse | undefined; isLoading: boolean }>(() => ({
     data: undefined,
     isLoading: true,
   })),
 )
-vi.mock('@/data/sports', () => ({
+vi.mock('@/integrations/sports', () => ({
   useSportsGames,
   useSportsPreview: () => ({ data: undefined }),
   formatUpcomingTime: (s: string) => s,
 }))
-vi.mock('@/data/countdowns', () => ({
+vi.mock('@/integrations/countdowns', () => ({
   useCountdowns: () => ({ data: null, isLoading: false, error: null, refetch: vi.fn() }),
 }))
-vi.mock('@/data/on-this-day', () => ({
+vi.mock('@/integrations/on-this-day', () => ({
   useOnThisDay: () => ({ data: undefined, isLoading: false }),
 }))
-vi.mock('@/data/chores', () => ({ useChores: () => ({ data: null, isLoading: false }) }))
-vi.mock('@/data/nutrislice', () => ({ useLunchMenu: () => ({ data: null, isLoading: false }) }))
+vi.mock('@/integrations/chores', () => ({ useChores: () => ({ data: null, isLoading: false }) }))
+vi.mock('@/integrations/nutrislice', () => ({
+  useLunchMenu: () => ({ data: null, isLoading: false }),
+}))
 
 const team = (abbreviation: string, score: number | null) => ({
   id: abbreviation,
@@ -62,7 +64,7 @@ const team = (abbreviation: string, score: number | null) => ({
 })
 
 // Real GameState values are 'live' | 'final' | 'upcoming' | 'postponed' (see
-// src/data/sports/types.ts).
+// src/integrations/sports/types.ts).
 const game = (state: GameState) => ({
   id: 'g1',
   league: 'MLB',

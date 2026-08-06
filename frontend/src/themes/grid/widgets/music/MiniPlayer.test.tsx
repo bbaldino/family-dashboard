@@ -2,11 +2,11 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { fireEvent, render, screen, act } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { MiniPlayer } from './MiniPlayer'
-import type { MusicContextValue } from '@/data/music'
-import type { QueueState } from '@/data/music'
+import type { MusicContextValue } from '@/integrations/music'
+import type { QueueState } from '@/integrations/music'
 
 const useMusic = vi.hoisted(() => vi.fn())
-vi.mock('@/data/music', () => ({ useMusic }))
+vi.mock('@/integrations/music', () => ({ useMusic }))
 
 function queue(state: QueueState['state']): QueueState {
   return {

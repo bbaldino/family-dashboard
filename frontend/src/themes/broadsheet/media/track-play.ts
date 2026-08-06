@@ -1,5 +1,5 @@
-import type { EnqueueMode, PlayOptions } from '@/data/music'
-import type { ArtistTrack } from '@/data/music'
+import type { EnqueueMode, PlayOptions } from '@/integrations/music'
+import type { ArtistTrack } from '@/integrations/music'
 
 /**
  * `PlayOptions` for one of the four track-actions-menu play actions, built

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Button } from '@/ui/Button'
-import { choresIntegration } from '@/data/chores'
-import type { Person } from '@/data/chores'
+import { choresIntegration } from '@/integrations/chores'
+import type { Person } from '@/integrations/chores'
 import { ColorPicker } from './ColorPicker'
 
 export function PeopleTab() {

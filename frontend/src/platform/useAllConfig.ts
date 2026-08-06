@@ -25,7 +25,7 @@ export const CONFIG_QUERY_KEY = ['config'] as const
  * `src/themes/grid/` rather than the registry, so the exemption above
  * doesn't cover it either. (`src/themes/grid/screens/HomeBoard.tsx` used to
  * be two more call sites here; it now reads through this hook.) One more
- * bypass, `fetchCalendarIds` in `src/data/google-calendar/config.ts`, also
+ * bypass, `fetchCalendarIds` in `src/integrations/google-calendar/config.ts`, also
  * reads `/api/config` directly rather than through this hook, but it does
  * see updates — it runs inside `useGoogleCalendar`'s 5-minute `usePolling`
  * cycle, not a mount-once effect. Migrating all of these onto this hook is

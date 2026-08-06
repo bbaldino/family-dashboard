@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { OffdayBlock } from './OffdayBlock'
 
-vi.mock('@/data/sports', () => ({ formatUpcomingTime: (s: string) => s }))
+vi.mock('@/integrations/sports', () => ({ formatUpcomingTime: (s: string) => s }))
 
 describe('OffdayBlock', () => {
   it('shows a loading-aware headline instead of "No game today." while data is still loading', () => {

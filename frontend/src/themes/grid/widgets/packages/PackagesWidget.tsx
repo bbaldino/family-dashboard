@@ -1,7 +1,12 @@
 import { useState } from 'react'
 import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
-import { usePackages, STATUS_LABELS, type Shipment, type ShipmentStatus } from '@/data/packages'
+import {
+  usePackages,
+  STATUS_LABELS,
+  type Shipment,
+  type ShipmentStatus,
+} from '@/integrations/packages'
 import { ShipmentRow } from './ShipmentRow'
 import { PackageDetailModal } from '@/themes/grid/overlays/packages/PackageDetailModal'
 type WidgetSize = 'compact' | 'standard' | 'expanded'

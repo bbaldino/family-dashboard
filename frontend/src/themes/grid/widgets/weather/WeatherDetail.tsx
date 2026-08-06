@@ -1,4 +1,4 @@
-import { conditionIcons, useWeatherForecast } from '@/data/weather'
+import { conditionIcons, useWeatherForecast } from '@/integrations/weather'
 
 export function WeatherDetail() {
   const { data: forecast, isError } = useWeatherForecast()

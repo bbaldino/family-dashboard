@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useMusic } from '@/data/music'
+import { useMusic } from '@/integrations/music'
 import { CentreSpreadMasthead } from './CentreSpreadMasthead'
 import { CentreSpreadCredits } from './CentreSpreadCredits'
 import { CentreSpreadPlate } from './CentreSpreadPlate'

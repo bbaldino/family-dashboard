@@ -1,4 +1,4 @@
-import type { CalendarEvent } from '@/data/google-calendar'
+import type { CalendarEvent } from '@/integrations/google-calendar'
 import { EventPill } from './EventPill'
 import { CELL_RULE, TODAY_BG } from './colors'
 

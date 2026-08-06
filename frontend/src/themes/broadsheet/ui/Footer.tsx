@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { Pause, Play } from 'lucide-react'
 import { ROUTE_PATHS } from '@/shell/routes'
 import type { ScreenKey } from '@/shell/types'
-import { useMusic } from '@/data/music'
+import { useMusic } from '@/integrations/music'
 import { DoubleRule } from '@/themes/broadsheet/ui/DoubleRule'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 

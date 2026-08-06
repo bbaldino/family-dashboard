@@ -1,4 +1,4 @@
-import type { ArtistTrack, PlayOptions } from '@/data/music'
+import type { ArtistTrack, PlayOptions } from '@/integrations/music'
 import { trackPlayOptions } from './track-play'
 import { encodeUriParam } from './track-url'
 import type { TrackActionsMenuGroup } from './TrackActionsMenu'

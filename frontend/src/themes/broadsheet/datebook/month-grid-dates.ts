@@ -2,7 +2,7 @@
  * The calendar days the month grid displays, grouped into week rows.
  *
  * This mirrors `useMonthCalendar`'s own gridStart/gridEnd computation
- * exactly (`src/data/google-calendar/useMonthCalendar.ts`) rather than
+ * exactly (`src/integrations/google-calendar/useMonthCalendar.ts`) rather than
  * assuming a fixed six-row grid the way the design mock's hand-written
  * fixture data does. That distinction matters: the mock hardcodes 42 cells
  * because its one example month (May 2026) happens to need six weeks, but

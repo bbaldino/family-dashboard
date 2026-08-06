@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BroadsheetLayout } from './BroadsheetLayout'
-import { useMusic } from '@/data/music'
+import { useMusic } from '@/integrations/music'
 
 /** A stand-in screen that exercises useMusic() the way GlanceStrip does. */
 function MusicProbe() {
@@ -13,7 +13,7 @@ function MusicProbe() {
 
 describe('BroadsheetLayout', () => {
   beforeEach(() => {
-    // Deliberately NOT mocking @/data/music — this test exists to prove the
+    // Deliberately NOT mocking @/integrations/music — this test exists to prove the
     // real MusicProvider is mounted. MusicProvider's useIntegrationConfig
     // hits `/api/config` through the shared react-query config query, and
     // jsdom doesn't provide a global fetch, so stub it. An empty config
@@ -36,7 +36,7 @@ describe('BroadsheetLayout', () => {
     // in BroadsheetLayout or every real render throws "useMusic must be
     // used within MusicProvider" the instant it hits hardware — a failure
     // no existing test caught because Home.test.tsx and GlanceStrip.test.tsx
-    // both mock @/data/music wholesale.
+    // both mock @/integrations/music wholesale.
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     expect(() =>
       render(

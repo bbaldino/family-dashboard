@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useIntegrationConfig } from '@/platform'
-import { activeScenario } from '@/data/scenario'
+import { activeScenario } from '@/lib/scenario'
 import { musicIntegration } from './config'
 import type { MusicState, QueueState } from './types'
 import { MusicContext, defaultContextValue } from './music-context'
@@ -10,7 +10,7 @@ import { musicStateFixtureFor } from './fixtures'
 
 /**
  * Queue-state fixture for the active scenario, computed once at module load
- * — `activeScenario` itself never changes at runtime (see `@/data/scenario`)
+ * — `activeScenario` itself never changes at runtime (see `@/lib/scenario`)
  * — so every render sees the same reference and the SSE-connection effect
  * below doesn't need it as a dependency. `undefined` when no scenario is
  * active or it doesn't define a music fixture, in which case the provider

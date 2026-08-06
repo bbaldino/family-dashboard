@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useDoorbellTheme, buildDoorbellCss, BROADSHEET_RING_LAYOUT } from '@/data/doorbell'
+import { useDoorbellTheme, buildDoorbellCss, BROADSHEET_RING_LAYOUT } from '@/integrations/doorbell'
 import { resolveBroadsheetDoorbellVars } from '@/themes/broadsheet/ui/broadsheet-vars'
 import { ROUTE_PATHS } from '@/shell/routes'
 

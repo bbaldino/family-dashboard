@@ -20,7 +20,7 @@ const useSearch = vi.hoisted(() => vi.fn())
 const useQueue = vi.hoisted(() => vi.fn())
 const getImageUrl = vi.hoisted(() => vi.fn(() => null))
 
-vi.mock('@/data/music', () => ({
+vi.mock('@/integrations/music', () => ({
   useMusic,
   useRoomPills,
   useTopTracks,

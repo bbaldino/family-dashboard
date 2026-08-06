@@ -8,10 +8,10 @@ const useChores = vi.hoisted(() => vi.fn())
 const useLunchMenu = vi.hoisted(() => vi.fn())
 const completeAssignment = vi.hoisted(() => vi.fn())
 const uncompleteAssignment = vi.hoisted(() => vi.fn())
-vi.mock('@/data/countdowns', () => ({ useCountdowns }))
-vi.mock('@/data/on-this-day', () => ({ useOnThisDay }))
-vi.mock('@/data/chores', () => ({ useChores }))
-vi.mock('@/data/nutrislice', () => ({ useLunchMenu }))
+vi.mock('@/integrations/countdowns', () => ({ useCountdowns }))
+vi.mock('@/integrations/on-this-day', () => ({ useOnThisDay }))
+vi.mock('@/integrations/chores', () => ({ useChores }))
+vi.mock('@/integrations/nutrislice', () => ({ useLunchMenu }))
 
 describe('HouseholdColumn', () => {
   beforeEach(() => {

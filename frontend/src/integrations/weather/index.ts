@@ -1,9 +1,9 @@
 import { z } from 'zod'
 import { defineIntegration, useIntegrationData } from '@/platform'
-import { summariseForecast } from './weather/forecast'
-import { computeAirQuality } from './weather/air-quality'
-import type { AqiLevel, UvLevel, PollenLevel, AirQualityData } from './weather/air-quality'
-import type { ForecastDay, ForecastData, HourlyForecast } from './weather/forecast'
+import { summariseForecast } from './forecast'
+import { computeAirQuality } from './air-quality'
+import type { AqiLevel, UvLevel, PollenLevel, AirQualityData } from './air-quality'
+import type { ForecastDay, ForecastData, HourlyForecast } from './forecast'
 
 /**
  * Weather — replaces the five old files under `data/weather/` (config,
@@ -14,8 +14,8 @@ import type { ForecastDay, ForecastData, HourlyForecast } from './weather/foreca
  * saved — see those files' own headers.
  *
  * `weatherIntegration` carries real `schema`/`fields` because it's registered
- * in the admin settings UI (`data/integrations-registry.ts`), which reads
- * both to render the settings form.
+ * in the admin settings UI (`integrations/registry.ts`), which reads both to
+ * render the settings form.
  *
  * No Rust half — `integrations/weather/` was deleted in slice 2a. The `.api`
  * client this integration carries points at `/api/weather`, a route that no

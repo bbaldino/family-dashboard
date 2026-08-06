@@ -1,5 +1,5 @@
-import { useRoomPills } from '@/data/music'
-import type { QueueState, TrackInfo } from '@/data/music'
+import { useRoomPills } from '@/integrations/music'
+import type { QueueState, TrackInfo } from '@/integrations/music'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { RoomPill } from './RoomPill'
 import { VolumeSlider } from './VolumeSlider'

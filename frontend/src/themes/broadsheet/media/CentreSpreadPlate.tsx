@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Pause, Play, SkipBack, SkipForward } from 'lucide-react'
-import type { TrackInfo } from '@/data/music'
+import type { TrackInfo } from '@/integrations/music'
 import { Cover } from './Cover'
 import { MeterBar } from './MeterBar'
 import { INK2 } from './colors'

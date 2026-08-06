@@ -1,5 +1,5 @@
 import { Modal } from '@/ui/Modal'
-import { usePackageEvents, STATUS_ICONS, type Shipment } from '@/data/packages'
+import { usePackageEvents, STATUS_ICONS, type Shipment } from '@/integrations/packages'
 
 interface PackageDetailModalProps {
   shipment: Shipment | null

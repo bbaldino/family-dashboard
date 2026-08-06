@@ -5,7 +5,7 @@ import { Artist } from './Artist'
 
 const useArtistDetail = vi.hoisted(() => vi.fn())
 const useMusic = vi.hoisted(() => vi.fn())
-vi.mock('@/data/music', () => ({ useArtistDetail, useMusic }))
+vi.mock('@/integrations/music', () => ({ useArtistDetail, useMusic }))
 
 const play = vi.fn()
 

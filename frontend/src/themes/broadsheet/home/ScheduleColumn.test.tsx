@@ -3,9 +3,9 @@ import { render, screen } from '@testing-library/react'
 import { ScheduleColumn } from './ScheduleColumn'
 
 const useGoogleCalendar = vi.hoisted(() => vi.fn())
-vi.mock('@/data/google-calendar', () => ({ useGoogleCalendar }))
+vi.mock('@/integrations/google-calendar', () => ({ useGoogleCalendar }))
 const useDrivingTime = vi.hoisted(() => vi.fn())
-vi.mock('@/data/driving-time', () => ({ useDrivingTime }))
+vi.mock('@/integrations/driving-time', () => ({ useDrivingTime }))
 
 const day = (dateIso: string, isToday: boolean, summaries: string[]) => ({
   date: new Date(dateIso),
@@ -22,13 +22,13 @@ const day = (dateIso: string, isToday: boolean, summaries: string[]) => ({
 describe('ScheduleColumn', () => {
   beforeEach(() => {
     // useDrivingTime returns the Record<string, EventDriveInfo> map directly —
-    // not a react-query-shaped result. See src/data/driving-time/useDrivingTime.ts.
+    // not a react-query-shaped result. See src/integrations/driving-time/useDrivingTime.ts.
     useDrivingTime.mockReturnValue({})
   })
 
   it('renders today as the hero and the rest of the week as the week-ahead strip', () => {
     // useGoogleCalendar wraps usePolling, whose `data` is the CalendarDay[]
-    // itself (not `{ days: [...] }`). See src/data/google-calendar/useGoogleCalendar.ts.
+    // itself (not `{ days: [...] }`). See src/integrations/google-calendar/useGoogleCalendar.ts.
     // Index 0 is always today (see fetchCalendarEvents) — ScheduleColumn
     // relies on that rather than filtering on `isToday` itself.
     useGoogleCalendar.mockReturnValue({

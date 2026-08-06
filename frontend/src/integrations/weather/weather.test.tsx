@@ -2,7 +2,7 @@ import { describe, expect, it, vi, afterEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { useAirQuality, useWeatherData, useWeatherForecast } from './weather'
+import { useAirQuality, useWeatherData, useWeatherForecast } from './index'
 
 /**
  * Pins the URLs `weather.ts` composes from config against the deleted

@@ -2,7 +2,7 @@ import { describe, expect, it, vi, afterEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { useDailyQuote } from './daily-quote'
+import { useDailyQuote } from './index'
 
 describe('useDailyQuote', () => {
   afterEach(() => vi.unstubAllGlobals())

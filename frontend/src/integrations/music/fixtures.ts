@@ -1,5 +1,5 @@
 /**
- * Named music states for `?scenario=<name>` (see `@/data/scenario`), typed
+ * Named music states for `?scenario=<name>` (see `@/lib/scenario`), typed
  * as the *real* return shapes of the music hooks — `QueueState`,
  * `SearchResults`, `TopTrack`, `RecentItem`, `RawPlayer`, `QueueItem`,
  * `AlbumDetail`, `ArtistDetail` — imported from their hook/type modules
@@ -32,7 +32,7 @@
  * To add a fixture set for another integration: write a sibling
  * `fixtures.ts`, export functions typed against the hook's real return
  * type, and have the hook check them the same way the hooks in this module
- * do — look up `activeScenario` from `@/data/scenario`, and fall through to
+ * do — look up `activeScenario` from `@/lib/scenario`, and fall through to
  * the normal fetch when it's `null` or not a scenario this integration
  * defines.
  */

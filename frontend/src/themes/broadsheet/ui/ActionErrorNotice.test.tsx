@@ -3,7 +3,7 @@ import { render, screen, act, fireEvent } from '@testing-library/react'
 import { ActionErrorNotice } from './ActionErrorNotice'
 
 const useMusic = vi.hoisted(() => vi.fn())
-vi.mock('@/data/music', () => ({ useMusic }))
+vi.mock('@/integrations/music', () => ({ useMusic }))
 
 const dismissError = vi.fn()
 

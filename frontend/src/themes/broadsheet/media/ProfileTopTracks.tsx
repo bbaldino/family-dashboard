@@ -1,4 +1,4 @@
-import type { ArtistTrack } from '@/data/music'
+import type { ArtistTrack } from '@/integrations/music'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { ArtistTrackRow } from './ArtistTrackRow'
 import type { TrackActionsMenuGroup } from './TrackActionsMenu'

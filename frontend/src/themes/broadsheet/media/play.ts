@@ -1,4 +1,4 @@
-import type { PlayOptions } from '@/data/music'
+import type { PlayOptions } from '@/integrations/music'
 
 /** The subset of a playable item's fields `useMusic().play` needs — a
  *  common shape `QuickDialsShelves`, `ForYouShelf`, and `SearchResultsPanel`

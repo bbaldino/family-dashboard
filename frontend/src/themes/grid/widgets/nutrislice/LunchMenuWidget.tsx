@@ -1,7 +1,7 @@
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
 import { ErrorDisplay } from '@/ui/ErrorDisplay'
 import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
-import { useLunchMenu, type LunchMenuDay, type MenuEntry } from '@/data/nutrislice'
+import { useLunchMenu, type LunchMenuDay, type MenuEntry } from '@/integrations/nutrislice'
 type WidgetSize = 'compact' | 'standard' | 'expanded'
 
 function EntryItem({ entry, compact = false }: { entry: MenuEntry; compact?: boolean }) {

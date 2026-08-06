@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
 import { BottomSheet } from '@/ui/BottomSheet'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
-import { choresIntegration } from '@/data/chores'
-import type { ChoreRef } from '@/data/chores'
+import { choresIntegration } from '@/integrations/chores'
+import type { ChoreRef } from '@/integrations/chores'
 
 interface MetaChorePickerProps {
   assignmentId: number

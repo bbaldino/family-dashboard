@@ -1,4 +1,4 @@
-import type { GamesResponse } from '@/data/sports'
+import type { GamesResponse } from '@/integrations/sports'
 import { OffdayBlock } from './OffdayBlock'
 import { PregameBlock } from './PregameBlock'
 import { LiveGame } from './LiveGame'

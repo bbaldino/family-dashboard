@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useNavigate, type NavigateFunction } from 'react-router-dom'
 import { Music, Loader2 } from 'lucide-react'
-import { useMusic, useSearch } from '@/data/music'
-import type { EnqueueMode, SearchItem } from '@/data/music'
+import { useMusic, useSearch } from '@/integrations/music'
+import type { EnqueueMode, SearchItem } from '@/integrations/music'
 import { TrackActionsMenu } from './TrackActionsMenu'
 import { encodeUriParam } from './track-url'
 

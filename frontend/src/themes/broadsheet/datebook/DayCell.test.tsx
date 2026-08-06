@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { DayCell } from './DayCell'
-import type { CalendarEvent } from '@/data/google-calendar'
+import type { CalendarEvent } from '@/integrations/google-calendar'
 
 const timed = (id: string, summary: string): CalendarEvent => ({
   id,

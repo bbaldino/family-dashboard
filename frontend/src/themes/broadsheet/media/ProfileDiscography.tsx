@@ -1,4 +1,4 @@
-import type { ArtistAlbumSummary } from '@/data/music'
+import type { ArtistAlbumSummary } from '@/integrations/music'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { Cover } from './Cover'
 import { MAX_DISCOGRAPHY_ALBUMS } from './profile-capacity'

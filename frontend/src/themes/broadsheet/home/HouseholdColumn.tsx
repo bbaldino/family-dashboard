@@ -1,10 +1,10 @@
 import { Check } from 'lucide-react'
-import { useCountdowns } from '@/data/countdowns'
-import type { CountdownItem } from '@/data/countdowns'
-import { useChores } from '@/data/chores'
-import type { PersonAssignments, TodayResponse } from '@/data/chores'
-import { useLunchMenu } from '@/data/nutrislice'
-import type { LunchMenuData } from '@/data/nutrislice'
+import { useCountdowns } from '@/integrations/countdowns'
+import type { CountdownItem } from '@/integrations/countdowns'
+import { useChores } from '@/integrations/chores'
+import type { PersonAssignments, TodayResponse } from '@/integrations/chores'
+import { useLunchMenu } from '@/integrations/nutrislice'
+import type { LunchMenuData } from '@/integrations/nutrislice'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 
 /** A soft accent for "On this day"'s year — the mock's `C.accent2`, a muted

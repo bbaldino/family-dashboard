@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { doorbellIntegration } from '@/data/doorbell'
+import { doorbellIntegration } from '@/integrations/doorbell'
 
 export function CamerasBoard() {
   const [cameraUrl, setCameraUrl] = useState<string | null>(null)

@@ -5,7 +5,7 @@ import {
   useDoorbellTheme,
   buildDoorbellCss,
   BROADSHEET_LAYOUT,
-} from '@/data/doorbell'
+} from '@/integrations/doorbell'
 import { resolveBroadsheetDoorbellVars } from '@/themes/broadsheet/ui/broadsheet-vars'
 import { MastheadFrame } from '@/themes/broadsheet/ui/MastheadFrame'
 import { mastheadKickerStyle, mastheadNumeralStyle } from '@/themes/broadsheet/ui/masthead-styles'
@@ -101,7 +101,7 @@ const emptyStateStyle = {
  * always-available window onto the front step, not an event notification.
  * "Keeping Watch" / "The Front Step" is true whether or not anyone's there.
  *
- * Unlike `useWebRtcStream` (`src/data/doorbell/useWebRtcStream.ts`), this
+ * Unlike `useWebRtcStream` (`src/integrations/doorbell/useWebRtcStream.ts`), this
  * doesn't hand-roll a WebRTC peer connection — the configured URL is
  * already a complete WebRTC *page* (go2rtc's own player), so an iframe is
  * the whole client, exactly matching grid's approach.

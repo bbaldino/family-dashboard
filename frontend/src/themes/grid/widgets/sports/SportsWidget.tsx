@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
-import { useSportsGames, type Game } from '@/data/sports'
+import { useSportsGames, type Game } from '@/integrations/sports'
 import { GameCard } from './GameCard'
 import { GameCardExpanded } from './GameCardExpanded'
 import { GameDetailModal } from '@/themes/grid/overlays/sports/GameDetailModal'

@@ -1,5 +1,5 @@
-import { useQueue } from '@/data/music'
-import type { QueueItem } from '@/data/music'
+import { useQueue } from '@/integrations/music'
+import type { QueueItem } from '@/integrations/music'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { MAX_RUNNING_ORDER_ROWS } from './centre-spread-capacity'
 

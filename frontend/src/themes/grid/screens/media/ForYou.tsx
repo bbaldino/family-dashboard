@@ -1,6 +1,6 @@
 import { Music } from 'lucide-react'
-import { useMusic, useForYou, getImageUrl } from '@/data/music'
-import type { CuratedPlaylist } from '@/data/music'
+import { useMusic, useForYou, getImageUrl } from '@/integrations/music'
+import type { CuratedPlaylist } from '@/integrations/music'
 
 function PlaylistCard({ playlist, onTap }: { playlist: CuratedPlaylist; onTap: () => void }) {
   const imgUrl = getImageUrl(playlist.image)

@@ -1,5 +1,5 @@
-import { formatUpcomingTime } from '@/data/sports'
-import type { GamesResponse } from '@/data/sports'
+import { formatUpcomingTime } from '@/integrations/sports'
+import type { GamesResponse } from '@/integrations/sports'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 
 const proseStyle = {

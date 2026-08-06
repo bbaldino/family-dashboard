@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
 import { ErrorDisplay } from '@/ui/ErrorDisplay'
 import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
-import { useChores } from '@/data/chores'
+import { useChores } from '@/integrations/chores'
 import { MetaChorePicker } from './MetaChorePicker'
-import type { TodayAssignment, PersonAssignments } from '@/data/chores'
+import type { TodayAssignment, PersonAssignments } from '@/integrations/chores'
 type WidgetSize = 'compact' | 'standard' | 'expanded'
 
 interface PickerState {

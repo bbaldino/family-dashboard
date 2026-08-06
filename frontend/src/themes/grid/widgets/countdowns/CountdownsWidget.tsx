@@ -1,6 +1,6 @@
 import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
-import { useCountdowns } from '@/data/countdowns'
+import { useCountdowns } from '@/integrations/countdowns'
 type WidgetSize = 'compact' | 'standard' | 'expanded'
 
 function formatDays(days: number): string {

@@ -1,4 +1,4 @@
-import type { Timer } from '@/data/timers'
+import type { Timer } from '@/integrations/timers'
 
 function formatCountdown(ms: number): string {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000))

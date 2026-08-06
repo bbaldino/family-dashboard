@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw } from 'lucide-react'
 import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
-import { useOnThisDay, onThisDayIntegration } from '@/data/on-this-day'
+import { useOnThisDay, onThisDayIntegration } from '@/integrations/on-this-day'
 import { useIntegrationConfig } from '@/platform'
 
 type WidgetSize = 'compact' | 'standard' | 'expanded'

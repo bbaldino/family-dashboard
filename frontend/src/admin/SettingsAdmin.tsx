@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/ui/Button'
-import { integrations } from '@/data/integrations-registry'
+import { integrations } from '@/integrations/registry'
 import { ModelSelect } from '@/admin/settings/llm/ModelSelect'
 import { settingsRegistry } from './settings-registry'
 

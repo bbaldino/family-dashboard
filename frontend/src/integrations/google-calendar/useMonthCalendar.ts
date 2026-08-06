@@ -1,5 +1,5 @@
 import { usePolling } from '@/hooks/usePolling'
-import { activeScenario } from '@/data/scenario'
+import { activeScenario } from '@/lib/scenario'
 import { fetchCalendarIds, googleCalendarIntegration } from './config'
 import { monthFixtureFor } from './fixtures'
 import type { CalendarEvent } from './types'

@@ -1,4 +1,4 @@
-import type { CalendarEvent } from '@/data/google-calendar'
+import type { CalendarEvent } from '@/integrations/google-calendar'
 import { isAllDay, formatEventTime } from '@/themes/broadsheet/home/event-format'
 import { ACCENT2, CREAM_SOFT, FOREST_SOFT } from './colors'
 

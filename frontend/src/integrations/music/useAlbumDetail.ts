@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { activeScenario } from '@/data/scenario'
+import { activeScenario } from '@/lib/scenario'
 import { musicIntegration } from './config'
 import { musicAlbumDetailFixtureFor } from './fixtures'
 import type { ArtistTrack } from './useArtistDetail'

@@ -6,7 +6,7 @@ import { QuickDialsShelves } from './QuickDialsShelves'
 const useTopTracks = vi.hoisted(() => vi.fn())
 const useRecentlyPlayed = vi.hoisted(() => vi.fn())
 const useMusic = vi.hoisted(() => vi.fn())
-vi.mock('@/data/music', () => ({ useTopTracks, useRecentlyPlayed, useMusic }))
+vi.mock('@/integrations/music', () => ({ useTopTracks, useRecentlyPlayed, useMusic }))
 
 const play = vi.fn()
 const noopMenu = { openMenuUri: null, onToggleMenu: vi.fn(), onCloseMenu: vi.fn() }

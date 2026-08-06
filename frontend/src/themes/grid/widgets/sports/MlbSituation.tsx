@@ -1,4 +1,4 @@
-import type { MlbSituationData } from '@/data/sports'
+import type { MlbSituationData } from '@/integrations/sports'
 import { BaseDiamond } from './BaseDiamond'
 import { CountIndicator } from './CountIndicator'
 

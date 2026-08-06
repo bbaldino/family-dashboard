@@ -1,5 +1,5 @@
 import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
-import { useWordOfTheDay } from '@/data/word-of-the-day'
+import { useWordOfTheDay } from '@/integrations/word-of-the-day'
 
 export function WordOfTheDayWidget() {
   const { data, isLoading, error } = useWordOfTheDay()

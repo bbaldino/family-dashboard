@@ -1,10 +1,10 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { SportsColumn } from './SportsColumn'
-import type { GamesResponse, GameState } from '@/data/sports'
+import type { GamesResponse, GameState } from '@/integrations/sports'
 
 const useSportsPreview = vi.hoisted(() => vi.fn())
-vi.mock('@/data/sports', () => ({
+vi.mock('@/integrations/sports', () => ({
   useSportsPreview,
   formatUpcomingTime: (s: string) => s,
 }))
@@ -25,7 +25,7 @@ const team = (abbreviation: string, score: number | null) => ({
 
 // Real GameState values are 'live' | 'final' | 'upcoming' | 'postponed' — the
 // task brief's mock used 'pre'/'in', which don't exist on the wire. Corrected
-// here (see src/data/sports/types.ts).
+// here (see src/integrations/sports/types.ts).
 const game = (state: GameState, extra: Record<string, unknown> = {}) => ({
   id: 'g1',
   league: 'MLB',

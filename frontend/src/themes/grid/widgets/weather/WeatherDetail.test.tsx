@@ -7,8 +7,8 @@ const useWeatherForecast = vi.hoisted(() => vi.fn())
 // shared `conditionIcons` map from this module, and that is real
 // presentation data — a whole-module mock would have to restate it here and
 // go stale the moment the real one changes.
-vi.mock('@/data/weather', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/data/weather')>()),
+vi.mock('@/integrations/weather', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/integrations/weather')>()),
   useWeatherForecast,
 }))
 

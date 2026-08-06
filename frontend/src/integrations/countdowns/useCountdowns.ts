@@ -2,7 +2,7 @@ import { usePolling, type UsePollingResult } from '@/hooks/usePolling'
 import { useIntegrationConfig } from '@/platform'
 import { countdownsIntegration } from './config'
 // Use the google-calendar integration's API to fetch events
-import { googleCalendarIntegration, type CalendarEvent } from '@/data/google-calendar'
+import { googleCalendarIntegration, type CalendarEvent } from '@/integrations/google-calendar'
 import { parseLocalDate } from '@/utils/date'
 
 export interface CountdownItem {

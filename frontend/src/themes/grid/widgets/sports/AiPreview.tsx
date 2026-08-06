@@ -1,4 +1,4 @@
-import { useSportsPreview } from '@/data/sports'
+import { useSportsPreview } from '@/integrations/sports'
 
 interface AiPreviewProps {
   gameId: string

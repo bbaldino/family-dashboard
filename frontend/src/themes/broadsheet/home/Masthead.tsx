@@ -1,4 +1,4 @@
-import { useHeroWeather } from '@/data/weather'
+import { useHeroWeather } from '@/integrations/weather'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { MastheadFrame } from '@/themes/broadsheet/ui/MastheadFrame'
 import {

@@ -1,4 +1,4 @@
-import type { Game } from '@/data/sports'
+import type { Game } from '@/integrations/sports'
 
 interface GameCardCompactProps {
   game: Game

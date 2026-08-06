@@ -1,4 +1,4 @@
-import type { CalendarEvent } from '@/data/google-calendar'
+import type { CalendarEvent } from '@/integrations/google-calendar'
 import { toLocalDateStr } from '@/utils/date'
 import { DayCell } from './DayCell'
 import { getMonthGridWeeks } from './month-grid-dates'

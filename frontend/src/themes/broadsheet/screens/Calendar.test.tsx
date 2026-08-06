@@ -3,9 +3,9 @@ import { act, fireEvent, render, screen } from '@testing-library/react'
 import { Calendar } from './Calendar'
 
 const useMonthCalendar = vi.hoisted(() => vi.fn())
-vi.mock('@/data/google-calendar', () => ({ useMonthCalendar }))
+vi.mock('@/integrations/google-calendar', () => ({ useMonthCalendar }))
 const useCountdowns = vi.hoisted(() => vi.fn())
-vi.mock('@/data/countdowns', () => ({ useCountdowns }))
+vi.mock('@/integrations/countdowns', () => ({ useCountdowns }))
 
 describe('broadsheet Calendar (the Datebook)', () => {
   beforeEach(() => {

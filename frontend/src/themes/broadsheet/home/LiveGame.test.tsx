@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { LiveGame } from './LiveGame'
-import type { Game, GameLeader, GameLiveDetail, GameTeam, Play } from '@/data/sports'
+import type { Game, GameLeader, GameLiveDetail, GameTeam, Play } from '@/integrations/sports'
 
 const team = (abbreviation: string, score: number): GameTeam => ({
   id: abbreviation,

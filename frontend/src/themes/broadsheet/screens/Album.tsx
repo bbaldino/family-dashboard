@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Play } from 'lucide-react'
-import { useAlbumDetail, useMusic } from '@/data/music'
+import { useAlbumDetail, useMusic } from '@/integrations/music'
 import { decodeUriParam } from '@/themes/broadsheet/media/track-url'
 import { MusicPageMasthead } from '@/themes/broadsheet/media/MusicPageMasthead'
 import { RecordSleeve } from '@/themes/broadsheet/media/RecordSleeve'

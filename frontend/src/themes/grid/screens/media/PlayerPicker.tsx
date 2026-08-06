@@ -1,6 +1,6 @@
 import { Volume2, Users, Plus, X as XIcon, Loader2 } from 'lucide-react'
-import { useMusic, usePlayers, normalizePlayer, useGroupMutations } from '@/data/music'
-import type { Player } from '@/data/music'
+import { useMusic, usePlayers, normalizePlayer, useGroupMutations } from '@/integrations/music'
+import type { Player } from '@/integrations/music'
 import { Modal } from '@/ui/Modal'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
 

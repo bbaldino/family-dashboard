@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { RecordSleeve } from './RecordSleeve'
-import type { AlbumDetail } from '@/data/music'
+import type { AlbumDetail } from '@/integrations/music'
 
 const album: AlbumDetail = {
   name: 'Push The Button',

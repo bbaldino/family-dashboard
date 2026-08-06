@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { NowSpinning } from './NowSpinning'
 
 const useMusic = vi.hoisted(() => vi.fn())
-vi.mock('@/data/music', () => ({ useMusic }))
+vi.mock('@/integrations/music', () => ({ useMusic }))
 
 const pause = vi.fn()
 const resume = vi.fn()

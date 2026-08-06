@@ -1,5 +1,5 @@
 import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
-import { useWeatherData, conditionIcons } from '@/data/weather'
+import { useWeatherData, conditionIcons } from '@/integrations/weather'
 import { WeatherDetail } from './WeatherDetail'
 
 export function WeatherWidget() {

@@ -1,5 +1,5 @@
 import { Pause, Play, SkipBack, SkipForward } from 'lucide-react'
-import { useMusic } from '@/data/music'
+import { useMusic } from '@/integrations/music'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { NowSpinningCover } from './NowSpinningCover'
 import { VolumeSlider } from './VolumeSlider'

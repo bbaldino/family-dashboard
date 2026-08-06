@@ -1,4 +1,4 @@
-import type { ArtistTrack } from '@/data/music'
+import type { ArtistTrack } from '@/integrations/music'
 import { featuredArtistsLabel } from './featured-artists'
 import { TrackActionsTrigger } from './TrackActionsTrigger'
 import type { TrackActionsMenuGroup } from './TrackActionsMenu'

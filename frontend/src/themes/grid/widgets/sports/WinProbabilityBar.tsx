@@ -1,4 +1,4 @@
-import type { WinProbability } from '@/data/sports'
+import type { WinProbability } from '@/integrations/sports'
 
 interface WinProbabilityBarProps {
   win: WinProbability

@@ -1,5 +1,5 @@
-import { useSportsPreview, formatUpcomingTime } from '@/data/sports'
-import type { Game, GameAthlete } from '@/data/sports'
+import { useSportsPreview, formatUpcomingTime } from '@/integrations/sports'
+import type { Game, GameAthlete } from '@/integrations/sports'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { TeamCap } from '@/themes/broadsheet/ui/TeamCap'
 

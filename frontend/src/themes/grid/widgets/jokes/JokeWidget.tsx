@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
-import { useJoke } from '@/data/jokes'
+import { useJoke } from '@/integrations/jokes'
 
 export function JokeWidget() {
   const { data, isLoading, error } = useJoke()

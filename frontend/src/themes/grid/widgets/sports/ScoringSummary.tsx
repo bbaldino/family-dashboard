@@ -1,4 +1,4 @@
-import type { GameTeam, Play, ScoringRecap } from '@/data/sports'
+import type { GameTeam, Play, ScoringRecap } from '@/integrations/sports'
 import { TeamDot } from './PlayByPlayLog'
 import { teamFor } from './team-utils'
 

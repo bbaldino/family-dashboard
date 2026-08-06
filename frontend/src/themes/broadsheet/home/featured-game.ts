@@ -1,4 +1,4 @@
-import type { Game } from '@/data/sports'
+import type { Game } from '@/integrations/sports'
 
 /**
  * Prefer a live game; otherwise the next upcoming one. Finals/postponed

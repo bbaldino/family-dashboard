@@ -1,5 +1,5 @@
 import type { WidgetMeta } from '@/lib/widget-types'
-import { useCountdowns } from '@/data/countdowns'
+import { useCountdowns } from '@/integrations/countdowns'
 
 export function useCountdownsWidgetMeta(): WidgetMeta {
   const { data } = useCountdowns()

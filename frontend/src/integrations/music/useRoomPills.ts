@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useIntegrationConfig } from '@/platform'
-import { activeScenario } from '@/data/scenario'
+import { activeScenario } from '@/lib/scenario'
 import { musicIntegration } from './config'
 import { usePlayers, normalizePlayer } from './usePlayers'
 import { useGroupMutations } from './useGroupMutations'

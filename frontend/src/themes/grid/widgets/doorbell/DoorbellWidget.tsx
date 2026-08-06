@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
-import { useWebRtcStream } from '@/data/doorbell'
+import { useWebRtcStream } from '@/integrations/doorbell'
 
 export function DoorbellWidget() {
   const [isLive, setIsLive] = useState(false)

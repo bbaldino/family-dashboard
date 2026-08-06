@@ -11,7 +11,7 @@ import { CentreSpread } from '@/themes/broadsheet/media/CentreSpread'
 import { MenuScrim } from '@/themes/broadsheet/media/MenuScrim'
 
 /** `useSearch` only enables its query once it's at least 2 characters
- *  (`src/data/music/useSearch.ts`) — matched here so "searching" (which
+ *  (`src/integrations/music/useSearch.ts`) — matched here so "searching" (which
  *  body the shelf column shows) agrees with what the hook itself will
  *  actually fetch. */
 const MIN_SEARCH_LENGTH = 2

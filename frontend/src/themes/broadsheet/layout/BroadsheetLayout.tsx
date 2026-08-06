@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom'
-import { MusicProvider } from '@/data/music'
+import { MusicProvider } from '@/integrations/music'
 import { Footer } from '@/themes/broadsheet/ui/Footer'
 import { ActionErrorNotice } from '@/themes/broadsheet/ui/ActionErrorNotice'
 

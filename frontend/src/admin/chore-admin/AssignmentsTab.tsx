@@ -9,10 +9,10 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core'
 import { Button } from '@/ui/Button'
-import { choresIntegration } from '@/data/chores'
-import type { AssignmentResponse, Chore, Person } from '@/data/chores'
+import { choresIntegration } from '@/integrations/chores'
+import type { AssignmentResponse, Chore, Person } from '@/integrations/chores'
 import { ChorePool } from './ChorePool'
-import { googleCalendarIntegration, type CalendarEvent } from '@/data/google-calendar'
+import { googleCalendarIntegration, type CalendarEvent } from '@/integrations/google-calendar'
 import { eventLocalDateStr, parseLocalDate, toLocalDateStr } from '@/utils/date'
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']

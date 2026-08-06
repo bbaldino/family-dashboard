@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { googleCalendarIntegration } from '@/data/google-calendar'
+import { googleCalendarIntegration } from '@/integrations/google-calendar'
 import { Button } from '@/ui/Button'
 
 interface CalendarListEntry {

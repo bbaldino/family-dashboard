@@ -1,5 +1,5 @@
 import { useIntegrationConfig } from '@/platform'
-import { doorbellIntegration, useDoorbellRing } from '@/data/doorbell'
+import { doorbellIntegration, useDoorbellRing } from '@/integrations/doorbell'
 import { DoorbellRingModal } from './DoorbellRingModal'
 
 /**

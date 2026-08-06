@@ -1,7 +1,7 @@
 import { Music } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { useMusic, useTopTracks, useRecentlyPlayed } from '@/data/music'
-import type { RecentItem, TopTrack, EnqueueMode } from '@/data/music'
+import { useMusic, useTopTracks, useRecentlyPlayed } from '@/integrations/music'
+import type { RecentItem, TopTrack, EnqueueMode } from '@/integrations/music'
 import { TrackActionsMenu } from './TrackActionsMenu'
 import { encodeUriParam } from './track-url'
 

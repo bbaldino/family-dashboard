@@ -1,4 +1,4 @@
-import type { TrackArtist } from '@/data/music'
+import type { TrackArtist } from '@/integrations/music'
 
 /**
  * The `feat. {name}` line under a track title, per the design brief:

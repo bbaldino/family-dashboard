@@ -1,4 +1,4 @@
-import { STATUS_ICONS, STATUS_LABELS, type Shipment } from '@/data/packages'
+import { STATUS_ICONS, STATUS_LABELS, type Shipment } from '@/integrations/packages'
 import { parseLocalDate } from '@/utils/date'
 
 function etaColor(deliveryDate: string | null): string {

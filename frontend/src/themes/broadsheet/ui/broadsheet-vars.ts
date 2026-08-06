@@ -1,4 +1,4 @@
-import { doorbellVarsForBroadsheet } from '@/data/doorbell'
+import { doorbellVarsForBroadsheet } from '@/integrations/doorbell'
 
 /**
  * Reads broadsheet's palette off the live document.

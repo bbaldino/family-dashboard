@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
-import { useMusic, useForYou, getImageUrl } from '@/data/music'
-import type { CuratedPlaylist } from '@/data/music'
+import { useMusic, useForYou, getImageUrl } from '@/integrations/music'
+import type { CuratedPlaylist } from '@/integrations/music'
 import { ShelfSection } from './ShelfSection'
 import type { ShelfCardItem } from './ShelfCard'
 import { playOptionsFor } from './play'

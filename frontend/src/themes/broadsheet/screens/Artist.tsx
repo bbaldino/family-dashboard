@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Radio } from 'lucide-react'
-import { useArtistDetail, useMusic } from '@/data/music'
+import { useArtistDetail, useMusic } from '@/integrations/music'
 import { decodeUriParam, encodeUriParam } from '@/themes/broadsheet/media/track-url'
 import { MusicPageMasthead } from '@/themes/broadsheet/media/MusicPageMasthead'
 import { ProfileStandfirst } from '@/themes/broadsheet/media/ProfileStandfirst'

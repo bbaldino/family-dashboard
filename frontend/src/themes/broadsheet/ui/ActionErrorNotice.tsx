@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useMusic } from '@/data/music'
+import { useMusic } from '@/integrations/music'
 
 /** How long a failure stays up before clearing itself. Long enough to read
  *  from across a kitchen, short enough that a stale complaint doesn't sit on

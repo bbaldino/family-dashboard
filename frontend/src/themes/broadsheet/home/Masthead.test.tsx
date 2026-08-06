@@ -4,7 +4,7 @@ import { Masthead } from './Masthead'
 import { ordinalSuffix } from './ordinal'
 
 const useHeroWeather = vi.hoisted(() => vi.fn())
-vi.mock('@/data/weather', () => ({ useHeroWeather }))
+vi.mock('@/integrations/weather', () => ({ useHeroWeather }))
 
 function renderMasthead(overrides: Partial<Parameters<typeof Masthead>[0]> = {}) {
   return render(
@@ -20,7 +20,7 @@ function renderMasthead(overrides: Partial<Parameters<typeof Masthead>[0]> = {})
 describe('Masthead', () => {
   beforeEach(() => {
     // useHeroWeather returns the HeroWeather object directly (or null) —
-    // not a react-query result. See src/data/weather.ts.
+    // not a react-query result. See src/integrations/weather.ts.
     useHeroWeather.mockReturnValue({
       temperature: '75',
       high: '78',

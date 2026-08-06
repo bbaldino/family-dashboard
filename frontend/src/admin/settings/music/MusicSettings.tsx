@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/ui/Button'
-import { musicIntegration } from '@/data/music'
+import { musicIntegration } from '@/integrations/music'
 
 interface Player {
   player_id: string

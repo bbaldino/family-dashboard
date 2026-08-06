@@ -1,4 +1,4 @@
-import { useSportsFinalRecap } from '@/data/sports'
+import { useSportsFinalRecap } from '@/integrations/sports'
 
 interface AiFinalRecapProps {
   gameId: string

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
-import { useMusic, useTopTracks, useRecentlyPlayed } from '@/data/music'
-import type { TopTrack, RecentItem } from '@/data/music'
+import { useMusic, useTopTracks, useRecentlyPlayed } from '@/integrations/music'
+import type { TopTrack, RecentItem } from '@/integrations/music'
 import { ShelfSection } from './ShelfSection'
 import type { ShelfCardItem } from './ShelfCard'
 import type { PlayableItem } from './play'

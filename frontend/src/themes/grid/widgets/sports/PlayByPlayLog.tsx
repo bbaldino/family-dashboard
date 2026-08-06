@@ -1,4 +1,4 @@
-import type { GameTeam, Play } from '@/data/sports'
+import type { GameTeam, Play } from '@/integrations/sports'
 import { teamFor } from './team-utils'
 
 interface PlayByPlayLogProps {

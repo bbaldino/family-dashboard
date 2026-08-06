@@ -1,5 +1,5 @@
 /**
- * Named calendar states for `?scenario=<name>` (see `@/data/scenario`),
+ * Named calendar states for `?scenario=<name>` (see `@/lib/scenario`),
  * typed as `MonthEvents` and `CalendarDay[]` — the *real* return shapes of
  * `useMonthCalendar` and `useGoogleCalendar`, imported from those hook
  * modules rather than redeclared. If either hook's shape changes, these
@@ -18,7 +18,7 @@
  * `fixtures.ts` next to that integration's hook(s), export functions typed
  * against the hook's real return type, and have the hook check them the
  * same way `useMonthCalendar`/`useGoogleCalendar` do below — look up
- * `activeScenario` from `@/data/scenario`, and fall through to the normal
+ * `activeScenario` from `@/lib/scenario`, and fall through to the normal
  * fetch when it's `null` or not a scenario this integration defines.
  */
 import { toLocalDateStr } from '@/utils/date'

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { formatEventTime, formatTimeUntil, isAllDay, nextEventLabel } from './event-format'
-import type { CalendarEvent } from '@/data/google-calendar'
+import type { CalendarEvent } from '@/integrations/google-calendar'
 
 const timed = (iso: string): CalendarEvent => ({
   id: '1',

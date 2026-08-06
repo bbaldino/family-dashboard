@@ -14,7 +14,7 @@ import {
   type Service,
   type Status,
   type ServiceUptime,
-} from '@/data/health'
+} from '@/integrations/health'
 
 /** Mock `health.jsx`'s `HL_STATUS`, mapped onto broadsheet's own tokens rather
  *  than its private hexes: forest for ok, the secondary ochre for degraded,

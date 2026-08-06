@@ -1,7 +1,7 @@
 import { ArrowLeft, Music, Radio } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useMusic, useArtistDetail } from '@/data/music'
-import type { EnqueueMode } from '@/data/music'
+import { useMusic, useArtistDetail } from '@/integrations/music'
+import type { EnqueueMode } from '@/integrations/music'
 import { TrackActionsMenu } from './TrackActionsMenu'
 import { decodeUriParam, encodeUriParam } from './track-url'
 

@@ -1,5 +1,5 @@
 import type { WidgetMeta } from '@/lib/widget-types'
-import { useSportsGames } from '@/data/sports'
+import { useSportsGames } from '@/integrations/sports'
 
 export function useSportsWidgetMeta(): WidgetMeta {
   const { data } = useSportsGames()

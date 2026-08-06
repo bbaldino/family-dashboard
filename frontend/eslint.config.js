@@ -33,7 +33,7 @@ export default defineConfig([
       'import/resolver': { typescript: { alwaysTryTypes: true } },
       'boundaries/elements': [
         { type: 'platform', pattern: 'src/platform/**' },
-        { type: 'data', pattern: 'src/data/**' },
+        { type: 'integrations', pattern: 'src/integrations/**' },
         { type: 'shell', pattern: 'src/shell/**' },
         { type: 'palettes', pattern: 'src/palettes/**' },
         { type: 'admin', pattern: 'src/admin/**' },
@@ -56,13 +56,15 @@ export default defineConfig([
               from: { element: { type: 'platform' } },
               disallow: {
                 to: {
-                  element: { types: { anyOf: ['data', 'theme', 'admin', 'shell', 'palettes'] } },
+                  element: {
+                    types: { anyOf: ['integrations', 'theme', 'admin', 'shell', 'palettes'] },
+                  },
                 },
               },
             },
-            // Data layer is pure — must not know about presentation.
+            // Integrations layer is pure — must not know about presentation.
             {
-              from: { element: { type: 'data' } },
+              from: { element: { type: 'integrations' } },
               disallow: {
                 to: { element: { types: { anyOf: ['theme', 'admin', 'shell'] } } },
               },
@@ -75,7 +77,7 @@ export default defineConfig([
             // Shared UI atoms stay generic — no integration awareness.
             {
               from: { element: { type: 'ui' } },
-              disallow: { to: { element: { type: 'data' } } },
+              disallow: { to: { element: { type: 'integrations' } } },
             },
             // The shell must not favour a concrete theme; themes register
             // themselves (see the side-effect import in src/App.tsx).

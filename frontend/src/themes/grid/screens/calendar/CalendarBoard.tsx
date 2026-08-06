@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
-import { useMonthCalendar } from '@/data/google-calendar'
+import { useMonthCalendar } from '@/integrations/google-calendar'
 import { MonthGrid } from './MonthGrid'
 import { DayDetailModal } from './DayDetailModal'
 

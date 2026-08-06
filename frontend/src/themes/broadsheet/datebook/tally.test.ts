@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { computeMonthTally } from './tally'
-import type { CalendarEvent } from '@/data/google-calendar'
+import type { CalendarEvent } from '@/integrations/google-calendar'
 
 const timed = (id: string, summary: string): CalendarEvent => ({
   id,

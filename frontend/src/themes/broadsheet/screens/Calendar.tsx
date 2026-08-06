@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useMonthCalendar } from '@/data/google-calendar'
-import { useCountdowns } from '@/data/countdowns'
+import { useMonthCalendar } from '@/integrations/google-calendar'
+import { useCountdowns } from '@/integrations/countdowns'
 import { DatebookMasthead } from '@/themes/broadsheet/datebook/DatebookMasthead'
 import { MonthGrid } from '@/themes/broadsheet/datebook/MonthGrid'
 import { computeMonthTally } from '@/themes/broadsheet/datebook/tally'

@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { Footer } from './Footer'
 
 const useMusic = vi.hoisted(() => vi.fn())
-vi.mock('@/data/music', () => ({ useMusic }))
+vi.mock('@/integrations/music', () => ({ useMusic }))
 
 describe('Footer', () => {
   beforeEach(() => {

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
-import { useMusic, useSearch, getImageUrl } from '@/data/music'
-import type { SearchItem } from '@/data/music'
+import { useMusic, useSearch, getImageUrl } from '@/integrations/music'
+import type { SearchItem } from '@/integrations/music'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { ShelfGrid } from './ShelfGrid'
 import type { ShelfCardItem } from './ShelfCard'

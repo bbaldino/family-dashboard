@@ -4,7 +4,7 @@ import { CentreSpreadRunningOrder } from './CentreSpreadRunningOrder'
 import { MAX_RUNNING_ORDER_ROWS } from './centre-spread-capacity'
 
 const useQueue = vi.hoisted(() => vi.fn())
-vi.mock('@/data/music', () => ({ useQueue }))
+vi.mock('@/integrations/music', () => ({ useQueue }))
 
 const current = {
   title: 'Amber Hours',

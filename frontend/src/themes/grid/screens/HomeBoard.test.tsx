@@ -12,13 +12,13 @@ const smallMeta = {
   sizePreference: { orientation: 'square' as const, relativeSize: 'small' as const },
 }
 
-vi.mock('@/data/google-calendar', () => ({
+vi.mock('@/integrations/google-calendar', () => ({
   useGoogleCalendar: () => ({ data: [], isLoading: false, error: null, refetch: vi.fn() }),
 }))
-vi.mock('@/data/weather', () => ({
+vi.mock('@/integrations/weather', () => ({
   useHeroWeather: () => null,
 }))
-vi.mock('@/data/driving-time', () => ({
+vi.mock('@/integrations/driving-time', () => ({
   useDrivingTime: () => ({}),
 }))
 vi.mock('@/themes/grid/widgets/timers/TimerBanner', () => ({

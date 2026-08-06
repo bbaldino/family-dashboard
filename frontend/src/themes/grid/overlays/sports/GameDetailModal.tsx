@@ -1,5 +1,5 @@
 import { Modal } from '@/ui/Modal'
-import type { Game } from '@/data/sports'
+import type { Game } from '@/integrations/sports'
 import { MlbSituation } from '@/themes/grid/widgets/sports/MlbSituation'
 import { GameHeadline } from '@/themes/grid/widgets/sports/GameHeadline'
 import { AiFinalRecap } from '@/themes/grid/widgets/sports/AiFinalRecap'

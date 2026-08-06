@@ -1,4 +1,4 @@
-import { useMusic, useRoomPills } from '@/data/music'
+import { useMusic, useRoomPills } from '@/integrations/music'
 import { MastheadFrame } from '@/themes/broadsheet/ui/MastheadFrame'
 import { mastheadKickerStyle, mastheadNumeralStyle } from '@/themes/broadsheet/ui/masthead-styles'
 import { INK2 } from './colors'

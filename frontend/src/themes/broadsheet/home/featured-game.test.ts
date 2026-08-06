@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { pickFeaturedGame } from './featured-game'
-import type { Game, GameState } from '@/data/sports'
+import type { Game, GameState } from '@/integrations/sports'
 
 const game = (id: string, state: GameState): Game =>
   ({

@@ -13,7 +13,7 @@ export default defineConfig({
   server: {
     allowedHosts: ['dashboard.baldino.me'],
     // The doorbell page is embedded cross-origin and we hand it `@font-face`
-    // rules pointing back here (see `data/doorbell/theming.ts`). Fonts are
+    // rules pointing back here (see `integrations/doorbell/theming.ts`). Fonts are
     // CORS-restricted even from plain CSS, and Vite sends no
     // `Access-Control-Allow-Origin` by default, so without this every face
     // fails to load and silently falls back to a generic family.
@@ -35,7 +35,7 @@ export default defineConfig({
     // tests so one test's vi.spyOn(...) can't leak its stubbed behavior into
     // the next test in the same file.
     restoreMocks: true,
-    // Pin the timezone so local-date bucketing (e.g. src/data/google-calendar)
+    // Pin the timezone so local-date bucketing (e.g. src/integrations/google-calendar)
     // is deterministic regardless of where the suite runs.
     env: { TZ: 'America/Los_Angeles' },
     server: {

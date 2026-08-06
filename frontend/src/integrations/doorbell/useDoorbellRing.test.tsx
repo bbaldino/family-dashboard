@@ -5,7 +5,7 @@ const useHaEntity = vi.hoisted(() => vi.fn())
 vi.mock('@/hooks/useHaEntity', () => ({ useHaEntity }))
 
 const play = vi.hoisted(() => vi.fn(() => ({ close: () => Promise.resolve() })))
-vi.mock('@/data/timers', () => ({ getAlarmById: () => ({ play }) }))
+vi.mock('@/integrations/timers', () => ({ getAlarmById: () => ({ play }) }))
 
 import { useDoorbellRing } from './useDoorbellRing'
 

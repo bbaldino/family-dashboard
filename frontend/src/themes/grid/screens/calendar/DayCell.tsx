@@ -1,4 +1,4 @@
-import type { CalendarEvent } from '@/data/google-calendar'
+import type { CalendarEvent } from '@/integrations/google-calendar'
 import { formatEventTimeCompact } from './formatEventTime'
 
 const MAX_PILLS = 4

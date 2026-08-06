@@ -3,7 +3,7 @@
  * name, per the design mock (`docs/superpowers/designs/broadsheet/media.jsx:32-51`).
  * This is a designed fallback, not a placeholder: Music Assistant is
  * unreachable from this machine and the music fixtures set every image to
- * `null` (see `src/data/music/fixtures.ts`'s header comment), so this is
+ * `null` (see `src/integrations/music/fixtures.ts`'s header comment), so this is
  * what the screen actually shows while it's being built, and often in
  * production too — plenty of local/imported tracks carry no artwork.
  *

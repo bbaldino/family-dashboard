@@ -1,5 +1,5 @@
 import type { WidgetMeta } from '@/lib/widget-types'
-import { useLunchMenu } from '@/data/nutrislice'
+import { useLunchMenu } from '@/integrations/nutrislice'
 
 export function useLunchWidgetMeta(): WidgetMeta {
   const { data } = useLunchMenu()

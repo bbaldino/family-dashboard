@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
 import { MapPin, Car } from 'lucide-react'
-import { useGoogleCalendar } from '@/data/google-calendar'
-import type { CalendarDay, CalendarEvent } from '@/data/google-calendar'
-import { useDrivingTime } from '@/data/driving-time'
-import type { EventDriveInfo } from '@/data/driving-time'
+import { useGoogleCalendar } from '@/integrations/google-calendar'
+import type { CalendarDay, CalendarEvent } from '@/integrations/google-calendar'
+import { useDrivingTime } from '@/integrations/driving-time'
+import type { EventDriveInfo } from '@/integrations/driving-time'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { formatEventTime } from './event-format'
 

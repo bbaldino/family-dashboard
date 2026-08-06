@@ -1,8 +1,8 @@
-import type { CalendarEvent, CalendarDay } from '@/data/google-calendar'
+import type { CalendarEvent, CalendarDay } from '@/integrations/google-calendar'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
 import { ErrorDisplay } from '@/ui/ErrorDisplay'
 import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
-import { useDrivingTime } from '@/data/driving-time'
+import { useDrivingTime } from '@/integrations/driving-time'
 import { DriveTag } from '@/themes/grid/widgets/driving-time/DriveTag'
 
 function formatEventTime(event: CalendarEvent): string {

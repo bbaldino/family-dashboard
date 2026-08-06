@@ -1,4 +1,4 @@
-import type { Game, GameTeam, LinescoreEntry, MlbSituationData, Play } from '@/data/sports'
+import type { Game, GameTeam, LinescoreEntry, MlbSituationData, Play } from '@/integrations/sports'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { TeamCap } from '@/themes/broadsheet/ui/TeamCap'
 

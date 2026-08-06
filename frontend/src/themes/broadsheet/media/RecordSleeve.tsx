@@ -1,4 +1,4 @@
-import type { AlbumDetail } from '@/data/music'
+import type { AlbumDetail } from '@/integrations/music'
 import { Cover } from './Cover'
 import { INK2 } from './colors'
 import { sumDurationSeconds, formatRuntimeMinutes } from './album-runtime'

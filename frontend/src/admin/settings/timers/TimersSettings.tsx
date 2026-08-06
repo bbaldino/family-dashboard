@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/ui/Button'
-import { ALARM_SOUNDS, DEFAULT_ALARM_ID } from '@/data/timers'
+import { ALARM_SOUNDS, DEFAULT_ALARM_ID } from '@/integrations/timers'
 
 export function TimersSettings() {
   const [serviceUrl, setServiceUrl] = useState('')

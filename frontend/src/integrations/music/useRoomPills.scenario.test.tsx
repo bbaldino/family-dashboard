@@ -18,13 +18,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
  * fixture-shaped id directly, which makes the id-agreement question
  * disappear rather than test it. This file instead mocks config to return
  * a value that looks like the real, unrelated Sonos id, activates a real
- * scenario via `@/data/scenario`, and leaves `usePlayers` completely real
+ * scenario via `@/lib/scenario`, and leaves `usePlayers` completely real
  * (not mocked) — so it goes through the actual scenario short-circuit in
  * `usePlayers.ts`. If `useRoomPills` ever again preferred the config value
  * over the scenario's own anchor, this test fails the same way the pills
  * failed in the browser: an empty pill list.
  */
-vi.mock('@/data/scenario', () => ({ activeScenario: 'packed' }))
+vi.mock('@/lib/scenario', () => ({ activeScenario: 'packed' }))
 
 const useIntegrationConfig = vi.hoisted(() => vi.fn())
 vi.mock('@/platform', async (importOriginal) => ({

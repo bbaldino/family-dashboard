@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { CentreSpreadCredits } from './CentreSpreadCredits'
 
 const useRoomPills = vi.hoisted(() => vi.fn())
-vi.mock('@/data/music', () => ({ useRoomPills }))
+vi.mock('@/integrations/music', () => ({ useRoomPills }))
 
 const kitchen = {
   playerId: 'kitchen',

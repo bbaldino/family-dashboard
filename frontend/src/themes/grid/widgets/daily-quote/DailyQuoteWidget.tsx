@@ -1,5 +1,5 @@
 import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
-import { useDailyQuote } from '@/data/daily-quote'
+import { useDailyQuote } from '@/integrations/daily-quote'
 
 export function DailyQuoteWidget() {
   const { data, isLoading, error } = useDailyQuote()
