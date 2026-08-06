@@ -112,15 +112,22 @@ async function fetchRouteDuration(
     throw new Error(`routes request failed: ${resp.status}`)
   }
   // `.text()` + `JSON.parse`, not `.json()` — matches `useIntegrationQuery`'s
-  // fetch-capability call, which reads the body this way so an empty
-  // response doesn't throw. Kept consistent so both call sites treat the
-  // `/api/fetch` response the same way.
+  // fetch-capability call, so both call sites read an `/api/fetch` response
+  // the same way.
   const text = await resp.text()
-  const data = (text ? JSON.parse(text) : {}) as RoutesResponse
-  // Mirrors the Rust's `.unwrap_or("0s")` — an upstream success with no
-  // route in the response still produces a (zero) duration rather than
-  // being treated as a failure. Only a non-2xx or network error should
-  // skip the update, and the caller's try/catch handles that.
+  // An empty body is a failure, not an empty result. `.json()` used to throw
+  // here, which skipped the update and left the destination showing nothing.
+  // Falling through instead would hit the `?? '0s'` below and render a
+  // confident "0 min drive" — on a wall display that reads as "leave now",
+  // which is worse than showing no estimate at all.
+  if (!text) {
+    throw new Error('routes response was empty')
+  }
+  const data = JSON.parse(text) as RoutesResponse
+  // Mirrors the Rust's `.unwrap_or("0s")` — an upstream success carrying a
+  // parseable body but no route still produces a zero duration rather than
+  // being treated as a failure. Ported deliberately; only the empty-body case
+  // above diverges from it.
   const raw = data.routes?.[0]?.duration ?? '0s'
   return parseDurationSecs(raw)
 }
