@@ -13,7 +13,6 @@ import { themeIntegration } from '@/palettes/config'
 import { drivingTimeIntegration } from '@/data/driving-time'
 import { planIntegration } from '@/data/plan'
 import { musicIntegration } from '@/data/music'
-import { dashboardIntegration } from '@/data/dashboard'
 import { llmIntegration } from '@/data/llm'
 import { onThisDayIntegration } from '@/data/on-this-day'
 import { wordOfTheDayIntegration } from '@/data/word-of-the-day'
@@ -34,7 +33,6 @@ export const integrations: Integration<any>[] = [
   drivingTimeIntegration,
   planIntegration,
   musicIntegration,
-  dashboardIntegration,
   llmIntegration,
   onThisDayIntegration,
   wordOfTheDayIntegration,
