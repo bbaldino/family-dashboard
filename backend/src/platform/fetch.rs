@@ -42,10 +42,10 @@ use crate::error::AppError;
 /// rejects a legitimate page is worse than the memory it saves, and the
 /// realistic worst case here is small: entries this large only come from
 /// `expect: "text"`, which as of this writing has exactly one caller
-/// (`word_of_the_day`, one Merriam-Webster page, refreshed on a daily TTL) —
-/// nowhere near 500 distinct large entries. Revisit if a second high-volume
-/// text caller shows up, or add real memory pressure monitoring instead of
-/// guessing at a byte limit.
+/// (`word-of-the-day`, one Merriam-Webster RSS feed, refreshed on an hourly
+/// TTL) — nowhere near 500 distinct large entries. Revisit if a second
+/// high-volume text caller shows up, or add real memory pressure monitoring
+/// instead of guessing at a byte limit.
 const MAX_CACHE_ENTRIES: usize = 500;
 
 #[derive(Clone)]
@@ -149,11 +149,11 @@ fn parse_method(raw: Option<&str>) -> Result<reqwest::Method, AppError> {
 /// How to interpret the upstream response body.
 ///
 /// `Json` is today's behaviour: parse as JSON, return as-is. `Text` exists
-/// for upstreams that are not JSON at all — `word_of_the_day` scrapes
-/// Merriam-Webster's HTML page, which a `resp.json()` call can only ever
-/// fail on. The response is still wrapped as JSON (`{"text": "<body>"}`) so
-/// every caller of this endpoint can assume a JSON response and never branch
-/// on `Content-Type`.
+/// for upstreams that are not JSON at all — `word-of-the-day` fetches
+/// Merriam-Webster's Word of the Day RSS feed, which a `resp.json()` call
+/// can only ever fail on. The response is still wrapped as JSON
+/// (`{"text": "<body>"}`) so every caller of this endpoint can assume a
+/// JSON response and never branch on `Content-Type`.
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Expect {
     Json,
