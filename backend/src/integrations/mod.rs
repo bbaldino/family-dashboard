@@ -9,7 +9,6 @@ pub mod nutrislice;
 pub mod on_this_day;
 pub mod packages;
 pub mod sports;
-pub mod trivia;
 pub mod word_of_the_day;
 
 pub use config_helpers::IntegrationConfig;
@@ -31,7 +30,6 @@ pub fn router(pool: SqlitePool) -> Router {
         .nest("/music", music::router(pool.clone()))
         .nest("/llm", crate::llm::router(pool.clone()))
         .nest("/on-this-day", on_this_day::router(pool.clone()))
-        .nest("/trivia", trivia::router())
         .nest("/word-of-the-day", word_of_the_day::router())
         .nest("/fetch", crate::platform::fetch::router())
 }
