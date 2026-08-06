@@ -168,6 +168,25 @@ describe('PeopleTab', () => {
     ])
   })
 
+  it("renders the server's message when a save fails, leaving the form open", async () => {
+    // Added after the rewire, not a characterization test. The old raw `fetch`
+    // never checked `resp.ok`, so a rejected save closed the form and silently
+    // did nothing; going through the integration's error handling it now says
+    // what went wrong and keeps what was typed.
+    const server = startChoreServer({
+      people: PEOPLE,
+      failWhen: (_url, method) => method === 'POST',
+    })
+    await renderLoaded(server)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Person' }))
+    fireEvent.change(screen.getByPlaceholderText('Person name'), { target: { value: 'Kai' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('boom')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('Person name')).toHaveValue('Kai')
+  })
+
   it('deletes a person and drops them from the list', async () => {
     const server = startChoreServer({ people: PEOPLE })
     await renderLoaded(server)
