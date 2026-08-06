@@ -136,4 +136,25 @@ describe('HomeBoard', () => {
     await waitFor(() => expect(screen.getByTestId('widget-chores')).toBeInTheDocument())
     await waitFor(() => expect(screen.queryByTestId('widget-sports')).not.toBeInTheDocument())
   })
+
+  it('falls back only the invalid key, leaving the other valid keys intact', async () => {
+    // columns=30 exceeds the schema's max(24) and must fall back to its own
+    // default. It must not also wipe out the valid, unrelated rows and
+    // hidden values that came along with it in the same config payload.
+    seedConfig({
+      'theme.grid.columns': '30',
+      'theme.grid.rows': '7',
+      'theme.grid.hidden': 'sports',
+    })
+    renderHomeBoard()
+
+    const defaults = gridSettingsSchema.parse({})
+    await waitFor(() => {
+      const grid = findGridContainer()
+      expect(grid.style.gridTemplateColumns).toBe(`repeat(${defaults.columns}, 1fr)`)
+      expect(grid.style.gridTemplateRows).toBe('repeat(7, 1fr)')
+    })
+    await waitFor(() => expect(screen.getByTestId('widget-chores')).toBeInTheDocument())
+    expect(screen.queryByTestId('widget-sports')).not.toBeInTheDocument()
+  })
 })

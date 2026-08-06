@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import type { z } from 'zod'
 import { useNavigate } from 'react-router-dom'
 import { HeroStrip } from '@/themes/grid/ui/HeroStrip'
 import type { HeroEvent } from '@/themes/grid/ui/HeroStrip'
@@ -35,6 +36,25 @@ import { useCalendarWidgetMeta } from '@/themes/grid/widget-meta/google-calendar
 const GRID_CONFIG_PREFIX = 'theme.grid.'
 
 /**
+ * Parse a single `theme.grid.<key>` value against that key's own field
+ * schema, falling back to that field's own default when the value is
+ * missing or invalid. Deliberately per-key rather than one `safeParse` over
+ * the whole scoped object: a single bad value (e.g. columns above the
+ * schema's max) must not also discard unrelated, valid keys like `hidden` —
+ * each setting is independent in the admin panel, so it must stay
+ * independent here too.
+ */
+function parseGridField<T extends z.ZodTypeAny>(
+  data: Record<string, string> | undefined,
+  key: string,
+  fieldSchema: T,
+): z.infer<T> {
+  const raw = data?.[`${GRID_CONFIG_PREFIX}${key}`]
+  const result = fieldSchema.safeParse(raw)
+  return result.success ? result.data : fieldSchema.parse(undefined)
+}
+
+/**
  * Grid's layout settings, read through the shared `/api/config` query and
  * validated against `gridSettingsSchema` — the same schema that backs the
  * admin settings panel, so the renderer and the form can't disagree about
@@ -46,16 +66,14 @@ const GRID_CONFIG_PREFIX = 'theme.grid.'
 function useGridSettings() {
   const { data } = useAllConfig()
 
-  return useMemo(() => {
-    const scoped: Record<string, string> = {}
-    for (const [key, value] of Object.entries(data ?? {})) {
-      if (key.startsWith(GRID_CONFIG_PREFIX)) {
-        scoped[key.slice(GRID_CONFIG_PREFIX.length)] = value
-      }
-    }
-    const result = gridSettingsSchema.safeParse(scoped)
-    return result.success ? result.data : gridSettingsSchema.parse({})
-  }, [data])
+  return useMemo(
+    () => ({
+      columns: parseGridField(data, 'columns', gridSettingsSchema.shape.columns),
+      rows: parseGridField(data, 'rows', gridSettingsSchema.shape.rows),
+      hidden: parseGridField(data, 'hidden', gridSettingsSchema.shape.hidden),
+    }),
+    [data],
+  )
 }
 
 function getHeroEvents(
