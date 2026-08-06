@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { HeroStrip } from '@/themes/grid/ui/HeroStrip'
 import type { HeroEvent } from '@/themes/grid/ui/HeroStrip'
 import { BottomSheet } from '@/ui/BottomSheet'
+import { useAllConfig } from '@/platform'
+import { gridSettingsSchema } from '@/themes/grid/settings-declaration'
 import { useGoogleCalendar } from '@/data/google-calendar'
 import type { CalendarDay } from '@/data/google-calendar'
 import { CalendarWidget } from '@/themes/grid/widgets/google-calendar/CalendarWidget'
@@ -30,44 +32,30 @@ import { CellGridLayout } from '@/themes/grid/layout/CellGridLayout'
 import type { CellGridWidget } from '@/themes/grid/layout/CellGridLayout'
 import { useCalendarWidgetMeta } from '@/themes/grid/widget-meta/google-calendar'
 
-function useGridConfig(): { columns: number; rows: number } {
-  const [config, setConfig] = useState({ columns: 8, rows: 6 })
+const GRID_CONFIG_PREFIX = 'theme.grid.'
 
-  useEffect(() => {
-    fetch('/api/config')
-      .then((r) => r.json())
-      .then((data: Record<string, string>) => {
-        const cols = parseInt(data['dashboard.columns'] ?? '8', 10) || 8
-        const rows = parseInt(data['dashboard.rows'] ?? '6', 10) || 6
-        setConfig({ columns: cols, rows: rows })
-      })
-      .catch(() => {})
-  }, [])
+/**
+ * Grid's layout settings, read through the shared `/api/config` query and
+ * validated against `gridSettingsSchema` — the same schema that backs the
+ * admin settings panel, so the renderer and the form can't disagree about
+ * what "default" means. Replaces two separate mount-only `fetch` calls that
+ * used to read the now-retired `dashboard.*` keys; going through
+ * `useAllConfig` also means a layout change now shows up within its poll
+ * interval instead of requiring a page reload.
+ */
+function useGridSettings() {
+  const { data } = useAllConfig()
 
-  return config
-}
-
-function useHiddenWidgets(): Set<string> {
-  const [hidden, setHidden] = useState<Set<string>>(new Set())
-
-  useEffect(() => {
-    fetch('/api/config')
-      .then((r) => r.json())
-      .then((data: Record<string, string>) => {
-        const hiddenStr = data['dashboard.hidden'] ?? ''
-        setHidden(
-          new Set(
-            hiddenStr
-              .split(',')
-              .map((s) => s.trim())
-              .filter(Boolean),
-          ),
-        )
-      })
-      .catch(() => {})
-  }, [])
-
-  return hidden
+  return useMemo(() => {
+    const scoped: Record<string, string> = {}
+    for (const [key, value] of Object.entries(data ?? {})) {
+      if (key.startsWith(GRID_CONFIG_PREFIX)) {
+        scoped[key.slice(GRID_CONFIG_PREFIX.length)] = value
+      }
+    }
+    const result = gridSettingsSchema.safeParse(scoped)
+    return result.success ? result.data : gridSettingsSchema.parse({})
+  }, [data])
 }
 
 function getHeroEvents(
@@ -218,8 +206,18 @@ function Widgets({
 
 export function HomeBoard() {
   const calendar = useGoogleCalendar()
-  const grid = useGridConfig()
-  const hidden = useHiddenWidgets()
+  const gridSettings = useGridSettings()
+  const grid = { columns: gridSettings.columns, rows: gridSettings.rows }
+  const hidden = useMemo(
+    () =>
+      new Set(
+        gridSettings.hidden
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean),
+      ),
+    [gridSettings.hidden],
+  )
 
   const allEvents = (calendar.data ?? []).flatMap((d) => d.events)
   const driveInfo = useDrivingTime(allEvents)
