@@ -233,6 +233,27 @@ describe('SportsSettings', () => {
 
       expect(requested.filter((u) => u.includes('/teams?league='))).toEqual([])
     })
+
+    // Added after the refactor, not a characterization test: the banner is the
+    // only sign a league's roster never arrived, and the panel underneath it
+    // sits on "Loading teams..." forever either way.
+    it('names the league in the banner when its roster fails to load', async () => {
+      mockFetch({ tracked: [] })
+      const original = globalThis.fetch
+      globalThis.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        if (String(input).includes('/teams?league=nba')) {
+          return Promise.reject(new Error('network down'))
+        }
+        return (original as typeof fetch)(input, init)
+      }) as unknown as typeof fetch
+
+      render(<SportsSettings />, { wrapper: Wrapper })
+      await screen.findByText('Browse by League')
+
+      fireEvent.click(screen.getByRole('button', { name: /NBA/ }))
+
+      expect(await screen.findByText('Failed to load NBA teams')).toBeInTheDocument()
+    })
   })
 
   describe('team search', () => {

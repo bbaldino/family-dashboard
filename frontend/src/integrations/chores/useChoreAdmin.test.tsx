@@ -321,6 +321,20 @@ describe('chores', () => {
     expect(isInvalidated(queryClient, TODAY_KEY)).toBe(true)
   })
 
+  it('invalidates the catalog, the week and the dashboard after an update', async () => {
+    mockFetch()
+    const queryClient = newClient()
+    seedCaches(queryClient)
+    const { result } = setup(() => useUpdateChore(), queryClient)
+
+    await result.current.mutateAsync({ id: 100, body: input })
+
+    expect(isInvalidated(queryClient, CHORE_LIST_KEY)).toBe(true)
+    // A renamed chore is embedded in every assignment it appears in.
+    expect(isInvalidated(queryClient, assignmentsKey(WEEK))).toBe(true)
+    expect(isInvalidated(queryClient, TODAY_KEY)).toBe(true)
+  })
+
   it('invalidates the dashboard after a delete', async () => {
     mockFetch()
     const queryClient = newClient()
