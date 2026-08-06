@@ -201,8 +201,10 @@ mod grid_theme_migration_tests {
             Some("sports,lunch")
         );
 
-        // This is a copy, not a move: the frontend still reads dashboard.*
-        // until Task 3 lands, so the source keys must survive the migration.
+        // This is a copy, not a move. Nothing reads `dashboard.*` any more,
+        // but the source keys must still survive: a rollback to an older
+        // build would need them, and deleting a user's config on a one-way
+        // assumption is not worth the few bytes it saves.
         assert_eq!(
             get_config(&pool, "dashboard.columns").await.as_deref(),
             Some("10")
