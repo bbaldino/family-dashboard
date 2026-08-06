@@ -12,7 +12,6 @@ import { packagesIntegration } from '@/integrations/packages'
 import { timersIntegration } from '@/integrations/timers'
 import { themeIntegration } from '@/palettes/config'
 import { drivingTimeIntegration } from '@/integrations/driving-time'
-import { planIntegration } from '@/integrations/plan'
 import { musicIntegration } from '@/integrations/music'
 import { llmProvider } from '@/providers/llm'
 import { onThisDayIntegration } from '@/integrations/on-this-day'
@@ -48,7 +47,6 @@ export const settingsEntries: Integration<any>[] = [
   timersIntegration,
   themeIntegration,
   drivingTimeIntegration,
-  planIntegration,
   musicIntegration,
   llmProvider,
   onThisDayIntegration,
