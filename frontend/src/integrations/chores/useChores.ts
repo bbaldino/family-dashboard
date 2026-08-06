@@ -2,7 +2,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { choresIntegration } from './config'
 import type { TodayResponse } from './types'
 
-const TODAY_KEY = ['chores', 'today'] as const
+/**
+ * The wall dashboard's today view. Exported because the admin hooks in
+ * `useChoreAdmin` write the same underlying rows through different endpoints
+ * and have to invalidate this entry too — a parallel key there would leave the
+ * kitchen tablet stale until its next poll.
+ */
+export const TODAY_KEY = ['chores', 'today'] as const
 
 /**
  * Flip one assignment's `completed` in a cached `TodayResponse`, keeping the
