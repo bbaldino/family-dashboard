@@ -1,4 +1,6 @@
-import { usePolling, type UsePollingResult } from '@/hooks/usePolling'
+import type { z } from 'zod'
+import type { UsePollingResult } from '@/hooks/usePolling'
+import { useIntegrationData } from '@/platform'
 import { nutrisliceIntegration } from './config'
 import { parseLocalDate, toLocalDateStr } from '@/utils/date'
 
@@ -129,29 +131,61 @@ function nextMonday(from: Date): Date {
   return d
 }
 
-async function fetchMenu(): Promise<LunchMenuData> {
+type NutriSliceConfig = z.infer<typeof nutrisliceIntegration.schema>
+
+/**
+ * `date` is a **path segment** (`YYYY/MM/DD`, slashes and all), not a query
+ * value — mirrors the deleted Rust route's `format!(".../{}", date)`. It
+ * must go in unencoded; running the whole date string through
+ * `encodeURIComponent` would turn its slashes into `%2F` and break the
+ * upstream path.
+ */
+function menuUrl(cfg: NutriSliceConfig, dateSegment: string): string {
+  return `https://${cfg.district}.api.nutrislice.com/menu/api/weeks/school/${cfg.school}/menu-type/${cfg.menu_type}/${dateSegment}?format=json`
+}
+
+// NutriSlice publishes a week's menu at a time and updates it at most once a
+// day (typically overnight). The hook itself only re-polls hourly (below),
+// so caching the upstream response for an hour keeps the backend
+// fetch-proxy cache warm between polls — every poll inside the same hour is
+// served from cache — without ever risking a menu update going unseen for
+// more than the hook's own poll cadence.
+const MENU_TTL_SECS = 60 * 60
+
+function useWeekMenu(dateSegment: string) {
+  // No explicit `<Raw, Out>` type args — per `useWeatherData`'s comment in
+  // `integrations/weather/index.ts`, that would leave `T` unfilled and
+  // fall back to its `never`-ish default, which then rejects
+  // `nutrisliceIntegration`'s concrete config shape below. `select` is a
+  // pass-through (the response is used raw — see `deriveLunchMenu`), but
+  // typing its parameter is what lets `Raw` and `T` both infer correctly
+  // from the arguments instead.
+  return useIntegrationData(
+    nutrisliceIntegration,
+    (cfg) => ({
+      url: menuUrl(cfg, dateSegment),
+      ttlSecs: MENU_TTL_SECS,
+    }),
+    {
+      select: (d: NutriSliceResponse): NutriSliceResponse => d,
+      refetchInterval: 60 * 60 * 1000, // hourly
+    },
+  )
+}
+
+function deriveLunchMenu(
+  thisWeek: NutriSliceResponse,
+  nextWeek: NutriSliceResponse,
+): LunchMenuData {
   const now = new Date()
-  const dateStr = formatDate(now)
-
-  // Fetch this week
-  const data = await nutrisliceIntegration.api!.get<NutriSliceResponse>(
-    `/menu?date=${encodeURIComponent(dateStr)}`,
-  )
-
-  // Fetch next week for expanded view
-  const nextWeekDate = nextMonday(now)
-  const nextWeekData = await nutrisliceIntegration.api!.get<NutriSliceResponse>(
-    `/menu?date=${encodeURIComponent(formatDate(nextWeekDate))}`,
-  )
-
-  const allDays = [...(data.days ?? []), ...(nextWeekData.days ?? [])]
+  const allDays = [...(thisWeek.days ?? []), ...(nextWeek.days ?? [])]
 
   const todayStr = toLocalDateStr(now)
   const tomorrow = new Date(now)
   tomorrow.setDate(tomorrow.getDate() + 1)
   const tomorrowStr = toLocalDateStr(tomorrow)
 
-  const todayData = data.days?.find((d) => d.date === todayStr)
+  const todayData = thisWeek.days?.find((d) => d.date === todayStr)
   const tomorrowData = allDays.find((d) => d.date === tomorrowStr)
 
   const week: LunchMenuDay[] = allDays
@@ -174,10 +208,32 @@ async function fetchMenu(): Promise<LunchMenuData> {
 
 export type LunchMenuResult = UsePollingResult<LunchMenuData>
 
+/**
+ * Composes two upstream weeks (this week + next, for the expanded view) into
+ * one `LunchMenuData` and adapts the pair of `useIntegrationData` results
+ * back to `UsePollingResult` — the shape `usePolling` produced, which four
+ * consumers (`LunchMenuWidget`, the grid widget-meta, broadsheet's `Home`
+ * and `HouseholdColumn`) still depend on. `HouseholdColumn` in particular
+ * documents relying on `data` being `null` (not `undefined`) until a fetch
+ * has actually succeeded, so that contract is preserved exactly: `data` is
+ * `null` unless *both* weeks have loaded, matching the old `fetchMenu`,
+ * which threw (and left the query without data) if either await failed.
+ */
 export function useLunchMenu(): LunchMenuResult {
-  return usePolling<LunchMenuData>({
-    queryKey: ['nutrislice', 'menu'],
-    fetcher: fetchMenu,
-    intervalMs: 60 * 60 * 1000, // hourly
-  })
+  const now = new Date()
+  const thisWeek = useWeekMenu(formatDate(now))
+  const nextWeek = useWeekMenu(formatDate(nextMonday(now)))
+
+  const data = thisWeek.data && nextWeek.data ? deriveLunchMenu(thisWeek.data, nextWeek.data) : null
+
+  const errorObj = thisWeek.error ?? nextWeek.error
+
+  return {
+    data,
+    error: errorObj ? errorObj.message : null,
+    isLoading: thisWeek.isLoading || nextWeek.isLoading,
+    refetch: async () => {
+      await Promise.all([thisWeek.refetch(), nextWeek.refetch()])
+    },
+  }
 }

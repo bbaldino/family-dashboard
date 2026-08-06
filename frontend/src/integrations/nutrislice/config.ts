@@ -1,6 +1,15 @@
 import { z } from 'zod'
 import { defineIntegration } from '@/platform'
 
+/**
+ * `defaults` here (`bagby-elementary-school` / `cambriansd` / `lunch`) carry
+ * over the deleted Rust route's `config.get_or(...)` fallbacks — the URL
+ * builder in `useLunchMenu.ts` no longer applies any defaulting of its own.
+ *
+ * The `.api` client this integration carries points at `/api/nutrislice`, a
+ * route that no longer exists — `useLunchMenu` goes through `/api/fetch`
+ * (`useIntegrationData`) instead; nothing here uses `.api`.
+ */
 export const nutrisliceIntegration = defineIntegration({
   id: 'nutrislice',
   name: 'School Lunch Menu',
