@@ -1,7 +1,6 @@
 pub mod chores;
 pub mod config;
 pub mod config_helpers;
-pub mod driving_time;
 pub mod google_calendar;
 pub mod health;
 pub mod music;
@@ -22,7 +21,6 @@ pub fn router(pool: SqlitePool) -> Router {
         .nest("/google", google_calendar::auth::router(pool.clone()))
         .nest("/health", health::router(pool.clone()))
         .nest("/sports", sports::router(pool.clone()))
-        .nest("/driving-time", driving_time::router(pool.clone()))
         .nest("/music", music::router(pool.clone()))
         .nest("/llm", crate::llm::router(pool.clone()))
         .nest("/on-this-day", on_this_day::router(pool.clone()))

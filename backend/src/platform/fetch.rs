@@ -97,8 +97,9 @@ impl ResponseCache {
 ///
 /// `method` defaults to GET and is restricted to the verbs an integration
 /// legitimately needs — an upstream API call, not arbitrary HTTP. `headers`
-/// and `body` exist because real APIs need them: `driving_time` calls Google
-/// Routes with `POST`, two `X-Goog-*` headers, and a JSON body.
+/// and `body` exist because real APIs need them: Google's Routes API, for
+/// example, needs `POST`, two `X-Goog-*` headers, and a JSON body — driven
+/// by a client integration on the frontend, not a Rust router.
 #[derive(Deserialize)]
 pub struct FetchRequest {
     pub url: String,
