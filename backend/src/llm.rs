@@ -1,5 +1,18 @@
-use axum::{Json, Router, extract::State, routing::get};
-use serde::Serialize;
+//! The LLM capability: model listing and single-prompt generation against a
+//! single openai-compatible backend, configured by `llm.url`.
+//!
+//! Mirrors `platform::fetch`'s logging discipline (see that module's docs)
+//! for the same reason: `llm.url` is an operator-configured endpoint, and a
+//! prompt or its response can carry anything the caller puts in it. Neither
+//! is ever logged — errors carry the model name and upstream status only,
+//! never response content.
+
+use axum::{
+    Json, Router,
+    extract::State,
+    routing::{get, post},
+};
+use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 
 use crate::error::AppError;
@@ -8,6 +21,7 @@ use crate::integrations::IntegrationConfig;
 pub fn router(pool: SqlitePool) -> Router {
     Router::new()
         .route("/models", get(list_models))
+        .route("/generate", post(generate_route))
         .with_state(pool)
 }
 
@@ -18,81 +32,29 @@ pub struct ModelInfo {
 
 #[derive(Serialize)]
 pub struct ModelsResponse {
-    pub provider: String,
     pub models: Vec<ModelInfo>,
 }
 
 async fn list_models(State(pool): State<SqlitePool>) -> Result<Json<ModelsResponse>, AppError> {
-    let llm = IntegrationConfig::new(&pool, "llm");
-    let provider = llm.get_or("provider", "ollama").await?;
-
-    let models = match provider.as_str() {
-        "ollama" => list_ollama_models(&pool).await?,
-        "openai_compat" => list_openai_compat_models(&pool).await?,
-        other => {
-            return Err(AppError::BadRequest(format!(
-                "Unknown llm.provider '{}'",
-                other
-            )));
-        }
-    };
-
-    Ok(Json(ModelsResponse { provider, models }))
-}
-
-async fn list_ollama_models(pool: &SqlitePool) -> Result<Vec<ModelInfo>, AppError> {
-    let ollama = IntegrationConfig::new(pool, "ollama");
-    let url = ollama.get_or("url", "http://localhost:11434").await?;
-    let token = ollama.get("token").await.ok();
-
-    let client = reqwest::Client::new();
-    let mut req = client.get(format!("{}/api/tags", url.trim_end_matches('/')));
-    if let Some(token) = &token {
-        req = req.bearer_auth(token);
-    }
-
-    let resp = req
-        .send()
-        .await
-        .map_err(|e| AppError::Internal(format!("Ollama models request failed: {}", e)))?;
-    if !resp.status().is_success() {
-        return Err(AppError::Internal(format!(
-            "Ollama models returned {}",
-            resp.status()
-        )));
-    }
-
-    let data: serde_json::Value = resp
-        .json()
-        .await
-        .map_err(|e| AppError::Internal(format!("Ollama models parse failed: {}", e)))?;
-
-    Ok(data["models"]
-        .as_array()
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|m| {
-                    m["name"].as_str().map(|name| ModelInfo {
-                        name: name.to_string(),
-                    })
-                })
-                .collect()
-        })
-        .unwrap_or_default())
+    let models = list_openai_compat_models(&pool).await?;
+    Ok(Json(ModelsResponse { models }))
 }
 
 async fn list_openai_compat_models(pool: &SqlitePool) -> Result<Vec<ModelInfo>, AppError> {
     let llm = IntegrationConfig::new(pool, "llm");
-    let url = llm.get("url").await.map_err(|_| {
-        AppError::BadRequest("llm.url not configured for openai_compat provider".to_string())
-    })?;
+    let url = llm
+        .get("url")
+        .await
+        .map_err(|_| AppError::BadRequest("llm.url not configured".to_string()))?;
 
     let client = reqwest::Client::new();
     let resp = client
         .get(format!("{}/v1/models", url.trim_end_matches('/')))
         .send()
         .await
-        .map_err(|e| AppError::Internal(format!("LLM models request failed: {}", e)))?;
+        .map_err(|e| {
+            AppError::Internal(format!("LLM models request failed: {}", e.without_url()))
+        })?;
 
     if !resp.status().is_success() {
         return Err(AppError::Internal(format!(
@@ -104,7 +66,7 @@ async fn list_openai_compat_models(pool: &SqlitePool) -> Result<Vec<ModelInfo>, 
     let data: serde_json::Value = resp
         .json()
         .await
-        .map_err(|e| AppError::Internal(format!("LLM models parse failed: {}", e)))?;
+        .map_err(|e| AppError::Internal(format!("LLM models parse failed: {}", e.without_url())))?;
 
     Ok(data["data"]
         .as_array()
@@ -120,74 +82,48 @@ async fn list_openai_compat_models(pool: &SqlitePool) -> Result<Vec<ModelInfo>, 
         .unwrap_or_default())
 }
 
-/// Generate a single-prompt completion via the configured LLM provider.
+/// The request body for `POST /generate`: `{"model", "prompt"}`.
+#[derive(Deserialize)]
+pub struct GenerateRequest {
+    pub model: String,
+    pub prompt: String,
+}
+
+#[derive(Serialize)]
+pub struct GenerateResponse {
+    pub text: String,
+}
+
+/// `POST /generate` — a thin HTTP wrapper over [`generate`], letting a
+/// browser-side (client) integration run a prompt the same way an
+/// in-process one does. See
+/// `docs/superpowers/specs/2026-08-05-client-vs-service-integrations.md` for
+/// why this crosses no new trust boundary: the backend already proxies
+/// arbitrary URLs unauthenticated over `POST /api/fetch`.
+async fn generate_route(
+    State(pool): State<SqlitePool>,
+    Json(req): Json<GenerateRequest>,
+) -> Result<Json<GenerateResponse>, AppError> {
+    let text = generate(&pool, &req.model, &req.prompt).await?;
+    Ok(Json(GenerateResponse { text }))
+}
+
+/// Generate a single-prompt completion against the configured openai-compatible
+/// endpoint (`llm.url`, hit at `/v1/chat/completions`).
 ///
-/// Provider is selected by `llm.provider` config (defaults to `"ollama"` so
-/// existing deployments keep working). Supported values:
-///   - `"ollama"`        — POST to `{ollama.url}/api/generate`
-///   - `"openai_compat"` — POST to `{llm.url}/v1/chat/completions`
+/// The internal entry point: `on_this_day` and `sports` call this directly,
+/// in-process. `POST /generate` is the HTTP-reachable wrapper over the same
+/// function, for a client-side integration that can't call Rust directly.
+///
+/// Never logs `prompt` or the returned text. On failure the error carries
+/// the model name and, for a non-2xx response, the upstream status code —
+/// never the response body, which could echo either back.
 pub async fn generate(pool: &SqlitePool, model: &str, prompt: &str) -> Result<String, AppError> {
     let llm = IntegrationConfig::new(pool, "llm");
-    let provider = llm.get_or("provider", "ollama").await?;
-
-    match provider.as_str() {
-        "ollama" => generate_ollama(pool, model, prompt).await,
-        "openai_compat" => generate_openai_compat(pool, model, prompt).await,
-        other => Err(AppError::BadRequest(format!(
-            "Unknown llm.provider '{}' (expected 'ollama' or 'openai_compat')",
-            other
-        ))),
-    }
-}
-
-async fn generate_ollama(pool: &SqlitePool, model: &str, prompt: &str) -> Result<String, AppError> {
-    let ollama = IntegrationConfig::new(pool, "ollama");
-    let url = ollama.get_or("url", "http://localhost:11434").await?;
-    let token = ollama.get("token").await.ok();
-
-    let client = reqwest::Client::new();
-    let mut req = client
-        .post(format!("{}/api/generate", url.trim_end_matches('/')))
-        .json(&serde_json::json!({
-            "model": model,
-            "prompt": prompt,
-            "stream": false,
-        }));
-    if let Some(token) = &token {
-        req = req.bearer_auth(token);
-    }
-
-    let resp = req
-        .send()
+    let url = llm
+        .get("url")
         .await
-        .map_err(|e| AppError::Internal(format!("Ollama request failed: {}", e)))?;
-
-    if !resp.status().is_success() {
-        let status = resp.status();
-        let body = resp.text().await.unwrap_or_default();
-        return Err(AppError::Internal(format!(
-            "Ollama returned {} for model '{}': {}",
-            status, model, body
-        )));
-    }
-
-    let data: serde_json::Value = resp
-        .json()
-        .await
-        .map_err(|e| AppError::Internal(format!("Ollama parse failed: {}", e)))?;
-
-    Ok(data["response"].as_str().unwrap_or("").trim().to_string())
-}
-
-async fn generate_openai_compat(
-    pool: &SqlitePool,
-    model: &str,
-    prompt: &str,
-) -> Result<String, AppError> {
-    let llm = IntegrationConfig::new(pool, "llm");
-    let url = llm.get("url").await.map_err(|_| {
-        AppError::BadRequest("llm.url not configured for openai_compat provider".to_string())
-    })?;
+        .map_err(|_| AppError::BadRequest("llm.url not configured".to_string()))?;
 
     let client = reqwest::Client::new();
     let resp = client
@@ -198,21 +134,26 @@ async fn generate_openai_compat(
         }))
         .send()
         .await
-        .map_err(|e| AppError::Internal(format!("LLM request failed: {}", e)))?;
+        .map_err(|e| {
+            AppError::Internal(format!(
+                "LLM request failed for model '{model}': {}",
+                e.without_url()
+            ))
+        })?;
 
     if !resp.status().is_success() {
         let status = resp.status();
-        let body = resp.text().await.unwrap_or_default();
         return Err(AppError::Internal(format!(
-            "LLM returned {} for model '{}': {}",
-            status, model, body
+            "LLM returned {status} for model '{model}'"
         )));
     }
 
-    let data: serde_json::Value = resp
-        .json()
-        .await
-        .map_err(|e| AppError::Internal(format!("LLM parse failed: {}", e)))?;
+    let data: serde_json::Value = resp.json().await.map_err(|e| {
+        AppError::Internal(format!(
+            "LLM parse failed for model '{model}': {}",
+            e.without_url()
+        ))
+    })?;
 
     Ok(data["choices"][0]["message"]["content"]
         .as_str()

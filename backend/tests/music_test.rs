@@ -1,3 +1,8 @@
+// This file only needs `test_pool` from the shared helpers module; the
+// log-capture helpers added for `fetch_test.rs`/`llm_test.rs` go unused
+// here. Silence the resulting dead_code warning rather than pulling in an
+// unused import.
+#[allow(dead_code)]
 mod helpers;
 
 use axum::body::to_bytes;

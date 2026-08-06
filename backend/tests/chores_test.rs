@@ -4,6 +4,11 @@ use axum_test::multipart::MultipartForm;
 use chrono::Datelike;
 use serde_json::json;
 
+// This file only needs `test_app` from the shared helpers module; the
+// log-capture helpers added for `fetch_test.rs`/`llm_test.rs` go unused
+// here. Silence the resulting dead_code warning rather than pulling in an
+// unused import.
+#[allow(dead_code)]
 #[path = "helpers.rs"]
 mod helpers;
 use helpers::test_app;
