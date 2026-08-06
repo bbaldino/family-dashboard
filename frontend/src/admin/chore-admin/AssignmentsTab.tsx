@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import {
   DndContext,
   DragOverlay,
@@ -9,8 +9,16 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core'
 import { Button } from '@/ui/Button'
-import { choresIntegration } from '@/integrations/chores'
-import type { AssignmentResponse, Chore, Person } from '@/integrations/chores'
+import {
+  useAssignments,
+  useChoreList,
+  useCopyWeek,
+  useCreateAssignment,
+  useDeleteAssignment,
+  usePeople,
+  useRotateWeek,
+} from '@/integrations/chores'
+import type { AssignmentResponse, Chore } from '@/integrations/chores'
 import { ChorePool } from './ChorePool'
 import { googleCalendarIntegration, type CalendarEvent } from '@/integrations/google-calendar'
 import { eventLocalDateStr, parseLocalDate, toLocalDateStr } from '@/utils/date'
@@ -97,15 +105,29 @@ function DragOverlayChip({ name, isMeta }: { name: string; isMeta: boolean }) {
 
 export function AssignmentsTab() {
   const [weekOf, setWeekOf] = useState(() => getMonday(new Date()))
-  const [assignments, setAssignments] = useState<AssignmentResponse[]>([])
-  const [people, setPeople] = useState<Person[]>([])
-  const [chores, setChores] = useState<Chore[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [activeChore, setActiveChore] = useState<Chore | null>(null)
-  const hasLoadedOnce = useRef(false)
 
   const weekStr = toLocalDateStr(weekOf)
+
+  const assignmentsQuery = useAssignments(weekStr)
+  const peopleQuery = usePeople()
+  const choreListQuery = useChoreList()
+  const createAssignment = useCreateAssignment()
+  const deleteAssignment = useDeleteAssignment()
+  const copyWeek = useCopyWeek()
+  const rotateWeek = useRotateWeek()
+
+  const assignments = assignmentsQuery.data ?? []
+  const people = peopleQuery.data ?? []
+  const chores = choreListQuery.data ?? []
+
+  // The banner shows whichever failed most recently, so an action's error takes
+  // precedence over a stale load error, and a successful reload clears the load
+  // error on its own.
+  const [actionError, setActionError] = useState<string | null>(null)
+  const loadError = assignmentsQuery.error ?? peopleQuery.error ?? choreListQuery.error
+  const error = actionError ?? loadError?.message ?? null
+
   const [calendarEvents, setCalendarEvents] = useState<Record<number, CalendarEvent[]>>({})
 
   // Fetch calendar events for the week
@@ -163,32 +185,7 @@ export function AssignmentsTab() {
     fetchCalendar()
   }, [weekOf])
 
-  const fetchData = useCallback(async () => {
-    if (!hasLoadedOnce.current) setLoading(true)
-    setError(null)
-    try {
-      const [assignData, peopleData, choresData] = await Promise.all([
-        choresIntegration.api.get<AssignmentResponse[]>(`/assignments?week=${weekStr}`),
-        choresIntegration.api.get<Person[]>('/people'),
-        choresIntegration.api.get<Chore[]>('/chores'),
-      ])
-      setAssignments(assignData)
-      setPeople(peopleData)
-      setChores(choresData)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load data')
-    } finally {
-      setLoading(false)
-      hasLoadedOnce.current = true
-    }
-  }, [weekStr])
-
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
-
   function prevWeek() {
-    hasLoadedOnce.current = false
     setWeekOf((prev) => {
       const d = new Date(prev)
       d.setDate(d.getDate() - 7)
@@ -197,7 +194,6 @@ export function AssignmentsTab() {
   }
 
   function nextWeek() {
-    hasLoadedOnce.current = false
     setWeekOf((prev) => {
       const d = new Date(prev)
       d.setDate(d.getDate() + 7)
@@ -206,37 +202,34 @@ export function AssignmentsTab() {
   }
 
   async function copyFromLastWeek() {
-    setError(null)
+    setActionError(null)
     try {
       const prevMonday = new Date(weekOf)
       prevMonday.setDate(prevMonday.getDate() - 7)
-      await choresIntegration.api.post('/weeks/copy', {
+      await copyWeek.mutateAsync({
         from_week: toLocalDateStr(prevMonday),
         to_week: weekStr,
       })
-      await fetchData()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to copy from last week')
+      setActionError(err instanceof Error ? err.message : 'Failed to copy from last week')
     }
   }
 
   async function rotate() {
-    setError(null)
+    setActionError(null)
     try {
-      await choresIntegration.api.post('/weeks/rotate', { week: weekStr })
-      await fetchData()
+      await rotateWeek.mutateAsync(weekStr)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to rotate')
+      setActionError(err instanceof Error ? err.message : 'Failed to rotate')
     }
   }
 
   async function handleRemoveAssignment(id: number) {
-    setError(null)
+    setActionError(null)
     try {
-      await choresIntegration.api.del('/assignments/' + id)
-      setAssignments((prev) => prev.filter((a) => a.id !== id))
+      await deleteAssignment.mutateAsync(id)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to remove assignment')
+      setActionError(err instanceof Error ? err.message : 'Failed to remove assignment')
     }
   }
 
@@ -262,17 +255,16 @@ export function AssignmentsTab() {
 
     if (isNaN(dayOfWeek) || isNaN(personId)) return
 
-    setError(null)
+    setActionError(null)
     try {
-      await choresIntegration.api.post('/assignments', {
+      await createAssignment.mutateAsync({
         chore_id: chore.id,
         person_id: personId,
         week_of: weekStr,
         day_of_week: dayOfWeek,
       })
-      await fetchData()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to assign chore')
+      setActionError(err instanceof Error ? err.message : 'Failed to assign chore')
     }
   }
 
@@ -288,7 +280,9 @@ export function AssignmentsTab() {
   const todayDayIndex = getTodayDayIndex()
   const isCurrentWeek = toLocalDateStr(getMonday(new Date())) === weekStr
 
-  if (loading) {
+  // Only while a week has nothing to show yet. A refetch behind an edit, or a
+  // week already in cache, keeps the grid on screen rather than blanking it.
+  if (assignmentsQuery.isPending || peopleQuery.isPending || choreListQuery.isPending) {
     return <p className="text-text-secondary">Loading assignments...</p>
   }
 
