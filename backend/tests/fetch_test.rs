@@ -553,6 +553,120 @@ async fn headers_and_body_never_reach_the_log() {
 }
 
 #[tokio::test]
+async fn expect_text_wraps_the_body_as_json() {
+    let (addr, _) = spawn_upstream(200, "<html><body>hello</body></html>").await;
+    let server = test_server().await;
+    let resp = server
+        .post("/fetch")
+        .json(&json!({ "url": format!("http://{addr}/page"), "expect": "text" }))
+        .await;
+    resp.assert_status_ok();
+    resp.assert_json(&json!({ "text": "<html><body>hello</body></html>" }));
+}
+
+#[tokio::test]
+async fn omitting_expect_still_parses_json_and_posts_body_unchanged() {
+    // Pins that an existing caller — one that has never heard of `expect` —
+    // is unaffected: the response is still parsed JSON, and the outbound
+    // request `invoke` sends upstream is byte-for-byte what it always was.
+    let (addr, captured) = spawn_capturing_upstream().await;
+    let server = test_server().await;
+    let resp = server
+        .post("/fetch")
+        .json(&json!({
+            "url": format!("http://{addr}/compute"),
+            "method": "POST",
+            "body": { "origin": "a", "destination": "b" }
+        }))
+        .await;
+    resp.assert_status_ok();
+    resp.assert_json(&json!({ "ok": true }));
+    let req = captured
+        .lock()
+        .unwrap()
+        .clone()
+        .expect("upstream was called");
+    assert_eq!(req.body, r#"{"destination":"b","origin":"a"}"#);
+    assert_eq!(req.content_type.as_deref(), Some("application/json"));
+}
+
+#[tokio::test]
+async fn rejects_an_unsupported_expect_value() {
+    let server = test_server().await;
+    let resp = server
+        .post("/fetch")
+        .json(&json!({ "url": "https://example.com/x", "expect": "xml" }))
+        .await;
+    resp.assert_status(StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn a_text_request_and_a_json_request_do_not_share_a_cache_entry() {
+    // The important regression: `expect` must be part of the cache key.
+    // Delete it from `cache_key` and this fails — a `text` request served
+    // from a `json` entry (or vice versa) would return the wrong shape
+    // entirely, not just stale data.
+    let (addr, hits) = spawn_upstream(200, r#"{"n":1}"#).await;
+    let server = test_server().await;
+    let url = format!("http://{addr}/shared");
+
+    let json_resp = server
+        .post("/fetch")
+        .json(&json!({ "url": url, "ttl_secs": 60 }))
+        .await;
+    json_resp.assert_status_ok();
+    json_resp.assert_json(&json!({ "n": 1 }));
+
+    let text_resp = server
+        .post("/fetch")
+        .json(&json!({ "url": url, "expect": "text", "ttl_secs": 60 }))
+        .await;
+    text_resp.assert_status_ok();
+    text_resp.assert_json(&json!({ "text": r#"{"n":1}"# }));
+
+    assert_eq!(
+        *hits.lock().unwrap(),
+        2,
+        "a json request and a text request to the same URL must each reach the upstream, \
+         not share a cache entry"
+    );
+}
+
+#[tokio::test]
+async fn a_text_response_body_never_reaches_the_log() {
+    // The one security property this module keeps: a response body is never
+    // logged. A `text` response is body content like any other JSON payload
+    // — nothing distinguishes it at the logging boundary, so a distinctive
+    // marker in the HTML body must never show up in captured logs, even
+    // though this request errors out and `AppError::Internal` logs a message
+    // for it.
+    let logs = captured_logs();
+    let marker = "distinctive-html-marker-should-never-be-logged";
+    let (addr, _) = spawn_upstream(
+        503,
+        "<html>distinctive-html-marker-should-never-be-logged</html>",
+    )
+    .await;
+    let server = test_server().await;
+    let resp = server
+        .post("/fetch")
+        .json(&json!({ "url": format!("http://{addr}/page"), "expect": "text" }))
+        .await;
+    resp.assert_status(StatusCode::INTERNAL_SERVER_ERROR);
+
+    let marker_addr = addr.to_string();
+    let logged = logs.lines_mentioning(&marker_addr);
+    assert!(
+        !logged.is_empty(),
+        "expected the non-2xx path to log something for {marker_addr}"
+    );
+    assert!(
+        !logged.contains(marker),
+        "the response body leaked into the log: {logged}"
+    );
+}
+
+#[tokio::test]
 async fn headers_and_body_never_reach_the_log_when_the_upstream_is_unreachable() {
     // The test above only exercises the non-2xx arm. This mirrors
     // `the_query_string_never_reaches_the_log_when_the_upstream_is_unreachable`

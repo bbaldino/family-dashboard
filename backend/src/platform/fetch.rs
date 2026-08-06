@@ -26,13 +26,26 @@ use std::time::{Duration, Instant};
 use axum::extract::State;
 use axum::{Json, Router};
 use serde::Deserialize;
+use serde_json::json;
 use tokio::sync::RwLock;
 use url::Url;
 
 use crate::error::AppError;
 
-/// Hard cap on distinct cache entries held across all callers. Bounds memory
-/// only; it does not protect an upstream from being hit on every miss.
+/// Hard cap on distinct cache entries held across all callers. Bounds the
+/// *number* of entries, not their size.
+///
+/// `expect: "text"` (see [`Expect`]) makes that distinction matter: a scraped
+/// HTML page can be a hundred-plus kilobytes, versus a typical JSON payload's
+/// low single-digit kilobytes, so 500 entries no longer implies a small
+/// worst-case footprint. No response-size cap was added for it. A cap that
+/// rejects a legitimate page is worse than the memory it saves, and the
+/// realistic worst case here is small: entries this large only come from
+/// `expect: "text"`, which as of this writing has exactly one caller
+/// (`word_of_the_day`, one Merriam-Webster page, refreshed on a daily TTL) —
+/// nowhere near 500 distinct large entries. Revisit if a second high-volume
+/// text caller shows up, or add real memory pressure monitoring instead of
+/// guessing at a byte limit.
 const MAX_CACHE_ENTRIES: usize = 500;
 
 #[derive(Clone)]
@@ -93,13 +106,16 @@ impl ResponseCache {
     }
 }
 
-/// The request body: `{"url", "method"?, "headers"?, "body"?, "ttl_secs"?}`.
+/// The request body: `{"url", "method"?, "headers"?, "body"?, "expect"?,
+/// "ttl_secs"?}`.
 ///
 /// `method` defaults to GET and is restricted to the verbs an integration
 /// legitimately needs — an upstream API call, not arbitrary HTTP. `headers`
 /// and `body` exist because real APIs need them: Google's Routes API, for
 /// example, needs `POST`, two `X-Goog-*` headers, and a JSON body — driven
-/// by a client integration on the frontend, not a Rust router.
+/// by a client integration on the frontend, not a Rust router. `expect`
+/// defaults to `"json"`, so every caller that predates it is unaffected; see
+/// [`Expect`] for what `"text"` does.
 #[derive(Deserialize)]
 pub struct FetchRequest {
     pub url: String,
@@ -109,6 +125,8 @@ pub struct FetchRequest {
     pub headers: BTreeMap<String, String>,
     #[serde(default)]
     pub body: Option<serde_json::Value>,
+    #[serde(default)]
+    pub expect: Option<String>,
     #[serde(default)]
     pub ttl_secs: u64,
 }
@@ -128,21 +146,69 @@ fn parse_method(raw: Option<&str>) -> Result<reqwest::Method, AppError> {
     }
 }
 
+/// How to interpret the upstream response body.
+///
+/// `Json` is today's behaviour: parse as JSON, return as-is. `Text` exists
+/// for upstreams that are not JSON at all — `word_of_the_day` scrapes
+/// Merriam-Webster's HTML page, which a `resp.json()` call can only ever
+/// fail on. The response is still wrapped as JSON (`{"text": "<body>"}`) so
+/// every caller of this endpoint can assume a JSON response and never branch
+/// on `Content-Type`.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Expect {
+    Json,
+    Text,
+}
+
+impl Expect {
+    fn as_str(self) -> &'static str {
+        match self {
+            Expect::Json => "json",
+            Expect::Text => "text",
+        }
+    }
+}
+
+/// Parses the `expect` field. Defaults to `Json`, mirroring how
+/// [`parse_method`] defaults to `GET` — every caller that predates this
+/// field keeps working unchanged.
+fn parse_expect(raw: Option<&str>) -> Result<Expect, AppError> {
+    match raw.unwrap_or("json") {
+        "json" => Ok(Expect::Json),
+        "text" => Ok(Expect::Text),
+        other => Err(AppError::BadRequest(format!(
+            "unsupported expect {other:?}"
+        ))),
+    }
+}
+
 /// Cache key for a request. JSON rather than a hand-joined string so no
 /// separator collision is possible, and `BTreeMap` serialises in sorted order
 /// so header ordering does not produce distinct keys for identical requests.
 ///
 /// Method and body are part of the key because a GET and a POST to the same
 /// URL are different resources; without them the second would be served the
-/// first's cached response.
+/// first's cached response. `expect` is part of it for the same reason: a
+/// `text`-wrapped `{"text": ...}` response and a parsed JSON response for the
+/// same URL are different shapes, so a `text` and a `json` request to the
+/// same URL must not share an entry — without this, whichever request
+/// populated the cache first would silently dictate the shape the other one
+/// gets back.
 fn cache_key(
     url: &Url,
     method: &reqwest::Method,
     headers: &BTreeMap<String, String>,
     body: Option<&serde_json::Value>,
+    expect: Expect,
 ) -> String {
-    serde_json::to_string(&(method.as_str(), url.as_str(), headers, body))
-        .unwrap_or_else(|_| url.to_string())
+    serde_json::to_string(&(
+        method.as_str(),
+        url.as_str(),
+        headers,
+        body,
+        expect.as_str(),
+    ))
+    .unwrap_or_else(|_| url.to_string())
 }
 
 /// A log-safe rendering of a URL: scheme, host, port, and path — never the
@@ -151,16 +217,21 @@ fn safe_label(url: &Url) -> String {
     format!("{}{}", url.origin().ascii_serialization(), url.path())
 }
 
-/// `POST /api/fetch` — fetch a URL and relay its JSON body.
+/// `POST /api/fetch` — fetch a URL and relay its body, as JSON or as text
+/// wrapped in JSON depending on `expect` (see [`Expect`]).
 ///
 /// Errors:
-/// - **400** — the URL will not parse, or its scheme is not `http`/`https`.
-/// - **500** — the upstream was unreachable, returned a non-2xx, or sent a
-///   body that would not parse as JSON. `AppError::Internal` renders a
-///   generic body to the caller; the log carries origin and path only.
+/// - **400** — the URL will not parse, its scheme is not `http`/`https`, the
+///   method is unsupported, a header is invalid, or `expect` is neither
+///   `"json"` nor `"text"` (and not omitted).
+/// - **500** — the upstream was unreachable, returned a non-2xx, or (for
+///   `expect: "json"`) sent a body that would not parse as JSON.
+///   `AppError::Internal` renders a generic body to the caller; the log
+///   carries origin and path only — never the response body, which for a
+///   `text` request is exactly what a caller asked to relay.
 ///
 /// Caching: `ttl_secs > 0` reads and writes the cache, keyed on the full
-/// request (method, URL, headers, and body — see [`cache_key`]).
+/// request (method, URL, headers, body, and expect — see [`cache_key`]).
 /// Concurrent misses are not single-flighted — each reaches the upstream.
 pub async fn invoke(
     State(state): State<PlatformState>,
@@ -182,6 +253,7 @@ pub async fn invoke(
     let label = safe_label(&url);
 
     let method = parse_method(req.method.as_deref())?;
+    let expect = parse_expect(req.expect.as_deref())?;
 
     // Build the header map up front so an invalid name or value is a 400
     // rather than a surprise at send time.
@@ -195,7 +267,7 @@ pub async fn invoke(
         headers.insert(name, value);
     }
 
-    let key = cache_key(&url, &method, &req.headers, req.body.as_ref());
+    let key = cache_key(&url, &method, &req.headers, req.body.as_ref(), expect);
 
     if req.ttl_secs > 0
         && let Some(hit) = state.cache.get(&key).await
@@ -224,15 +296,29 @@ pub async fn invoke(
         )));
     }
 
-    let data: serde_json::Value = resp
-        .json()
-        .await
-        // `resp.json()`'s error is `Kind::Decode`, which reqwest never
-        // attaches a URL to today, so `without_url()` is a no-op here right
-        // now -- kept anyway so this call site can't start leaking on some
-        // future reqwest version that changes that, without anyone having to
-        // notice and come back to add it.
-        .map_err(|e| AppError::Internal(format!("{label} parse failed: {}", e.without_url())))?;
+    // Neither arm below ever puts the response body itself into an error
+    // message or a log — only `label` (origin + path) and the underlying
+    // `reqwest::Error`'s own text, which for a decode/read failure describes
+    // *why* it failed, not the bytes that failed to decode.
+    let data: serde_json::Value = match expect {
+        Expect::Json => resp
+            .json()
+            .await
+            // `resp.json()`'s error is `Kind::Decode`, which reqwest never
+            // attaches a URL to today, so `without_url()` is a no-op here
+            // right now -- kept anyway so this call site can't start leaking
+            // on some future reqwest version that changes that, without
+            // anyone having to notice and come back to add it.
+            .map_err(|e| {
+                AppError::Internal(format!("{label} parse failed: {}", e.without_url()))
+            })?,
+        Expect::Text => {
+            let text = resp.text().await.map_err(|e| {
+                AppError::Internal(format!("{label} read failed: {}", e.without_url()))
+            })?;
+            json!({ "text": text })
+        }
+    };
 
     if req.ttl_secs > 0 {
         state
