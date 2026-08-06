@@ -7,6 +7,8 @@ import { ScreenShell } from './canvas/ScreenShell'
 import { ScreenErrorBoundary } from './errors/ScreenErrorBoundary'
 import { OverlayErrorBoundary } from './errors/OverlayErrorBoundary'
 import { ScreenNotAvailable } from './errors/ScreenNotAvailable'
+import { useTheme } from '@/palettes/useTheme'
+import { themeToVariables } from '@/palettes/types'
 
 const DEFAULT_THEME_ID = 'grid'
 const CONFIG_KEY = 'theme.presentation'
@@ -28,6 +30,7 @@ function resolveTheme(id: string | null): ThemeModule {
 export function ThemeMount() {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [loaded, setLoaded] = useState(false)
+  const { activeTheme } = useTheme()
 
   useEffect(() => {
     fetch('/api/config')
@@ -90,8 +93,15 @@ export function ThemeMount() {
     </Fragment>
   )
 
-  if (theme.canvas.model === 'fixed-scale') {
-    return <ScreenShell canvas={theme.canvas}>{content}</ScreenShell>
-  }
-  return content
+  const rootStyle = Object.fromEntries(Object.entries(themeToVariables(activeTheme.colors)))
+
+  return (
+    <div className="w-full h-full" style={rootStyle}>
+      {theme.canvas.model === 'fixed-scale' ? (
+        <ScreenShell canvas={theme.canvas}>{content}</ScreenShell>
+      ) : (
+        content
+      )}
+    </div>
+  )
 }

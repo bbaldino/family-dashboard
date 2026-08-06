@@ -1,9 +1,21 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest'
+import type { ReactNode } from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { ThemeMount } from './ThemeMount'
 import { registerTheme, _resetRegistry } from './ThemeRegistry'
 import type { ThemeModule } from './types'
+
+const wrapper = ({ children }: { children: ReactNode }) => (
+  <MemoryRouter initialEntries={['/']}>{children}</MemoryRouter>
+)
+
+function seedConfig(config: Record<string, string>) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve(config) }),
+  )
+}
 
 const gridStub: ThemeModule = {
   id: 'grid',
@@ -124,5 +136,17 @@ describe('ThemeMount', () => {
     )
     await waitFor(() => expect(screen.getByText(/calendar/i)).toBeInTheDocument())
     expect(screen.queryByText(/unknown/i)).not.toBeInTheDocument()
+  })
+
+  it('applies the active palette to its own root, not the document', async () => {
+    seedConfig({ 'theme.active': 'earth-tones' })
+    const { container } = render(<ThemeMount />, { wrapper })
+
+    await waitFor(() => expect(container.firstElementChild).toBeTruthy())
+    const root = container.firstElementChild as HTMLElement
+
+    expect(root.style.getPropertyValue('--color-bg-primary')).not.toBe('')
+    // The point of the whole change: nothing lands on the document root.
+    expect(document.documentElement.style.getPropertyValue('--color-bg-primary')).toBe('')
   })
 })

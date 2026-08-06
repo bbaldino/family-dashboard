@@ -1,13 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { BUILTIN_THEMES, EARTH_TONES, themeToVariables } from './types'
-import type { Theme, ThemeColors } from './types'
-
-function applyThemeToDocument(colors: ThemeColors) {
-  const vars = themeToVariables(colors)
-  for (const [key, value] of Object.entries(vars)) {
-    document.documentElement.style.setProperty(key, value)
-  }
-}
+import { BUILTIN_THEMES, EARTH_TONES } from './types'
+import type { Theme } from './types'
 
 export function useTheme() {
   const [activeId, setActiveId] = useState<string>('earth-tones')
@@ -37,13 +30,6 @@ export function useTheme() {
       .catch(() => setLoaded(true))
   }, [])
 
-  // Apply active theme whenever it changes
-  useEffect(() => {
-    if (loaded) {
-      applyThemeToDocument(activeTheme.colors)
-    }
-  }, [activeTheme, loaded])
-
   const setActiveTheme = useCallback(async (themeId: string) => {
     setActiveId(themeId)
     await fetch('/api/config/theme.active', {
@@ -62,14 +48,6 @@ export function useTheme() {
     })
   }, [])
 
-  const applyPreview = useCallback((colors: ThemeColors) => {
-    applyThemeToDocument(colors)
-  }, [])
-
-  const clearPreview = useCallback(() => {
-    applyThemeToDocument(activeTheme.colors)
-  }, [activeTheme])
-
   return {
     activeTheme,
     allThemes,
@@ -77,7 +55,5 @@ export function useTheme() {
     loaded,
     setActiveTheme,
     saveCustomThemes,
-    applyPreview,
-    clearPreview,
   }
 }

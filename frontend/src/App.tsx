@@ -9,12 +9,6 @@ import { AdminLayout } from './admin/AdminLayout'
 import { SettingsAdmin } from './admin/SettingsAdmin'
 import { getRuntimeConfig } from './lib/ha-client'
 import { useHaUsable } from './lib/useHaUsable'
-import { useTheme } from './palettes/useTheme'
-
-function PaletteApplicator() {
-  useTheme()
-  return null
-}
 
 /** Fetch HA config from the backend at startup */
 function useHaConfig(): { haUrl?: string; haToken?: string; loading: boolean } {
@@ -66,7 +60,6 @@ export function App() {
 
   const content = (
     <QueryClientProvider client={queryClient}>
-      <PaletteApplicator />
       <AppRoutes />
     </QueryClientProvider>
   )

@@ -294,15 +294,7 @@ const COLOR_SECTIONS: {
 ]
 
 export function ThemeSettings() {
-  const {
-    activeTheme,
-    allThemes,
-    customThemes,
-    setActiveTheme,
-    saveCustomThemes,
-    applyPreview,
-    clearPreview,
-  } = useTheme()
+  const { activeTheme, allThemes, customThemes, setActiveTheme, saveCustomThemes } = useTheme()
   const [editingTheme, setEditingTheme] = useState<Theme | null>(null)
   const [editedColors, setEditedColors] = useState<ThemeColors | null>(null)
   const [status, setStatus] = useState<string | null>(null)
@@ -311,13 +303,6 @@ export function ThemeSettings() {
     setEditingTheme(activeTheme)
     setEditedColors(deepClone(activeTheme.colors))
   }, [activeTheme])
-
-  useEffect(() => {
-    if (editedColors) {
-      applyPreview(editedColors)
-    }
-    return () => clearPreview()
-  }, [editedColors, applyPreview, clearPreview])
 
   const handleColorChange = (key: string, value: string) => {
     if (!editedColors) return
