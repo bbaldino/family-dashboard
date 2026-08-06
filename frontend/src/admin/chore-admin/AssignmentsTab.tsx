@@ -155,9 +155,22 @@ export function AssignmentsTab() {
   // The banner shows whichever failed most recently, so an action's error takes
   // precedence over a stale load error, and a successful reload clears the load
   // error on its own.
+  //
+  // Starting an action clears the banner outright, load error included — that
+  // is what the single `error` string this tab used to hold did with its
+  // `setError(null)`. A query error does not clear until a refetch succeeds, so
+  // `dismissedLoadError` remembers the one that was hidden; the next failure is
+  // a different `Error` instance and shows again.
   const [actionError, setActionError] = useState<string | null>(null)
+  const [dismissedLoadError, setDismissedLoadError] = useState<Error | null>(null)
   const loadError = assignmentsQuery.error ?? peopleQuery.error ?? choreListQuery.error
-  const error = actionError ?? loadError?.message ?? null
+  const error =
+    actionError ?? (loadError === dismissedLoadError ? null : (loadError?.message ?? null))
+
+  function clearErrors() {
+    setActionError(null)
+    setDismissedLoadError(loadError)
+  }
 
   // The calendar row is decoration on top of the grid: if it cannot load, the
   // week still renders with an empty row, and the error banner above stays for
@@ -191,7 +204,7 @@ export function AssignmentsTab() {
   }
 
   async function copyFromLastWeek() {
-    setActionError(null)
+    clearErrors()
     try {
       const prevMonday = new Date(weekOf)
       prevMonday.setDate(prevMonday.getDate() - 7)
@@ -205,7 +218,7 @@ export function AssignmentsTab() {
   }
 
   async function rotate() {
-    setActionError(null)
+    clearErrors()
     try {
       await rotateWeek.mutateAsync(weekStr)
     } catch (err) {
@@ -214,7 +227,7 @@ export function AssignmentsTab() {
   }
 
   async function handleRemoveAssignment(id: number) {
-    setActionError(null)
+    clearErrors()
     try {
       await deleteAssignment.mutateAsync(id)
     } catch (err) {
@@ -244,7 +257,7 @@ export function AssignmentsTab() {
 
     if (isNaN(dayOfWeek) || isNaN(personId)) return
 
-    setActionError(null)
+    clearErrors()
     try {
       await createAssignment.mutateAsync({
         chore_id: chore.id,

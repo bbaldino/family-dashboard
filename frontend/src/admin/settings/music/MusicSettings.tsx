@@ -9,6 +9,11 @@ export function MusicSettings() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
+  // The player fetch's error state only clears on a successful refetch, so a
+  // save would otherwise leave the previous failure on screen. The old single
+  // `error` string was cleared by `handleSave`; this keeps that. Only
+  // `loadPlayers` can make the query fail again, and it lifts this first.
+  const [playersErrorDismissed, setPlayersErrorDismissed] = useState(false)
 
   const {
     data: players = [],
@@ -38,12 +43,14 @@ export function MusicSettings() {
 
   const loadPlayers = () => {
     setError(null)
+    setPlayersErrorDismissed(false)
     fetchPlayers()
   }
 
   const handleSave = async () => {
     try {
       setError(null)
+      setPlayersErrorDismissed(true)
       const saves = [
         ['music.service_url', serviceUrl],
         ['music.api_token', apiToken],
@@ -74,7 +81,9 @@ export function MusicSettings() {
   // the previous failure the moment it starts rather than when it lands.
   const displayedError =
     error ??
-    (playersFailed && !loadingPlayers ? 'Failed to load players — check URL and token' : null)
+    (playersFailed && !loadingPlayers && !playersErrorDismissed
+      ? 'Failed to load players — check URL and token'
+      : null)
 
   return (
     <div className="space-y-6">

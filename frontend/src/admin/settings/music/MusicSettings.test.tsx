@@ -129,4 +129,35 @@ describe('MusicSettings default player', () => {
     expect(await screen.findByText(/check URL and token/)).toBeInTheDocument()
     expect(screen.getByDisplayValue('http://music.local:8095')).toBeInTheDocument()
   })
+
+  it('drops the player-load error when a save succeeds', async () => {
+    globalThis.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      const json = (value: unknown, ok = true) =>
+        Promise.resolve({
+          ok,
+          status: ok ? 200 : 502,
+          json: () => Promise.resolve(value),
+          text: () => Promise.resolve(JSON.stringify(value)),
+        } as Response)
+
+      if (url === '/api/config') return json(CONFIG)
+      if (url === '/api/music/players') return json({ error: 'connection refused' }, false)
+      if (url.startsWith('/api/config/') && init?.method === 'PUT') {
+        puts.push({ url, body: String(init.body) })
+        return json({})
+      }
+      return Promise.reject(new Error(`Unexpected fetch url: ${url}`))
+    }) as unknown as typeof fetch
+
+    await renderLoaded()
+    fireEvent.click(screen.getByRole('button', { name: 'Load Players' }))
+    await screen.findByText(/check URL and token/)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() => expect(puts).toHaveLength(3))
+    expect(screen.queryByText(/check URL and token/)).toBeNull()
+    expect(await screen.findByText('Saved!')).toBeInTheDocument()
+  })
 })

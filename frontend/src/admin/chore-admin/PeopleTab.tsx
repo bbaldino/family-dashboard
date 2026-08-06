@@ -12,9 +12,23 @@ export function PeopleTab() {
   // The banner shows whichever failed most recently, so an action's error takes
   // precedence over a stale load error, and a successful reload clears the load
   // error on its own.
+  //
+  // Starting an action clears the banner outright, load error included — that
+  // is what the single `error` string this tab used to hold did with its
+  // `setError(null)`. A query error does not clear until a refetch succeeds, so
+  // `dismissedLoadError` remembers the one that was hidden; the next failure is
+  // a different `Error` instance and shows again.
   const [actionError, setActionError] = useState<string | null>(null)
+  const [dismissedLoadError, setDismissedLoadError] = useState<Error | null>(null)
   const people = peopleQuery.data ?? []
-  const error = actionError ?? peopleQuery.error?.message ?? null
+  const loadError = peopleQuery.error
+  const error =
+    actionError ?? (loadError === dismissedLoadError ? null : (loadError?.message ?? null))
+
+  function clearErrors() {
+    setActionError(null)
+    setDismissedLoadError(loadError)
+  }
 
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -66,7 +80,7 @@ export function PeopleTab() {
 
   async function handleSave() {
     if (!formName.trim()) return
-    setActionError(null)
+    clearErrors()
     try {
       await savePerson.mutateAsync({
         id: editingId,
@@ -79,7 +93,7 @@ export function PeopleTab() {
   }
 
   async function handleDelete(id: number) {
-    setActionError(null)
+    clearErrors()
     try {
       await deletePerson.mutateAsync(id)
     } catch (err) {
