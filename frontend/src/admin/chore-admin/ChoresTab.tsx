@@ -1,12 +1,21 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Button } from '@/ui/Button'
-import { choresIntegration } from '@/integrations/chores'
+import { useChoreList, useCreateChore, useDeleteChore, useUpdateChore } from '@/integrations/chores'
 import type { Chore } from '@/integrations/chores'
 
 export function ChoresTab() {
-  const [chores, setChores] = useState<Chore[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const choreList = useChoreList()
+  const createChore = useCreateChore()
+  const updateChore = useUpdateChore()
+  const deleteChore = useDeleteChore()
+
+  // The banner shows whichever failed most recently, so an action's error takes
+  // precedence over a stale load error, and a successful reload clears the load
+  // error on its own.
+  const [actionError, setActionError] = useState<string | null>(null)
+  const chores = choreList.data ?? []
+  const error = actionError ?? choreList.error?.message ?? null
+
   const [showAddForm, setShowAddForm] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
 
@@ -18,23 +27,6 @@ export function ChoresTab() {
   const [formChoreType, setFormChoreType] = useState<'regular' | 'meta'>('regular')
   const [formPickFromTags, setFormPickFromTags] = useState<string[]>([])
   const [formPickFromTagsInput, setFormPickFromTagsInput] = useState('')
-
-  async function loadChores() {
-    setLoading(true)
-    setError(null)
-    try {
-      const data = await choresIntegration.api.get<Chore[]>('/chores')
-      setChores(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load chores')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    loadChores()
-  }, [])
 
   function resetForm() {
     setFormName('')
@@ -110,35 +102,35 @@ export function ChoresTab() {
 
   async function handleSave() {
     if (!formName.trim()) return
-    setError(null)
+    setActionError(null)
     try {
       const body = {
         name: formName.trim(),
         description: formDescription.trim() || null,
         chore_type: formChoreType,
         tags: formTags,
+        // Only meaningful for a meta chore; a regular one sends [] rather than
+        // dropping whatever was typed into the field before the type flipped.
         pick_from_tags: formChoreType === 'meta' ? formPickFromTags : [],
       }
 
       if (editingId !== null) {
-        await choresIntegration.api.put('/chores/' + editingId, body)
+        await updateChore.mutateAsync({ id: editingId, body })
       } else {
-        await choresIntegration.api.post('/chores', body)
+        await createChore.mutateAsync(body)
       }
       cancelForm()
-      await loadChores()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save chore')
+      setActionError(err instanceof Error ? err.message : 'Failed to save chore')
     }
   }
 
   async function handleDelete(id: number) {
-    setError(null)
+    setActionError(null)
     try {
-      await choresIntegration.api.del('/chores/' + id)
-      setChores((prev) => prev.filter((c) => c.id !== id))
+      await deleteChore.mutateAsync(id)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete chore')
+      setActionError(err instanceof Error ? err.message : 'Failed to delete chore')
     }
   }
 
@@ -269,7 +261,7 @@ export function ChoresTab() {
     )
   }
 
-  if (loading) {
+  if (choreList.isPending) {
     return <p className="text-text-secondary">Loading chores...</p>
   }
 
