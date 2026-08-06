@@ -200,6 +200,21 @@ mod grid_theme_migration_tests {
             get_config(&pool, "theme.grid.hidden").await.as_deref(),
             Some("sports,lunch")
         );
+
+        // This is a copy, not a move: the frontend still reads dashboard.*
+        // until Task 3 lands, so the source keys must survive the migration.
+        assert_eq!(
+            get_config(&pool, "dashboard.columns").await.as_deref(),
+            Some("10")
+        );
+        assert_eq!(
+            get_config(&pool, "dashboard.rows").await.as_deref(),
+            Some("7")
+        );
+        assert_eq!(
+            get_config(&pool, "dashboard.hidden").await.as_deref(),
+            Some("sports,lunch")
+        );
     }
 
     #[tokio::test]
