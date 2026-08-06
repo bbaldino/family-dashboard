@@ -6,6 +6,14 @@ export interface IntegrationQueryOptions<Raw, Out> {
   body?: unknown
   /** Seconds the backend should cache this URL's response. 0 = no caching. */
   ttlSecs?: number
+  /**
+   * How the backend should interpret the upstream response. Omitted (the
+   * default) means `"json"` — `/api/fetch` parses the body and relays it
+   * as-is. `"text"` is for a non-JSON upstream (an HTML page to scrape,
+   * say): the backend wraps the raw body as `{ text: string }` instead of
+   * attempting to parse it, and `Raw` here is that wrapper shape.
+   */
+  expect?: 'json' | 'text'
   select?: (raw: Raw) => Out
   /** Number, or a function of the last result — this is the scheduler. */
   refetchInterval?: number | ((data: Out | undefined) => number | false)
@@ -24,10 +32,10 @@ export function useIntegrationQuery<Raw, Out = Raw>(
   url: string | null,
   opts: IntegrationQueryOptions<Raw, Out> = {},
 ) {
-  const { method, headers, body, ttlSecs = 0, select, refetchInterval, enabled } = opts
+  const { method, headers, body, ttlSecs = 0, expect, select, refetchInterval, enabled } = opts
 
   return useQuery({
-    queryKey: ['integration', integration.id, url, method, headers, body, ttlSecs],
+    queryKey: ['integration', integration.id, url, method, headers, body, ttlSecs, expect],
     queryFn: async (): Promise<Raw> => {
       // Omit absent fields rather than sending them as `undefined` — a plain
       // GET must still post exactly `{url, ttl_secs}`, the shape the backend
@@ -37,11 +45,13 @@ export function useIntegrationQuery<Raw, Out = Raw>(
         method?: string
         headers?: Record<string, string>
         body?: unknown
+        expect?: string
         ttl_secs: number
       } = { url, ttl_secs: ttlSecs }
       if (method) payload.method = method
       if (headers) payload.headers = headers
       if (body !== undefined) payload.body = body
+      if (expect) payload.expect = expect
 
       const resp = await fetch('/api/fetch', {
         method: 'POST',

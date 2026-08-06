@@ -13,6 +13,8 @@ export interface IntegrationRequest {
   body?: unknown
   /** Seconds the backend caches this response. 0 or absent means no caching. */
   ttlSecs?: number
+  /** See `IntegrationQueryOptions.expect` — omitted means `"json"`. */
+  expect?: 'json' | 'text'
   /** Poll cadence in ms. Put it here when it derives from config. */
   refetchInterval?: number
 }
@@ -86,6 +88,7 @@ export function useIntegrationData<
     headers: spec?.headers,
     body: spec?.body,
     ttlSecs: spec?.ttlSecs,
+    expect: spec?.expect,
     select: opts.select,
     refetchInterval: opts.refetchInterval ?? spec?.refetchInterval,
     enabled: opts.enabled,
