@@ -6,8 +6,8 @@ import { z } from 'zod'
 import { defineIntegration, useIntegrationQuery } from './index'
 
 const demo = defineIntegration({
-  id: 'daily-quote',
-  name: 'Daily Quote',
+  id: 'demo',
+  name: 'Demo',
   schema: z.object({}),
   fields: {},
 })

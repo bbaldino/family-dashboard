@@ -29,8 +29,8 @@ export interface IntegrationDataOptions<Raw, Out> {
  * The one hook a client integration needs.
  *
  * `integration` is always a `defineIntegration` result, `schema` and
- * `fields` included — a config-less integration (`daily-quote` is the
- * reference example, ZenQuotes needs no config at all) declares that by
+ * `fields` included — a config-less integration (`word-of-the-day` is the
+ * reference example, it needs no config at all) declares that by
  * giving `schema: z.object({})`, not by omitting `schema`. Whether there is
  * anything to wait on is derived from the schema itself (`hasConfig` below),
  * not from which function produced the object.

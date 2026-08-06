@@ -19,9 +19,9 @@ const demoIntegration = defineIntegration({
   },
 })
 
-/** Empty schema — the shape `daily-quote` uses to declare "no config" rather
- *  than omitting `schema` altogether. Nothing for `useIntegrationData` to
- *  gate on. */
+/** Empty schema — the shape `word-of-the-day` uses to declare "no config"
+ *  rather than omitting `schema` altogether. Nothing for `useIntegrationData`
+ *  to gate on. */
 const demoNoConfigIntegration = defineIntegration({
   id: 'demo-no-config',
   name: 'Demo (no config)',
