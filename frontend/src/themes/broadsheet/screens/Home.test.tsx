@@ -41,9 +41,6 @@ vi.mock('@/integrations/sports', () => ({
 vi.mock('@/integrations/countdowns', () => ({
   useCountdowns: () => ({ data: null, isLoading: false, error: null, refetch: vi.fn() }),
 }))
-vi.mock('@/integrations/on-this-day', () => ({
-  useOnThisDay: () => ({ data: undefined, isLoading: false }),
-}))
 vi.mock('@/integrations/chores', () => ({ useChores: () => ({ data: null, isLoading: false }) }))
 vi.mock('@/integrations/nutrislice', () => ({
   useLunchMenu: () => ({ data: null, isLoading: false }),

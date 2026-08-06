@@ -3,13 +3,11 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { HouseholdColumn } from './HouseholdColumn'
 
 const useCountdowns = vi.hoisted(() => vi.fn())
-const useOnThisDay = vi.hoisted(() => vi.fn())
 const useChores = vi.hoisted(() => vi.fn())
 const useLunchMenu = vi.hoisted(() => vi.fn())
 const completeAssignment = vi.hoisted(() => vi.fn())
 const uncompleteAssignment = vi.hoisted(() => vi.fn())
 vi.mock('@/integrations/countdowns', () => ({ useCountdowns }))
-vi.mock('@/integrations/on-this-day', () => ({ useOnThisDay }))
 vi.mock('@/integrations/chores', () => ({ useChores }))
 vi.mock('@/integrations/nutrislice', () => ({ useLunchMenu }))
 
@@ -23,8 +21,6 @@ describe('HouseholdColumn', () => {
     // useCountdowns: UsePollingResult<CountdownItem[]> — data is the array
     // directly (or null), not { items: [...] }.
     useCountdowns.mockReturnValue({ data: null, isLoading: false, error: null, refetch: vi.fn() })
-    // useOnThisDay: plain react-query result; data is OnThisDayData | undefined.
-    useOnThisDay.mockReturnValue({ data: undefined, isLoading: false })
     // useChores: data is TodayResponse | null (persons/completed_count/total_count).
     useChores.mockReturnValue({
       data: null,
@@ -74,10 +70,6 @@ describe('HouseholdColumn', () => {
       error: null,
       refetch: vi.fn(),
     })
-    useOnThisDay.mockReturnValue({
-      data: { events: [{ year: 1980, text: 'Pac-Man begins location testing.' }] },
-      isLoading: false,
-    })
     render(<HouseholdColumn />)
     const labels = screen
       .getAllByText(/^(Cafeteria · today|Chores today|Coming up|On this day)$/)
@@ -96,8 +88,8 @@ describe('HouseholdColumn', () => {
 
   it('renders every section fully populated without throwing (the column at its fullest)', () => {
     // This state — lunch, chores past both the per-person and per-column
-    // visible caps, coming up at its cap, and a long on-this-day blurb —
-    // has never been rendered against real data at once. Not a layout
+    // visible caps, and coming up at its cap — has never been rendered
+    // against real data at once. Not a layout
     // assertion (jsdom can't measure overflow); this exists so the fullest
     // realistic combination is at least known not to crash, and the
     // "+more" caps are honoured together rather than only individually.
@@ -185,17 +177,6 @@ describe('HouseholdColumn', () => {
       isLoading: false,
       error: null,
       refetch: vi.fn(),
-    })
-    useOnThisDay.mockReturnValue({
-      data: {
-        events: [
-          {
-            year: 1969,
-            text: 'Apollo 11 astronauts Neil Armstrong and Buzz Aldrin become the first humans to walk on the Moon, an achievement watched live by an estimated 650 million people around the world.',
-          },
-        ],
-      },
-      isLoading: false,
     })
     expect(() => render(<HouseholdColumn />)).not.toThrow()
     // Section header sums across every person, uncapped.
@@ -336,26 +317,6 @@ describe('HouseholdColumn', () => {
     render(<HouseholdColumn />)
     expect(screen.getByText('Vacuum living room')).toBeInTheDocument()
     expect(screen.queryByText('Pick a chore')).not.toBeInTheDocument()
-  })
-
-  /** The design moved On this day off Home entirely so chores get the vertical
-   *  room (`broadsheet-v2.jsx`: "On this day moved to the glance strip"). The
-   *  integration, its settings and grid's widget all stay — only this column
-   *  stops rendering it. Asserted rather than assumed because the caps above
-   *  were originally sized against that blurb fitting on screen, so its
-   *  absence is what makes 4/4 safe. */
-  it('no longer renders On this day', () => {
-    useOnThisDay.mockReturnValue({
-      data: { events: [{ year: 1980, text: 'Pac-Man begins location testing.' }] },
-    })
-    useChores.mockReturnValue({ data: { completed_count: 0, total_count: 0, persons: [] } })
-    useCountdowns.mockReturnValue({ data: [] })
-    useLunchMenu.mockReturnValue({ data: null, isLoading: false })
-
-    render(<HouseholdColumn />)
-
-    expect(screen.queryByText(/On this day/i)).not.toBeInTheDocument()
-    expect(screen.queryByText(/Pac-Man/)).not.toBeInTheDocument()
   })
 
   describe('chore toggling', () => {
