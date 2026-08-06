@@ -131,7 +131,7 @@ fn clean_event_text(text: &str) -> String {
         .replace("(shown) ", "")
 }
 
-/// Pre-filter events to remove obviously inappropriate ones before sending to Ollama.
+/// Pre-filter events to remove obviously inappropriate ones before sending to the LLM.
 /// This reduces the chance of the model picking something bad from a long list.
 fn pre_filter_events(events: &[WikiEvent]) -> Vec<&WikiEvent> {
     const BAD_KEYWORDS: &[&str] = &[
@@ -299,7 +299,7 @@ pub async fn get_events(
         }
     }
 
-    // Pre-filter to remove obviously inappropriate events before sending to Ollama
+    // Pre-filter to remove obviously inappropriate events before sending to the LLM
     let filtered: Vec<WikiEvent> = pre_filter_events(&all_events)
         .into_iter()
         .cloned()
@@ -320,10 +320,7 @@ pub async fn get_events(
             events
         }
         Err(e) => {
-            tracing::warn!(
-                "Ollama curation failed, returning pre-filtered events: {}",
-                e
-            );
+            tracing::warn!("LLM curation failed, returning pre-filtered events: {}", e);
             let events: Vec<OnThisDayEvent> = filtered
                 .iter()
                 .map(|ev| OnThisDayEvent {
