@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/ui/Button'
-import { gridSettingsFields } from './settingsFields'
+import { gridSettingsFields } from './settings-declaration'
 
 const WIDGETS = [
   { id: 'calendar', label: 'Calendar' },

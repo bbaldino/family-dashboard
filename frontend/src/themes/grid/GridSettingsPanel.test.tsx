@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { GridSettingsPanel } from './GridSettingsPanel'
-import { gridSettingsFields } from './settingsFields'
+import { gridSettingsFields } from './settings-declaration'
 
 describe('GridSettingsPanel', () => {
   afterEach(() => {
