@@ -5,12 +5,12 @@ export const llmProvider = defineIntegration({
   id: 'llm',
   name: 'LLM',
   schema: z.object({
-    provider: z.string().optional().default('ollama'),
     url: z.string().optional().default(''),
   }),
-  // Fields are required by the type but not rendered — settings-registry owns the UI.
   fields: {
-    provider: { label: 'Provider' },
-    url: { label: 'Service URL' },
+    url: {
+      label: 'Service URL',
+      description: 'Base URL of the openai-compatible chat-completions service.',
+    },
   },
 })

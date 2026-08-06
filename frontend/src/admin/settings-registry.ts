@@ -22,7 +22,6 @@ import { ChoreAdmin } from '@/admin/ChoreAdmin'
 import { DoorbellSettings } from '@/admin/settings/doorbell/DoorbellSettings'
 import { TimersSettings } from '@/admin/settings/timers/TimersSettings'
 import { MusicSettings } from '@/admin/settings/music/MusicSettings'
-import { LlmSettings } from '@/admin/settings/llm/LlmSettings'
 import { ThemeAdmin } from '@/admin/settings/theme/ThemeAdmin'
 
 /**
@@ -65,6 +64,5 @@ export const settingsRegistry: Record<string, ComponentType<Record<string, never
   doorbell: DoorbellSettings,
   timers: TimersSettings,
   music: MusicSettings,
-  llm: LlmSettings,
   theme: ThemeAdmin,
 }

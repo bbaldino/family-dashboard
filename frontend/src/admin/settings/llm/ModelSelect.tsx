@@ -8,7 +8,6 @@ interface ModelSelectProps {
 }
 
 interface ModelsResponse {
-  provider: string
   models: { name: string }[]
 }
 
