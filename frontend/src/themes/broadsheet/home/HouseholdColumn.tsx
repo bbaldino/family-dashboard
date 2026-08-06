@@ -7,12 +7,6 @@ import { useLunchMenu } from '@/integrations/nutrislice'
 import type { LunchMenuData } from '@/integrations/nutrislice'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 
-/** A soft accent for "On this day"'s year — the mock's `C.accent2`, a muted
- *  gold distinct from the rust used for kickers and drive times. No token
- *  for it; approximated as a blend of the two we do have (per the design
- *  brief's guidance on `ruleSoft`/`ink2`/`accent2`: approximate rather than
- *  add a token) instead of hard-coding a new colour. */
-
 /* ───────────────────────── Lunch ─────────────────────────
  * Mock: broadsheet-v2.jsx:229-249. */
 
@@ -432,36 +426,11 @@ function ComingUpSection({ items }: { items: CountdownItem[] }) {
   )
 }
 
-/* ───────────────────────── On this day ─────────────────────────
- * Mock: broadsheet-v2.jsx:303-313. `margin-top: auto` pins this to the
- * column's foot rather than letting it float wherever the sections above
- * it happen to end — the column reads as a designed page rather than a
- * stack that stops early. It only has room to work because `HouseholdColumn`
- * itself fills the height of its grid cell (`h-full`) — margin-top: auto
- * has nothing to push against in a container sized to its content.
- *
- * The mock puts the blurb inline beside the 22px year, sharing what's left
- * of the row after a fixed-width label — that reads fine for the mock's
- * one-line sample text, but the real feed's blurbs run a full sentence or
- * two, and wrapping that beside the year in the narrowest column on the
- * page (household, off-day) read as cramped (found live against the
- * running dashboard). Label and year now share their own line; the blurb
- * drops beneath at the column's full width instead of the leftover sliver.
- * `line-clamp-2` bounds it — the real feed has no length guarantee, and
- * this is the column's bottom-pinned section, so an unbounded blurb could
- * push its own top edge past what's visible when the sections above it are
- * full. Was `line-clamp-3` until `WeatherStrip` (the full-width band above
- * the footer) took roughly 70px from every column above it. With On this day
- * now off Home, this section is the last block in the column and the design
- * gives it two columns of four (`broadsheet-v2.jsx`), which is what the cap
- * below reflects. */
-
 /**
  * The third column of the Home screen's body: the household rundown —
- * lunch, chores, what's coming up, and a bit of trivia — stacked top to
- * bottom in that order, "On this day" pinned to the foot. Every source can
- * be empty (or, for Lunch, simply not confirmed yet) on a cold cache; each
- * section guards its own data.
+ * lunch, chores, and what's coming up — stacked top to bottom in that
+ * order. Every source can be empty (or, for Lunch, simply not confirmed
+ * yet) on a cold cache; each section guards its own data.
  *
  * Lunch and Chores distinguish "nothing to show" from "not fetched yet":
  * `useLunchMenu()`/`useChores()` return `null` on a cold cache or a failed

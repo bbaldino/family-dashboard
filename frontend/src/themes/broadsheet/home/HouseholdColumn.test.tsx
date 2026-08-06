@@ -71,6 +71,11 @@ describe('HouseholdColumn', () => {
       refetch: vi.fn(),
     })
     render(<HouseholdColumn />)
+    // `On this day` stays in the alternation deliberately. It is not dead: it
+    // is what makes this a regression guard rather than a tautology — if that
+    // section ever came back to this column, the `toEqual` below would catch
+    // it. Drop the alternative and a returning section would slip past
+    // unnoticed.
     const labels = screen
       .getAllByText(/^(Cafeteria · today|Chores today|Coming up|On this day)$/)
       .map((el) => el.textContent)
