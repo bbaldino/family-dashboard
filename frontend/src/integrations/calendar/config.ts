@@ -27,7 +27,7 @@ export const calendarIntegration = defineIntegration({
   fields: {
     calendar_ids: {
       label: 'Selected Calendars (JSON)',
-      description: 'Managed via calendar picker below',
+      description: 'Managed from the Google Calendar settings panel',
     },
   },
 })
