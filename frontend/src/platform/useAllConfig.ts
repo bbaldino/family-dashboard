@@ -14,10 +14,9 @@ export const CONFIG_QUERY_KEY = ['config'] as const
  * admin `SettingsComponent` registered in `settingsRegistry` also does its
  * own raw fetch, but that is a different, one-shot pattern (load current
  * values once to prefill a form) and out of scope for this hook. Outside
- * that registry, three call sites across three files still do their own raw
+ * that registry, two call sites across two files still do their own raw
  * `useEffect` + `fetch('/api/config')`, and none of them refetch —
- * `src/themes/grid/screens/CamerasBoard.tsx`,
- * `src/themes/grid/overlays/doorbell/DoorbellRingListener.tsx`, and
+ * `src/themes/grid/overlays/doorbell/DoorbellRingListener.tsx` and
  * `src/themes/grid/GridSettingsPanel.tsx` — the last one is the same
  * one-shot prefill pattern as a `SettingsComponent`, but it lives under
  * `src/themes/grid/` rather than the registry, so the exemption above
