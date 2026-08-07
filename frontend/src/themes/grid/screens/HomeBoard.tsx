@@ -29,7 +29,7 @@ import { useOnThisDayWidgetMeta } from '@/themes/grid/widget-meta/on-this-day'
 import { MetaFillerWidget } from '@/themes/grid/ui/MetaFillerWidget'
 import { CellGridLayout } from '@/themes/grid/layout/CellGridLayout'
 import type { CellGridWidget } from '@/themes/grid/layout/CellGridLayout'
-import { useCalendarWidgetMeta } from '@/themes/grid/widget-meta/google-calendar'
+import { useCalendarWidgetMeta } from '@/themes/grid/widget-meta/calendar'
 
 const GRID_CONFIG_PREFIX = 'theme.grid.'
 

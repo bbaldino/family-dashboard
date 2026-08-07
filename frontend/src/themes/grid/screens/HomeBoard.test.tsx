@@ -45,7 +45,7 @@ vi.mock('@/themes/grid/widgets/on-this-day/OnThisDayWidget', () => ({
 vi.mock('@/themes/grid/widgets/word-of-the-day/WordOfTheDayWidget', () => ({
   WordOfTheDayWidget: () => <div data-testid="widget-word-of-the-day" />,
 }))
-vi.mock('@/themes/grid/widget-meta/google-calendar', () => ({
+vi.mock('@/themes/grid/widget-meta/calendar', () => ({
   useCalendarWidgetMeta: () => smallMeta,
 }))
 vi.mock('@/themes/grid/widget-meta/sports', () => ({
