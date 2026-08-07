@@ -198,6 +198,38 @@ describe('ThemeSettings', () => {
     expect(swatch('P1')).toHaveStyle({ background: rgb(PICKED) })
   })
 
+  // The same property, isolated. `useTheme` now narrows its parse to the
+  // stored theme string, so most unrelated saves no longer hand this screen a
+  // new `activeTheme` object at all — which means the test above passes on
+  // that alone, and would keep passing even if the seeding started following
+  // the theme's identity again. This one changes the stored theme list itself,
+  // the way creating a theme on another tab does: the re-parse is unavoidable,
+  // `Kitchen` arrives as a brand new object under the same id, and only the
+  // seed-once split can keep the edits.
+  it('keeps in-progress swatch edits when the theme it is editing is re-parsed', async () => {
+    const PORCH = { id: 'porch', name: 'Porch', builtin: false, colors: OCEAN.colors }
+    const { table } = stubConfig({
+      'theme.active': 'kitchen',
+      'theme.custom_themes': JSON.stringify([KITCHEN]),
+    })
+    const { client } = renderSettings()
+    await waitFor(() => expect(pill('Kitchen')).toHaveClass('border-palette-1'))
+
+    editSwatch('P1')
+    expect(swatch('P1')).toHaveStyle({ background: rgb(PICKED) })
+
+    table['theme.custom_themes'] = JSON.stringify([KITCHEN, PORCH])
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: CONFIG_QUERY_KEY })
+    })
+    // The new pill is the synchronisation point: it can only render once the
+    // re-parsed list has reached the component, so the assertion below is
+    // made against an editor that has already seen the new `Kitchen` object.
+    await screen.findByRole('button', { name: /^Porch$/ })
+
+    expect(swatch('P1')).toHaveStyle({ background: rgb(PICKED) })
+  })
+
   it('re-seeds the swatches when the theme is deliberately switched', async () => {
     stubConfig({ 'theme.active': 'kitchen', 'theme.custom_themes': JSON.stringify([KITCHEN]) })
     renderSettings()

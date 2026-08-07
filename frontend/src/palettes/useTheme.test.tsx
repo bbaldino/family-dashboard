@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useTheme } from './useTheme'
-import { CONFIG_QUERY_KEY } from '@/platform'
+import { CONFIG_QUERY_KEY, useAllConfig } from '@/platform'
 import { EARTH_TONES } from './types'
 import type { Theme } from './types'
 
@@ -104,6 +104,43 @@ describe('useTheme', () => {
     })
 
     await waitFor(() => expect(result.current.activeTheme.id).toBe('forest'))
+  })
+
+  it('hands out the same activeTheme object when an unrelated key changes', async () => {
+    // Custom themes are parsed out of a JSON string, so memoizing them on the
+    // whole config object gave every consumer a brand new `activeTheme` for a
+    // timer setting or a sports team — churn with nothing behind it. A
+    // built-in would pass this under any implementation (module constants keep
+    // their reference), hence the custom theme.
+    const stored = {
+      'theme.active': CUSTOM.id,
+      'theme.custom_themes': JSON.stringify([CUSTOM]),
+    }
+    const fetchMock = stubConfig(stored)
+    const client = newClient()
+    const { result } = renderHook(() => ({ theme: useTheme(), config: useAllConfig() }), {
+      wrapper: wrapperFor(client),
+    })
+    await waitFor(() => expect(result.current.theme.activeTheme.id).toBe(CUSTOM.id))
+    const before = result.current.theme.activeTheme
+
+    fetchMock.mockImplementation(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ ...stored, 'timers.service_url': 'http://timer.local' }),
+      } as Response),
+    )
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: CONFIG_QUERY_KEY })
+    })
+    // Read through the same component as the hook under test, so this only
+    // passes once the new config has actually reached a render — not merely
+    // the cache.
+    await waitFor(() =>
+      expect(result.current.config.data?.['timers.service_url']).toBe('http://timer.local'),
+    )
+
+    expect(result.current.theme.activeTheme).toBe(before)
   })
 
   it('picks up custom themes stored in config', async () => {
