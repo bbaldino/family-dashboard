@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useSaveConfig } from '@/platform'
+import { useState, useEffect } from 'react'
+import { useAllConfig, useSaveConfig } from '@/platform'
 import { googleCalendarIntegration } from '@/integrations/google-calendar'
 import { Button } from '@/ui/Button'
 
@@ -9,36 +9,53 @@ interface CalendarListEntry {
   primary?: boolean
 }
 
+/**
+ * Prefilled once from the shared `/api/config` query, then left alone — same
+ * split as `themes/grid/GridSettingsPanel.tsx`: this outer half tracks the
+ * live query and re-renders on every poll; the inner form's lazy `useState`
+ * initialisers read it once at mount and ignore every later value, so a poll
+ * tick can't overwrite an in-progress edit.
+ */
 export function CountdownsSettings() {
+  const { data, isPending } = useAllConfig()
+
+  if (isPending) {
+    return <div className="text-text-muted text-sm">Loading...</div>
+  }
+
+  return <CountdownsSettingsForm config={data} />
+}
+
+function CountdownsSettingsForm({ config }: { config: Record<string, string> | undefined }) {
   const [calendars, setCalendars] = useState<CalendarListEntry[]>([])
-  const [selectedCalendarId, setSelectedCalendarId] = useState('')
-  const [horizonDays, setHorizonDays] = useState('90')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  // Unrelated to /api/config — the Google Calendar list, fetched once on
+  // mount, same as before.
+  const [calendarsLoading, setCalendarsLoading] = useState(true)
+  const [selectedCalendarId, setSelectedCalendarId] = useState(
+    () => config?.['countdowns.calendar_id'] ?? '',
+  )
+  const [horizonDays, setHorizonDays] = useState(() => config?.['countdowns.horizon_days'] ?? '90')
+  const [error, setError] = useState<string | null>(config ? null : 'Failed to load settings')
   const [status, setStatus] = useState<string | null>(null)
   const saveConfig = useSaveConfig()
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const [cals, config] = await Promise.all([
-        googleCalendarIntegration.api!.get<CalendarListEntry[]>('/calendars').catch(() => []),
-        fetch('/api/config').then((r) => r.json()) as Promise<Record<string, string>>,
-      ])
-      setCalendars(cals)
-      setSelectedCalendarId(config['countdowns.calendar_id'] ?? '')
-      setHorizonDays(config['countdowns.horizon_days'] ?? '90')
-    } catch {
-      setError('Failed to load settings')
-    } finally {
-      setLoading(false)
+  useEffect(() => {
+    let cancelled = false
+    googleCalendarIntegration
+      .api!.get<CalendarListEntry[]>('/calendars')
+      .then((cals) => {
+        if (!cancelled) setCalendars(cals)
+      })
+      .catch(() => {
+        if (!cancelled) setError('Failed to load settings')
+      })
+      .finally(() => {
+        if (!cancelled) setCalendarsLoading(false)
+      })
+    return () => {
+      cancelled = true
     }
   }, [])
-
-  useEffect(() => {
-    load()
-  }, [load])
 
   const handleSave = async () => {
     try {
@@ -56,7 +73,7 @@ export function CountdownsSettings() {
     }
   }
 
-  if (loading) {
+  if (calendarsLoading) {
     return <div className="text-text-muted text-sm">Loading...</div>
   }
 

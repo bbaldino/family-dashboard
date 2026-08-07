@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useSaveConfig } from '@/platform'
+import { useState } from 'react'
+import { useAllConfig, useSaveConfig } from '@/platform'
 import { Button } from '@/ui/Button'
 import { ModelSelect } from '@/admin/settings/llm/ModelSelect'
 import { settingsEntries, settingsRegistry } from './settings-registry'
@@ -22,35 +22,40 @@ function getSchemaDefaults(): Record<string, string> {
   return defaults
 }
 
+/**
+ * Prefilled once from the shared `/api/config` query, then left alone — same
+ * split as `themes/grid/GridSettingsPanel.tsx`: this outer half tracks the
+ * live query and re-renders on every poll; the inner form's lazy `useState`
+ * initialisers read it once at mount and ignore every later value, so a poll
+ * tick can't overwrite an in-progress edit — including one left behind on a
+ * different sidebar tab, since `localConfig` here spans every integration at
+ * once rather than resetting per tab.
+ */
 export function SettingsAdmin() {
+  const { data, isPending } = useAllConfig()
+
+  if (isPending) {
+    return <div className="text-text-muted text-sm">Loading...</div>
+  }
+
+  return <SettingsAdminForm config={data} />
+}
+
+function SettingsAdminForm({ config }: { config: Record<string, string> | undefined }) {
   const [selectedId, setSelectedId] = useState<string | null>(
     settingsEntries.length > 0 ? settingsEntries[0].id : null,
   )
-  const [allConfig, setAllConfig] = useState<Record<string, string>>({})
-  const [localConfig, setLocalConfig] = useState<Record<string, string>>({})
+  const [allConfig, setAllConfig] = useState<Record<string, string>>(() => ({
+    ...getSchemaDefaults(),
+    ...config,
+  }))
+  const [localConfig, setLocalConfig] = useState<Record<string, string>>(() => ({
+    ...getSchemaDefaults(),
+    ...config,
+  }))
   const [status, setStatus] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(config ? null : 'Failed to load settings')
   const saveConfig = useSaveConfig()
-
-  useEffect(() => {
-    let cancelled = false
-    fetch('/api/config')
-      .then((resp) => resp.json())
-      .then((data) => {
-        if (cancelled) return
-        // Merge schema defaults under saved values so unsaved fields show their defaults
-        const defaults = getSchemaDefaults()
-        const merged = { ...defaults, ...data }
-        setAllConfig(merged)
-        setLocalConfig(merged)
-      })
-      .catch(() => {
-        if (!cancelled) setError('Failed to load settings')
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   const handleChange = (fullKey: string, value: string) => {
     setLocalConfig((prev) => ({ ...prev, [fullKey]: value }))

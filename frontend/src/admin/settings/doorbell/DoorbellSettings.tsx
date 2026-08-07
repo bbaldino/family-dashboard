@@ -1,21 +1,46 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Play } from 'lucide-react'
-import { useSaveConfig } from '@/platform'
+import { useAllConfig, useSaveConfig } from '@/platform'
 import { Button } from '@/ui/Button'
 import { ALARM_SOUNDS, getAlarmById } from '@/integrations/timers'
 import { doorbellIntegration } from '@/integrations/doorbell'
 
+/**
+ * Prefilled once from the shared `/api/config` query, then left alone — same
+ * split as `themes/grid/GridSettingsPanel.tsx`: this outer half tracks the
+ * live query and re-renders on every poll; the inner form's lazy `useState`
+ * initialisers read it once at mount and ignore every later value, so a poll
+ * tick can't overwrite an in-progress edit.
+ */
 export function DoorbellSettings() {
+  const { data, isPending } = useAllConfig()
+
+  if (isPending) {
+    return <div className="text-text-muted text-sm">Loading...</div>
+  }
+
+  return <DoorbellSettingsForm config={data} />
+}
+
+function DoorbellSettingsForm({ config }: { config: Record<string, string> | undefined }) {
   const defaults = doorbellIntegration.schema.parse({})
-  const [cameraUrl, setCameraUrl] = useState('')
-  const [pressSensor, setPressSensor] = useState('')
-  const [screensaverEntity, setScreensaverEntity] = useState('')
-  const [autoDismissSeconds, setAutoDismissSeconds] = useState(
-    String(defaults.auto_dismiss_seconds),
+  const g = (k: string, d: string) => config?.[`doorbell.${k}`] ?? d
+  const [cameraUrl, setCameraUrl] = useState(() => g('camera_url', defaults.camera_url ?? ''))
+  const [pressSensor, setPressSensor] = useState(() =>
+    g('press_sensor_entity', defaults.press_sensor_entity),
   )
-  const [chimeEnabled, setChimeEnabled] = useState(defaults.chime_enabled)
-  const [chimeSoundId, setChimeSoundId] = useState(defaults.chime_sound_id)
-  const [loading, setLoading] = useState(true)
+  const [screensaverEntity, setScreensaverEntity] = useState(() =>
+    g('screensaver_entity', defaults.screensaver_entity),
+  )
+  const [autoDismissSeconds, setAutoDismissSeconds] = useState(() =>
+    g('auto_dismiss_seconds', String(defaults.auto_dismiss_seconds)),
+  )
+  const [chimeEnabled, setChimeEnabled] = useState(
+    () => g('chime_enabled', String(defaults.chime_enabled)) === 'true',
+  )
+  const [chimeSoundId, setChimeSoundId] = useState(() =>
+    g('chime_sound_id', defaults.chime_sound_id),
+  )
   const [status, setStatus] = useState<{
     kind: 'ok' | 'error'
     text: string
@@ -24,23 +49,8 @@ export function DoorbellSettings() {
   const saveConfig = useSaveConfig()
   const previewCtxRef = useRef<AudioContext | null>(null)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const raw = (await fetch('/api/config').then((r) => r.json())) as Record<string, string>
-      const g = (k: string, d: string) => raw[`doorbell.${k}`] ?? d
-      setCameraUrl(g('camera_url', defaults.camera_url ?? ''))
-      setPressSensor(g('press_sensor_entity', defaults.press_sensor_entity))
-      setScreensaverEntity(g('screensaver_entity', defaults.screensaver_entity))
-      setAutoDismissSeconds(g('auto_dismiss_seconds', String(defaults.auto_dismiss_seconds)))
-      setChimeEnabled(g('chime_enabled', String(defaults.chime_enabled)) === 'true')
-      setChimeSoundId(g('chime_sound_id', defaults.chime_sound_id))
-    } catch {
-      // fall through with defaults already in state
-    } finally {
-      setLoading(false)
-    }
-
+  // Unrelated to /api/config — a browser permission query, run once on mount.
+  useEffect(() => {
     navigator.permissions
       .query({ name: 'microphone' as PermissionName })
       .then((result) => {
@@ -48,12 +58,7 @@ export function DoorbellSettings() {
         result.onchange = () => setMicStatus(result.state)
       })
       .catch(() => {})
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-
-  useEffect(() => {
-    load()
-  }, [load])
 
   const handleSave = async () => {
     try {
@@ -99,8 +104,6 @@ export function DoorbellSettings() {
     },
     [],
   )
-
-  if (loading) return <div className="text-text-muted text-sm">Loading...</div>
 
   return (
     <div className="space-y-6 max-w-md">

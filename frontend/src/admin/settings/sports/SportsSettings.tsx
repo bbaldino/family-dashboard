@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useSaveConfig } from '@/platform'
+import { useState, useEffect, useMemo } from 'react'
+import { useAllConfig, useSaveConfig } from '@/platform'
 import { Button } from '@/ui/Button'
 import { ModelSelect } from '@/admin/settings/llm/ModelSelect'
 import {
@@ -17,16 +17,52 @@ const LEAGUES = [
   { id: 'nhl', name: 'NHL' },
 ]
 
+function parseTrackedTeams(raw: string | undefined): { teams: TrackedTeam[]; failed: boolean } {
+  if (!raw) return { teams: [], failed: false }
+  try {
+    return { teams: JSON.parse(raw), failed: false }
+  } catch {
+    return { teams: [], failed: true }
+  }
+}
+
+/**
+ * Prefilled once from the shared `/api/config` query, then left alone — same
+ * split as `themes/grid/GridSettingsPanel.tsx`: this outer half tracks the
+ * live query and re-renders on every poll; the inner form's lazy `useState`
+ * initialisers read it once at mount and ignore every later value, so a poll
+ * tick can't overwrite an in-progress edit.
+ */
 export function SportsSettings() {
-  const [trackedTeams, setTrackedTeams] = useState<TrackedTeam[]>([])
+  const { data, isPending } = useAllConfig()
+
+  if (isPending) {
+    return <div className="text-text-muted text-sm">Loading...</div>
+  }
+
+  return <SportsSettingsForm config={data} />
+}
+
+function SportsSettingsForm({ config }: { config: Record<string, string> | undefined }) {
+  // Memoised rather than a plain lazy `useState`, because the legacy-backfill
+  // effect below needs the same parsed-once value without re-parsing.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const parsed = useMemo(() => parseTrackedTeams(config?.['sports.tracked_teams']), [])
+
+  const [trackedTeams, setTrackedTeams] = useState<TrackedTeam[]>(() => parsed.teams)
   const [expandedLeague, setExpandedLeague] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [pollLive, setPollLive] = useState('5')
-  const [pollIdle, setPollIdle] = useState('900')
-  const [windowHours, setWindowHours] = useState('24')
-  const [model, setModel] = useState('llama3.1:8b')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [pollLive, setPollLive] = useState(() => config?.['sports.poll_interval_live'] ?? '5')
+  const [pollIdle, setPollIdle] = useState(() => config?.['sports.poll_interval_idle'] ?? '900')
+  const [windowHours, setWindowHours] = useState(() => config?.['sports.window_hours'] ?? '24')
+  const [model, setModel] = useState(() => config?.['sports.model'] ?? 'llama3.1:8b')
+  const [error, setError] = useState<string | null>(
+    config === undefined
+      ? 'Failed to load settings'
+      : parsed.failed
+        ? 'Failed to load settings'
+        : null,
+  )
   const [status, setStatus] = useState<string | null>(null)
   const saveConfig = useSaveConfig()
 
@@ -41,56 +77,44 @@ export function SportsSettings() {
     }
   }, [expandedTeamsFailed, expandedLeague])
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const config = (await fetch('/api/config').then((r) => r.json())) as Record<string, string>
-      const tracked: TrackedTeam[] = config['sports.tracked_teams']
-        ? JSON.parse(config['sports.tracked_teams'])
-        : []
-      setPollLive(config['sports.poll_interval_live'] ?? '5')
-      setPollIdle(config['sports.poll_interval_idle'] ?? '900')
-      setWindowHours(config['sports.window_hours'] ?? '24')
-      setModel(config['sports.model'] ?? 'llama3.1:8b')
-
-      // Backfill display info for teams missing name/logo (legacy data)
-      const needsBackfill = tracked.some((t) => !t.name)
-      if (needsBackfill && tracked.length > 0) {
-        const leagueIds = [...new Set(tracked.map((t) => t.league))]
-        const teamsByLeague: Record<string, TeamInfo[]> = {}
-        await Promise.all(
-          leagueIds.map(async (leagueId) => {
-            try {
-              teamsByLeague[leagueId] = await fetchLeagueTeams(leagueId)
-            } catch {
-              // skip — pills will just show the ID
-            }
-          }),
-        )
-        // No local copy to keep: `fetchLeagueTeams` filled the same cache
-        // entries `useLeagueTeams` reads, so these leagues now expand without
-        // a second request.
-        const enriched = tracked.map((t) => {
-          if (t.name) return t
-          const info = teamsByLeague[t.league]?.find((team) => team.id === t.teamId)
-          if (info) return { ...t, name: info.name, logo: info.logo }
-          return t
-        })
-        setTrackedTeams(enriched)
-      } else {
-        setTrackedTeams(tracked)
-      }
-    } catch {
-      setError('Failed to load settings')
-    } finally {
-      setLoading(false)
-    }
-  }, [fetchLeagueTeams])
-
+  // Legacy backfill: entries saved before name/logo were stored get their
+  // display info filled in once, against the config this form was seeded
+  // with — same "runs once at mount" contract as the lazy `useState`s above,
+  // just via an effect because it's genuinely async.
   useEffect(() => {
-    load()
-  }, [load])
+    const tracked = parsed.teams
+    const needsBackfill = tracked.some((t) => !t.name)
+    if (!needsBackfill) return
+    let cancelled = false
+    void (async () => {
+      const leagueIds = [...new Set(tracked.map((t) => t.league))]
+      const teamsByLeague: Record<string, TeamInfo[]> = {}
+      await Promise.all(
+        leagueIds.map(async (leagueId) => {
+          try {
+            teamsByLeague[leagueId] = await fetchLeagueTeams(leagueId)
+          } catch {
+            // skip — pills will just show the ID
+          }
+        }),
+      )
+      if (cancelled) return
+      // No local copy to keep: `fetchLeagueTeams` filled the same cache
+      // entries `useLeagueTeams` reads, so these leagues now expand without
+      // a second request.
+      const enriched = tracked.map((t) => {
+        if (t.name) return t
+        const info = teamsByLeague[t.league]?.find((team) => team.id === t.teamId)
+        if (info) return { ...t, name: info.name, logo: info.logo }
+        return t
+      })
+      setTrackedTeams(enriched)
+    })()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const toggleLeague = (leagueId: string) => {
     // Expanding is the whole trigger — `useLeagueTeams` fetches off this state.
@@ -130,10 +154,6 @@ export function SportsSettings() {
     } catch {
       setError('Failed to save settings')
     }
-  }
-
-  if (loading) {
-    return <div className="text-text-muted text-sm">Loading...</div>
   }
 
   return (

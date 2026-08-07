@@ -1,28 +1,40 @@
-import { useState, useEffect } from 'react'
-import { useSaveConfig } from '@/platform'
+import { useState } from 'react'
+import { useAllConfig, useSaveConfig } from '@/platform'
 import { useCalendarList } from '@/integrations/google-calendar'
 
+function parseCalendarIds(raw: string | undefined): string[] {
+  if (!raw) return []
+  try {
+    return JSON.parse(raw)
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Prefilled once from the shared `/api/config` query, then left alone — same
+ * split as `themes/grid/GridSettingsPanel.tsx`: this outer half tracks the
+ * live query and re-renders on every poll; the inner form's lazy `useState`
+ * initialiser reads it once at mount and ignores every later value, so a poll
+ * tick can't overwrite an in-progress edit.
+ */
 export function GoogleCalendarSettings() {
-  const [calendarIds, setCalendarIds] = useState<string[]>([])
+  const { data, isPending } = useAllConfig()
+
+  if (isPending) {
+    return <div className="text-text-muted text-sm">Loading...</div>
+  }
+
+  return <GoogleCalendarSettingsForm config={data} />
+}
+
+function GoogleCalendarSettingsForm({ config }: { config: Record<string, string> | undefined }) {
+  const [calendarIds, setCalendarIds] = useState<string[]>(() =>
+    parseCalendarIds(config?.['google-calendar.calendar_ids']),
+  )
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
   const configSaver = useSaveConfig()
-
-  useEffect(() => {
-    fetch('/api/config')
-      .then((r) => r.json())
-      .then((allConfig: Record<string, string>) => {
-        const ids = allConfig['google-calendar.calendar_ids']
-        if (ids) {
-          try {
-            setCalendarIds(JSON.parse(ids))
-          } catch {
-            // ignore
-          }
-        }
-      })
-      .catch(() => {})
-  }, [])
 
   const {
     data: calendars = [],

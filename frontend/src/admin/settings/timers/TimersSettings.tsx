@@ -1,33 +1,33 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useSaveConfig } from '@/platform'
+import { useState } from 'react'
+import { useAllConfig, useSaveConfig } from '@/platform'
 import { Button } from '@/ui/Button'
 import { ALARM_SOUNDS, DEFAULT_ALARM_ID } from '@/integrations/timers'
 
+/**
+ * Prefilled once from the shared `/api/config` query, then left alone — same
+ * split as `themes/grid/GridSettingsPanel.tsx`: this outer half tracks the
+ * live query and re-renders on every poll; the inner form's lazy `useState`
+ * initialisers read it once at mount and ignore every later value, so a poll
+ * tick can't overwrite an in-progress edit.
+ */
 export function TimersSettings() {
-  const saveConfig = useSaveConfig()
-  const [serviceUrl, setServiceUrl] = useState('')
-  const [selectedSound, setSelectedSound] = useState(DEFAULT_ALARM_ID)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data, isPending } = useAllConfig()
+
+  if (isPending) {
+    return <div className="text-text-muted text-sm">Loading...</div>
+  }
+
+  return <TimersSettingsForm config={data} />
+}
+
+function TimersSettingsForm({ config }: { config: Record<string, string> | undefined }) {
+  const [serviceUrl, setServiceUrl] = useState(() => config?.['timers.service_url'] ?? '')
+  const [selectedSound, setSelectedSound] = useState(
+    () => config?.['timers.alarm_sound'] ?? DEFAULT_ALARM_ID,
+  )
+  const [error, setError] = useState<string | null>(config ? null : 'Failed to load settings')
   const [status, setStatus] = useState<string | null>(null)
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const config = (await fetch('/api/config').then((r) => r.json())) as Record<string, string>
-      setServiceUrl(config['timers.service_url'] ?? '')
-      setSelectedSound(config['timers.alarm_sound'] ?? DEFAULT_ALARM_ID)
-    } catch {
-      setError('Failed to load settings')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    load()
-  }, [load])
+  const saveConfig = useSaveConfig()
 
   const handleSave = async () => {
     try {
@@ -43,10 +43,6 @@ export function TimersSettings() {
     } catch {
       setError('Failed to save settings')
     }
-  }
-
-  if (loading) {
-    return <div className="text-text-muted text-sm">Loading...</div>
   }
 
   return (

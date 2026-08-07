@@ -10,29 +10,35 @@ export const CONFIG_QUERY_KEY = ['config'] as const
  * fixes that fan-out for those consumers — react-query dedupes the
  * concurrent mounts, and invalidating this key updates all of them at once.
  *
- * This does not cover every place the app reads `/api/config`, though. Each
- * admin `SettingsComponent` registered in `settingsRegistry` still does its
- * own raw fetch. That is a different, one-shot pattern — load current values
- * once to prefill a form — and out of scope for this hook.
+ * Every place the app reads `/api/config` now goes through this hook,
+ * including the admin `SettingsComponent` forms registered in
+ * `settingsRegistry` (and `SettingsAdmin.tsx`'s own generic-field editor for
+ * integrations without one). Those are a different consumption pattern from
+ * everything else, though: a one-shot form prefill, not a live display.
  *
- * Note that reading through this hook and *tracking* it are separate
- * choices. `src/themes/grid/GridSettingsPanel.tsx` (the same prefill pattern,
- * but under `src/themes/grid/` rather than the registry) reads this query and
- * then deliberately ignores every later value: a form's unsaved edits are
- * never in `/api/config`, so inputs derived from this query would discard
- * whatever someone had typed on the next poll tick. Any `SettingsComponent`
- * migrated here later wants that same shape — one shared request, prefill
- * once — not live values.
+ * Reading through this hook and *tracking* it are separate choices. Every
+ * settings form — `src/themes/grid/GridSettingsPanel.tsx` and the eight admin
+ * forms under `src/admin/` (`SettingsAdmin`, `TimersSettings`,
+ * `GoogleCalendarSettings`, `ThemePicker`, `MusicSettings`,
+ * `DoorbellSettings`, `SportsSettings`, `CountdownsSettings`) — reads this
+ * query and then deliberately ignores every later value: a form's unsaved
+ * edits are never in `/api/config`, so inputs derived from this query would
+ * discard whatever someone had typed on the next poll tick. Each is split
+ * into an outer component that tracks the live query and re-renders on every
+ * poll, and an inner form whose lazy `useState` initialisers read the config
+ * it was mounted with once and ignore every later value — the inner never
+ * remounts on a poll tick, only on a real navigation, so "once" is structural
+ * rather than a flag that could be forgotten. Seeding state from a
+ * `useEffect` instead is rejected by the `react-hooks/set-state-in-effect`
+ * lint rule, which is why this shape exists rather than a simpler one.
  *
- * Everything outside that registry now reads through this hook. It used to
- * be nine more raw fetches: two in `screens/HomeBoard.tsx`, one in
- * `fetchCalendarIds` (the google-calendar hooks derive their calendar ids
- * from this query instead, and it is gone), and six mount-only readers that
- * therefore needed a page reload to see a config change —
- * `palettes/useTheme.ts` and `shell/ThemeMount.tsx` (between them the reason
- * a theme or presentation change used to need one) plus grid's
- * `TimerBanner`, `CamerasBoard`, `DoorbellRingListener` and
- * `GridSettingsPanel`.
+ * Everything else reads live and now goes through this hook too. It used to
+ * be raw fetches in `screens/HomeBoard.tsx` (two), `fetchCalendarIds` (the
+ * google-calendar hooks derive their calendar ids from this query instead,
+ * and it is gone), `palettes/useTheme.ts` and `shell/ThemeMount.tsx` (between
+ * them the reason a theme or presentation change used to need a page
+ * reload), and grid's `TimerBanner`, `CamerasBoard` and
+ * `DoorbellRingListener`.
  *
  * Two of those — `CamerasBoard` and `DoorbellRingListener` — read this
  * query's raw data and coerce per key rather than going through

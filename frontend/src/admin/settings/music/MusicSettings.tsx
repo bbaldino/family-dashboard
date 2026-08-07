@@ -1,14 +1,30 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useSaveConfig } from '@/platform'
+import { useState } from 'react'
+import { useAllConfig, useSaveConfig } from '@/platform'
 import { Button } from '@/ui/Button'
 import { usePlayerOptions } from '@/integrations/music'
 
+/**
+ * Prefilled once from the shared `/api/config` query, then left alone — same
+ * split as `themes/grid/GridSettingsPanel.tsx`: this outer half tracks the
+ * live query and re-renders on every poll; the inner form's lazy `useState`
+ * initialisers read it once at mount and ignore every later value, so a poll
+ * tick can't overwrite an in-progress edit.
+ */
 export function MusicSettings() {
-  const [serviceUrl, setServiceUrl] = useState('')
-  const [apiToken, setApiToken] = useState('')
-  const [defaultPlayer, setDefaultPlayer] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data, isPending } = useAllConfig()
+
+  if (isPending) {
+    return <div className="text-text-muted text-sm">Loading...</div>
+  }
+
+  return <MusicSettingsForm config={data} />
+}
+
+function MusicSettingsForm({ config }: { config: Record<string, string> | undefined }) {
+  const [serviceUrl, setServiceUrl] = useState(() => config?.['music.service_url'] ?? '')
+  const [apiToken, setApiToken] = useState(() => config?.['music.api_token'] ?? '')
+  const [defaultPlayer, setDefaultPlayer] = useState(() => config?.['music.default_player'] ?? '')
+  const [error, setError] = useState<string | null>(config ? null : 'Failed to load settings')
   const [status, setStatus] = useState<string | null>(null)
   // The player fetch's error state only clears on a successful refetch, so a
   // save would otherwise leave the previous failure on screen. The old single
@@ -23,25 +39,6 @@ export function MusicSettings() {
     isError: playersFailed,
     refetch: fetchPlayers,
   } = usePlayerOptions()
-
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const config = (await fetch('/api/config').then((r) => r.json())) as Record<string, string>
-      setServiceUrl(config['music.service_url'] ?? '')
-      setApiToken(config['music.api_token'] ?? '')
-      setDefaultPlayer(config['music.default_player'] ?? '')
-    } catch {
-      setError('Failed to load settings')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    load()
-  }, [load])
 
   const loadPlayers = () => {
     setError(null)
@@ -65,10 +62,6 @@ export function MusicSettings() {
     } catch {
       setError('Failed to save settings')
     }
-  }
-
-  if (loading) {
-    return <div className="text-text-muted text-sm">Loading...</div>
   }
 
   const canLoadPlayers = serviceUrl.trim() !== '' && apiToken.trim() !== ''

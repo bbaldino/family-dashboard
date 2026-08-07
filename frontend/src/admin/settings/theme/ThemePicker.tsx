@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { useSaveConfig } from '@/platform'
+import { useState } from 'react'
+import { useAllConfig, useSaveConfig } from '@/platform'
 import { getAllThemes, getTheme } from '@/shell/ThemeRegistry'
 import type { ThemeSettings } from '@/shell/types'
 
@@ -18,26 +18,30 @@ function ThemeSettingsSection({ settings }: { settings: ThemeSettings }) {
   )
 }
 
+/**
+ * Prefilled once from the shared `/api/config` query, then left alone — same
+ * split as `themes/grid/GridSettingsPanel.tsx`: this outer half tracks the
+ * live query and re-renders on every poll; the inner form's lazy `useState`
+ * initialiser reads it once at mount and ignores every later value, so a poll
+ * tick can't overwrite an in-progress choice before it saves.
+ */
 export function ThemePicker() {
-  const [selected, setSelected] = useState<string>(DEFAULT_THEME_ID)
+  const { data, isPending } = useAllConfig()
+
+  if (isPending) {
+    return <div className="text-text-muted text-sm">Loading...</div>
+  }
+
+  return <ThemePickerForm config={data} />
+}
+
+function ThemePickerForm({ config }: { config: Record<string, string> | undefined }) {
+  const [selected, setSelected] = useState<string>(() => config?.[CONFIG_KEY] ?? DEFAULT_THEME_ID)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(false)
   const themes = getAllThemes()
   const selectedTheme = getTheme(selected)
   const saveConfig = useSaveConfig()
-
-  useEffect(() => {
-    let cancelled = false
-    fetch('/api/config')
-      .then((r) => r.json())
-      .then((config: Record<string, string>) => {
-        if (!cancelled) setSelected(config[CONFIG_KEY] ?? DEFAULT_THEME_ID)
-      })
-      .catch(() => {})
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   const choose = async (id: string) => {
     const previous = selected
