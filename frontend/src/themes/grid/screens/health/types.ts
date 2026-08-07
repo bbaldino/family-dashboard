@@ -15,22 +15,13 @@ import type {
 export type { HealthComponent, HistorySample, Service, Status, UptimeReport, UptimeSegment }
 
 // critical > unknown > degraded > ok
-export const SEVERITY: Record<string, number> = {
-  critical: 4,
-  unknown: 3,
-  degraded: 2,
-  ok: 1,
-}
 
-export function severity(status: Status): number {
-  if (!status) return 3
-  return SEVERITY[status] ?? 3
-}
-
-export function worstOf(...statuses: Status[]): Status {
-  let worst: Status = 'ok'
-  for (const s of statuses) {
-    if (severity(s) > severity(worst)) worst = s
-  }
-  return worst
-}
+/**
+ * `severity` and `worstOf` deliberately are NOT redefined here.
+ *
+ * Which status is *worse* is a fact about health data, not a rendering
+ * choice — `integrations/health` owns it and its own reductions use it. What
+ * belongs to this theme is `tone.ts`: which colour a status gets. Keeping a
+ * second ranking here meant two places to change if the order ever did.
+ */
+export { severity, worstOf } from '@/integrations/health'
