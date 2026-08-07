@@ -7,6 +7,7 @@ import { nutrisliceIntegration } from '@/integrations/nutrislice'
 import { weatherIntegration } from '@/integrations/weather'
 import { googleCloudProvider } from '@/providers/google-cloud'
 import { googleCalendarIntegration } from '@/integrations/google-calendar'
+import { calendarIntegration } from '@/integrations/calendar'
 import { sportsIntegration } from '@/integrations/sports'
 import { timersIntegration } from '@/integrations/timers'
 import { themeIntegration } from '@/palettes/config'
@@ -40,6 +41,7 @@ export const settingsEntries: Integration<any>[] = [
   weatherIntegration,
   googleCloudProvider,
   googleCalendarIntegration,
+  calendarIntegration,
   sportsIntegration,
   timersIntegration,
   themeIntegration,

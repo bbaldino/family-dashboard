@@ -81,6 +81,47 @@ async fn migrate_grid_theme_config(pool: &sqlx::SqlitePool) {
     }
 }
 
+/// One-time migration: which calendars the dashboard shows was stored under
+/// `google-calendar.`, back when Google Calendar was a single integration.
+/// It is now a *provider* — an authenticated connection and the operations it
+/// answers — and "which calendars, in which window, in which widget" is its
+/// consumers' policy, so the key moves to the `calendar` integration that
+/// owns the week strip and the month grid.
+///
+/// Copies rather than moves, and skips a destination that already exists, so
+/// re-running at every boot is a no-op and never overwrites a selection the
+/// user has since edited.
+async fn migrate_calendar_config(pool: &sqlx::SqlitePool) {
+    let new_key = "calendar.calendar_ids";
+    let existing: Option<String> = sqlx::query_scalar("SELECT value FROM config WHERE key = ?")
+        .bind(new_key)
+        .fetch_optional(pool)
+        .await
+        .unwrap_or(None);
+
+    if existing.is_some() {
+        return;
+    }
+
+    let old_key = "google-calendar.calendar_ids";
+    let old_value: Option<String> = sqlx::query_scalar("SELECT value FROM config WHERE key = ?")
+        .bind(old_key)
+        .fetch_optional(pool)
+        .await
+        .unwrap_or(None);
+
+    if let Some(value) = old_value {
+        let _ = sqlx::query(
+            "INSERT INTO config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        )
+        .bind(new_key)
+        .bind(&value)
+        .execute(pool)
+        .await;
+        tracing::info!("Migrated {} -> {}", old_key, new_key);
+    }
+}
+
 #[tokio::main]
 async fn main() {
     // Load .env file if present (won't error if missing)
@@ -91,6 +132,7 @@ async fn main() {
     let pool = db::init_pool().await;
     migrate_google_cloud_config(&pool).await;
     migrate_grid_theme_config(&pool).await;
+    migrate_calendar_config(&pool).await;
 
     let api_routes = integrations::router(pool.clone());
 
@@ -143,8 +185,8 @@ async fn main() {
 }
 
 #[cfg(test)]
-mod grid_theme_migration_tests {
-    use super::migrate_grid_theme_config;
+mod config_migration_tests {
+    use super::{migrate_calendar_config, migrate_grid_theme_config};
     use sqlx::SqlitePool;
     use sqlx::sqlite::SqlitePoolOptions;
 
@@ -240,5 +282,55 @@ mod grid_theme_migration_tests {
         let pool = test_pool().await;
         migrate_grid_theme_config(&pool).await;
         assert_eq!(get_config(&pool, "theme.grid.columns").await, None);
+    }
+
+    const SELECTED: &str = r#"["family@group.calendar.google.com","work"]"#;
+
+    #[tokio::test]
+    async fn copies_calendar_ids_to_the_calendar_prefix() {
+        let pool = test_pool().await;
+        set_config(&pool, "google-calendar.calendar_ids", SELECTED).await;
+
+        migrate_calendar_config(&pool).await;
+
+        assert_eq!(
+            get_config(&pool, "calendar.calendar_ids").await.as_deref(),
+            Some(SELECTED)
+        );
+
+        // A copy, not a move — same reasoning as the grid keys above. The
+        // `google-calendar` *provider* still exists and still owns the OAuth
+        // connection; only this one key changed hands, and a build from
+        // before the split would still be looking for it here.
+        assert_eq!(
+            get_config(&pool, "google-calendar.calendar_ids")
+                .await
+                .as_deref(),
+            Some(SELECTED)
+        );
+    }
+
+    #[tokio::test]
+    async fn does_not_clobber_an_existing_calendar_ids_value() {
+        // The one way this migration could lose something a person chose by
+        // hand: once the calendar integration's own key has been edited, a
+        // reboot must not drag the stale `google-calendar` value back over it.
+        let pool = test_pool().await;
+        set_config(&pool, "google-calendar.calendar_ids", SELECTED).await;
+        set_config(&pool, "calendar.calendar_ids", r#"["home"]"#).await;
+
+        migrate_calendar_config(&pool).await;
+
+        assert_eq!(
+            get_config(&pool, "calendar.calendar_ids").await.as_deref(),
+            Some(r#"["home"]"#)
+        );
+    }
+
+    #[tokio::test]
+    async fn is_a_no_op_when_no_calendar_ids_exists() {
+        let pool = test_pool().await;
+        migrate_calendar_config(&pool).await;
+        assert_eq!(get_config(&pool, "calendar.calendar_ids").await, None);
     }
 }
