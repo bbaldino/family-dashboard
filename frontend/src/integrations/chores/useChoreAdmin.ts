@@ -182,8 +182,10 @@ export function useDeleteAssignment() {
  * Bulk-fill a week from the previous one. The backend does the whole copy in
  * one transaction, so it either lands entirely or not at all, and it refuses a
  * target week that already has assignments rather than appending a duplicate
- * set — that refusal arrives as a 400 whose message names the week, which the
- * assignments tab shows in its error banner.
+ * set — that refusal arrives as a 400 whose message says how many chores are
+ * already there, which the assignments tab shows verbatim in its error banner.
+ * It does not name the week: the banner renders directly under a header that
+ * already does.
  */
 export function useCopyWeek() {
   const queryClient = useQueryClient()
