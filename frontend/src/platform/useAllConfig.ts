@@ -17,10 +17,10 @@ export const CONFIG_QUERY_KEY = ['config'] as const
  * everything else, though: a one-shot form prefill, not a live display.
  *
  * Reading through this hook and *tracking* it are separate choices. Every
- * settings form — `src/themes/grid/GridSettingsPanel.tsx`, the eight admin
- * forms under `src/admin/` (`SettingsAdmin`, `TimersSettings`,
- * `GoogleCalendarSettings`, `ThemePicker`, `MusicSettings`,
- * `DoorbellSettings`, `SportsSettings`, `CountdownsSettings`) and
+ * settings form — `src/themes/grid/GridSettingsPanel.tsx`, the seven admin
+ * forms under `src/admin/` (`SettingsAdmin`, `GoogleCalendarSettings`,
+ * `ThemePicker`, `MusicSettings`, `DoorbellSettings`, `SportsSettings`,
+ * `CountdownsSettings`) and
  * `src/palettes/ThemeSettings.tsx` — reads this
  * query and then deliberately ignores every later value: a form's unsaved
  * edits are never in `/api/config`, so inputs derived from this query would
@@ -42,7 +42,7 @@ export const CONFIG_QUERY_KEY = ['config'] as const
  * them the reason a theme or presentation change used to need a page
  * reload), and grid's `CamerasBoard` and `DoorbellRingListener`.
  *
- * Both of those — `CamerasBoard` and `DoorbellRingListener` — read this
+ * Both of those read this
  * query's raw data and coerce per key rather than going through
  * `useIntegrationConfig`, deliberately: one unparseable `doorbell.*` value
  * would otherwise take the whole integration's config to `null` (see that

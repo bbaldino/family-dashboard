@@ -167,8 +167,8 @@ describe('ThemeSettings', () => {
   // needed it more than the other nine: unsaved swatches live only in this
   // component's state, and a *custom* theme is re-parsed out of the config
   // JSON into a brand new object every time anything in the table changes.
-  // Following that object's identity meant a timer setting saved on another
-  // tab silently took the recolouring with it.
+  // Following that object's identity meant an unrelated setting saved on
+  // another tab silently took the recolouring with it.
   it('keeps in-progress swatch edits when an unrelated config change lands', async () => {
     const { table } = stubConfig({
       'theme.active': 'kitchen',

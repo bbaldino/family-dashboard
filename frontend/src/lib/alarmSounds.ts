@@ -137,44 +137,6 @@ export const ALARM_SOUNDS: AlarmSound[] = [
   ),
 ]
 
-export const DEFAULT_ALARM_ID = 'gentle-chime'
-
 export function getAlarmById(id: string): AlarmSound {
   return ALARM_SOUNDS.find((s) => s.id === id) ?? ALARM_SOUNDS[0]
-}
-
-const REPEAT_COUNT = 20 // pre-schedule up to 20 repeats (~2 minutes for most sounds)
-const GAP_BETWEEN_REPEATS = 2 // seconds of silence between each repeat
-
-/**
- * Start a repeating alarm. Pre-schedules all repeats on a single AudioContext
- * so timing is precise. Returns a stop function that closes the context.
- */
-export function startRepeatingAlarm(soundId: string): () => void {
-  const alarm = getAlarmById(soundId)
-  try {
-    const ctx = new AudioContext()
-    const t = ctx.currentTime
-    const interval = alarm.duration + GAP_BETWEEN_REPEATS
-
-    for (let i = 0; i < REPEAT_COUNT; i++) {
-      alarm.schedule(ctx, t + i * interval)
-    }
-
-    // Auto-close after all repeats finish
-    const totalDuration = REPEAT_COUNT * interval
-    const autoCloseTimer = setTimeout(
-      () => {
-        ctx.close().catch(() => {})
-      },
-      totalDuration * 1000 + 1000,
-    ) // +1s buffer
-
-    return () => {
-      clearTimeout(autoCloseTimer)
-      ctx.close().catch(() => {})
-    }
-  } catch {
-    return () => {}
-  }
 }
