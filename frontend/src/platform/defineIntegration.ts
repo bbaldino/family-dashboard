@@ -36,10 +36,11 @@ export interface Integration<T extends z.ZodObject<z.ZodRawShape>> extends Integ
 }
 
 async function apiRequest<R>(baseUrl: string, path: string, options?: RequestInit): Promise<R> {
-  const resp = await fetch(`${baseUrl}${path}`, options)
+  const url = `${baseUrl}${path}`
+  const resp = await fetch(url, options)
   if (!resp.ok) {
-    const err = await resp.json().catch(() => ({ error: 'Request failed' }))
-    throw new Error(err.error || `${resp.status}`)
+    const err = await resp.json().catch(() => ({}))
+    throw new Error(err.error || `${url} failed with ${resp.status}`)
   }
   if (resp.status === 204) return undefined as R
   const text = await resp.text()

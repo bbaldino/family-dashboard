@@ -82,3 +82,17 @@ describe('postForm / putForm', () => {
     await expect(demo.api.postForm('/people', form())).resolves.toEqual({ id: 7, name: 'Ben' })
   })
 })
+
+describe('apiRequest error fallback', () => {
+  it('names the request path when a non-2xx body carries no error message', async () => {
+    mockFetch(400, {})
+
+    await expect(demo.api.get('/status')).rejects.toThrow('/status')
+  })
+
+  it("still throws the backend's message when the body has one", async () => {
+    mockFetch(400, { error: 'bad request' })
+
+    await expect(demo.api.get('/status')).rejects.toThrow('bad request')
+  })
+})
