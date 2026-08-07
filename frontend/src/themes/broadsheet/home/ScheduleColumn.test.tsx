@@ -27,8 +27,8 @@ describe('ScheduleColumn', () => {
   })
 
   it('renders today as the hero and the rest of the week as the week-ahead strip', () => {
-    // useGoogleCalendar wraps usePolling, whose `data` is the CalendarDay[]
-    // itself (not `{ days: [...] }`). See src/integrations/google-calendar/useGoogleCalendar.ts.
+    // useGoogleCalendar's `data` is the CalendarDay[] itself (not
+    // `{ days: [...] }`). See src/integrations/google-calendar/useGoogleCalendar.ts.
     // Index 0 is always today (see fetchCalendarEvents) — ScheduleColumn
     // relies on that rather than filtering on `isToday` itself.
     useGoogleCalendar.mockReturnValue({

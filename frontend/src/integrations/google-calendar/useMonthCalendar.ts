@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import type { UsePollingResult } from '@/hooks/usePolling'
+import type { UsePollingResult } from '@/integrations/types'
 import { useAllConfig, useIntegrationConfig } from '@/platform'
 import { activeScenario } from '@/lib/scenario'
 import { googleCalendarIntegration, parseCalendarIds } from './config'
