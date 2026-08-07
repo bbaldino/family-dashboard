@@ -19,9 +19,12 @@ export const googleCalendarIntegration = defineIntegration({
  * The saved `calendar_ids` value as a list, falling back to `['primary']` when
  * nothing is configured, the stored value is not parseable, or it is empty.
  *
- * One definition of "which calendars" for both the promise-based
- * `fetchCalendarIds` below and the `useIntegrationConfig` path in
- * `useCalendarEvents`, so the two cannot drift on the fallback.
+ * The one definition of "which calendars" for every caller — the week strip,
+ * the month grid and `useCalendarEvents` all reach it through
+ * `useIntegrationConfig`, so none of them can drift on the fallback. It
+ * replaced a promise-based `fetchCalendarIds` that read `/api/config`
+ * itself; that bypassed the shared config query and only stayed current
+ * because it happened to run inside a poll's fetcher.
  */
 export function parseCalendarIds(saved: string | undefined | null): string[] {
   if (saved) {
@@ -33,19 +36,4 @@ export function parseCalendarIds(saved: string | undefined | null): string[] {
     }
   }
   return ['primary']
-}
-
-/**
- * Reads the selected calendar IDs out of `/api/config`, falling back to
- * `['primary']` if nothing is configured or the request/parse fails.
- */
-export async function fetchCalendarIds(): Promise<string[]> {
-  let saved: string | undefined
-  try {
-    const allConfig: Record<string, string> = await fetch('/api/config').then((r) => r.json())
-    saved = allConfig['google-calendar.calendar_ids']
-  } catch {
-    // Config not available
-  }
-  return parseCalendarIds(saved)
 }

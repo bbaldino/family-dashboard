@@ -1,6 +1,9 @@
-import { usePolling } from '@/hooks/usePolling'
+import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import type { UsePollingResult } from '@/hooks/usePolling'
+import { useAllConfig, useIntegrationConfig } from '@/platform'
 import { activeScenario } from '@/lib/scenario'
-import { fetchCalendarIds } from './config'
+import { googleCalendarIntegration, parseCalendarIds } from './config'
 import { fetchEventsForCalendars } from './events'
 import { monthFixtureFor } from './fixtures'
 import type { CalendarEvent } from './types'
@@ -11,9 +14,11 @@ export interface MonthEvents {
   byDate: Record<string, CalendarEvent[]>
 }
 
-async function fetchMonthEvents(year: number, month: number): Promise<MonthEvents> {
-  const calendarIds = await fetchCalendarIds()
-
+async function fetchMonthEvents(
+  year: number,
+  month: number,
+  calendarIds: string[],
+): Promise<MonthEvents> {
   // Calculate date range: first Sunday of the grid to last Saturday
   const firstOfMonth = new Date(year, month, 1)
   const gridStart = new Date(firstOfMonth)
@@ -65,13 +70,39 @@ async function fetchMonthEvents(year: number, month: number): Promise<MonthEvent
   return { byDate }
 }
 
-export function useMonthCalendar(year: number, month: number) {
-  return usePolling<MonthEvents>({
-    queryKey: ['google-calendar', 'month', String(year), String(month)],
-    fetcher: () => {
+/**
+ * One month's events, bucketed by local date, for the month grid.
+ *
+ * Same shape as `useGoogleCalendar` and for the same reasons: the configured
+ * calendar ids live in the query key (so a `calendar_ids` change is picked up
+ * without a remount, on a kiosk that never reloads), the query waits for the
+ * config so it never asks `primary` first and corrects itself, and the result
+ * is adapted back to `UsePollingResult` — `data` stays `null` rather than
+ * `undefined` until a fetch succeeds, which `Calendar.tsx` documents relying
+ * on.
+ */
+export function useMonthCalendar(year: number, month: number): UsePollingResult<MonthEvents> {
+  const { isPending: configPending } = useAllConfig()
+  const config = useIntegrationConfig(googleCalendarIntegration)
+  const savedIds = config?.calendar_ids
+  const calendarIds = useMemo(() => parseCalendarIds(savedIds), [savedIds])
+
+  const query = useQuery({
+    queryKey: ['google-calendar', 'month', String(year), String(month), calendarIds],
+    queryFn: () => {
       const fixture = monthFixtureFor(activeScenario, year, month)
-      return fixture ? Promise.resolve(fixture) : fetchMonthEvents(year, month)
+      return fixture ? Promise.resolve(fixture) : fetchMonthEvents(year, month, calendarIds)
     },
-    intervalMs: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+    enabled: !configPending,
   })
+
+  return {
+    data: query.data ?? null,
+    error: query.error ? query.error.message : null,
+    isLoading: configPending || query.isLoading,
+    refetch: async () => {
+      await query.refetch()
+    },
+  }
 }

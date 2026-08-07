@@ -24,12 +24,11 @@ export const CONFIG_QUERY_KEY = ['config'] as const
  * one-shot prefill pattern as a `SettingsComponent`, but it lives under
  * `src/themes/grid/` rather than the registry, so the exemption above
  * doesn't cover it either. (`src/themes/grid/screens/HomeBoard.tsx` used to
- * be two more call sites here; it now reads through this hook.) One more
- * bypass, `fetchCalendarIds` in `src/integrations/google-calendar/config.ts`, also
- * reads `/api/config` directly rather than through this hook, but it does
- * see updates — it runs inside `useGoogleCalendar`'s 5-minute `usePolling`
- * cycle, not a mount-once effect. Migrating all of these onto this hook is
- * follow-up work, not done here.
+ * be two more call sites here; it now reads through this hook, as do the
+ * google-calendar hooks — `fetchCalendarIds` was one more bypass until the
+ * week strip and month grid started deriving their calendar ids from this
+ * query, and it is gone.) Migrating the rest onto this hook is follow-up
+ * work, not done here.
  *
  * There are 10 independent places config gets written (`SettingsAdmin` plus
  * nine per-integration `SettingsComponent`s, each with its own save handler),

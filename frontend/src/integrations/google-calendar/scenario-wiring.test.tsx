@@ -37,6 +37,28 @@ function mockFetch(events: CalendarEvent[]) {
   }) as unknown as typeof fetch
 }
 
+/**
+ * Serves `/api/config` (both hooks wait for it before deciding anything) and
+ * records everything else, so a fixture case can assert that no *calendar*
+ * request went out — the config read is not the thing a fixture replaces.
+ */
+function mockConfigOnlyFetch() {
+  const fetchMock = vi.fn((input: RequestInfo | URL) => {
+    if (String(input) === '/api/config') {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response)
+    }
+    return Promise.reject(new Error(`Unexpected fetch url: ${String(input)}`))
+  })
+  globalThis.fetch = fetchMock as unknown as typeof fetch
+  return fetchMock
+}
+
+function eventRequests(fetchMock: ReturnType<typeof mockConfigOnlyFetch>): string[] {
+  return fetchMock.mock.calls
+    .map((call) => String(call[0]))
+    .filter((url) => url.startsWith('/api/google-calendar/'))
+}
+
 function createWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -56,14 +78,13 @@ describe('calendar hook scenario wiring', () => {
   it('useMonthCalendar returns the fixture without touching fetch when one is defined', async () => {
     const fixture = { byDate: { '2026-05-15': [] } }
     monthFixtureFor.mockReturnValue(fixture)
-    const fetchSpy = vi.fn()
-    globalThis.fetch = fetchSpy as unknown as typeof fetch
+    const fetchMock = mockConfigOnlyFetch()
 
     const { result } = renderHook(() => useMonthCalendar(2026, 4), { wrapper: createWrapper() })
     await waitFor(() => expect(result.current.data).not.toBeNull())
 
     expect(result.current.data).toEqual(fixture)
-    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(eventRequests(fetchMock)).toEqual([])
   })
 
   it('useMonthCalendar fetches normally when no fixture is defined for the active scenario', async () => {
@@ -87,14 +108,13 @@ describe('calendar hook scenario wiring', () => {
       { date: new Date(2026, 4, 15), label: 'Today 5/15', isToday: true, events: [] },
     ]
     weekFixtureFor.mockReturnValue(fixture)
-    const fetchSpy = vi.fn()
-    globalThis.fetch = fetchSpy as unknown as typeof fetch
+    const fetchMock = mockConfigOnlyFetch()
 
     const { result } = renderHook(() => useGoogleCalendar(), { wrapper: createWrapper() })
     await waitFor(() => expect(result.current.data).not.toBeNull())
 
     expect(result.current.data).toEqual(fixture)
-    expect(fetchSpy).not.toHaveBeenCalled()
+    expect(eventRequests(fetchMock)).toEqual([])
   })
 
   it('useGoogleCalendar fetches normally when no fixture is defined for the active scenario', async () => {

@@ -1,6 +1,9 @@
-import { usePolling, type UsePollingResult } from '@/hooks/usePolling'
+import { useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import type { UsePollingResult } from '@/hooks/usePolling'
+import { useAllConfig, useIntegrationConfig } from '@/platform'
 import { activeScenario } from '@/lib/scenario'
-import { fetchCalendarIds } from './config'
+import { googleCalendarIntegration, parseCalendarIds } from './config'
 import { fetchEventsForCalendars } from './events'
 import { weekFixtureFor } from './fixtures'
 import type { CalendarEvent } from './types'
@@ -23,9 +26,7 @@ function dayLabel(date: Date, today: Date): string {
   return `${date.toLocaleDateString([], { weekday: 'long' })} ${short}`
 }
 
-async function fetchCalendarEvents(): Promise<CalendarDay[]> {
-  const calendarIds = await fetchCalendarIds()
-
+async function fetchCalendarEvents(calendarIds: string[]): Promise<CalendarDay[]> {
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const endOfWeek = new Date(today)
@@ -73,13 +74,50 @@ async function fetchCalendarEvents(): Promise<CalendarDay[]> {
   return days
 }
 
+/**
+ * Today plus the next six days, each with its events, for the week strip.
+ *
+ * The calendar ids come from `useIntegrationConfig` and sit *in the query
+ * key*, which is what keeps this reactive to config: editing the selected
+ * calendars in admin re-asks the new ones with no remount. That used to be a
+ * side effect of a raw `/api/config` read living inside the poll's fetcher —
+ * invisible, and the only thing making a config change visible on a kiosk
+ * that never reloads.
+ *
+ * `useAllConfig`'s pending flag gates the query for the reason
+ * `useCalendarEvents` documents: config reads as `null` both while it loads
+ * and when it is absent, so an ungated first render would fetch `primary`
+ * and then correct itself — the strip filling, blanking, and filling again.
+ * That same flag also feeds `isLoading`, because `ScheduleColumn` chooses
+ * between "Fetching the week ahead…" and "Nothing on the books this week."
+ * on it alone.
+ *
+ * The result is adapted back to `UsePollingResult` — `data` is `null`, not
+ * react-query's `undefined`, until a fetch has actually succeeded. See
+ * `useLunchMenu` for why that distinction matters to callers.
+ */
 export function useGoogleCalendar(): CalendarData {
-  return usePolling<CalendarDay[]>({
-    queryKey: ['google-calendar', 'events'],
-    fetcher: () => {
+  const { isPending: configPending } = useAllConfig()
+  const config = useIntegrationConfig(googleCalendarIntegration)
+  const savedIds = config?.calendar_ids
+  const calendarIds = useMemo(() => parseCalendarIds(savedIds), [savedIds])
+
+  const query = useQuery({
+    queryKey: ['google-calendar', 'week', calendarIds],
+    queryFn: () => {
       const fixture = weekFixtureFor(activeScenario)
-      return fixture ? Promise.resolve(fixture) : fetchCalendarEvents()
+      return fixture ? Promise.resolve(fixture) : fetchCalendarEvents(calendarIds)
     },
-    intervalMs: 5 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+    enabled: !configPending,
   })
+
+  return {
+    data: query.data ?? null,
+    error: query.error ? query.error.message : null,
+    isLoading: configPending || query.isLoading,
+    refetch: async () => {
+      await query.refetch()
+    },
+  }
 }
