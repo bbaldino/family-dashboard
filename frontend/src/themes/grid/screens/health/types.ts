@@ -1,46 +1,18 @@
-export type Status = 'ok' | 'degraded' | 'critical' | 'unknown' | null
+// Data shapes describing what the integration returns live in
+// integrations/health/types.ts — this file only re-exports them so the theme
+// doesn't have its own drifting copy. Everything below this import is
+// presentation logic (ranking and colouring a status), which is the theme's
+// business and stays here.
+import type {
+  HealthComponent,
+  HistorySample,
+  Service,
+  Status,
+  UptimeReport,
+  UptimeSegment,
+} from '@/integrations/health'
 
-export interface HealthComponent {
-  name: string
-  status: Status
-  critical: boolean
-  message: string | null
-}
-
-export interface Service {
-  id: number
-  name: string
-  type_id: string
-  interval_secs: number
-  enabled: boolean
-  status: Status
-  message: string | null
-  components: HealthComponent[]
-  updated_at: string | null
-}
-
-export interface UptimeSegment {
-  status: Status
-  start: number
-  end: number
-}
-
-export interface UptimeReport {
-  window_secs: number
-  ok_secs: number
-  degraded_secs: number
-  critical_secs: number
-  unknown_secs: number
-  percent_ok: number
-  segments: UptimeSegment[]
-}
-
-export interface HistorySample {
-  status: Status
-  message: string | null
-  components: HealthComponent[]
-  at: number
-}
+export type { HealthComponent, HistorySample, Service, Status, UptimeReport, UptimeSegment }
 
 // critical > unknown > degraded > ok
 export const SEVERITY: Record<string, number> = {
