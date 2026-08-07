@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useAllConfig } from '@/platform'
 import { useHaEntity } from '@/hooks/useHaEntity'
 import { getAlarmById } from '@/integrations/timers'
 import { doorbellIntegration, detectRisingEdge } from '@/integrations/doorbell'
@@ -14,45 +15,37 @@ interface DoorbellRingConfig {
 }
 
 /**
- * Loads the doorbell-integration config from /api/config once at mount.
- * Values are stored as strings in the shared config table; we coerce here.
+ * The doorbell-integration config, read through the shared `/api/config`
+ * query — it used to be a mount-only fetch of its own, so re-pointing the
+ * doorbell at a different sensor needed a page reload.
+ *
+ * The coercion stays here rather than moving to `useIntegrationConfig`
+ * because the config table stores every value as a string while the
+ * doorbell schema types `auto_dismiss_seconds` as a number and
+ * `chime_enabled` as a boolean: scoped parsing fails outright once the admin
+ * form has written those two, and a null config would mean no doorbell popup
+ * at all.
+ *
+ * Returns null only while the first fetch is in flight; a failed fetch
+ * resolves to the schema defaults, as the old `catch` did.
  */
 function useDoorbellConfig(): DoorbellRingConfig | null {
-  const [config, setConfig] = useState<DoorbellRingConfig | null>(null)
+  const { data, isPending } = useAllConfig()
 
-  useEffect(() => {
-    const load = async () => {
-      const defaults = doorbellIntegration.schema.parse({})
-      try {
-        const raw = (await fetch('/api/config').then((r) => r.json())) as Record<string, string>
-        const get = (k: string, d: string) => raw[`doorbell.${k}`] ?? d
-        const seconds = parseInt(
-          get('auto_dismiss_seconds', String(defaults.auto_dismiss_seconds)),
-          10,
-        )
-        setConfig({
-          press_sensor_entity: get('press_sensor_entity', defaults.press_sensor_entity),
-          screensaver_entity: get('screensaver_entity', defaults.screensaver_entity),
-          auto_dismiss_seconds: Number.isFinite(seconds) ? seconds : defaults.auto_dismiss_seconds,
-          chime_enabled: get('chime_enabled', String(defaults.chime_enabled)) === 'true',
-          chime_sound_id: get('chime_sound_id', defaults.chime_sound_id),
-          camera_url: get('camera_url', defaults.camera_url ?? ''),
-        })
-      } catch {
-        setConfig({
-          press_sensor_entity: defaults.press_sensor_entity,
-          screensaver_entity: defaults.screensaver_entity,
-          auto_dismiss_seconds: defaults.auto_dismiss_seconds,
-          chime_enabled: defaults.chime_enabled,
-          chime_sound_id: defaults.chime_sound_id,
-          camera_url: defaults.camera_url ?? '',
-        })
-      }
+  return useMemo(() => {
+    if (isPending) return null
+    const defaults = doorbellIntegration.schema.parse({})
+    const get = (k: string, d: string) => data?.[`doorbell.${k}`] ?? d
+    const seconds = parseInt(get('auto_dismiss_seconds', String(defaults.auto_dismiss_seconds)), 10)
+    return {
+      press_sensor_entity: get('press_sensor_entity', defaults.press_sensor_entity),
+      screensaver_entity: get('screensaver_entity', defaults.screensaver_entity),
+      auto_dismiss_seconds: Number.isFinite(seconds) ? seconds : defaults.auto_dismiss_seconds,
+      chime_enabled: get('chime_enabled', String(defaults.chime_enabled)) === 'true',
+      chime_sound_id: get('chime_sound_id', defaults.chime_sound_id),
+      camera_url: get('camera_url', defaults.camera_url ?? ''),
     }
-    load()
-  }, [])
-
-  return config
+  }, [data, isPending])
 }
 
 export function DoorbellRingListener() {

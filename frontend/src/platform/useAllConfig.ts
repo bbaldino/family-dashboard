@@ -14,11 +14,10 @@ export const CONFIG_QUERY_KEY = ['config'] as const
  * admin `SettingsComponent` registered in `settingsRegistry` also does its
  * own raw fetch, but that is a different, one-shot pattern (load current
  * values once to prefill a form) and out of scope for this hook. Outside
- * that registry, two call sites across two files still do their own raw
- * `useEffect` + `fetch('/api/config')`, and none of them refetch —
- * `src/themes/grid/overlays/doorbell/DoorbellRingListener.tsx` and
- * `src/themes/grid/GridSettingsPanel.tsx` — the last one is the same
- * one-shot prefill pattern as a `SettingsComponent`, but it lives under
+ * that registry, one call site still does its own raw `useEffect` +
+ * `fetch('/api/config')` and never refetches —
+ * `src/themes/grid/GridSettingsPanel.tsx`, which is the same one-shot
+ * prefill pattern as a `SettingsComponent` but lives under
  * `src/themes/grid/` rather than the registry, so the exemption above
  * doesn't cover it either. (`src/themes/grid/screens/HomeBoard.tsx` used to
  * be two more call sites here; it now reads through this hook, as do the
@@ -27,8 +26,13 @@ export const CONFIG_QUERY_KEY = ['config'] as const
  * query, and it is gone. `src/palettes/useTheme.ts` and
  * `src/shell/ThemeMount.tsx` were two more — between them the reason a
  * theme or presentation change used to need a reload; both read through
- * this hook now.) Migrating the rest onto this hook is follow-up work, not
- * done here.
+ * this hook now, as do grid's `TimerBanner`, `CamerasBoard` and
+ * `DoorbellRingListener`.) Note that two of those read this query's raw
+ * data rather than `useIntegrationConfig`, on purpose: the config table
+ * stores every value as a string, while `doorbellIntegration`'s schema
+ * types `auto_dismiss_seconds` as a number and `chime_enabled` as a
+ * boolean, so scoped parsing fails outright once the admin form has written
+ * those two keys.
  *
  * There are 10 independent places config gets written (`SettingsAdmin` plus
  * nine per-integration `SettingsComponent`s, each with its own save handler),
