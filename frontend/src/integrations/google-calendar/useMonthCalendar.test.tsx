@@ -22,6 +22,9 @@ interface ServerOptions {
   calendarIds?: string
   /** Events per calendar id; a missing id responds 500. */
   eventsByCalendar: Record<string, CalendarEvent[]>
+  /** Calendar ids whose response is withheld until the promise resolves, so
+   *  a test can inspect the hook while that fetch is still in flight. */
+  hold?: Record<string, Promise<void>>
 }
 
 function stubFetch(options: ServerOptions) {
@@ -44,11 +47,13 @@ function stubFetch(options: ServerOptions) {
           json: () => Promise.resolve({ error: 'calendar unavailable' }),
         } as Response)
       }
-      return Promise.resolve({
+      const response = {
         ok: true,
         status: 200,
         text: () => Promise.resolve(JSON.stringify(events)),
-      } as Response)
+      } as Response
+      const gate = options.hold?.[calendar]
+      return gate ? gate.then(() => response) : Promise.resolve(response)
     }
     return Promise.reject(new Error(`Unexpected fetch url: ${url}`))
   })
@@ -260,6 +265,58 @@ describe('useMonthCalendar', () => {
 
     await waitFor(() => expect(calendarsAsked(fetchMock)).toEqual(['work', 'home']))
     await waitFor(() => expect(result.current.data!.byDate['2026-05-15']).toBeDefined())
+  })
+
+  // See `useGoogleCalendar.test.tsx`: `placeholderData: keepPreviousData` is
+  // the only thing stopping the ids' move into the query key from emptying
+  // the month grid for the length of a round trip every time the selected
+  // calendars change.
+  it('keeps the previous month on screen while the new calendars are still fetching', async () => {
+    const standup: CalendarEvent = {
+      id: 'standup',
+      summary: 'Standup',
+      start: { date: '2026-05-14' },
+      end: { date: '2026-05-15' },
+    }
+    const soccer: CalendarEvent = {
+      id: 'soccer',
+      summary: 'Soccer',
+      start: { date: '2026-05-15' },
+      end: { date: '2026-05-16' },
+    }
+    let landHome = () => {}
+    const homeInFlight = new Promise<void>((resolve) => {
+      landHome = resolve
+    })
+    const fetchMock = stubFetch({
+      calendarIds: JSON.stringify(['work']),
+      eventsByCalendar: { work: [standup], home: [soccer] },
+      hold: { home: homeInFlight },
+    })
+    const queryClient = newClient()
+
+    const { result } = renderHook(() => useMonthCalendar(2026, 4), {
+      wrapper: wrapperFor(queryClient),
+    })
+
+    await waitFor(() => expect(result.current.data).not.toBeNull())
+    expect(result.current.data!.byDate['2026-05-14']?.map((e) => e.id)).toEqual(['standup'])
+
+    act(() => {
+      queryClient.setQueryData(CONFIG_QUERY_KEY, {
+        'google-calendar.calendar_ids': JSON.stringify(['home']),
+      })
+    })
+
+    // The new key's fetch is out but deliberately unresolved. The grid keeps
+    // last month's buckets rather than emptying.
+    await waitFor(() => expect(calendarsAsked(fetchMock)).toEqual(['work', 'home']))
+    expect(result.current.data).not.toBeNull()
+    expect(result.current.data!.byDate['2026-05-14']?.map((e) => e.id)).toEqual(['standup'])
+
+    landHome()
+    await waitFor(() => expect(result.current.data!.byDate['2026-05-15']).toBeDefined())
+    expect(result.current.data!.byDate['2026-05-14']).toBeUndefined()
   })
 
   it('re-polls every five minutes', async () => {

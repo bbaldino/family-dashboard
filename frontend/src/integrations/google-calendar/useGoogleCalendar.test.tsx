@@ -41,6 +41,9 @@ interface ServerOptions {
   calendarIds?: string
   /** Events per calendar id; a missing id responds 500. */
   eventsByCalendar: Record<string, CalendarEvent[]>
+  /** Calendar ids whose response is withheld until the promise resolves, so
+   *  a test can inspect the hook while that fetch is still in flight. */
+  hold?: Record<string, Promise<void>>
 }
 
 function stubFetch(options: ServerOptions) {
@@ -63,11 +66,13 @@ function stubFetch(options: ServerOptions) {
           json: () => Promise.resolve({ error: 'calendar unavailable' }),
         } as Response)
       }
-      return Promise.resolve({
+      const response = {
         ok: true,
         status: 200,
         text: () => Promise.resolve(JSON.stringify(events)),
-      } as Response)
+      } as Response
+      const gate = options.hold?.[calendar]
+      return gate ? gate.then(() => response) : Promise.resolve(response)
     }
     return Promise.reject(new Error(`Unexpected fetch url: ${url}`))
   })
@@ -199,6 +204,48 @@ describe('useGoogleCalendar', () => {
     await waitFor(() =>
       expect(result.current.data!.flatMap((d) => d.events.map((e) => e.id))).toEqual(['soccer']),
     )
+  })
+
+  // `placeholderData: keepPreviousData` is what stops the strip going blank
+  // between the two. Without it the ids moving into the query key would be a
+  // visible regression on the wall panel: the old hook re-read the ids
+  // *inside* its fetcher, so the key never changed and the previous week
+  // stayed up throughout the swap.
+  it('keeps the previous week on screen while the new calendars are still fetching', async () => {
+    let landHome = () => {}
+    const homeInFlight = new Promise<void>((resolve) => {
+      landHome = resolve
+    })
+    const fetchMock = stubFetch({
+      calendarIds: JSON.stringify(['work']),
+      eventsByCalendar: {
+        work: [event('standup', '2026-05-12')],
+        home: [event('soccer', '2026-05-12')],
+      },
+      hold: { home: homeInFlight },
+    })
+    const queryClient = newClient()
+
+    const { result } = renderHook(() => useGoogleCalendar(), { wrapper: wrapperFor(queryClient) })
+
+    await waitFor(() => expect(result.current.data).not.toBeNull())
+    const eventIds = () => result.current.data?.flatMap((d) => d.events.map((e) => e.id))
+    expect(eventIds()).toEqual(['standup'])
+
+    act(() => {
+      queryClient.setQueryData(CONFIG_QUERY_KEY, {
+        'google-calendar.calendar_ids': JSON.stringify(['home']),
+      })
+    })
+
+    // The new key's fetch is out but deliberately unresolved. Last week's
+    // days must still be what a caller reads — `data` neither null nor empty.
+    await waitFor(() => expect(calendarsAsked(fetchMock)).toEqual(['work', 'home']))
+    expect(result.current.data).not.toBeNull()
+    expect(eventIds()).toEqual(['standup'])
+
+    landHome()
+    await waitFor(() => expect(eventIds()).toEqual(['soccer']))
   })
 
   it('re-polls every five minutes', async () => {
