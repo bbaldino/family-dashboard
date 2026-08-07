@@ -294,10 +294,11 @@ const COLOR_SECTIONS: {
 ]
 
 export function ThemeSettings() {
-  const { activeTheme, allThemes, customThemes, setActiveTheme, saveCustomThemes } = useTheme()
+  const { activeTheme, allThemes, customThemes, savePalette } = useTheme()
   const [editingTheme, setEditingTheme] = useState<Theme | null>(null)
   const [editedColors, setEditedColors] = useState<ThemeColors | null>(null)
   const [status, setStatus] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     setEditingTheme(activeTheme)
@@ -317,13 +318,32 @@ export function ThemeSettings() {
     setEditedColors(newColors)
   }
 
-  const handleSelectTheme = (theme: Theme) => {
-    setActiveTheme(theme.id)
-    setEditingTheme(theme)
-    setEditedColors(deepClone(theme.colors))
+  /**
+   * Every write here is optimistic — `savePalette` seeds the shared config
+   * cache so the whole dashboard repaints before the round trip finishes.
+   * When the write is rejected the seed is rolled back, which puts the
+   * stored palette back on screen (and, via the effect above, re-seeds the
+   * swatches from it); this banner is what says *why* the editor jumped
+   * back. Without it a failed save looked exactly like a successful one.
+   */
+  const attemptSave = async (write: Parameters<typeof savePalette>[0]) => {
+    setError(null)
+    try {
+      await savePalette(write)
+      return true
+    } catch {
+      setError('Failed to save theme')
+      return false
+    }
   }
 
-  const handleNewTheme = () => {
+  const handleSelectTheme = async (theme: Theme) => {
+    setEditingTheme(theme)
+    setEditedColors(deepClone(theme.colors))
+    await attemptSave({ activeId: theme.id })
+  }
+
+  const handleNewTheme = async () => {
     const source = editingTheme ?? activeTheme
     const newTheme: Theme = {
       id: generateId(),
@@ -331,9 +351,10 @@ export function ThemeSettings() {
       builtin: false,
       colors: deepClone(source.colors),
     }
-    const updated = [...customThemes, newTheme]
-    saveCustomThemes(updated)
-    setActiveTheme(newTheme.id)
+    // Storing the theme and selecting it is one click, so it is one save —
+    // two would invalidate the shared config query twice and refetch the
+    // whole table twice for it.
+    await attemptSave({ themes: [...customThemes, newTheme], activeId: newTheme.id })
   }
 
   const handleSave = async () => {
@@ -343,7 +364,7 @@ export function ThemeSettings() {
     const updated = customThemes.map((t) =>
       t.id === editingTheme.id ? { ...t, colors: deepClone(editedColors) } : t,
     )
-    await saveCustomThemes(updated)
+    if (!(await attemptSave({ themes: updated }))) return
     setStatus('Saved!')
     setTimeout(() => setStatus(null), 2000)
   }
@@ -357,14 +378,19 @@ export function ThemeSettings() {
   const handleDelete = async () => {
     if (!editingTheme || editingTheme.builtin) return
     const updated = customThemes.filter((t) => t.id !== editingTheme.id)
-    await saveCustomThemes(updated)
-    setActiveTheme('earth-tones')
+    // Same again: dropping the theme and falling back to earth-tones is one
+    // click and so one save.
+    await attemptSave({ themes: updated, activeId: 'earth-tones' })
   }
 
   if (!editedColors) return null
 
   return (
     <div className="h-full flex flex-col gap-2">
+      {error && (
+        <div className="bg-error/10 text-error rounded-lg p-3 text-sm flex-shrink-0">{error}</div>
+      )}
+
       {/* Theme selector */}
       <div className="flex flex-wrap gap-2 flex-shrink-0">
         {allThemes.map((theme) => (

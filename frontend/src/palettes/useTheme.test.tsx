@@ -137,7 +137,7 @@ describe('useTheme', () => {
     await waitFor(() => expect(result.current.activeTheme.id).toBe('forest'))
 
     await act(async () => {
-      await result.current.setActiveTheme('ocean')
+      await result.current.savePalette({ activeId: 'ocean' })
     })
 
     await waitFor(() => expect(result.current.activeTheme.id).toBe('ocean'))
@@ -161,12 +161,62 @@ describe('useTheme', () => {
     expect(result.current.customThemes).toEqual([])
 
     await act(async () => {
-      await result.current.saveCustomThemes([CUSTOM])
+      await result.current.savePalette({ themes: [CUSTOM] })
     })
 
     await waitFor(() => expect(result.current.customThemes).toEqual([CUSTOM]))
     expect(result.current.allThemes.map((t) => t.id)).toContain('kitchen-night')
     expect(fetchMock.mock.calls.filter(([u]) => String(u) === '/api/config')).toHaveLength(2)
+  })
+
+  it('writes both keys in one mutation, so one click refetches the config once', async () => {
+    // Creating a theme (and deleting one) changes the custom list *and* the
+    // active id from a single click. Two mutations would invalidate the
+    // shared config query twice and re-read the whole table twice for it.
+    const fetchMock = stubConfig({ 'theme.active': 'forest' })
+    const { result } = renderHook(() => useTheme(), { wrapper: wrapperFor(newClient()) })
+    await waitFor(() => expect(result.current.activeTheme.id).toBe('forest'))
+
+    await act(async () => {
+      await result.current.savePalette({ themes: [CUSTOM], activeId: CUSTOM.id })
+    })
+
+    await waitFor(() => expect(result.current.activeTheme.id).toBe('kitchen-night'))
+    expect(result.current.customThemes).toEqual([CUSTOM])
+    expect(fetchMock.mock.calls.filter(([u]) => String(u) === '/api/config')).toHaveLength(2)
+  })
+
+  it('rolls the optimistic seed back and rejects when the write fails', async () => {
+    // Nothing is invalidated on a failed write, so an un-rolled-back seed
+    // would leave the whole dashboard painted in a palette the server
+    // rejected until the next poll corrected it up to a minute later — and
+    // the rejection has to reach `ThemeSettings`, which is the only thing
+    // that can say so.
+    stubConfig({ 'theme.active': 'forest' })
+    const client = newClient()
+    const { result } = renderHook(() => useTheme(), { wrapper: wrapperFor(client) })
+    await waitFor(() => expect(result.current.activeTheme.id).toBe('forest'))
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input)
+        if (url === '/api/config') {
+          return Promise.resolve({
+            ok: true,
+            json: () => Promise.resolve({ 'theme.active': 'forest' }),
+          } as Response)
+        }
+        return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) })
+      }),
+    )
+
+    await act(async () => {
+      await expect(result.current.savePalette({ activeId: 'ocean' })).rejects.toThrow()
+    })
+
+    expect(client.getQueryData(CONFIG_QUERY_KEY)).toMatchObject({ 'theme.active': 'forest' })
+    expect(result.current.activeTheme.id).toBe('forest')
   })
 
   it('keeps the switch after the invalidated re-read lands', async () => {
@@ -181,7 +231,7 @@ describe('useTheme', () => {
     await waitFor(() => expect(result.current.activeTheme.id).toBe('forest'))
 
     await act(async () => {
-      await result.current.setActiveTheme('ocean')
+      await result.current.savePalette({ activeId: 'ocean' })
     })
     await waitFor(() =>
       expect(fetchMock.mock.calls.filter(([u]) => String(u) === '/api/config')).toHaveLength(2),
