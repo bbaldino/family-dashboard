@@ -63,7 +63,12 @@ export function useCountdowns(): CountdownsData {
   const horizonDays = parseInt(config?.horizon_days ?? '90', 10) || 90
 
   const query = useQuery({
-    queryKey: ['countdowns', calendarId ?? 'unconfigured'],
+    // `horizonDays` belongs in the key as much as the calendar id does: it
+    // is an argument to the fetch (it sets the window's end), so leaving it
+    // out meant editing "Days ahead" in admin changed nothing until the
+    // hourly poll happened to come round — on a kiosk that never reloads,
+    // up to an hour of showing the old window.
+    queryKey: ['countdowns', calendarId ?? 'unconfigured', horizonDays],
     queryFn: () => fetchCountdowns(calendarId!, horizonDays),
     refetchInterval: 60 * 60 * 1000, // hourly
     enabled: !!calendarId,

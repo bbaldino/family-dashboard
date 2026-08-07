@@ -3,6 +3,7 @@ import { renderHook, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useCountdowns } from './useCountdowns'
+import { CONFIG_QUERY_KEY } from '@/platform'
 
 /**
  * `useCountdowns` fetches through `googleCalendarIntegration.api` (a plain
@@ -58,11 +59,19 @@ function stubFetch() {
   return fetchMock
 }
 
-function createWrapper() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+function createWrapper(
+  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   }
+}
+
+function eventUrls(fetchMock: ReturnType<typeof stubFetch>): URL[] {
+  return fetchMock.mock.calls
+    .map(([input]) => String(input))
+    .filter((url) => url.startsWith('/api/google-calendar/events'))
+    .map((url) => new URL(url, 'http://localhost'))
 }
 
 describe('useCountdowns', () => {
@@ -111,6 +120,32 @@ describe('useCountdowns', () => {
     expect(result.current.data).toEqual([
       expect.objectContaining({ id: 'evt-1', name: "Kid's Birthday", daysUntil: 5 }),
     ])
+  })
+
+  it('re-asks with a new window when horizon_days changes, without a remount', async () => {
+    const fetchMock = stubFetch()
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const { result } = renderHook(() => useCountdowns(), { wrapper: createWrapper(queryClient) })
+
+    await waitFor(() => expect(result.current.data).not.toBeNull())
+    expect(eventUrls(fetchMock)).toHaveLength(1)
+
+    // Someone widens "Days ahead" in admin. `horizon_days` is an argument to
+    // the fetch, so it has to be part of the query key — otherwise this
+    // lands in the shared cache and the hook goes on serving the old
+    // 30-day window until the hourly poll comes round.
+    act(() => {
+      queryClient.setQueryData(CONFIG_QUERY_KEY, {
+        ...CONFIG,
+        'countdowns.horizon_days': '60',
+      })
+    })
+
+    await waitFor(() => expect(eventUrls(fetchMock)).toHaveLength(2))
+    const [start, end] = ['start', 'end'].map(
+      (p) => new Date(eventUrls(fetchMock)[1].searchParams.get(p)!),
+    )
+    expect(end.getTime() - start.getTime()).toBe(60 * 24 * 60 * 60 * 1000)
   })
 
   it('polls hourly', async () => {
