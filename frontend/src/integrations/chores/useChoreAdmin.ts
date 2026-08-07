@@ -179,10 +179,11 @@ export function useDeleteAssignment() {
 // ----------------------------------------------------------------- weeks
 
 /**
- * Bulk-fill a week from the previous one. The backend loops bare INSERTs with
- * no transaction, so a partial copy is possible — a known Rust bug tracked
- * separately, deliberately not worked around here. Invalidating both grids on
- * success at least makes whatever landed visible immediately.
+ * Bulk-fill a week from the previous one. The backend does the whole copy in
+ * one transaction, so it either lands entirely or not at all, and it refuses a
+ * target week that already has assignments rather than appending a duplicate
+ * set — that refusal arrives as a 400 whose message names the week, which the
+ * assignments tab shows in its error banner.
  */
 export function useCopyWeek() {
   const queryClient = useQueryClient()
@@ -193,8 +194,8 @@ export function useCopyWeek() {
   })
 }
 
-/** Shift a week's chores round the household. Same non-transactional backend
- *  caveat as `useCopyWeek`. */
+/** Shift a week's chores round the household. Like `useCopyWeek`, the backend
+ *  rotates in one transaction, so a failure leaves the week untouched. */
 export function useRotateWeek() {
   const queryClient = useQueryClient()
   return useMutation({

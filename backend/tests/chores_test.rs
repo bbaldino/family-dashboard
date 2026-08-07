@@ -32,6 +32,46 @@ async fn create_chore_json(server: &TestServer, body: serde_json::Value) -> serd
     resp.json::<serde_json::Value>()
 }
 
+// ── Helper: make the *second* write to `assignments` fail ──
+//
+// The bugs these guard are partial writes: a handler that loops statements
+// without a transaction leaves whatever it managed to do behind. Reproducing
+// that needs a failure that lands *mid-loop*, not on the first statement — a
+// first-statement failure leaves nothing behind either way and would pass with
+// or without the transaction.
+//
+// A counter table plus a `RAISE(ABORT)` trigger gives exactly that, and does it
+// without depending on the order rows come back in: the first INSERT/UPDATE the
+// handler issues succeeds, the next one aborts.
+async fn abort_second_write(pool: &sqlx::SqlitePool, event: &str) {
+    sqlx::query("CREATE TABLE fault_count (n INTEGER NOT NULL)")
+        .execute(pool)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO fault_count (n) VALUES (0)")
+        .execute(pool)
+        .await
+        .unwrap();
+    sqlx::query(&format!(
+        "CREATE TRIGGER abort_second BEFORE {event} ON assignments BEGIN \
+           UPDATE fault_count SET n = n + 1; \
+           SELECT RAISE(ABORT, 'simulated mid-loop failure') \
+             WHERE (SELECT n FROM fault_count) > 1; \
+         END"
+    ))
+    .execute(pool)
+    .await
+    .unwrap();
+}
+
+async fn assignment_count(pool: &sqlx::SqlitePool, week: &str) -> i64 {
+    sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM assignments WHERE week_of = ?")
+        .bind(week)
+        .fetch_one(pool)
+        .await
+        .unwrap()
+}
+
 // ── Helper: create an assignment via the API ──
 
 async fn create_assignment_json(server: &TestServer, body: serde_json::Value) -> serde_json::Value {
@@ -472,6 +512,80 @@ async fn test_week_copy() {
     assert!(chore_names.contains(&"Meta"));
 }
 
+/// Fills `week` with two assignments for one person and returns the pool's
+/// view of it, so the copy tests have a source with more than one row — a
+/// one-row copy cannot fail *partway*.
+async fn seed_two_assignments(server: &TestServer, pool: &sqlx::SqlitePool, week: &str) {
+    let person_id = insert_person(pool, "Alice", "#ff0000").await;
+    for (name, day) in [("Dishes", 0), ("Trash", 1)] {
+        let chore = create_chore_json(server, json!({ "name": name })).await;
+        create_assignment_json(
+            server,
+            json!({
+                "chore_id": chore["id"],
+                "person_id": person_id,
+                "week_of": week,
+                "day_of_week": day
+            }),
+        )
+        .await;
+    }
+}
+
+#[tokio::test]
+async fn test_week_copy_refuses_non_empty_target() {
+    let (app, pool) = test_app().await;
+    let server = TestServer::new(app);
+
+    seed_two_assignments(&server, &pool, "2026-03-16").await;
+
+    let copy = json!({"from_week": "2026-03-16", "to_week": "2026-03-23"});
+
+    server
+        .post("/chores/weeks/copy")
+        .json(&copy)
+        .await
+        .assert_status(StatusCode::CREATED);
+
+    // Second copy is refused rather than appended. Appending is what made this
+    // a bug: it silently doubled every assignment in the target week.
+    let resp = server.post("/chores/weeks/copy").json(&copy).await;
+    resp.assert_status(StatusCode::BAD_REQUEST);
+    let body: serde_json::Value = resp.json();
+    assert!(
+        body["error"].as_str().unwrap().contains("2026-03-23"),
+        "the refusal should name the week it refused: {body}"
+    );
+
+    assert_eq!(
+        assignment_count(&pool, "2026-03-23").await,
+        2,
+        "the target week should still hold one copy, not two"
+    );
+}
+
+#[tokio::test]
+async fn test_week_copy_rolls_back_a_partial_failure() {
+    let (app, pool) = test_app().await;
+    let server = TestServer::new(app);
+
+    seed_two_assignments(&server, &pool, "2026-03-16").await;
+    abort_second_write(&pool, "INSERT").await;
+
+    let resp = server
+        .post("/chores/weeks/copy")
+        .json(&json!({"from_week": "2026-03-16", "to_week": "2026-03-23"}))
+        .await;
+    resp.assert_status(StatusCode::INTERNAL_SERVER_ERROR);
+
+    assert_eq!(
+        assignment_count(&pool, "2026-03-23").await,
+        0,
+        "a copy that failed on its second insert must leave the target week empty, \
+         not holding the row that happened to land first"
+    );
+}
+
 // ═══════════════════════════════════════════════════════════════════════
 // 6. Week rotate
 // ═══════════════════════════════════════════════════════════════════════
@@ -529,6 +643,56 @@ async fn test_week_rotate() {
         match chore_name {
             "Dishes" => assert_eq!(person_name, "Bob", "Dishes should now be Bob's"),
             "Trash" => assert_eq!(person_name, "Alice", "Trash should now be Alice's"),
+            _ => panic!("Unexpected chore: {chore_name}"),
+        }
+    }
+}
+
+#[tokio::test]
+async fn test_week_rotate_rolls_back_a_partial_failure() {
+    let (app, pool) = test_app().await;
+    let server = TestServer::new(app);
+
+    let alice_id = insert_person(&pool, "Alice", "#ff0000").await;
+    let bob_id = insert_person(&pool, "Bob", "#00ff00").await;
+
+    let chore_a = create_chore_json(&server, json!({"name": "Dishes"})).await;
+    let chore_b = create_chore_json(&server, json!({"name": "Trash"})).await;
+
+    for (chore, person_id) in [(&chore_a, alice_id), (&chore_b, bob_id)] {
+        create_assignment_json(
+            &server,
+            json!({
+                "chore_id": chore["id"],
+                "person_id": person_id,
+                "week_of": "2026-03-16",
+                "day_of_week": 0
+            }),
+        )
+        .await;
+    }
+
+    abort_second_write(&pool, "UPDATE").await;
+
+    let resp = server
+        .post("/chores/weeks/rotate")
+        .json(&json!({"week": "2026-03-16"}))
+        .await;
+    resp.assert_status(StatusCode::INTERNAL_SERVER_ERROR);
+
+    // Half a rotation is worse than none: one chore moves, the rest stay, and
+    // the week reads as if somebody reassigned a single chore by hand.
+    let assignments: Vec<serde_json::Value> = server
+        .get("/chores/assignments?week=2026-03-16")
+        .await
+        .json();
+    assert_eq!(assignments.len(), 2);
+    for a in &assignments {
+        let chore_name = a["chore"]["name"].as_str().unwrap();
+        let person_name = a["person"]["name"].as_str().unwrap();
+        match chore_name {
+            "Dishes" => assert_eq!(person_name, "Alice", "Dishes should still be Alice's"),
+            "Trash" => assert_eq!(person_name, "Bob", "Trash should still be Bob's"),
             _ => panic!("Unexpected chore: {chore_name}"),
         }
     }

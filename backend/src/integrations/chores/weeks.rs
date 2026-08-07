@@ -25,18 +25,40 @@ async fn copy_week(
     State(pool): State<SqlitePool>,
     Json(input): Json<CopyWeek>,
 ) -> Result<(StatusCode, Json<serde_json::Value>), AppError> {
+    // One transaction for the whole copy. Failing partway through the inserts
+    // used to leave the target week half filled, with nothing to say which
+    // half; now the target is either fully copied or untouched. Any early
+    // return below drops the transaction, which rolls it back.
+    let mut tx = pool.begin().await?;
+
     // Fetch all assignments for source week
     let source_assignments = sqlx::query_as::<_, (i64, i64, i32)>(
         "SELECT chore_id, person_id, day_of_week FROM assignments WHERE week_of = ?",
     )
     .bind(&input.from_week)
-    .fetch_all(&pool)
+    .fetch_all(&mut *tx)
     .await?;
 
     if source_assignments.is_empty() {
         return Err(AppError::NotFound(format!(
             "No assignments found for week {}",
             input.from_week
+        )));
+    }
+
+    // Refuse a target week that already has assignments. This used to append,
+    // so copying twice silently duplicated every assignment. Clearing the
+    // target instead would be worse: it would destroy a week somebody filled
+    // in by hand, without asking.
+    let existing: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM assignments WHERE week_of = ?")
+        .bind(&input.to_week)
+        .fetch_one(&mut *tx)
+        .await?;
+
+    if existing > 0 {
+        return Err(AppError::BadRequest(format!(
+            "Week {} already has {} assignment(s) — clear it before copying into it",
+            input.to_week, existing
         )));
     }
 
@@ -49,9 +71,11 @@ async fn copy_week(
         .bind(person_id)
         .bind(&input.to_week)
         .bind(day_of_week)
-        .execute(&pool)
+        .execute(&mut *tx)
         .await?;
     }
+
+    tx.commit().await?;
 
     Ok((
         StatusCode::CREATED,
@@ -66,9 +90,14 @@ async fn rotate_week(
     State(pool): State<SqlitePool>,
     Json(input): Json<RotateWeek>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    // One transaction for the whole rotation. Failing partway used to leave
+    // some chores shifted and the rest where they were — a week nobody can
+    // read. Any early return below drops the transaction, which rolls it back.
+    let mut tx = pool.begin().await?;
+
     // Get all people ordered by ID
     let people = sqlx::query_as::<_, (i64,)>("SELECT id FROM people ORDER BY id")
-        .fetch_all(&pool)
+        .fetch_all(&mut *tx)
         .await?;
 
     if people.len() < 2 {
@@ -88,7 +117,7 @@ async fn rotate_week(
     let assignments =
         sqlx::query_as::<_, (i64, i64)>("SELECT id, person_id FROM assignments WHERE week_of = ?")
             .bind(&input.week)
-            .fetch_all(&pool)
+            .fetch_all(&mut *tx)
             .await?;
 
     // Update each assignment with the rotated person
@@ -97,10 +126,12 @@ async fn rotate_week(
             sqlx::query("UPDATE assignments SET person_id = ? WHERE id = ?")
                 .bind(new_person_id)
                 .bind(assignment_id)
-                .execute(&pool)
+                .execute(&mut *tx)
                 .await?;
         }
     }
+
+    tx.commit().await?;
 
     Ok(Json(serde_json::json!({
         "status": "rotated",
