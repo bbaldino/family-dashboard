@@ -43,6 +43,13 @@ export function useTheme() {
 
   const writeConfig = useCallback(
     async (key: string, value: string) => {
+      // Seeded into the shared cache rather than held in local state, so
+      // every config consumer sees the switch at once. A config fetch that
+      // is already in flight would land on top of this and put the old value
+      // back for one poll interval — cancelling it first isn't worth it: the
+      // window is the few ms before the app's first config fetch resolves,
+      // and `cancelQueries` provokes an immediate refetch that reintroduces
+      // exactly the overwrite it was meant to prevent.
       queryClient.setQueryData<Record<string, string>>(CONFIG_QUERY_KEY, (prev) => ({
         ...(prev ?? {}),
         [key]: value,

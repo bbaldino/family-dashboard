@@ -112,17 +112,21 @@ describe('useTheme', () => {
   })
 
   it('shows a theme switch immediately rather than waiting for the next poll', async () => {
-    const fetchMock = stubConfig({ 'theme.active': 'earth-tones' })
-    const { result } = renderHook(() => useTheme(), { wrapper: wrapperFor(newClient()) })
-    await waitFor(() => expect(result.current.activeTheme.id).toBe('earth-tones'))
+    // Seeded with a non-default theme so the wait below observes the fetch
+    // actually landing: 'earth-tones' is also the pre-fetch fallback, so
+    // waiting on it would pass before the query had resolved and the write
+    // below would then race the in-flight response.
+    const fetchMock = stubConfig({ 'theme.active': 'forest' })
+    const client = newClient()
+    const { result } = renderHook(() => useTheme(), { wrapper: wrapperFor(client) })
+    await waitFor(() => expect(result.current.activeTheme.id).toBe('forest'))
 
     await act(async () => {
       await result.current.setActiveTheme('ocean')
     })
 
-    // No refetch has happened: the switch has to be visible off the local
-    // write alone, or the picker looks dead for up to a minute.
-    expect(result.current.activeTheme.id).toBe('ocean')
+    await waitFor(() => expect(result.current.activeTheme.id).toBe('ocean'))
+    expect(client.getQueryData(CONFIG_QUERY_KEY)).toMatchObject({ 'theme.active': 'ocean' })
     expect(
       fetchMock.mock.calls.some(
         ([u, init]) =>
@@ -130,18 +134,23 @@ describe('useTheme', () => {
           (init as RequestInit | undefined)?.method === 'PUT',
       ),
     ).toBe(true)
+    // Still one config read: the switch showed off the local write alone, or
+    // the picker would look dead for up to a minute.
+    expect(fetchMock.mock.calls.filter(([u]) => String(u) === '/api/config')).toHaveLength(1)
   })
 
   it('shows a saved custom theme immediately', async () => {
-    stubConfig({})
+    const fetchMock = stubConfig({ 'theme.active': 'forest' })
     const { result } = renderHook(() => useTheme(), { wrapper: wrapperFor(newClient()) })
-    await waitFor(() => expect(result.current.customThemes).toEqual([]))
+    await waitFor(() => expect(result.current.activeTheme.id).toBe('forest'))
+    expect(result.current.customThemes).toEqual([])
 
     await act(async () => {
       await result.current.saveCustomThemes([CUSTOM])
     })
 
-    expect(result.current.customThemes).toEqual([CUSTOM])
+    await waitFor(() => expect(result.current.customThemes).toEqual([CUSTOM]))
     expect(result.current.allThemes.map((t) => t.id)).toContain('kitchen-night')
+    expect(fetchMock.mock.calls.filter(([u]) => String(u) === '/api/config')).toHaveLength(1)
   })
 })
