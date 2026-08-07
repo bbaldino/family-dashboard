@@ -11,28 +11,34 @@ export const CONFIG_QUERY_KEY = ['config'] as const
  * concurrent mounts, and invalidating this key updates all of them at once.
  *
  * This does not cover every place the app reads `/api/config`, though. Each
- * admin `SettingsComponent` registered in `settingsRegistry` also does its
- * own raw fetch, but that is a different, one-shot pattern (load current
- * values once to prefill a form) and out of scope for this hook. Outside
- * that registry, one call site still does its own raw `useEffect` +
- * `fetch('/api/config')` and never refetches —
- * `src/themes/grid/GridSettingsPanel.tsx`, which is the same one-shot
- * prefill pattern as a `SettingsComponent` but lives under
- * `src/themes/grid/` rather than the registry, so the exemption above
- * doesn't cover it either. (`src/themes/grid/screens/HomeBoard.tsx` used to
- * be two more call sites here; it now reads through this hook, as do the
- * google-calendar hooks — `fetchCalendarIds` was one more bypass until the
- * week strip and month grid started deriving their calendar ids from this
- * query, and it is gone. `src/palettes/useTheme.ts` and
- * `src/shell/ThemeMount.tsx` were two more — between them the reason a
- * theme or presentation change used to need a reload; both read through
- * this hook now, as do grid's `TimerBanner`, `CamerasBoard` and
- * `DoorbellRingListener`.) Note that two of those read this query's raw
- * data rather than `useIntegrationConfig`, on purpose: the config table
- * stores every value as a string, while `doorbellIntegration`'s schema
- * types `auto_dismiss_seconds` as a number and `chime_enabled` as a
- * boolean, so scoped parsing fails outright once the admin form has written
- * those two keys.
+ * admin `SettingsComponent` registered in `settingsRegistry` still does its
+ * own raw fetch. That is a different, one-shot pattern — load current values
+ * once to prefill a form — and out of scope for this hook.
+ *
+ * Note that reading through this hook and *tracking* it are separate
+ * choices. `src/themes/grid/GridSettingsPanel.tsx` (the same prefill pattern,
+ * but under `src/themes/grid/` rather than the registry) reads this query and
+ * then deliberately ignores every later value: a form's unsaved edits are
+ * never in `/api/config`, so inputs derived from this query would discard
+ * whatever someone had typed on the next poll tick. Any `SettingsComponent`
+ * migrated here later wants that same shape — one shared request, prefill
+ * once — not live values.
+ *
+ * Everything outside that registry now reads through this hook. It used to
+ * be nine more raw fetches: two in `screens/HomeBoard.tsx`, one in
+ * `fetchCalendarIds` (the google-calendar hooks derive their calendar ids
+ * from this query instead, and it is gone), and six mount-only readers that
+ * therefore needed a page reload to see a config change —
+ * `palettes/useTheme.ts` and `shell/ThemeMount.tsx` (between them the reason
+ * a theme or presentation change used to need one) plus grid's
+ * `TimerBanner`, `CamerasBoard`, `DoorbellRingListener` and
+ * `GridSettingsPanel`.
+ *
+ * Two of those — `CamerasBoard` and `DoorbellRingListener` — read this
+ * query's raw data and coerce per key rather than going through
+ * `useIntegrationConfig`, deliberately: one unparseable `doorbell.*` value
+ * would otherwise take the whole integration's config to `null` (see that
+ * hook), blanking the camera and the ring popup over an unrelated key.
  *
  * There are 10 independent places config gets written (`SettingsAdmin` plus
  * nine per-integration `SettingsComponent`s, each with its own save handler),

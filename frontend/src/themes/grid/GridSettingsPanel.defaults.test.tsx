@@ -1,6 +1,8 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
 import { z } from 'zod'
+import type { ReactNode } from 'react'
 import { render, screen } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { GridSettingsPanel } from './GridSettingsPanel'
 
 // A schema whose defaults differ from the real one (8/6) so the assertion
@@ -28,7 +30,11 @@ describe('GridSettingsPanel defaults', () => {
 
   it('shows defaults sourced from the settings schema, not a hardcoded copy', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) }))
-    render(<GridSettingsPanel />)
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    render(<GridSettingsPanel />, { wrapper })
 
     expect(await screen.findByDisplayValue('5')).toBeInTheDocument()
     expect(
