@@ -1,22 +1,15 @@
-import { useState, useEffect } from 'react'
-import { useTimers } from '@/integrations/timers'
+import { useIntegrationConfig } from '@/platform'
+import { useTimers, timersIntegration } from '@/integrations/timers'
 import { TimerCard } from './TimerCard'
 
 export function TimerBanner() {
-  const [serviceUrl, setServiceUrl] = useState<string | undefined>(undefined)
-  const [alarmSoundId, setAlarmSoundId] = useState<string | undefined>(undefined)
-
-  // Load config
-  useEffect(() => {
-    fetch('/api/config')
-      .then((r) => r.json())
-      .then((config: Record<string, string>) => {
-        const url = config['timers.service_url']
-        if (url) setServiceUrl(url)
-        setAlarmSoundId(config['timers.alarm_sound'])
-      })
-      .catch(() => {})
-  }, [])
+  // Was its own mount-only fetch of /api/config, so pointing timers at a new
+  // service needed a page reload. Through the platform it lands within the
+  // shared query's poll interval instead — and an empty service url still
+  // reads as "not configured" rather than as a url of "".
+  const config = useIntegrationConfig(timersIntegration)
+  const serviceUrl = config?.service_url || undefined
+  const alarmSoundId = config?.alarm_sound || undefined
 
   const { timers, firedTimers, pause, resume, cancel, dismiss } = useTimers(
     serviceUrl,
