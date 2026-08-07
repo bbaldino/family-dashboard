@@ -17,17 +17,20 @@ export const CONFIG_QUERY_KEY = ['config'] as const
  * everything else, though: a one-shot form prefill, not a live display.
  *
  * Reading through this hook and *tracking* it are separate choices. Every
- * settings form — `src/themes/grid/GridSettingsPanel.tsx` and the eight admin
+ * settings form — `src/themes/grid/GridSettingsPanel.tsx`, the eight admin
  * forms under `src/admin/` (`SettingsAdmin`, `TimersSettings`,
  * `GoogleCalendarSettings`, `ThemePicker`, `MusicSettings`,
- * `DoorbellSettings`, `SportsSettings`, `CountdownsSettings`) — reads this
+ * `DoorbellSettings`, `SportsSettings`, `CountdownsSettings`) and
+ * `src/palettes/ThemeSettings.tsx` — reads this
  * query and then deliberately ignores every later value: a form's unsaved
  * edits are never in `/api/config`, so inputs derived from this query would
  * discard whatever someone had typed on the next poll tick. Each is split
  * into an outer component that tracks the live query and re-renders on every
  * poll, and an inner form whose lazy `useState` initialisers read the config
  * it was mounted with once and ignore every later value — the inner never
- * remounts on a poll tick, only on a real navigation, so "once" is structural
+ * remounts on a poll tick, only on a real navigation (`ThemeSettings` also
+ * keys its inner half on the active theme's id, so a deliberate switch
+ * re-seeds the swatches and nothing else does), so "once" is structural
  * rather than a flag that could be forgotten. Seeding state from a
  * `useEffect` instead is rejected by the `react-hooks/set-state-in-effect`
  * lint rule, which is why this shape exists rather than a simpler one.

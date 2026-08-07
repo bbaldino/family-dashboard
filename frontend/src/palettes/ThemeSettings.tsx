@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { HexColorPicker } from 'react-colorful'
+import { useAllConfig } from '@/platform'
 import { Button } from '@/ui/Button'
 import { ThemePreview } from './ThemePreview'
 import { useTheme } from './useTheme'
@@ -293,20 +294,67 @@ const COLOR_SECTIONS: {
   },
 ]
 
+/**
+ * The tenth settings form, and now the same shape as the other nine: this
+ * outer half tracks the live `/api/config` query and re-renders whenever
+ * anything in the table changes; the editor below reads the theme it was
+ * mounted with and ignores every later re-parse of it.
+ *
+ * It needed the split more than the others did. `useTheme` memoizes the
+ * custom themes on the whole config object, so *any* config write — a timer
+ * setting, a sports team — re-parses the JSON into brand new theme objects.
+ * An editor that followed that identity threw away in-progress swatches
+ * every time, and only for custom themes: the built-ins are module constants
+ * and keep their reference, which is what kept this hidden.
+ *
+ * `key` makes a deliberate switch of the active theme a remount, so the one
+ * change that *should* re-seed the swatches still does. The error banner
+ * lives out here because a rejected switch rolls the active id back, which
+ * remounts the editor — and the message explaining why it jumped has to
+ * outlive that.
+ */
 export function ThemeSettings() {
+  const { isPending } = useAllConfig()
   const { activeTheme, allThemes, customThemes, savePalette } = useTheme()
-  const [editingTheme, setEditingTheme] = useState<Theme | null>(null)
-  const [editedColors, setEditedColors] = useState<ThemeColors | null>(null)
-  const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    setEditingTheme(activeTheme)
-    setEditedColors(deepClone(activeTheme.colors))
-  }, [activeTheme])
+  // Until the config lands, `activeTheme` is the earth-tones fallback rather
+  // than the stored theme — seeding an editor from it would only show the
+  // wrong palette for a moment and then remount.
+  if (isPending) return null
+
+  return (
+    <ThemeEditor
+      key={activeTheme.id}
+      theme={activeTheme}
+      allThemes={allThemes}
+      customThemes={customThemes}
+      savePalette={savePalette}
+      error={error}
+      setError={setError}
+    />
+  )
+}
+
+function ThemeEditor({
+  theme,
+  allThemes,
+  customThemes,
+  savePalette,
+  error,
+  setError,
+}: {
+  theme: Theme
+  allThemes: Theme[]
+  customThemes: Theme[]
+  savePalette: ReturnType<typeof useTheme>['savePalette']
+  error: string | null
+  setError: (message: string | null) => void
+}) {
+  const [editedColors, setEditedColors] = useState<ThemeColors>(() => deepClone(theme.colors))
+  const [status, setStatus] = useState<string | null>(null)
 
   const handleColorChange = (key: string, value: string) => {
-    if (!editedColors) return
     const newColors = deepClone(editedColors)
     for (const section of COLOR_SECTIONS) {
       const item = section.items.find((i) => i.key === key)
@@ -321,10 +369,17 @@ export function ThemeSettings() {
   /**
    * Every write here is optimistic — `savePalette` seeds the shared config
    * cache so the whole dashboard repaints before the round trip finishes.
-   * When the write is rejected the seed is rolled back, which puts the
-   * stored palette back on screen (and, via the effect above, re-seeds the
-   * swatches from it); this banner is what says *why* the editor jumped
-   * back. Without it a failed save looked exactly like a successful one.
+   * When the write is rejected the seed is rolled back, putting the stored
+   * palette back on the dashboard; the banner is what says *why* the editor
+   * jumped back. Without it a failed save looked exactly like a successful
+   * one.
+   *
+   * The swatches are put back explicitly here, because this editor
+   * deliberately no longer follows the config object's identity. A rejected
+   * *switch* rolls the active id back and remounts the whole editor, which
+   * re-seeds it; a rejected save of an edited palette never changes the id,
+   * so without this line the swatches would sit there showing colours the
+   * server refused and the dashboard is no longer painted in.
    */
   const attemptSave = async (write: Parameters<typeof savePalette>[0]) => {
     setError(null)
@@ -333,23 +388,23 @@ export function ThemeSettings() {
       return true
     } catch {
       setError('Failed to save theme')
+      setEditedColors(deepClone(theme.colors))
       return false
     }
   }
 
-  const handleSelectTheme = async (theme: Theme) => {
-    setEditingTheme(theme)
-    setEditedColors(deepClone(theme.colors))
-    await attemptSave({ activeId: theme.id })
+  // No local seeding: the write flips the active id, and the remount that
+  // follows is what re-seeds the editor from the theme now selected.
+  const handleSelectTheme = async (selected: Theme) => {
+    await attemptSave({ activeId: selected.id })
   }
 
   const handleNewTheme = async () => {
-    const source = editingTheme ?? activeTheme
     const newTheme: Theme = {
       id: generateId(),
-      name: `${source.name} Copy`,
+      name: `${theme.name} Copy`,
       builtin: false,
-      colors: deepClone(source.colors),
+      colors: deepClone(theme.colors),
     }
     // Storing the theme and selecting it is one click, so it is one save —
     // two would invalidate the shared config query twice and refetch the
@@ -358,11 +413,10 @@ export function ThemeSettings() {
   }
 
   const handleSave = async () => {
-    if (!editingTheme || !editedColors) return
-    if (editingTheme.builtin) return
+    if (theme.builtin) return
 
     const updated = customThemes.map((t) =>
-      t.id === editingTheme.id ? { ...t, colors: deepClone(editedColors) } : t,
+      t.id === theme.id ? { ...t, colors: deepClone(editedColors) } : t,
     )
     if (!(await attemptSave({ themes: updated }))) return
     setStatus('Saved!')
@@ -370,20 +424,16 @@ export function ThemeSettings() {
   }
 
   const handleReset = () => {
-    if (editingTheme) {
-      setEditedColors(deepClone(editingTheme.colors))
-    }
+    setEditedColors(deepClone(theme.colors))
   }
 
   const handleDelete = async () => {
-    if (!editingTheme || editingTheme.builtin) return
-    const updated = customThemes.filter((t) => t.id !== editingTheme.id)
+    if (theme.builtin) return
+    const updated = customThemes.filter((t) => t.id !== theme.id)
     // Same again: dropping the theme and falling back to earth-tones is one
     // click and so one save.
     await attemptSave({ themes: updated, activeId: 'earth-tones' })
   }
-
-  if (!editedColors) return null
 
   return (
     <div className="h-full flex flex-col gap-2">
@@ -393,22 +443,22 @@ export function ThemeSettings() {
 
       {/* Theme selector */}
       <div className="flex flex-wrap gap-2 flex-shrink-0">
-        {allThemes.map((theme) => (
+        {allThemes.map((t) => (
           <button
-            key={theme.id}
-            onClick={() => handleSelectTheme(theme)}
+            key={t.id}
+            onClick={() => handleSelectTheme(t)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-medium border-2 transition-colors ${
-              activeTheme.id === theme.id
+              theme.id === t.id
                 ? 'border-palette-1 bg-palette-1/10 text-palette-1'
                 : 'border-border text-text-secondary hover:border-text-muted'
             }`}
           >
             <div className="flex gap-1">
-              {theme.colors.palette.slice(0, 3).map((c, i) => (
+              {t.colors.palette.slice(0, 3).map((c, i) => (
                 <div key={i} className="w-2 h-2 rounded-full" style={{ background: c }} />
               ))}
             </div>
-            {theme.name}
+            {t.name}
           </button>
         ))}
         <button
@@ -448,14 +498,14 @@ export function ThemeSettings() {
 
       {/* Actions */}
       <div className="flex items-center gap-2 flex-shrink-0">
-        {!editingTheme?.builtin && <Button onClick={handleSave}>Save Theme</Button>}
+        {!theme.builtin && <Button onClick={handleSave}>Save Theme</Button>}
         <button
           onClick={handleReset}
           className="px-4 py-2 rounded-[var(--radius-button)] text-[13px] font-medium bg-bg-card-hover text-text-secondary"
         >
           Reset
         </button>
-        {!editingTheme?.builtin && (
+        {!theme.builtin && (
           <button
             onClick={handleDelete}
             className="px-4 py-2 rounded-[var(--radius-button)] text-[13px] font-medium bg-bg-card-hover text-error"
@@ -463,7 +513,7 @@ export function ThemeSettings() {
             Delete
           </button>
         )}
-        {editingTheme?.builtin && (
+        {theme.builtin && (
           <span className="text-[11px] text-text-muted">
             Built-in theme — create a copy to customize
           </span>

@@ -1,9 +1,10 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
 import type { ReactNode } from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { CONFIG_QUERY_KEY, useAllConfig } from '@/platform'
 import { ThemeSettings } from './ThemeSettings'
-import { EARTH_TONES } from './types'
+import { EARTH_TONES, OCEAN } from './types'
 
 const EARTH_COLORS = EARTH_TONES.colors
 
@@ -21,9 +22,18 @@ vi.mock('./ThemePreview', () => ({ ThemePreview: () => <div data-testid="preview
  * poll corrected it up to a minute later. Indistinguishable from success.
  */
 
+/** A second consumer of the shared config query, so a test can tell when a
+ *  refresh has actually reached the components rather than just the cache. */
+function Probe() {
+  const { data } = useAllConfig()
+  return <div data-testid="probe">{data?.['timers.service_url'] ?? ''}</div>
+}
+
 /** A config table that remembers writes, since a save invalidates the shared
- *  query and the very next thing that happens is a re-read. `failWrites`
- *  makes every PUT respond 500 without touching the table. */
+ *  query and the very next thing that happens is a re-read. The table is
+ *  returned so a test can also change it from underneath, the way an edit
+ *  made on another screen would. `failWrites` makes every PUT respond 500
+ *  without touching the table. */
 function stubConfig(config: Record<string, string>, failWrites = false) {
   const table = { ...config }
   const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
@@ -44,7 +54,7 @@ function stubConfig(config: Record<string, string>, failWrites = false) {
     return Promise.reject(new Error(`Unexpected fetch url: ${url}`))
   })
   vi.stubGlobal('fetch', fetchMock)
-  return fetchMock
+  return { fetchMock, table }
 }
 
 function renderSettings() {
@@ -54,13 +64,44 @@ function renderSettings() {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   )
-  return { client, ...render(<ThemeSettings />, { wrapper }) }
+  return {
+    client,
+    ...render(
+      <>
+        <Probe />
+        <ThemeSettings />
+      </>,
+      { wrapper },
+    ),
+  }
 }
 
 /** The selector pill for a theme; the active one carries `border-palette-1`. */
 function pill(name: string) {
   return screen.getByRole('button', { name: new RegExp(`^${name}$`) })
 }
+
+/** `#rrggbb` as jsdom serialises it back out of a `style` attribute. */
+function rgb(hex: string) {
+  const n = parseInt(hex.slice(1), 16)
+  return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`
+}
+
+/** A swatch, found by the label the editor renders underneath it. */
+function swatch(label: string) {
+  return screen.getByText(label).previousElementSibling as HTMLElement
+}
+
+/** Taps a swatch open and picks the first colour in its grid — the closest
+ *  thing to someone half way through recolouring a palette. */
+const PICKED = '#e53935' // first entry of the editor's tap-to-pick grid
+function editSwatch(label: string) {
+  fireEvent.click(swatch(label))
+  const grid = document.querySelector('.grid-cols-10')
+  fireEvent.click(grid!.firstElementChild as HTMLElement)
+}
+
+const KITCHEN = { id: 'kitchen', name: 'Kitchen', builtin: false, colors: EARTH_COLORS }
 
 describe('ThemeSettings', () => {
   afterEach(() => {
@@ -94,12 +135,7 @@ describe('ThemeSettings', () => {
 
   it('says the save failed when storing an edited custom theme is rejected', async () => {
     stubConfig(
-      {
-        'theme.active': 'kitchen',
-        'theme.custom_themes': JSON.stringify([
-          { id: 'kitchen', name: 'Kitchen', builtin: false, colors: EARTH_COLORS },
-        ]),
-      },
+      { 'theme.active': 'kitchen', 'theme.custom_themes': JSON.stringify([KITCHEN]) },
       true,
     )
     renderSettings()
@@ -115,7 +151,7 @@ describe('ThemeSettings', () => {
     // "+ New Theme" stores the theme and selects it. As two mutations that
     // was two invalidations and two reads of the whole config table for a
     // single click; `useSaveConfig` takes a batch precisely so it is one.
-    const fetchMock = stubConfig({ 'theme.active': 'earth-tones' })
+    const { fetchMock } = stubConfig({ 'theme.active': 'earth-tones' })
     renderSettings()
     await waitFor(() => expect(pill('Earth Tones')).toHaveClass('border-palette-1'))
     const readsBefore = fetchMock.mock.calls.filter(([u]) => String(u) === '/api/config').length
@@ -125,5 +161,79 @@ describe('ThemeSettings', () => {
     await waitFor(() => expect(pill('Earth Tones Copy')).toHaveClass('border-palette-1'))
     const reads = fetchMock.mock.calls.filter(([u]) => String(u) === '/api/config')
     expect(reads.length - readsBefore).toBe(1)
+  })
+
+  // The property the seed-once split exists for, and the reason this screen
+  // needed it more than the other nine: unsaved swatches live only in this
+  // component's state, and a *custom* theme is re-parsed out of the config
+  // JSON into a brand new object every time anything in the table changes.
+  // Following that object's identity meant a timer setting saved on another
+  // tab silently took the recolouring with it.
+  it('keeps in-progress swatch edits when an unrelated config change lands', async () => {
+    const { table } = stubConfig({
+      'theme.active': 'kitchen',
+      'theme.custom_themes': JSON.stringify([KITCHEN]),
+      'timers.service_url': 'http://timer.local',
+    })
+    const { client } = renderSettings()
+    await waitFor(() => expect(pill('Kitchen')).toHaveClass('border-palette-1'))
+
+    editSwatch('P1')
+    expect(swatch('P1')).toHaveStyle({ background: rgb(PICKED) })
+
+    // Someone saves something unrelated on another settings tab.
+    table['timers.service_url'] = 'http://someone-else-changed-it'
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: CONFIG_QUERY_KEY })
+    })
+    // The probe is the synchronisation point: react-query notifies its
+    // observers a tick after the refetch resolves, so asserting straight
+    // after `invalidateQueries` would pass before the new config had reached
+    // any component at all — and would go on passing against an editor that
+    // re-seeded itself on every config change.
+    await waitFor(() =>
+      expect(screen.getByTestId('probe')).toHaveTextContent('http://someone-else-changed-it'),
+    )
+
+    expect(swatch('P1')).toHaveStyle({ background: rgb(PICKED) })
+  })
+
+  it('re-seeds the swatches when the theme is deliberately switched', async () => {
+    stubConfig({ 'theme.active': 'kitchen', 'theme.custom_themes': JSON.stringify([KITCHEN]) })
+    renderSettings()
+    await waitFor(() => expect(pill('Kitchen')).toHaveClass('border-palette-1'))
+
+    editSwatch('P1')
+    expect(swatch('P1')).toHaveStyle({ background: rgb(PICKED) })
+
+    fireEvent.click(pill('Ocean'))
+
+    await waitFor(() =>
+      expect(swatch('P1')).toHaveStyle({ background: rgb(OCEAN.colors.palette[0]) }),
+    )
+  })
+
+  // The other half of the same fix, pulling the opposite way: the editor no
+  // longer follows the config object, so a rejected write has to put the
+  // stored colours back explicitly. Otherwise a failed save leaves the
+  // swatches showing a palette nobody stored — while the dashboard behind
+  // them has already rolled back to the one that is.
+  it('puts the stored colours back when saving an edited palette is rejected', async () => {
+    stubConfig(
+      { 'theme.active': 'kitchen', 'theme.custom_themes': JSON.stringify([KITCHEN]) },
+      true,
+    )
+    renderSettings()
+    await waitFor(() => expect(pill('Kitchen')).toHaveClass('border-palette-1'))
+
+    editSwatch('P1')
+    expect(swatch('P1')).toHaveStyle({ background: rgb(PICKED) })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Theme' }))
+
+    expect(await screen.findByText('Failed to save theme')).toBeInTheDocument()
+    await waitFor(() =>
+      expect(swatch('P1')).toHaveStyle({ background: rgb(EARTH_COLORS.palette[0]) }),
+    )
   })
 })
