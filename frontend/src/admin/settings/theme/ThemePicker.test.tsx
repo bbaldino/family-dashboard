@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react'
 import { z } from 'zod'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemePicker } from './ThemePicker'
 import { registerTheme, _resetRegistry } from '@/shell/ThemeRegistry'
+import { CONFIG_QUERY_KEY, useAllConfig } from '@/platform'
 import type { ThemeModule } from '@/shell/types'
 
 const stub = (id: string, name: string): ThemeModule => ({
@@ -150,5 +151,79 @@ describe('ThemePicker', () => {
     fireEvent.click(screen.getByRole('radio', { name: /Cards Grid/ }))
 
     expect(await screen.findByText('Grid columns')).toBeInTheDocument()
+  })
+})
+
+/** A second consumer of the shared query, so a test can tell when a refresh
+ *  has actually reached the components rather than just the cache. */
+function Probe() {
+  const { data } = useAllConfig()
+  return <div data-testid="probe">{data?.['theme.presentation'] ?? ''}</div>
+}
+
+describe('ThemePicker prefill', () => {
+  beforeEach(() => {
+    _resetRegistry()
+    registerTheme(gridStub())
+    registerTheme(stub('broadsheet', 'Broadsheet'))
+    registerTheme(stub('ledger', 'Ledger'))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    _resetRegistry()
+  })
+
+  // The property the one-shot prefill exists for. The radio moves the moment
+  // it is clicked, before the write has landed, so that choice lives only in
+  // this component's state — a form that tracked the query would have a poll
+  // tick yank the selection out from under whoever just made it.
+  it('does not overwrite an in-progress choice when the config query refreshes', async () => {
+    let landWrite = () => {}
+    const writeInFlight = new Promise<void>((resolve) => {
+      landWrite = resolve
+    })
+    let presentation = 'grid'
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      if (String(input) === '/api/config') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ 'theme.presentation': presentation }),
+        } as Response)
+      }
+      return writeInFlight.then(() => ({ ok: true, json: () => Promise.resolve({}) }) as Response)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    })
+    render(
+      <QueryClientProvider client={client}>
+        {/* The probe is the synchronisation point: react-query notifies its
+         *  observers a tick after the refetch resolves, so asserting straight
+         *  after `invalidateQueries` would pass before the new config had
+         *  reached any component at all. */}
+        <Probe />
+        <ThemePicker />
+      </QueryClientProvider>,
+    )
+    await waitFor(() => expect(screen.getByRole('radio', { name: /Cards Grid/ })).toBeChecked())
+
+    // Chosen, write still in flight.
+    fireEvent.click(screen.getByRole('radio', { name: /Broadsheet/ }))
+    await waitFor(() => expect(screen.getByRole('radio', { name: /Broadsheet/ })).toBeChecked())
+
+    // A poll lands, carrying a change made elsewhere entirely.
+    presentation = 'ledger'
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: CONFIG_QUERY_KEY })
+    })
+    await waitFor(() => expect(screen.getByTestId('probe')).toHaveTextContent('ledger'))
+
+    expect(screen.getByRole('radio', { name: /Broadsheet/ })).toBeChecked()
+    expect(screen.getByRole('radio', { name: /Ledger/ })).not.toBeChecked()
+
+    landWrite()
   })
 })

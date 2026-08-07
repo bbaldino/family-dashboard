@@ -1,8 +1,9 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import type { ReactNode } from 'react'
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { SportsSettings } from './SportsSettings'
+import { CONFIG_QUERY_KEY, useAllConfig } from '@/platform'
 
 /**
  * Characterization tests: these describe what this screen does *today*, and
@@ -309,5 +310,69 @@ describe('SportsSettings', () => {
         { league: 'mlb', teamId: 'bos-sox', name: 'Red Sox', logo: 'https://cdn.test/sox.png' },
       ])
     })
+  })
+})
+
+/** A second consumer of the shared query, so a test can tell when a refresh
+ *  has actually reached the components rather than just the cache. */
+function Probe() {
+  const { data } = useAllConfig()
+  return <div data-testid="probe">{data?.['sports.poll_interval_live'] ?? ''}</div>
+}
+
+describe('SportsSettings prefill', () => {
+  beforeEach(() => {
+    puts = []
+    requested = []
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  // The property the one-shot prefill exists for. Unsaved edits live only in
+  // this component's state — they are never in /api/config — so a form that
+  // tracked the query would throw away whatever someone had typed on the
+  // next poll tick, with nobody else having changed a thing. This screen
+  // seeds via a `useMemo(…, [])` rather than a lazy `useState`; the property
+  // is the same either way.
+  it('does not overwrite an in-progress edit when the config query refreshes', async () => {
+    const fetchMock = mockFetch()
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        {/* The probe is the synchronisation point: react-query notifies its
+         *  observers a tick after the refetch resolves, so asserting straight
+         *  after `invalidateQueries` would pass before the new config had
+         *  reached any component at all. */}
+        <Probe />
+        <SportsSettings />
+      </QueryClientProvider>,
+    )
+    await screen.findByText('Browse by League')
+
+    fireEvent.change(screen.getByDisplayValue('10'), { target: { value: '99' } })
+
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url === '/api/config') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ 'sports.poll_interval_live': '7' }),
+        } as Response)
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({}),
+        text: () => Promise.resolve('{}'),
+      } as Response)
+    })
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: CONFIG_QUERY_KEY })
+    })
+    await waitFor(() => expect(screen.getByTestId('probe')).toHaveTextContent('7'))
+
+    expect(screen.getByDisplayValue('99')).toBeInTheDocument()
+    expect(screen.queryByDisplayValue('7')).not.toBeInTheDocument()
   })
 })
