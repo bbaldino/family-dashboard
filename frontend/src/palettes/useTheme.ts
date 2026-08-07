@@ -43,7 +43,14 @@ export function useTheme() {
   // and with it `setActiveTheme` — on every render of the dashboard.
   const { mutateAsync: saveConfig } = useSaveConfig()
 
-  const customThemes = useMemo(() => parseCustomThemes(data?.[CUSTOM_KEY]), [data])
+  // Keyed on the stored string, not the whole config object: `data` gets a new
+  // identity whenever *any* key changes, which would re-parse this JSON into
+  // fresh theme objects and hand every consumer a new `activeTheme` for an
+  // unrelated save. That churn is what used to wipe in-progress swatch edits
+  // in `ThemeSettings` — fixed there structurally, but the churn itself has no
+  // reason to exist, and the next consumer would inherit it.
+  const savedThemes = data?.[CUSTOM_KEY]
+  const customThemes = useMemo(() => parseCustomThemes(savedThemes), [savedThemes])
   const allThemes = useMemo(() => [...BUILTIN_THEMES, ...customThemes], [customThemes])
   const activeId = data?.[ACTIVE_KEY]
   const activeTheme = allThemes.find((t) => t.id === activeId) ?? EARTH_TONES
