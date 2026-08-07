@@ -40,9 +40,15 @@ export function integrationQueryKey(integrationId: string, spec: ProxyFetchSpec)
 export async function fetchViaProxy<Raw = unknown>(spec: ProxyFetchSpec): Promise<Raw> {
   const { url, method, headers, body, ttlSecs = 0, expect } = spec
 
-  // Omit absent fields rather than sending them as `undefined` — a plain
-  // GET must still post exactly `{url, ttl_secs}`, the shape the backend
+  // A plain GET must post exactly `{url, ttl_secs}` — the shape the backend
   // tests assert.
+  //
+  // The guards below are belt-and-braces, not the mechanism: `JSON.stringify`
+  // already drops `undefined`-valued keys, so assigning an absent `method`
+  // unguarded would serialise identically. What must not happen is
+  // substituting a *default* — `method ?? 'GET'` would put a key on the wire
+  // that a plain GET is asserted not to carry. Keep that distinction in mind
+  // before "simplifying" either the guards or the defaults.
   const payload: {
     url: string | null
     method?: string
