@@ -5,7 +5,7 @@ import { useAllConfig, useIntegrationConfig } from '@/platform'
 import { activeScenario } from '@/lib/scenario'
 import {
   fetchEventsForCalendars,
-  parseCalendarIds,
+  readCalendarIdsOrDefault,
   type CalendarEvent,
 } from '@/providers/google-calendar'
 import { calendarIntegration } from './config'
@@ -111,7 +111,7 @@ export function useGoogleCalendar(): CalendarData {
   const { isPending: configPending } = useAllConfig()
   const config = useIntegrationConfig(calendarIntegration)
   const savedIds = config?.calendar_ids
-  const calendarIds = useMemo(() => parseCalendarIds(savedIds), [savedIds])
+  const calendarIds = useMemo(() => readCalendarIdsOrDefault(savedIds), [savedIds])
 
   const query = useQuery({
     queryKey: ['calendar', 'week', calendarIds],

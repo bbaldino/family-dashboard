@@ -18,14 +18,15 @@ const CALENDARS = [
   { id: 'school', summary: 'School' },
 ]
 
-function stubFetch(calendarIds: string[]) {
-  let stored = JSON.stringify(calendarIds)
-  const fetchMock = vi.fn((input: RequestInfo | URL) => {
+function stubFetch(calendarIds: string[] | undefined) {
+  let stored = calendarIds === undefined ? undefined : JSON.stringify(calendarIds)
+  const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input)
     if (url === '/api/config') {
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ 'calendar.calendar_ids': stored }),
+        json: () =>
+          Promise.resolve(stored === undefined ? {} : { 'calendar.calendar_ids': stored }),
       } as Response)
     }
     if (url === '/api/google-calendar/calendars') {
@@ -33,6 +34,11 @@ function stubFetch(calendarIds: string[]) {
         ok: true,
         text: () => Promise.resolve(JSON.stringify(CALENDARS)),
       } as Response)
+    }
+    if (url === '/api/config/calendar.calendar_ids' && init?.method === 'PUT') {
+      const body = JSON.parse(String(init.body)) as { value: string }
+      stored = body.value
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response)
     }
     return Promise.reject(new Error(`Unexpected fetch url: ${url}`))
   })
@@ -85,5 +91,39 @@ describe('GoogleCalendarSettings', () => {
     expect(screen.getByRole('checkbox', { name: 'Home' })).toBeChecked()
     expect(screen.getByRole('checkbox', { name: /Work/ })).toBeChecked()
     expect(screen.getByRole('checkbox', { name: 'School' })).not.toBeChecked()
+  })
+
+  it('saves only the ticked calendar from an unconfigured panel, not a primary default', async () => {
+    // `calendar.calendar_ids` absent entirely — an unconfigured install. The
+    // panel is an edit surface: it must seed from what is actually stored
+    // ([], here), never from the `'primary'` fallback that fetch paths use.
+    // Otherwise `'primary'` rides along in the save with no checkbox to
+    // untick it by — Google never returns that literal string as a real
+    // calendar id.
+    const { fetchMock } = stubFetch(undefined)
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <GoogleCalendarSettings />
+      </QueryClientProvider>,
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Fetch Calendars' }))
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: /Work/ })).toBeInTheDocument())
+
+    expect(screen.getByRole('checkbox', { name: /Work/ })).not.toBeChecked()
+
+    fireEvent.click(screen.getByRole('checkbox', { name: /Work/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/config/calendar.calendar_ids',
+        expect.objectContaining({ method: 'PUT' }),
+      ),
+    )
+    const call = fetchMock.mock.calls.find(([url]) => url === '/api/config/calendar.calendar_ids')
+    const body = JSON.parse(String(call?.[1]?.body)) as { value: string }
+    expect(JSON.parse(body.value)).toEqual(['work'])
   })
 })

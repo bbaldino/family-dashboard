@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAllConfig, useSaveConfig } from '@/platform'
-import { useCalendarList, parseCalendarIds } from '@/providers/google-calendar'
+import { useCalendarList, readStoredCalendarIds } from '@/providers/google-calendar'
 
 /**
  * Connects the Google account and picks which calendars the household
@@ -28,7 +28,7 @@ export function GoogleCalendarSettings() {
 
 function GoogleCalendarSettingsForm({ config }: { config: Record<string, string> | undefined }) {
   const [calendarIds, setCalendarIds] = useState<string[]>(() =>
-    parseCalendarIds(config?.['calendar.calendar_ids']),
+    readStoredCalendarIds(config?.['calendar.calendar_ids']),
   )
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
