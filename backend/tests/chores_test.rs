@@ -552,9 +552,14 @@ async fn test_week_copy_refuses_non_empty_target() {
     let resp = server.post("/chores/weeks/copy").json(&copy).await;
     resp.assert_status(StatusCode::BAD_REQUEST);
     let body: serde_json::Value = resp.json();
+    let message = body["error"].as_str().unwrap();
+    // This string is rendered verbatim in `AssignmentsTab`'s banner, directly
+    // under a header that already names the week — so it deliberately does
+    // *not* repeat the ISO date. What it must carry is how much is in the way
+    // and what to do about it.
     assert!(
-        body["error"].as_str().unwrap().contains("2026-03-23"),
-        "the refusal should name the week it refused: {body}"
+        message.contains('2') && message.contains("clear"),
+        "the refusal should say how many chores are in the way and what to do: {body}"
     );
 
     assert_eq!(

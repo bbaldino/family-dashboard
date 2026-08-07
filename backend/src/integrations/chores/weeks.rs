@@ -56,9 +56,13 @@ async fn copy_week(
         .await?;
 
     if existing > 0 {
+        // Worded for a kitchen tablet, not a console: `AssignmentsTab` renders
+        // this verbatim in its banner, directly under a header that already
+        // says "Week of August 3, 2026" — so repeating the ISO date here is
+        // noise, and "assignment(s)" reads like a log line.
+        let chores = if existing == 1 { "chore" } else { "chores" };
         return Err(AppError::BadRequest(format!(
-            "Week {} already has {} assignment(s) — clear it before copying into it",
-            input.to_week, existing
+            "This week already has {existing} {chores} — clear it before copying last week in"
         )));
     }
 
