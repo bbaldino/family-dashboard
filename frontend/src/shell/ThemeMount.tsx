@@ -1,5 +1,6 @@
-import { useEffect, useState, Fragment } from 'react'
+import { Fragment } from 'react'
 import { Route, Routes } from 'react-router-dom'
+import { useAllConfig } from '@/platform'
 import { getTheme } from './ThemeRegistry'
 import type { ScreenKey, ThemeModule } from './types'
 import { ROUTE_PATHS } from './routes'
@@ -27,24 +28,27 @@ function resolveTheme(id: string | null): ThemeModule {
   return grid
 }
 
+/**
+ * Mounts whichever presentation `theme.presentation` names, in whichever
+ * palette `useTheme` resolves.
+ *
+ * Both come off the one shared `/api/config` query rather than a mount-only
+ * fetch of its own, so switching presentation in admin no longer needs a
+ * page reload — it lands within that query's poll interval. react-query's
+ * structural sharing means an unchanged poll response hands back the same
+ * `data` object, so the every-60s refetch re-renders nothing underneath
+ * this: the fixed-scale canvas is not remounted and not rescaled.
+ */
 export function ThemeMount() {
-  const [activeId, setActiveId] = useState<string | null>(null)
-  const [loaded, setLoaded] = useState(false)
+  const { data, isPending } = useAllConfig()
   const { activeTheme } = useTheme()
 
-  useEffect(() => {
-    fetch('/api/config')
-      .then((r) => r.json())
-      .then((config: Record<string, string>) => {
-        setActiveId(config[CONFIG_KEY] ?? null)
-        setLoaded(true)
-      })
-      .catch(() => setLoaded(true))
-  }, [])
+  // A failed fetch leaves `data` undefined, which resolves to the default
+  // theme below — same as the old `.catch` that flipped `loaded` and left
+  // the id null.
+  if (isPending) return null
 
-  if (!loaded) return null
-
-  const theme = resolveTheme(activeId)
+  const theme = resolveTheme(data?.[CONFIG_KEY] ?? null)
   const Layout = theme.layout
 
   const screenRoutes = (Object.entries(ROUTE_PATHS) as [ScreenKey, string][]).map(([key, path]) => {

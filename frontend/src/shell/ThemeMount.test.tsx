@@ -1,10 +1,11 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeMount } from './ThemeMount'
 import { registerTheme, _resetRegistry } from './ThemeRegistry'
 import type { ThemeModule } from './types'
+import { CONFIG_QUERY_KEY } from '@/platform'
 
 /** The palette (and, below, the presentation choice) is read through the
  *  shared config query, so the mount needs a client the way the real app
@@ -123,6 +124,59 @@ describe('ThemeMount', () => {
     renderMount(['/calendar'])
     await waitFor(() => expect(screen.getByText(/calendar/i)).toBeInTheDocument())
     expect(screen.queryByText(/unknown/i)).not.toBeInTheDocument()
+  })
+
+  it('switches presentation when theme.presentation changes, with no remount', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ 'theme.presentation': 'grid' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const { client } = renderMount()
+    await waitFor(() => expect(screen.getByTestId('grid-home')).toBeInTheDocument())
+
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ 'theme.presentation': 'broadsheet' }),
+    })
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: CONFIG_QUERY_KEY })
+    })
+
+    await waitFor(() => expect(screen.getByTestId('broadsheet-home')).toBeInTheDocument())
+  })
+
+  // The config query now polls underneath the whole dashboard. On the
+  // tablet that means the fixed-scale canvas re-renders every 60s where it
+  // used to render once — so an unchanged refetch must not replace the
+  // canvas element, which would remount every screen inside it and
+  // re-run the scale calculation visibly.
+  it('keeps the same canvas element across a refetch that changes nothing', async () => {
+    mockConfig('broadsheet')
+    const { client } = renderMount()
+    await waitFor(() => expect(screen.getByTestId('theme-canvas')).toBeInTheDocument())
+    const before = screen.getByTestId('theme-canvas')
+    const beforeTransform = before.style.transform
+
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: CONFIG_QUERY_KEY })
+    })
+
+    expect(screen.getByTestId('theme-canvas')).toBe(before)
+    expect(screen.getByTestId('theme-canvas').style.transform).toBe(beforeTransform)
+  })
+
+  it('reads the presentation and the palette off one shared request', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ 'theme.presentation': 'grid', 'theme.active': 'ocean' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    renderMount()
+    await waitFor(() => expect(screen.getByTestId('grid-home')).toBeInTheDocument())
+
+    const configCalls = fetchMock.mock.calls.filter(([u]) => String(u) === '/api/config')
+    expect(configCalls).toHaveLength(1)
   })
 
   it('applies the active palette to its own root, not the document', async () => {
