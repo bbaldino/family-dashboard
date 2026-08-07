@@ -1,14 +1,25 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest'
-import type { ReactNode } from 'react'
 import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemeMount } from './ThemeMount'
 import { registerTheme, _resetRegistry } from './ThemeRegistry'
 import type { ThemeModule } from './types'
 
-const wrapper = ({ children }: { children: ReactNode }) => (
-  <MemoryRouter initialEntries={['/']}>{children}</MemoryRouter>
-)
+/** The palette (and, below, the presentation choice) is read through the
+ *  shared config query, so the mount needs a client the way the real app
+ *  gives it one. */
+function renderMount(initialEntries: string[] = ['/']) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const result = render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={initialEntries}>
+        <ThemeMount />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  )
+  return { ...result, client }
+}
 
 function seedConfig(config: Record<string, string>) {
   vi.stubGlobal(
@@ -64,22 +75,14 @@ describe('ThemeMount', () => {
 
   it('mounts the theme named in config', async () => {
     mockConfig('broadsheet')
-    render(
-      <MemoryRouter initialEntries={['/']}>
-        <ThemeMount />
-      </MemoryRouter>,
-    )
+    renderMount()
     await waitFor(() => expect(screen.getByTestId('broadsheet-home')).toBeInTheDocument())
   })
 
   it('falls back to grid when the config value is unknown', async () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     mockConfig('nonexistent-theme')
-    render(
-      <MemoryRouter initialEntries={['/']}>
-        <ThemeMount />
-      </MemoryRouter>,
-    )
+    renderMount()
     await waitFor(() => expect(screen.getByTestId('grid-home')).toBeInTheDocument())
     expect(warnSpy).toHaveBeenCalledWith(
       expect.stringContaining('Unknown theme "nonexistent-theme"'),
@@ -89,31 +92,19 @@ describe('ThemeMount', () => {
 
   it('falls back to grid when the config value is missing', async () => {
     mockConfig(null)
-    render(
-      <MemoryRouter initialEntries={['/']}>
-        <ThemeMount />
-      </MemoryRouter>,
-    )
+    renderMount()
     await waitFor(() => expect(screen.getByTestId('grid-home')).toBeInTheDocument())
   })
 
   it('wraps a fixed-scale theme in the canvas scaler', async () => {
     mockConfig('broadsheet')
-    render(
-      <MemoryRouter initialEntries={['/']}>
-        <ThemeMount />
-      </MemoryRouter>,
-    )
+    renderMount()
     await waitFor(() => expect(screen.getByTestId('theme-canvas')).toBeInTheDocument())
   })
 
   it('does NOT wrap a fluid theme in the canvas scaler', async () => {
     mockConfig('grid')
-    render(
-      <MemoryRouter initialEntries={['/']}>
-        <ThemeMount />
-      </MemoryRouter>,
-    )
+    renderMount()
     await waitFor(() => expect(screen.getByTestId('grid-home')).toBeInTheDocument())
     expect(screen.queryByTestId('theme-canvas')).not.toBeInTheDocument()
   })
@@ -129,18 +120,14 @@ describe('ThemeMount', () => {
     _resetRegistry()
     registerTheme(homeOnlyStub)
     mockConfig('grid')
-    render(
-      <MemoryRouter initialEntries={['/calendar']}>
-        <ThemeMount />
-      </MemoryRouter>,
-    )
+    renderMount(['/calendar'])
     await waitFor(() => expect(screen.getByText(/calendar/i)).toBeInTheDocument())
     expect(screen.queryByText(/unknown/i)).not.toBeInTheDocument()
   })
 
   it('applies the active palette to its own root, not the document', async () => {
     seedConfig({ 'theme.active': 'earth-tones' })
-    const { container } = render(<ThemeMount />, { wrapper })
+    const { container } = renderMount()
 
     await waitFor(() => expect(container.firstElementChild).toBeTruthy())
     const root = container.firstElementChild as HTMLElement

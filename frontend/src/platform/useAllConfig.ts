@@ -14,10 +14,9 @@ export const CONFIG_QUERY_KEY = ['config'] as const
  * admin `SettingsComponent` registered in `settingsRegistry` also does its
  * own raw fetch, but that is a different, one-shot pattern (load current
  * values once to prefill a form) and out of scope for this hook. Outside
- * that registry, six call sites across six files still do their own raw
+ * that registry, five call sites across five files still do their own raw
  * `useEffect` + `fetch('/api/config')`, and none of them refetch —
- * `src/shell/ThemeMount.tsx`, `src/palettes/useTheme.ts` (so a theme change
- * still needs a reload), `src/themes/grid/widgets/timers/TimerBanner.tsx`,
+ * `src/shell/ThemeMount.tsx`, `src/themes/grid/widgets/timers/TimerBanner.tsx`,
  * `src/themes/grid/screens/CamerasBoard.tsx`,
  * `src/themes/grid/overlays/doorbell/DoorbellRingListener.tsx`, and
  * `src/themes/grid/GridSettingsPanel.tsx` — the last one is the same
@@ -27,8 +26,9 @@ export const CONFIG_QUERY_KEY = ['config'] as const
  * be two more call sites here; it now reads through this hook, as do the
  * google-calendar hooks — `fetchCalendarIds` was one more bypass until the
  * week strip and month grid started deriving their calendar ids from this
- * query, and it is gone.) Migrating the rest onto this hook is follow-up
- * work, not done here.
+ * query, and it is gone. `src/palettes/useTheme.ts` was another, which is
+ * why a theme change used to need a reload; it reads through this hook
+ * now.) Migrating the rest onto this hook is follow-up work, not done here.
  *
  * There are 10 independent places config gets written (`SettingsAdmin` plus
  * nine per-integration `SettingsComponent`s, each with its own save handler),
