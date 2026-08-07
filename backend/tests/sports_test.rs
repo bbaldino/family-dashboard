@@ -1,12 +1,12 @@
 use axum_test::TestServer;
 use serde_json::json;
 
-// Only `test_app` is needed here; the log-capture helpers this module also
-// carries belong to `fetch_test.rs`/`llm_test.rs`.
+// Only `test_app`/`test_pool` are needed here; the log-capture helpers this
+// module also carries belong to `fetch_test.rs`/`llm_test.rs`.
 #[allow(dead_code)]
 #[path = "helpers.rs"]
 mod helpers;
-use helpers::test_app;
+use helpers::{test_app, test_pool};
 
 /// The third state. `/games` has three distinct empty-ish outcomes and only
 /// one of them is a problem:
@@ -19,6 +19,10 @@ use helpers::test_app;
 ///
 /// So an untracked dashboard must report *nothing* unavailable, otherwise
 /// the frontend would cry outage at someone who simply has no teams.
+///
+/// This one guards state 1 only — it returns at `routes.rs`'s
+/// `tracked.is_empty()` check and never reaches the league loop. State 3 is
+/// guarded by `games_names_a_league_it_could_not_reach` below.
 #[tokio::test]
 async fn games_reports_nothing_unavailable_when_no_teams_are_tracked() {
     let (app, _pool) = test_app().await;
@@ -33,6 +37,81 @@ async fn games_reports_nothing_unavailable_when_no_teams_are_tracked() {
         body["unavailableLeagues"],
         json!([]),
         "no tracked teams is a legitimately empty response, not a degraded one"
+    );
+    assert_eq!(
+        body["hasLive"],
+        json!(false),
+        "nothing is tracked, so nothing can be live"
+    );
+}
+
+/// State 3, at the level the frontend actually reads: not "does
+/// `resolve_scoreboard` decide `None`" (the unit tests in `routes.rs` cover
+/// that) but "does `/games` *act* on that decision".
+///
+/// A tracked league whose scoreboard cannot be fetched, with nothing cached to
+/// fall back on, has to be named in `unavailableLeagues`. Drop that report —
+/// the bare `continue` the old code did — and the body becomes
+/// `{"games": [], "unavailableLeagues": []}`, byte-identical to a quiet
+/// Tuesday. That indistinguishability is the entire defect.
+///
+/// ESPN is made unreachable by resolving its host to a closed loopback port,
+/// so this never leaves the machine and never depends on ESPN being up. The
+/// timeout is a backstop in case the connection is blackholed rather than
+/// refused; either way the fetch fails, which is all this test needs.
+#[tokio::test]
+async fn games_names_a_league_it_could_not_reach() {
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    use dashboard_backend::integrations::sports;
+
+    let pool = test_pool().await;
+    sqlx::query("INSERT INTO config (key, value) VALUES (?, ?)")
+        .bind("sports.tracked_teams")
+        .bind(r#"[{"league":"mlb","teamId":"10"}]"#)
+        .execute(&pool)
+        .await
+        .expect("tracked team stored");
+
+    let client = reqwest::Client::builder()
+        .resolve("site.api.espn.com", ([127, 0, 0, 1], 1).into())
+        .timeout(Duration::from_secs(5))
+        .build()
+        .expect("client builds");
+
+    let (events_tx, _events_rx) = tokio::sync::broadcast::channel(16);
+    let state = sports::routes::SportsState {
+        pool,
+        // Empty: no fresh entry, and no stale one either, so all three tiers
+        // of `resolve_scoreboard` miss.
+        cache: sports::cache::EspnCache::new(),
+        client,
+        preview_cache: Arc::new(sports::preview::PreviewCache::new()),
+        final_recap_cache: Arc::new(sports::final_recap::FinalRecapCache::new()),
+        enrichment_cache: Arc::new(sports::enrichment::EnrichmentCache::new()),
+        recap_cache: Arc::new(sports::recap::RecapCache::new()),
+        replayer: None,
+        start_timer: Arc::new(tokio::sync::Mutex::new(None)),
+        events_tx,
+    };
+    let app = axum::Router::new()
+        .route("/games", axum::routing::get(sports::routes::get_games))
+        .with_state(state);
+
+    let resp = TestServer::new(app).get("/games").await;
+    resp.assert_status_ok();
+    let body: serde_json::Value = resp.json();
+
+    assert_eq!(
+        body["unavailableLeagues"],
+        json!(["mlb"]),
+        "an unreachable tracked league must be named in the response, not skipped silently"
+    );
+    assert_eq!(
+        body["games"],
+        json!([]),
+        "there is genuinely nothing to show for it"
     );
 }
 
