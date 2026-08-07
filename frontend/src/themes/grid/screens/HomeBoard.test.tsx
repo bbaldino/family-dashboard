@@ -24,7 +24,7 @@ vi.mock('@/integrations/driving-time', () => ({
 vi.mock('@/themes/grid/widgets/timers/TimerBanner', () => ({
   TimerBanner: () => null,
 }))
-vi.mock('@/themes/grid/widgets/google-calendar/CalendarWidget', () => ({
+vi.mock('@/themes/grid/widgets/calendar/CalendarWidget', () => ({
   CalendarWidget: () => <div data-testid="widget-calendar" />,
 }))
 vi.mock('@/themes/grid/widgets/chores/ChoresWidget', () => ({
