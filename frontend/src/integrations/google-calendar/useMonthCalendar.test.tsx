@@ -224,7 +224,7 @@ describe('useMonthCalendar', () => {
       wrapper: wrapperFor(newClient()),
     })
 
-    // Cold cache: `null`, not `undefined` — the `UsePollingResult` contract
+    // Cold cache: `null`, not `undefined` — the `PollResult` contract
     // `Calendar.tsx` documents relying on.
     expect(result.current.data).toBeNull()
     expect(result.current.error).toBeNull()

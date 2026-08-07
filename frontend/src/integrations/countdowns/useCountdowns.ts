@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import type { UsePollingResult } from '@/integrations/types'
+import type { PollResult } from '@/integrations/types'
 import { useIntegrationConfig } from '@/platform'
 import { countdownsIntegration } from './config'
 // Use the google-calendar integration's API to fetch events
@@ -13,7 +13,7 @@ export interface CountdownItem {
   daysUntil: number
 }
 
-export type CountdownsData = UsePollingResult<CountdownItem[]>
+export type CountdownsData = PollResult<CountdownItem[]>
 
 async function fetchCountdowns(calendarId: string, horizonDays: number): Promise<CountdownItem[]> {
   const now = new Date()
@@ -49,7 +49,7 @@ async function fetchCountdowns(calendarId: string, horizonDays: number): Promise
 }
 
 /**
- * Adapts react-query's result back to `UsePollingResult` — the shared
+ * Adapts react-query's result back to `PollResult` — the shared
  * return-shape contract this hook's three consumers (`HouseholdColumn`,
  * `Calendar`, the grid `CountdownsWidget` and its widget-meta) still depend
  * on. In particular `data` stays `null` (not react-query's `undefined`)

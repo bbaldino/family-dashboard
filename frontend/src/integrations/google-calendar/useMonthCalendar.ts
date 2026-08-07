@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import type { UsePollingResult } from '@/integrations/types'
+import type { PollResult } from '@/integrations/types'
 import { useAllConfig, useIntegrationConfig } from '@/platform'
 import { activeScenario } from '@/lib/scenario'
 import { googleCalendarIntegration, parseCalendarIds } from './config'
@@ -77,11 +77,11 @@ async function fetchMonthEvents(
  * calendar ids live in the query key (so a `calendar_ids` change is picked up
  * without a remount, on a kiosk that never reloads), the query waits for the
  * config so it never asks `primary` first and corrects itself, and the result
- * is adapted back to `UsePollingResult` — `data` stays `null` rather than
+ * is adapted back to `PollResult` — `data` stays `null` rather than
  * `undefined` until a fetch succeeds, which `Calendar.tsx` documents relying
  * on.
  */
-export function useMonthCalendar(year: number, month: number): UsePollingResult<MonthEvents> {
+export function useMonthCalendar(year: number, month: number): PollResult<MonthEvents> {
   const { isPending: configPending } = useAllConfig()
   const config = useIntegrationConfig(googleCalendarIntegration)
   const savedIds = config?.calendar_ids

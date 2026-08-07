@@ -18,7 +18,7 @@ describe('HouseholdColumn', () => {
     // same pattern) — clear their call history so one test's toggle doesn't
     // leak into the next.
     vi.clearAllMocks()
-    // useCountdowns: UsePollingResult<CountdownItem[]> — data is the array
+    // useCountdowns: PollResult<CountdownItem[]> — data is the array
     // directly (or null), not { items: [...] }.
     useCountdowns.mockReturnValue({ data: null, isLoading: false, error: null, refetch: vi.fn() })
     // useChores: data is TodayResponse | null (persons/completed_count/total_count).
@@ -28,7 +28,7 @@ describe('HouseholdColumn', () => {
       completeAssignment,
       uncompleteAssignment,
     })
-    // useLunchMenu: UsePollingResult<LunchMenuData>; data.today is a LunchMenuDay | null.
+    // useLunchMenu: PollResult<LunchMenuData>; data.today is a LunchMenuDay | null.
     useLunchMenu.mockReturnValue({ data: null, isLoading: false })
   })
 

@@ -8,7 +8,7 @@
  * this shape because their consumers depend on the `null`-before-success
  * distinction — see `useLunchMenu` for the fuller account of why it matters.
  */
-export interface UsePollingResult<T> {
+export interface PollResult<T> {
   data: T | null
   error: string | null
   isLoading: boolean

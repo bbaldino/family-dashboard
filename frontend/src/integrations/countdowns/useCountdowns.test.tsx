@@ -13,10 +13,10 @@ import { useCountdowns } from './useCountdowns'
  * This suite pins the composed request (calendar id + ISO start/end derived
  * from `horizon_days`), the hourly poll cadence, and — the point of Task 1
  * per the migration plan — that `data` stays `null` (not `undefined`) until
- * the first fetch actually succeeds, exactly as the `UsePollingResult`
+ * the first fetch actually succeeds, exactly as the `PollResult`
  * contract guarantees. `HouseholdColumn` and the grid widget-meta both read
  * `data ?? []`, which happens to tolerate either, but the contract is
- * `UsePollingResult<T>` and this hook still owes it.
+ * `PollResult<T>` and this hook still owes it.
  */
 
 const NOW = new Date('2026-08-05T12:00:00')
@@ -103,7 +103,7 @@ describe('useCountdowns', () => {
     stubFetch()
     const { result } = renderHook(() => useCountdowns(), { wrapper: createWrapper() })
 
-    // Cold cache: null, not undefined — the `UsePollingResult` contract.
+    // Cold cache: null, not undefined — the `PollResult` contract.
     expect(result.current.data).toBeNull()
 
     await waitFor(() => expect(result.current.data).not.toBeNull())

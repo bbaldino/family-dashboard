@@ -16,7 +16,7 @@ import type { CalendarEvent } from './types'
  *    being called *inside* the poll's fetcher; it now falls out of the ids
  *    being part of the query key. The tablet is a wall-mounted kiosk that
  *    never reloads, so "picked up on the next reload" means "never".
- * 2. **The `null`-before-success contract.** `UsePollingResult.data` is
+ * 2. **The `null`-before-success contract.** `PollResult.data` is
  *    `null`, not react-query's `undefined`, until a fetch has actually
  *    succeeded — see `useLunchMenu` for the fuller account.
  * 3. **`isLoading` covers the config wait too.** `ScheduleColumn` picks
@@ -163,7 +163,7 @@ describe('useGoogleCalendar', () => {
 
     const { result } = renderHook(() => useGoogleCalendar(), { wrapper: wrapperFor(newClient()) })
 
-    // Cold cache: `null`, not `undefined` — the `UsePollingResult` contract.
+    // Cold cache: `null`, not `undefined` — the `PollResult` contract.
     expect(result.current.data).toBeNull()
     expect(result.current.error).toBeNull()
 

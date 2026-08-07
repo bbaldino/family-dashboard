@@ -1,5 +1,5 @@
 import type { z } from 'zod'
-import type { UsePollingResult } from '@/integrations/types'
+import type { PollResult } from '@/integrations/types'
 import { useIntegrationData } from '@/platform'
 import { nutrisliceIntegration } from './config'
 import { parseLocalDate, toLocalDateStr } from '@/utils/date'
@@ -206,12 +206,12 @@ function deriveLunchMenu(
   }
 }
 
-export type LunchMenuResult = UsePollingResult<LunchMenuData>
+export type LunchMenuResult = PollResult<LunchMenuData>
 
 /**
  * Composes two upstream weeks (this week + next, for the expanded view) into
  * one `LunchMenuData` and adapts the pair of `useIntegrationData` results
- * back to `UsePollingResult` — the shared return-shape contract which four
+ * back to `PollResult` — the shared return-shape contract which four
  * consumers (`LunchMenuWidget`, the grid widget-meta, broadsheet's `Home`
  * and `HouseholdColumn`) still depend on. `HouseholdColumn` in particular
  * documents relying on `data` being `null` (not `undefined`) until a fetch

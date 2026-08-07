@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import type { UsePollingResult } from '@/integrations/types'
+import type { PollResult } from '@/integrations/types'
 import { useAllConfig, useIntegrationConfig } from '@/platform'
 import { activeScenario } from '@/lib/scenario'
 import { googleCalendarIntegration, parseCalendarIds } from './config'
@@ -16,7 +16,7 @@ export interface CalendarDay {
   events: CalendarEvent[]
 }
 
-export type CalendarData = UsePollingResult<CalendarDay[]>
+export type CalendarData = PollResult<CalendarDay[]>
 
 function dayLabel(date: Date, today: Date): string {
   const diff = Math.floor((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
@@ -92,7 +92,7 @@ async function fetchCalendarEvents(calendarIds: string[]): Promise<CalendarDay[]
  * between "Fetching the week ahead…" and "Nothing on the books this week."
  * on it alone.
  *
- * The result is adapted back to `UsePollingResult` — `data` is `null`, not
+ * The result is adapted back to `PollResult` — `data` is `null`, not
  * react-query's `undefined`, until a fetch has actually succeeded. See
  * `useLunchMenu` for why that distinction matters to callers.
  */

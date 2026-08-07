@@ -13,7 +13,7 @@ describe('broadsheet Calendar (the Datebook)', () => {
   })
 
   it('renders the full page with every data source empty', () => {
-    // Cold-cache boot state — the UsePollingResult contract keeps `data`
+    // Cold-cache boot state — the PollResult contract keeps `data`
     // null until the first fetch resolves.
     useMonthCalendar.mockReturnValue({ data: null, isLoading: true })
     render(<Calendar />)
