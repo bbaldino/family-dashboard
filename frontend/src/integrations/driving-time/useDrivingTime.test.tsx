@@ -280,3 +280,62 @@ describe('useDrivingTime', () => {
     expect(routeCallsFor(fetchMock, 'A St')).toHaveLength(1)
   })
 })
+
+describe('useDrivingTime relevance filter', () => {
+  // Routes is a billed API: the hook must narrow events to a location, a
+  // start time, in the future, within 24 hours *before* fanning out. Each
+  // test below pairs one qualifying event with one event that fails exactly
+  // one of those conditions, and asserts only the qualifying destination was
+  // ever requested — pinning each condition independently of the others.
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('does not request a route for an event without a location', async () => {
+    const fetchMock = stubFetch({ durationsByDestination: { 'Qualifying St': '600s' } })
+    const qualifying = makeEvent('evt-qualifying', 60, 'Qualifying St')
+    const noLocation: CalendarEvent = {
+      id: 'evt-no-location',
+      summary: 'evt-no-location',
+      start: { dateTime: new Date(Date.now() + 60 * 60000).toISOString() },
+      end: { dateTime: new Date(Date.now() + 60 * 60000).toISOString() },
+    }
+
+    renderHook(() => useDrivingTime([qualifying, noLocation]), { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(routeCallsFor(fetchMock, 'Qualifying St')).toHaveLength(1)
+    })
+
+    expect(fetchMock.mock.calls.filter(([input]) => String(input) === '/api/fetch')).toHaveLength(1)
+  })
+
+  it('does not request a route for an event starting in the past', async () => {
+    const fetchMock = stubFetch({ durationsByDestination: { 'Qualifying St': '600s' } })
+    const qualifying = makeEvent('evt-qualifying', 60, 'Qualifying St')
+    const past = makeEvent('evt-past', -60, 'Past St')
+
+    renderHook(() => useDrivingTime([qualifying, past]), { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(routeCallsFor(fetchMock, 'Qualifying St')).toHaveLength(1)
+    })
+
+    expect(fetchMock.mock.calls.filter(([input]) => String(input) === '/api/fetch')).toHaveLength(1)
+  })
+
+  it('does not request a route for an event starting beyond 24 hours', async () => {
+    const fetchMock = stubFetch({ durationsByDestination: { 'Qualifying St': '600s' } })
+    const qualifying = makeEvent('evt-qualifying', 60, 'Qualifying St')
+    const farFuture = makeEvent('evt-far-future', 25 * 60, 'Far Future St')
+
+    renderHook(() => useDrivingTime([qualifying, farFuture]), { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(routeCallsFor(fetchMock, 'Qualifying St')).toHaveLength(1)
+    })
+
+    expect(fetchMock.mock.calls.filter(([input]) => String(input) === '/api/fetch')).toHaveLength(1)
+  })
+})
