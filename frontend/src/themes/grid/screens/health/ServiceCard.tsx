@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
 import { ChevronDown, ChevronRight } from 'lucide-react'
+import { useServiceHistory, useUptimeReport } from '@/integrations/health'
 import { UptimeBar } from './UptimeBar'
 import { statusTone } from './tone'
-import type { HealthComponent, HistorySample, Service, UptimeReport } from './types'
+import type { HealthComponent, HistorySample, Service } from './types'
 
 function TypePill({ label }: { label: string }) {
   return (
@@ -72,25 +72,10 @@ export function ServiceCard({ service }: { service: Service }) {
   const [expanded, setExpanded] = useState(false)
   const tone = statusTone(service.status)
 
-  const uptime = useQuery({
-    queryKey: ['health', 'uptime', service.id],
-    queryFn: () =>
-      fetch(`/api/health/uptime/${service.id}?window=86400`).then(
-        (r) => r.json() as Promise<UptimeReport>,
-      ),
-    enabled: expanded,
-    staleTime: 60 * 1000,
-  })
-
-  const history = useQuery({
-    queryKey: ['health', 'history', service.id],
-    queryFn: () =>
-      fetch(`/api/health/history/${service.id}?limit=20`).then(
-        (r) => r.json() as Promise<HistorySample[]>,
-      ),
-    enabled: expanded,
-    staleTime: 60 * 1000,
-  })
+  // Both panels stay closed for business until the card opens — a board of
+  // twenty services would otherwise fire forty requests nobody asked to see.
+  const uptime = useUptimeReport(service.id, { enabled: expanded })
+  const history = useServiceHistory(service.id, { enabled: expanded })
 
   const Chevron = expanded ? ChevronDown : ChevronRight
 

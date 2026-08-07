@@ -1,7 +1,7 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { bucketSegments, windowEndOf, BLOCKS_24H } from './uptime'
 import { healthIntegration } from './config'
-import type { Incident, Service, Status, UptimeReport } from './types'
+import type { HistorySample, Incident, Service, Status, UptimeReport } from './types'
 
 const { api } = healthIntegration
 
@@ -11,6 +11,10 @@ const DAY_SECS = 86_400
  *  out loud ("REFRESHING EVERY 10s"), so the number has to be real. */
 export const REFRESH_MS = 10_000
 
+/** The detail panels behind an expanded card: fetched once on open, then left
+ *  alone. A day-long window and a 20-row log do not move in a minute. */
+const DETAIL_STALE_MS = 60_000
+
 export function useHealthServices() {
   return useQuery({
     queryKey: ['health', 'status'],
@@ -18,6 +22,13 @@ export function useHealthServices() {
     refetchInterval: REFRESH_MS,
   })
 }
+
+/** One cache entry per service's 24-hour report, shared by both uptime hooks
+ *  below — two fetchers under one key is how a screen ends up reading data
+ *  another screen's fetcher put there. */
+const uptimeQueryKey = (serviceId: number) => ['health', 'uptime', serviceId]
+const fetchUptime = (serviceId: number) =>
+  api.get<UptimeReport>(`/uptime/${serviceId}?window=${DAY_SECS}`)
 
 export interface ServiceUptime {
   /** `BLOCKS_24H` statuses, oldest first — ready for the bar. */
@@ -35,8 +46,8 @@ export interface ServiceUptime {
 export function useServiceUptime(services: Service[]): Record<number, ServiceUptime> {
   const results = useQueries({
     queries: services.map((s) => ({
-      queryKey: ['health', 'uptime', s.id],
-      queryFn: () => api.get<UptimeReport>(`/uptime/${s.id}?window=${DAY_SECS}`),
+      queryKey: uptimeQueryKey(s.id),
+      queryFn: () => fetchUptime(s.id),
       refetchInterval: 60_000,
     })),
   })
@@ -55,6 +66,50 @@ export function useServiceUptime(services: Service[]): Record<number, ServiceUpt
         : { blocks: blank(), percentOk: null }
   })
   return byId
+}
+
+/**
+ * The same 24-hour report as `useServiceUptime`, for **one** service and only
+ * while its card is open — the shape a card-per-service board wants, where
+ * `useServiceUptime` fans out over every service at once for a board that
+ * draws them all.
+ *
+ * Deliberately a second hook over the same query rather than options on
+ * `useServiceUptime`: the callers differ in how many services they ask about
+ * and in when they ask, and react-query resolves `enabled` per observer.
+ * Sharing `uptimeQueryKey` and `fetchUptime` is what matters — one endpoint,
+ * one cache entry per service, one fetcher — while each caller keeps its own
+ * fetch policy. Two fetchers under one key is precisely the hazard: whichever
+ * ran first would fill the entry for both.
+ *
+ * Returns the raw report rather than `ServiceUptime` blocks; the caller draws
+ * its own bar and reads `percent_ok` directly.
+ */
+export function useUptimeReport(serviceId: number, { enabled = true } = {}) {
+  return useQuery({
+    queryKey: uptimeQueryKey(serviceId),
+    queryFn: () => fetchUptime(serviceId),
+    enabled,
+    staleTime: DETAIL_STALE_MS,
+  })
+}
+
+/**
+ * The recent status samples for one service — the raw poll log behind an
+ * expanded card, newest first.
+ *
+ * The row cap is passed because upstream has no useful default here (unlike
+ * the incident ledger's window), and it is part of the cache key: a card
+ * showing twenty rows must not be served a ten-row response cached by someone
+ * asking for less.
+ */
+export function useServiceHistory(serviceId: number, { limit = 20, enabled = true } = {}) {
+  return useQuery({
+    queryKey: ['health', 'history', serviceId, limit],
+    queryFn: () => api.get<HistorySample[]>(`/history/${serviceId}?limit=${limit}`),
+    enabled,
+    staleTime: DETAIL_STALE_MS,
+  })
 }
 
 /**

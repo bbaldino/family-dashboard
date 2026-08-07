@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useHealthServices, REFRESH_MS } from '@/integrations/health'
 import { ServiceCard } from './health/ServiceCard'
 import { statusTone } from './health/tone'
 import { severity, type Service, type Status } from './health/types'
@@ -47,12 +47,7 @@ function SummaryStrip({
 }
 
 export function HealthBoard() {
-  const { data, isLoading, error, dataUpdatedAt } = useQuery({
-    queryKey: ['health', 'status'],
-    queryFn: () => fetch('/api/health/status').then((r) => r.json() as Promise<Service[]>),
-    refetchInterval: 30 * 1000,
-    staleTime: 15 * 1000,
-  })
+  const { data, isLoading, error, dataUpdatedAt } = useHealthServices()
 
   if (isLoading && !data) {
     return <div className="p-4 text-text-muted text-sm">Loading service health…</div>
@@ -69,7 +64,10 @@ export function HealthBoard() {
     <div className="h-full overflow-auto p-4 flex flex-col gap-3">
       <div className="flex items-baseline justify-between">
         <h1 className="text-lg font-bold text-text-primary">Homelab Health</h1>
-        <span className="text-xs text-text-muted">auto-refreshing every 30s</span>
+        {/* Read off the hook's own interval: the board no longer owns the
+            cadence, and a hard-coded number here would be a claim nothing
+            keeps true. */}
+        <span className="text-xs text-text-muted">auto-refreshing every {REFRESH_MS / 1000}s</span>
       </div>
       {services.length > 0 && <SummaryStrip services={services} lastUpdated={lastUpdated} />}
       {services.length === 0 ? (
