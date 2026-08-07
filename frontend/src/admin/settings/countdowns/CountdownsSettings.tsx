@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAllConfig, useSaveConfig } from '@/platform'
-import { googleCalendarProvider } from '@/providers/google-calendar'
-import type { CalendarListEntry } from '@/providers/google-calendar'
+import { useCalendarList } from '@/providers/google-calendar'
 import { Button } from '@/ui/Button'
 
 /**
@@ -22,9 +21,14 @@ export function CountdownsSettings() {
 }
 
 function CountdownsSettingsForm({ config }: { config: Record<string, string> | undefined }) {
-  const [calendars, setCalendars] = useState<CalendarListEntry[]>([])
   // Unrelated to /api/config — the Google Calendar list, fetched once on
-  // mount, same as before.
+  // mount, same as before, now via the provider's own `useCalendarList`
+  // (the same hook the calendar picker in `GoogleCalendarSettings` uses)
+  // instead of a hand-rolled `api.get`. `useCalendarList` defaults to
+  // `enabled: false` so an admin page load doesn't spend a Google API call
+  // on its own; this effect is what turns that into "fetch once on mount"
+  // for this panel, mirroring the original loading/error shape exactly.
+  const { data: calendars = [], refetch: fetchCalendars } = useCalendarList()
   const [calendarsLoading, setCalendarsLoading] = useState(true)
   const [selectedCalendarId, setSelectedCalendarId] = useState(
     () => config?.['countdowns.calendar_id'] ?? '',
@@ -36,13 +40,9 @@ function CountdownsSettingsForm({ config }: { config: Record<string, string> | u
 
   useEffect(() => {
     let cancelled = false
-    googleCalendarProvider
-      .api!.get<CalendarListEntry[]>('/calendars')
-      .then((cals) => {
-        if (!cancelled) setCalendars(cals)
-      })
-      .catch(() => {
-        if (!cancelled) setError('Failed to load settings')
+    fetchCalendars()
+      .then((result) => {
+        if (!cancelled && result.error) setError('Failed to load settings')
       })
       .finally(() => {
         if (!cancelled) setCalendarsLoading(false)
@@ -50,7 +50,7 @@ function CountdownsSettingsForm({ config }: { config: Record<string, string> | u
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [fetchCalendars])
 
   const handleSave = async () => {
     try {
