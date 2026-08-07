@@ -20,11 +20,10 @@ interface DoorbellRingConfig {
  * doorbell at a different sensor needed a page reload.
  *
  * The coercion stays here rather than moving to `useIntegrationConfig`
- * because the config table stores every value as a string while the
- * doorbell schema types `auto_dismiss_seconds` as a number and
- * `chime_enabled` as a boolean: scoped parsing fails outright once the admin
- * form has written those two, and a null config would mean no doorbell popup
- * at all.
+ * because that hook returns null for the *whole* integration if any single
+ * `doorbell.*` value fails to parse, and a null config here means no
+ * doorbell popup at all — a bad `chime_sound_id` shouldn't stop the door
+ * being answered.
  *
  * Returns null only while the first fetch is in flight; a failed fetch
  * resolves to the schema defaults, as the old `catch` did.

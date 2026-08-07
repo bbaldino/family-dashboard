@@ -70,13 +70,11 @@ describe('CamerasBoard', () => {
     await waitFor(() => expect(frameSrc()).toBe('https://cam.test/new'))
   })
 
-  // The doorbell schema types `auto_dismiss_seconds` as a number and
-  // `chime_enabled` as a boolean, but the config table stores every value as
-  // a string and the admin form writes exactly these two. Scoped parsing
-  // (`useIntegrationConfig`) therefore fails outright once they exist and
-  // hands back null — which would silently swap the household's own camera
-  // url for the schema default. This screen reads the one key it needs off
-  // the raw query for that reason; this pins it.
+  // The keys the admin form writes alongside this one, as the config table
+  // holds them — all strings. They used to make scoped parsing fail outright
+  // (see `integrations/doorbell/config.test.ts`); the schema coerces them now,
+  // and reading the one key it needs off the raw query keeps this screen
+  // independent of the rest of the integration's config either way.
   it('still finds the camera url when other doorbell keys are stored as strings', async () => {
     stubConfig({
       'doorbell.camera_url': 'https://cam.test/front',

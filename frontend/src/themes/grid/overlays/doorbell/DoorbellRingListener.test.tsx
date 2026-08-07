@@ -70,12 +70,11 @@ describe('DoorbellRingListener', () => {
     await waitFor(() => expect(watchedEntities()).toContain('binary_sensor.new'))
   })
 
-  // The config table stores everything as a string, and the admin form
-  // writes `auto_dismiss_seconds` and `chime_enabled` as "45"/"false" — the
-  // reason this reads the raw query and coerces here rather than leaning on
-  // the doorbell schema, which types them as number and boolean and so fails
-  // to parse them at all. If that ever regressed, the listener would render
-  // nothing and the doorbell would stop popping up entirely.
+  // The config table stores everything as a string, and the admin form writes
+  // `auto_dismiss_seconds` and `chime_enabled` as "45"/"false". Those two used
+  // to be unparseable (see `integrations/doorbell/config.test.ts`); this
+  // listener coerces them itself so that no single unreadable `doorbell.*`
+  // value can leave it rendering nothing and the doorbell silently dead.
   it('stays active when the numeric and boolean keys are stored as strings', async () => {
     stubConfig({
       'doorbell.press_sensor_entity': 'binary_sensor.side_door',
