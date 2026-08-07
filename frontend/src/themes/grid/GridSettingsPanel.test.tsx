@@ -111,6 +111,63 @@ describe('GridSettingsPanel', () => {
     expect(screen.queryByDisplayValue('3')).not.toBeInTheDocument()
   })
 
+  // The panel writes three keys off one Save button. Invalidating per key
+  // would pull the whole config table three times for one click — invisible
+  // in a browser, and exactly the fan-out the shared query exists to stop.
+  it('refreshes the shared config once for a three-key save, and not per key', async () => {
+    const table: Record<string, string> = { 'theme.grid.columns': '8', 'theme.grid.rows': '4' }
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url === '/api/config') {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...table }) } as Response)
+      }
+      const key = decodeURIComponent(url.slice('/api/config/'.length))
+      if (init?.method === 'PUT') {
+        table[key] = (JSON.parse(String(init.body)) as { value: string }).value
+      } else {
+        delete table[key]
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const client = newClient()
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    )
+    render(
+      <>
+        <Probe />
+        <GridSettingsPanel />
+      </>,
+      { wrapper },
+    )
+    await waitFor(() => expect(screen.getByDisplayValue('8')).toBeInTheDocument())
+    const readsBefore = fetchMock.mock.calls.filter(([u]) => String(u) === '/api/config').length
+
+    fireEvent.change(screen.getByDisplayValue('8'), { target: { value: '12' } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    })
+
+    // The probe is a real observer of the shared query, so this only passes
+    // once the invalidated refetch has reached a component — not merely once
+    // `invalidateQueries` has been called.
+    await waitFor(() => expect(screen.getByTestId('probe')).toHaveTextContent('12'))
+
+    const writes = fetchMock.mock.calls.filter(([u]) => String(u).startsWith('/api/config/'))
+    expect(writes).toHaveLength(3)
+    // No widget is hidden, so the third write clears the key rather than
+    // storing an empty string.
+    expect(writes.map(([u, init]) => [String(u), (init as RequestInit).method])).toContainEqual([
+      '/api/config/theme.grid.hidden',
+      'DELETE',
+    ])
+    const readsAfter = fetchMock.mock.calls.filter(([u]) => String(u) === '/api/config').length
+    expect(readsAfter - readsBefore).toBe(1)
+    expect(await screen.findByText('Saved!')).toBeInTheDocument()
+  })
+
   it('says so when the config cannot be loaded, instead of hanging on Loading', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
     renderPanel()

@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useSaveConfig } from '@/platform'
 import { Button } from '@/ui/Button'
 import { ALARM_SOUNDS, DEFAULT_ALARM_ID } from '@/integrations/timers'
 
 export function TimersSettings() {
+  const saveConfig = useSaveConfig()
   const [serviceUrl, setServiceUrl] = useState('')
   const [selectedSound, setSelectedSound] = useState(DEFAULT_ALARM_ID)
   const [loading, setLoading] = useState(true)
@@ -30,17 +32,12 @@ export function TimersSettings() {
   const handleSave = async () => {
     try {
       setError(null)
-      const saves = [
-        ['timers.service_url', serviceUrl],
-        ['timers.alarm_sound', selectedSound],
-      ]
-      for (const [key, value] of saves) {
-        await fetch(`/api/config/${encodeURIComponent(key)}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ value }),
-        })
-      }
+      // One mutation for both keys, so the shared config query refetches once
+      // for this Save rather than once per key.
+      await saveConfig.mutateAsync([
+        { key: 'timers.service_url', value: serviceUrl },
+        { key: 'timers.alarm_sound', value: selectedSound },
+      ])
       setStatus('Saved!')
       setTimeout(() => setStatus(null), 2000)
     } catch {

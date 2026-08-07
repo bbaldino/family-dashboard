@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Play } from 'lucide-react'
+import { useSaveConfig } from '@/platform'
 import { Button } from '@/ui/Button'
 import { ALARM_SOUNDS, getAlarmById } from '@/integrations/timers'
 import { doorbellIntegration } from '@/integrations/doorbell'
@@ -20,6 +21,7 @@ export function DoorbellSettings() {
     text: string
   } | null>(null)
   const [micStatus, setMicStatus] = useState<'unknown' | 'granted' | 'denied' | 'prompt'>('unknown')
+  const saveConfig = useSaveConfig()
   const previewCtxRef = useRef<AudioContext | null>(null)
 
   const load = useCallback(async () => {
@@ -53,22 +55,19 @@ export function DoorbellSettings() {
     load()
   }, [load])
 
-  const putConfig = (key: string, value: string) =>
-    fetch(`/api/config/doorbell.${key}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ value }),
-    })
-
   const handleSave = async () => {
     try {
-      await Promise.all([
-        putConfig('camera_url', cameraUrl),
-        putConfig('press_sensor_entity', pressSensor),
-        putConfig('screensaver_entity', screensaverEntity),
-        putConfig('auto_dismiss_seconds', autoDismissSeconds),
-        putConfig('chime_enabled', String(chimeEnabled)),
-        putConfig('chime_sound_id', chimeSoundId),
+      // These used to go out concurrently via `Promise.all`. As one batched
+      // mutation they are written in order and the shared config query
+      // refetches once for the six of them rather than six times — which is
+      // what makes the camera and the ring popup pick the change up at once.
+      await saveConfig.mutateAsync([
+        { key: 'doorbell.camera_url', value: cameraUrl },
+        { key: 'doorbell.press_sensor_entity', value: pressSensor },
+        { key: 'doorbell.screensaver_entity', value: screensaverEntity },
+        { key: 'doorbell.auto_dismiss_seconds', value: autoDismissSeconds },
+        { key: 'doorbell.chime_enabled', value: String(chimeEnabled) },
+        { key: 'doorbell.chime_sound_id', value: chimeSoundId },
       ])
       setStatus({ kind: 'ok', text: 'Saved!' })
     } catch (err) {

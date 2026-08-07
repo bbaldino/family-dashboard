@@ -86,11 +86,12 @@ describe('useAllConfig', () => {
     await waitFor(() => expect(screen.getByTestId('one')).toHaveTextContent('zzz'))
   })
 
-  // The tablet this app runs on is a wall-mounted kiosk: it never regains
-  // window focus and never remounts, so nothing ever calls invalidateQueries
-  // (none of the 10 config-writing save handlers do, nor could a direct
-  // `curl` edit to /api/config/<key>). refetchInterval is what actually
-  // closes the loop on a real device — this proves it does, with no
+  // In-app saves go through `useSaveConfig` and invalidate this key, so they
+  // no longer need the poll. Edits made outside the app do — a direct `curl`
+  // to /api/config/<key>, or a save from another browser, has nothing in this
+  // process to announce it, and the tablet is a wall-mounted kiosk that never
+  // regains window focus and never remounts. refetchInterval is the only
+  // thing that closes that loop, so it stays: this proves it works with no
   // invalidation in sight.
   it('propagates a settings change to every consumer via the refetch interval, with no invalidation', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })

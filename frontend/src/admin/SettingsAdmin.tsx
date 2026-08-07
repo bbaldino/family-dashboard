@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSaveConfig } from '@/platform'
 import { Button } from '@/ui/Button'
 import { ModelSelect } from '@/admin/settings/llm/ModelSelect'
 import { settingsEntries, settingsRegistry } from './settings-registry'
@@ -29,6 +30,7 @@ export function SettingsAdmin() {
   const [localConfig, setLocalConfig] = useState<Record<string, string>>({})
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const saveConfig = useSaveConfig()
 
   useEffect(() => {
     let cancelled = false
@@ -82,16 +84,15 @@ export function SettingsAdmin() {
         }
       }
 
-      // Save changed keys for this integration
+      // Save changed keys for this integration. Collected first and written
+      // as one mutation: an integration with several edited fields would
+      // otherwise refetch the whole config table once per field.
       const prefix = selectedIntegration.id + '.'
-      for (const [key, value] of Object.entries(localConfig)) {
-        if (key.startsWith(prefix) && allConfig[key] !== value) {
-          await fetch(`/api/config/${encodeURIComponent(key)}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ value }),
-          })
-        }
+      const changed = Object.entries(localConfig)
+        .filter(([key, value]) => key.startsWith(prefix) && allConfig[key] !== value)
+        .map(([key, value]) => ({ key, value }))
+      if (changed.length > 0) {
+        await saveConfig.mutateAsync(changed)
       }
       setAllConfig({ ...localConfig })
       setStatus('Saved!')

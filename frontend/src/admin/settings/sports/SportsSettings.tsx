@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useSaveConfig } from '@/platform'
 import { Button } from '@/ui/Button'
 import { ModelSelect } from '@/admin/settings/llm/ModelSelect'
 import {
@@ -27,6 +28,7 @@ export function SportsSettings() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
+  const saveConfig = useSaveConfig()
 
   // Only the expanded league is ever rendered, so one query covers the panel.
   const { data: expandedTeams, isError: expandedTeamsFailed } = useLeagueTeams(expandedLeague)
@@ -114,20 +116,15 @@ export function SportsSettings() {
   const handleSave = async () => {
     try {
       setError(null)
-      const saves = [
-        ['sports.tracked_teams', JSON.stringify(trackedTeams)],
-        ['sports.poll_interval_live', pollLive],
-        ['sports.poll_interval_idle', pollIdle],
-        ['sports.window_hours', windowHours],
-        ['sports.model', model],
-      ]
-      for (const [key, value] of saves) {
-        await fetch(`/api/config/${encodeURIComponent(key)}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ value }),
-        })
-      }
+      // One mutation for all five keys, so the shared config query refetches
+      // once for this Save rather than five times.
+      await saveConfig.mutateAsync([
+        { key: 'sports.tracked_teams', value: JSON.stringify(trackedTeams) },
+        { key: 'sports.poll_interval_live', value: pollLive },
+        { key: 'sports.poll_interval_idle', value: pollIdle },
+        { key: 'sports.window_hours', value: windowHours },
+        { key: 'sports.model', value: model },
+      ])
       setStatus('Saved!')
       setTimeout(() => setStatus(null), 2000)
     } catch {

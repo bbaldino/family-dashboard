@@ -21,13 +21,28 @@ const CUSTOM: Theme = {
   builtin: false,
 }
 
+/**
+ * A config table that actually remembers writes.
+ *
+ * A save now invalidates the shared query, so the very next thing that
+ * happens after a write is a re-read. A stub that always replayed its seed
+ * would answer that re-read with the *old* value and make an optimistic
+ * update look like it had been rolled back — which says nothing about the
+ * hook and everything about the stub.
+ */
 function stubConfig(config: Record<string, string>) {
+  const table = { ...config }
   const fetchMock = vi.fn((...args: Parameters<typeof fetch>) => {
     const url = String(args[0])
+    const init = args[1]
     if (url === '/api/config') {
-      return Promise.resolve({ ok: true, json: () => Promise.resolve(config) } as Response)
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ ...table }) } as Response)
     }
     if (url.startsWith('/api/config/')) {
+      const key = decodeURIComponent(url.slice('/api/config/'.length))
+      if (init?.method === 'PUT') {
+        table[key] = (JSON.parse(String(init.body)) as { value: string }).value
+      }
       return Promise.resolve({ ok: true, json: () => Promise.resolve({}) } as Response)
     }
     return Promise.reject(new Error(`Unexpected fetch url: ${url}`))
@@ -134,9 +149,9 @@ describe('useTheme', () => {
           (init as RequestInit | undefined)?.method === 'PUT',
       ),
     ).toBe(true)
-    // Still one config read: the switch showed off the local write alone, or
-    // the picker would look dead for up to a minute.
-    expect(fetchMock.mock.calls.filter(([u]) => String(u) === '/api/config')).toHaveLength(1)
+    // Two config reads: the mount, and the one the save invalidated. Nothing
+    // waited out a poll interval, and nothing read the table once per key.
+    expect(fetchMock.mock.calls.filter(([u]) => String(u) === '/api/config')).toHaveLength(2)
   })
 
   it('shows a saved custom theme immediately', async () => {
@@ -151,6 +166,27 @@ describe('useTheme', () => {
 
     await waitFor(() => expect(result.current.customThemes).toEqual([CUSTOM]))
     expect(result.current.allThemes.map((t) => t.id)).toContain('kitchen-night')
-    expect(fetchMock.mock.calls.filter(([u]) => String(u) === '/api/config')).toHaveLength(1)
+    expect(fetchMock.mock.calls.filter(([u]) => String(u) === '/api/config')).toHaveLength(2)
+  })
+
+  it('keeps the switch after the invalidated re-read lands', async () => {
+    // The optimistic `setQueryData` and the refetch the save provokes are two
+    // different reasons the new value could be on screen. This proves it is
+    // still there once the server's own copy has come back and replaced the
+    // optimistic one — i.e. that the write was really persisted and really
+    // re-read, not just painted locally.
+    const fetchMock = stubConfig({ 'theme.active': 'forest' })
+    const client = newClient()
+    const { result } = renderHook(() => useTheme(), { wrapper: wrapperFor(client) })
+    await waitFor(() => expect(result.current.activeTheme.id).toBe('forest'))
+
+    await act(async () => {
+      await result.current.setActiveTheme('ocean')
+    })
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.filter(([u]) => String(u) === '/api/config')).toHaveLength(2),
+    )
+
+    await waitFor(() => expect(result.current.activeTheme.id).toBe('ocean'))
   })
 })

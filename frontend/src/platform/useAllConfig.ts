@@ -40,15 +40,20 @@ export const CONFIG_QUERY_KEY = ['config'] as const
  * would otherwise take the whole integration's config to `null` (see that
  * hook), blanking the camera and the ring popup over an unrelated key.
  *
- * There are 10 independent places config gets written (`SettingsAdmin` plus
- * nine per-integration `SettingsComponent`s, each with its own save handler),
- * plus direct edits to `/api/config/<key>` outside the app entirely. None of
- * them call `invalidateQueries`, and the tablet this app runs on never
- * refocuses or remounts (`refetchOnWindowFocus: false` in `App.tsx` — it's a
- * wall-mounted kiosk stuck on one page), so a poll is what actually closes
- * the loop for the consumers this hook does cover: `refetchInterval`
- * guarantees they see a config change within 60s, with no reload and no
- * per-save-handler wiring.
+ * Every save handler in the app now writes through `useSaveConfig`, which
+ * invalidates this key, so an in-app change lands on every consumer at once
+ * rather than up to 60s later.
+ *
+ * **`refetchInterval` is not redundant because of that, and must stay.** It
+ * covers the writes no handler can announce: config is also edited outside
+ * the app entirely — a direct `PUT`/`DELETE` to `/api/config/<key>` from a
+ * shell, or a change made from a second browser — and nothing in this process
+ * hears about those. The tablet this app runs on can't recover either way: it
+ * never refocuses and never remounts (`refetchOnWindowFocus: false` in
+ * `App.tsx` — it's a wall-mounted kiosk stuck on one page), so without the
+ * poll an external edit would sit unseen until someone power-cycled the
+ * thing. Invalidation makes in-app saves instant; this is the backstop for
+ * everything else.
  *
  * `enabled` (default `true`) exists for `useIntegrationData`'s config-less
  * path: a config-less integration has nothing to read from `/api/config`, so

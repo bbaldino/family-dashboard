@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { useAllConfig, CONFIG_QUERY_KEY } from '@/platform'
+import { useAllConfig, useSaveConfig, CONFIG_QUERY_KEY } from '@/platform'
 import { BUILTIN_THEMES, EARTH_TONES } from './types'
 import type { Theme } from './types'
 
@@ -27,14 +27,20 @@ function parseCustomThemes(raw: string | undefined): Theme[] {
  * within that query's poll interval instead, on every consumer at once
  * (`ThemeMount` renders the whole dashboard inside these variables).
  *
- * The two writers still `PUT` directly — moving them onto a shared save
- * mutation is separate work — but they seed the shared cache first so the
- * picker reflects the change immediately rather than looking dead until the
- * next poll. If the `PUT` fails, the poll puts the stored value back.
+ * Both writers go through `useSaveConfig`, which invalidates the shared query
+ * on success — so the switch is confirmed against the server rather than
+ * waiting a poll interval for it. They still seed the cache optimistically
+ * first: the invalidated refetch is a round trip, and the picker would look
+ * dead for its duration otherwise. If the write fails, that refetch never
+ * happens and the next poll puts the stored value back.
  */
 export function useTheme() {
   const queryClient = useQueryClient()
   const { data } = useAllConfig()
+  // `mutateAsync` is stable across renders; the result object it comes off is
+  // not, so depending on the whole thing below would rebuild `writeConfig` —
+  // and with it `setActiveTheme` — on every render of the dashboard.
+  const { mutateAsync: saveConfig } = useSaveConfig()
 
   const customThemes = useMemo(() => parseCustomThemes(data?.[CUSTOM_KEY]), [data])
   const allThemes = useMemo(() => [...BUILTIN_THEMES, ...customThemes], [customThemes])
@@ -54,13 +60,9 @@ export function useTheme() {
         ...(prev ?? {}),
         [key]: value,
       }))
-      await fetch(`/api/config/${key}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value }),
-      })
+      await saveConfig({ key, value })
     },
-    [queryClient],
+    [queryClient, saveConfig],
   )
 
   const setActiveTheme = useCallback(

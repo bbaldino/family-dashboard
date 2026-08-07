@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useSaveConfig } from '@/platform'
 import { useCalendarList } from '@/integrations/google-calendar'
 
 export function GoogleCalendarSettings() {
   const [calendarIds, setCalendarIds] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
+  const configSaver = useSaveConfig()
 
   useEffect(() => {
     fetch('/api/config')
@@ -42,10 +44,9 @@ export function GoogleCalendarSettings() {
     setSaving(true)
     setStatus(null)
     try {
-      await fetch(`/api/config/${encodeURIComponent('google-calendar.calendar_ids')}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: JSON.stringify(calendarIds) }),
+      await configSaver.mutateAsync({
+        key: 'google-calendar.calendar_ids',
+        value: JSON.stringify(calendarIds),
       })
       setStatus('Saved!')
     } catch {

@@ -1,6 +1,8 @@
+import type { ReactNode } from 'react'
 import { z } from 'zod'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ThemePicker } from './ThemePicker'
 import { registerTheme, _resetRegistry } from '@/shell/ThemeRegistry'
 import type { ThemeModule } from '@/shell/types'
@@ -21,6 +23,18 @@ const gridStub = (): ThemeModule => ({
     Component: () => <div>Grid columns</div>,
   },
 })
+
+/** The picker saves through the platform's shared config mutation, so it
+ *  needs a client — the same one the rest of the admin screen renders under. */
+function renderPicker() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  })
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  )
+  return render(<ThemePicker />, { wrapper })
+}
 
 function seedConfig(config: Record<string, string>) {
   vi.stubGlobal(
@@ -43,7 +57,7 @@ describe('ThemePicker', () => {
   })
 
   it('lists every registered theme by name', async () => {
-    render(<ThemePicker />)
+    renderPicker()
     await waitFor(() => expect(screen.getByText('Cards Grid')).toBeInTheDocument())
     expect(screen.getByText('Broadsheet')).toBeInTheDocument()
   })
@@ -56,17 +70,17 @@ describe('ThemePicker', () => {
         json: () => Promise.resolve({ 'theme.presentation': 'broadsheet' }),
       }),
     )
-    render(<ThemePicker />)
+    renderPicker()
     await waitFor(() => expect(screen.getByRole('radio', { name: /Broadsheet/ })).toBeChecked())
   })
 
   it('defaults to grid when no theme is configured', async () => {
-    render(<ThemePicker />)
+    renderPicker()
     await waitFor(() => expect(screen.getByRole('radio', { name: /Cards Grid/ })).toBeChecked())
   })
 
   it('persists the choice to theme.presentation', async () => {
-    render(<ThemePicker />)
+    renderPicker()
     await waitFor(() => expect(screen.getByText('Broadsheet')).toBeInTheDocument())
 
     fireEvent.click(screen.getByRole('radio', { name: /Broadsheet/ }))
@@ -96,7 +110,7 @@ describe('ThemePicker', () => {
         return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) })
       }),
     )
-    render(<ThemePicker />)
+    renderPicker()
     await waitFor(() => expect(screen.getByRole('radio', { name: /Cards Grid/ })).toBeChecked())
 
     fireEvent.click(screen.getByRole('radio', { name: /Broadsheet/ }))
@@ -108,13 +122,13 @@ describe('ThemePicker', () => {
 
   it("renders the selected theme's settings", async () => {
     seedConfig({ 'theme.presentation': 'grid' })
-    render(<ThemePicker />)
+    renderPicker()
     expect(await screen.findByText('Grid columns')).toBeInTheDocument()
   })
 
   it('renders no settings section for a theme that declares none', async () => {
     seedConfig({ 'theme.presentation': 'broadsheet' })
-    render(<ThemePicker />)
+    renderPicker()
     // 'Broadsheet' is the radio label — present at first render regardless
     // of whether config has resolved, since `selected` starts as 'grid'.
     // Wait on the radio actually being checked, which only happens once the
@@ -127,7 +141,7 @@ describe('ThemePicker', () => {
 
   it('swaps the settings when a different theme is selected', async () => {
     seedConfig({ 'theme.presentation': 'broadsheet' })
-    render(<ThemePicker />)
+    renderPicker()
     // Same reasoning as above: wait for the config-driven selection, not for
     // the always-present radio label.
     await waitFor(() => expect(screen.getByRole('radio', { name: /Broadsheet/ })).toBeChecked())

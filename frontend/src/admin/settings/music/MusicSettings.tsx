@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useSaveConfig } from '@/platform'
 import { Button } from '@/ui/Button'
 import { usePlayerOptions } from '@/integrations/music'
 
@@ -14,6 +15,7 @@ export function MusicSettings() {
   // `error` string was cleared by `handleSave`; this keeps that. Only
   // `loadPlayers` can make the query fail again, and it lifts this first.
   const [playersErrorDismissed, setPlayersErrorDismissed] = useState(false)
+  const saveConfig = useSaveConfig()
 
   const {
     data: players = [],
@@ -51,18 +53,13 @@ export function MusicSettings() {
     try {
       setError(null)
       setPlayersErrorDismissed(true)
-      const saves = [
-        ['music.service_url', serviceUrl],
-        ['music.api_token', apiToken],
-        ['music.default_player', defaultPlayer],
-      ]
-      for (const [key, value] of saves) {
-        await fetch(`/api/config/${encodeURIComponent(key)}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ value }),
-        })
-      }
+      // One mutation for all three keys, so the shared config query refetches
+      // once for this Save rather than three times.
+      await saveConfig.mutateAsync([
+        { key: 'music.service_url', value: serviceUrl },
+        { key: 'music.api_token', value: apiToken },
+        { key: 'music.default_player', value: defaultPlayer },
+      ])
       setStatus('Saved!')
       setTimeout(() => setStatus(null), 2000)
     } catch {

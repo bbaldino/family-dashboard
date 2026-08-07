@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useSaveConfig } from '@/platform'
 import { googleCalendarIntegration } from '@/integrations/google-calendar'
 import { Button } from '@/ui/Button'
 
@@ -15,6 +16,7 @@ export function CountdownsSettings() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
+  const saveConfig = useSaveConfig()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -41,16 +43,12 @@ export function CountdownsSettings() {
   const handleSave = async () => {
     try {
       setError(null)
-      await fetch('/api/config/countdowns.calendar_id', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: selectedCalendarId }),
-      })
-      await fetch('/api/config/countdowns.horizon_days', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: horizonDays }),
-      })
+      // One mutation for both keys, so the shared config query refetches once
+      // for this Save rather than once per key.
+      await saveConfig.mutateAsync([
+        { key: 'countdowns.calendar_id', value: selectedCalendarId },
+        { key: 'countdowns.horizon_days', value: horizonDays },
+      ])
       setStatus('Saved!')
       setTimeout(() => setStatus(null), 2000)
     } catch {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSaveConfig } from '@/platform'
 import { getAllThemes, getTheme } from '@/shell/ThemeRegistry'
 import type { ThemeSettings } from '@/shell/types'
 
@@ -23,6 +24,7 @@ export function ThemePicker() {
   const [error, setError] = useState(false)
   const themes = getAllThemes()
   const selectedTheme = getTheme(selected)
+  const saveConfig = useSaveConfig()
 
   useEffect(() => {
     let cancelled = false
@@ -43,12 +45,7 @@ export function ThemePicker() {
     setSaving(true)
     setError(false)
     try {
-      const response = await fetch(`/api/config/${CONFIG_KEY}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: id }),
-      })
-      if (!response.ok) throw new Error(`PUT ${CONFIG_KEY} failed: ${response.status}`)
+      await saveConfig.mutateAsync({ key: CONFIG_KEY, value: id })
     } catch {
       // The radio was optimistically selected before the request settled —
       // roll it back so the UI doesn't claim a save that never happened.
@@ -63,8 +60,8 @@ export function ThemePicker() {
     <div className="mb-8">
       <h3 className="text-sm font-bold text-text-primary mb-1">Presentation</h3>
       <p className="text-xs text-text-secondary mb-3">
-        Which layout the dashboard renders. The dashboard picks the change up within a minute — no
-        reload needed.
+        Which layout the dashboard renders. The dashboard switches as soon as this saves — no reload
+        needed.
       </p>
       <div className="flex flex-col gap-2">
         {themes.map((theme) => (

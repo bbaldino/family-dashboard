@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useAllConfig } from '@/platform'
+import { useAllConfig, useSaveConfig } from '@/platform'
 import { Button } from '@/ui/Button'
 import { gridSettingsFields, gridSettingsSchema } from './settings-declaration'
 
@@ -83,6 +83,7 @@ function GridSettingsForm({ config }: { config: Record<string, string> | undefin
   )
   const [status, setStatus] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(config ? null : 'Failed to load settings')
+  const saveConfig = useSaveConfig()
 
   const toggleWidget = (id: string) => {
     setHidden((prev) => {
@@ -99,28 +100,16 @@ function GridSettingsForm({ config }: { config: Record<string, string> | undefin
   const handleSave = async () => {
     try {
       setError(null)
-      await fetch(`/api/config/${encodeURIComponent('theme.grid.columns')}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: columns }),
-      })
-      await fetch(`/api/config/${encodeURIComponent('theme.grid.rows')}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ value: rows }),
-      })
+      // One mutation for all three keys, so the shared config query refetches
+      // once for this Save rather than three times. Every widget hidden means
+      // *deleting* `theme.grid.hidden` rather than storing an empty string —
+      // a `null` value is how this mutation says DELETE.
       const hiddenStr = Array.from(hidden).join(',')
-      if (hiddenStr) {
-        await fetch(`/api/config/${encodeURIComponent('theme.grid.hidden')}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ value: hiddenStr }),
-        })
-      } else {
-        await fetch(`/api/config/${encodeURIComponent('theme.grid.hidden')}`, {
-          method: 'DELETE',
-        })
-      }
+      await saveConfig.mutateAsync([
+        { key: 'theme.grid.columns', value: columns },
+        { key: 'theme.grid.rows', value: rows },
+        { key: 'theme.grid.hidden', value: hiddenStr || null },
+      ])
       setStatus('Saved!')
       setTimeout(() => setStatus(null), 2000)
     } catch {
