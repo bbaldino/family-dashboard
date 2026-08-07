@@ -9,7 +9,6 @@ import { weatherIntegration } from '@/integrations/weather'
 import { googleCloudProvider } from '@/providers/google-cloud'
 import { googleCalendarProvider } from '@/providers/google-calendar'
 import { sportsIntegration } from '@/integrations/sports'
-import { timersIntegration } from '@/integrations/timers'
 import { themeIntegration } from '@/palettes/config'
 import { drivingTimeIntegration } from '@/integrations/driving-time'
 import { musicIntegration } from '@/integrations/music'
@@ -21,7 +20,6 @@ import { GoogleCalendarSettings } from '@/admin/settings/google-calendar/GoogleC
 import { CountdownsSettings } from '@/admin/settings/countdowns/CountdownsSettings'
 import { ChoreAdmin } from '@/admin/ChoreAdmin'
 import { DoorbellSettings } from '@/admin/settings/doorbell/DoorbellSettings'
-import { TimersSettings } from '@/admin/settings/timers/TimersSettings'
 import { MusicSettings } from '@/admin/settings/music/MusicSettings'
 import { ThemeAdmin } from '@/admin/settings/theme/ThemeAdmin'
 
@@ -51,7 +49,6 @@ export const settingsEntries: Integration<any>[] = [
   googleCloudProvider,
   googleCalendarProvider,
   sportsIntegration,
-  timersIntegration,
   themeIntegration,
   drivingTimeIntegration,
   musicIntegration,
@@ -72,7 +69,6 @@ export const settingsRegistry: Record<string, ComponentType<Record<string, never
   countdowns: CountdownsSettings,
   chores: ChoreAdmin,
   doorbell: DoorbellSettings,
-  timers: TimersSettings,
   music: MusicSettings,
   theme: ThemeAdmin,
 }

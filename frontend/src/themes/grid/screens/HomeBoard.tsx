@@ -15,7 +15,6 @@ import { LunchMenuWidget } from '@/themes/grid/widgets/nutrislice/LunchMenuWidge
 import { useHeroWeather } from '@/integrations/weather'
 import { WeatherDetail } from '@/themes/grid/widgets/weather/WeatherDetail'
 import { SportsWidget } from '@/themes/grid/widgets/sports/SportsWidget'
-import { TimerBanner } from '@/themes/grid/widgets/timers/TimerBanner'
 import { useDrivingTime } from '@/integrations/driving-time'
 import type { EventDriveInfo } from '@/integrations/driving-time'
 import { OnThisDayWidget } from '@/themes/grid/widgets/on-this-day/OnThisDayWidget'
@@ -239,9 +238,6 @@ export function HomeBoard() {
 
   return (
     <div className="flex flex-col gap-[var(--spacing-grid-gap)] h-full">
-      {/* Timer banner -- full width, only shows when timers active */}
-      <TimerBanner />
-
       {/* Hero strip -- full width */}
       <HeroStripWithData heroEvents={heroEvents} />
 

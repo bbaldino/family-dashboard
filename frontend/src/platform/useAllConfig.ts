@@ -40,10 +40,9 @@ export const CONFIG_QUERY_KEY = ['config'] as const
  * google-calendar hooks derive their calendar ids from this query instead,
  * and it is gone), `palettes/useTheme.ts` and `shell/ThemeMount.tsx` (between
  * them the reason a theme or presentation change used to need a page
- * reload), and grid's `TimerBanner`, `CamerasBoard` and
- * `DoorbellRingListener`.
+ * reload), and grid's `CamerasBoard` and `DoorbellRingListener`.
  *
- * Two of those — `CamerasBoard` and `DoorbellRingListener` — read this
+ * Both of those — `CamerasBoard` and `DoorbellRingListener` — read this
  * query's raw data and coerce per key rather than going through
  * `useIntegrationConfig`, deliberately: one unparseable `doorbell.*` value
  * would otherwise take the whole integration's config to `null` (see that
