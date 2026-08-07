@@ -56,7 +56,7 @@ export function PeopleTab() {
     setFormName(person.name)
     setFormColor(person.color)
     setFormAvatarFile(null)
-    setFormAvatarPreview(person.avatar ? `/api/chores/people/${person.id}/avatar` : null)
+    setFormAvatarPreview(person.avatar)
     setEditingId(person.id)
     setShowAddForm(false)
   }
@@ -190,7 +190,7 @@ export function PeopleTab() {
                 {/* Avatar or color initial */}
                 {person.avatar ? (
                   <img
-                    src={`/api/chores/people/${person.id}/avatar`}
+                    src={person.avatar}
                     alt={person.name}
                     className="w-10 h-10 rounded-full object-cover shrink-0"
                   />

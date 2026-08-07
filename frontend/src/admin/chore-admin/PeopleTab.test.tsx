@@ -57,17 +57,14 @@ describe('PeopleTab', () => {
     expect(server.callsTo('/api/chores/people', 'GET')).toHaveLength(1)
   })
 
-  it('shows a person with an avatar as an image from the per-person avatar route', async () => {
+  it('shows a person with an avatar as an image served inline from the person JSON', async () => {
     const server = startChoreServer({ people: PEOPLE })
     await renderLoaded(server)
 
-    // Deliberately preserved: this route does not exist on the backend. It is a
-    // known bug tracked separately, not something the api-confinement work
-    // should quietly change.
-    expect(screen.getByRole('img', { name: 'Sam' })).toHaveAttribute(
-      'src',
-      '/api/chores/people/2/avatar',
-    )
+    // There is no per-person avatar route on the backend. `person.avatar` is
+    // already a complete, directly-usable `src` (a data URL in production),
+    // so it is rendered as-is rather than built into a constructed URL.
+    expect(screen.getByRole('img', { name: 'Sam' })).toHaveAttribute('src', 'sam.png')
     // Someone with no avatar gets their initial instead.
     expect(screen.getByText('B')).toBeInTheDocument()
   })
@@ -166,6 +163,16 @@ describe('PeopleTab', () => {
         body: { name: 'Benjamin', color: '#e88a6a' },
       },
     ])
+  })
+
+  it("seeds the edit form's avatar preview from the person's avatar, not a constructed route", async () => {
+    const server = startChoreServer({ people: PEOPLE })
+    await renderLoaded(server)
+
+    // Sam (index 1) has an avatar; edit them rather than Ben.
+    fireEvent.click(screen.getAllByRole('button', { name: 'Edit' })[1])
+
+    expect(screen.getByRole('img', { name: 'Preview' })).toHaveAttribute('src', 'sam.png')
   })
 
   it("renders the server's message when a save fails, leaving the form open", async () => {
