@@ -63,7 +63,8 @@ export function ThemePicker() {
     <div className="mb-8">
       <h3 className="text-sm font-bold text-text-primary mb-1">Presentation</h3>
       <p className="text-xs text-text-secondary mb-3">
-        Which layout the dashboard renders. Takes effect on the next reload.
+        Which layout the dashboard renders. The dashboard picks the change up within a minute — no
+        reload needed.
       </p>
       <div className="flex flex-col gap-2">
         {themes.map((theme) => (
