@@ -38,27 +38,50 @@ function makeEvent(id: string, minutesFromNow: number, location: string): Calend
 function stubFetch(opts: {
   configData?: Record<string, string>
   configPromise?: Promise<unknown>
+  /** Per-destination-address duration, for the multi-destination tests. A
+   *  `null` stands for an upstream failure of that one destination. */
+  durationsByDestination?: Record<string, string | null>
 }) {
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    // `init` isn't read here — the request-shape test inspects it directly
-    // off `fetchMock.mock.calls`, which is why it stays in the signature (so
-    // the mock's call tuples type as `[input, init]` instead of `[input]`).
-    void init
     const url = String(input)
     if (url === '/api/config') {
       if (opts.configPromise) await opts.configPromise
       return { ok: true, json: async () => opts.configData ?? FULL_CONFIG } as Response
     }
     if (url === '/api/fetch') {
+      // The request-shape test inspects `init` off `fetchMock.mock.calls`
+      // rather than here; the fan-out tests need the destination to decide
+      // what to answer, which is the only reason this reads the body.
+      const sent = JSON.parse((init?.body as string) ?? '{}')
+      const destination = sent.body?.destination?.address as string | undefined
+      const duration =
+        destination && opts.durationsByDestination
+          ? opts.durationsByDestination[destination]
+          : '650s'
+      if (duration === null || duration === undefined) {
+        return {
+          ok: false,
+          status: 502,
+          json: async () => ({ error: 'upstream said no' }),
+        } as Response
+      }
       return {
         ok: true,
-        text: async () => JSON.stringify({ routes: [{ duration: '650s' }] }),
+        text: async () => JSON.stringify({ routes: [{ duration }] }),
       } as Response
     }
     throw new Error(`Unexpected fetch url: ${url}`)
   })
   vi.stubGlobal('fetch', fetchMock)
   return fetchMock
+}
+
+function routeCallsFor(fetchMock: ReturnType<typeof stubFetch>, destination: string) {
+  return fetchMock.mock.calls.filter(([input, init]) => {
+    if (String(input) !== '/api/fetch') return false
+    const sent = JSON.parse(((init as RequestInit)?.body as string) ?? '{}')
+    return sent.body?.destination?.address === destination
+  })
 }
 
 function createWrapper() {
@@ -207,5 +230,50 @@ describe('useDrivingTime', () => {
     // leaveByTime = event start - drive duration - buffer_minutes (5).
     const expectedLeaveBy = new Date(eventStart.getTime() - 650 * 1000 - 5 * 60 * 1000)
     expect(info.leaveByTime.getTime()).toBe(expectedLeaveBy.getTime())
+  })
+
+  it('keys each event by its own id when a destination in the middle fails', async () => {
+    // The fan-out returns results in *input* order, so a map built from the
+    // results alone would slide every later entry up by one when one
+    // destination has no result — attaching B's drive time to C's event, and
+    // rendering perfectly plausibly while doing it.
+    stubFetch({ durationsByDestination: { 'A St': '600s', 'B St': null, 'C St': '1800s' } })
+    const events = [
+      makeEvent('evt-a', 60, 'A St'),
+      makeEvent('evt-b', 90, 'B St'),
+      makeEvent('evt-c', 120, 'C St'),
+    ]
+
+    const { result } = renderHook(() => useDrivingTime(events), { wrapper: createWrapper() })
+
+    await waitFor(() => {
+      expect(result.current['evt-a']).toBeDefined()
+      expect(result.current['evt-c']).toBeDefined()
+    })
+
+    expect(result.current['evt-a'].durationSeconds).toBe(600)
+    expect(result.current['evt-c'].durationSeconds).toBe(1800)
+    // The failed destination gets no entry at all — not the next one's time.
+    expect(result.current['evt-b']).toBeUndefined()
+  })
+
+  it('serves two consumers of the same destination from one proxied request', async () => {
+    // The point of being on react-query: the grid draws the calendar widget
+    // and the hero strip from the same events, and both call this hook. Off
+    // the cache that was two identical Routes calls (and two billed
+    // requests); keyed through `integrationQueryKey` it is one.
+    const fetchMock = stubFetch({ durationsByDestination: { 'A St': '600s' } })
+    const events = [makeEvent('evt-a', 60, 'A St')]
+    const wrapper = createWrapper()
+
+    const first = renderHook(() => useDrivingTime(events), { wrapper })
+    const second = renderHook(() => useDrivingTime(events), { wrapper })
+
+    await waitFor(() => {
+      expect(first.result.current['evt-a']).toBeDefined()
+      expect(second.result.current['evt-a']).toBeDefined()
+    })
+
+    expect(routeCallsFor(fetchMock, 'A St')).toHaveLength(1)
   })
 })
