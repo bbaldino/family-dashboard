@@ -1,4 +1,4 @@
-import type { CalendarEvent } from '@/integrations/google-calendar'
+import type { CalendarEvent } from '@/providers/google-calendar'
 
 /** Google marks all-day events with a date-only start (no dateTime). */
 export function isAllDay(event: CalendarEvent): boolean {

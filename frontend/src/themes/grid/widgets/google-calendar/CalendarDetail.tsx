@@ -1,4 +1,4 @@
-import type { CalendarEvent } from '@/integrations/google-calendar'
+import type { CalendarEvent } from '@/providers/google-calendar'
 
 function formatEventTime(event: CalendarEvent): string {
   const start = event.start.dateTime ?? event.start.date

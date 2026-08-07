@@ -12,7 +12,7 @@ const smallMeta = {
   sizePreference: { orientation: 'square' as const, relativeSize: 'small' as const },
 }
 
-vi.mock('@/integrations/google-calendar', () => ({
+vi.mock('@/integrations/calendar', () => ({
   useGoogleCalendar: () => ({ data: [], isLoading: false, error: null, refetch: vi.fn() }),
 }))
 vi.mock('@/integrations/weather', () => ({

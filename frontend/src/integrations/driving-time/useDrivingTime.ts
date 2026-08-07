@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { drivingTimeIntegration } from './config'
 import { googleCloudProvider } from '@/providers/google-cloud'
 import { useIntegrationConfig } from '@/platform'
-import type { CalendarEvent } from '@/integrations/google-calendar'
+import type { CalendarEvent } from '@/providers/google-calendar'
 import type { EventDriveInfo, DriveUrgency } from './types'
 
 function computeUrgency(minutesUntilLeave: number): DriveUrgency {

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useMonthCalendar } from '@/integrations/google-calendar'
+import { useMonthCalendar } from '@/integrations/calendar'
 import { useCountdowns } from '@/integrations/countdowns'
 import { DatebookMasthead } from '@/themes/broadsheet/datebook/DatebookMasthead'
 import { MonthGrid } from '@/themes/broadsheet/datebook/MonthGrid'

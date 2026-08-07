@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MonthGrid } from './MonthGrid'
-import type { CalendarEvent } from '@/integrations/google-calendar'
+import type { CalendarEvent } from '@/providers/google-calendar'
 
 const allDay = (id: string, summary: string, date: string): CalendarEvent => ({
   id,

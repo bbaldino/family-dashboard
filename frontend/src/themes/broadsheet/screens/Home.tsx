@@ -1,5 +1,6 @@
-import { useGoogleCalendar } from '@/integrations/google-calendar'
-import type { CalendarDay, CalendarEvent } from '@/integrations/google-calendar'
+import { useGoogleCalendar } from '@/integrations/calendar'
+import type { CalendarDay } from '@/integrations/calendar'
+import type { CalendarEvent } from '@/providers/google-calendar'
 import { useSportsGames } from '@/integrations/sports'
 import { useLunchMenu } from '@/integrations/nutrislice'
 import { Masthead } from '@/themes/broadsheet/home/Masthead'

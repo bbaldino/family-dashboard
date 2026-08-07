@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { useDrivingTime, formatDuration } from './useDrivingTime'
 import { drivingTimeIntegration } from './config'
-import type { CalendarEvent } from '@/integrations/google-calendar'
+import type { CalendarEvent } from '@/providers/google-calendar'
 
 /**
  * Pins the composed `/api/fetch` request this hook sends to Google's Routes

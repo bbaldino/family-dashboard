@@ -6,8 +6,7 @@ import { doorbellIntegration } from '@/integrations/doorbell'
 import { nutrisliceIntegration } from '@/integrations/nutrislice'
 import { weatherIntegration } from '@/integrations/weather'
 import { googleCloudProvider } from '@/providers/google-cloud'
-import { googleCalendarIntegration } from '@/integrations/google-calendar'
-import { calendarIntegration } from '@/integrations/calendar'
+import { googleCalendarProvider } from '@/providers/google-calendar'
 import { sportsIntegration } from '@/integrations/sports'
 import { timersIntegration } from '@/integrations/timers'
 import { themeIntegration } from '@/palettes/config'
@@ -31,6 +30,14 @@ import { ThemeAdmin } from '@/admin/settings/theme/ThemeAdmin'
  * about how each entry gets its data; see
  * `docs/superpowers/specs/2026-08-05-client-vs-service-integrations.md` for
  * that classification. `SettingsAdmin.tsx` is the only consumer.
+ *
+ * Calendar gets one entry, not two: `googleCalendarProvider` here, rendering
+ * `GoogleCalendarSettings`, which connects the account *and* picks the
+ * calendars — one screen because that is one job to a person, even though the
+ * picker writes the `calendar` integration's `calendar_ids`. Admin is allowed
+ * to touch config across integrations, so nothing else needs an entry, and
+ * `calendarIntegration` deliberately has none: its only setting is the one
+ * that picker manages.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const settingsEntries: Integration<any>[] = [
@@ -40,8 +47,7 @@ export const settingsEntries: Integration<any>[] = [
   nutrisliceIntegration,
   weatherIntegration,
   googleCloudProvider,
-  googleCalendarIntegration,
-  calendarIntegration,
+  googleCalendarProvider,
   sportsIntegration,
   timersIntegration,
   themeIntegration,

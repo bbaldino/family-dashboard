@@ -20,7 +20,8 @@ import {
 } from '@/integrations/chores'
 import type { AssignmentResponse, Chore } from '@/integrations/chores'
 import { ChorePool } from './ChorePool'
-import { useCalendarEvents, type CalendarEvent } from '@/integrations/google-calendar'
+import { useCalendarEvents } from '@/integrations/calendar'
+import type { CalendarEvent } from '@/providers/google-calendar'
 import { eventLocalDateStr, parseLocalDate, toLocalDateStr } from '@/utils/date'
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']

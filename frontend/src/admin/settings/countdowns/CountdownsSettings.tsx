@@ -1,13 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useAllConfig, useSaveConfig } from '@/platform'
-import { googleCalendarIntegration } from '@/integrations/google-calendar'
+import { googleCalendarProvider } from '@/providers/google-calendar'
+import type { CalendarListEntry } from '@/providers/google-calendar'
 import { Button } from '@/ui/Button'
-
-interface CalendarListEntry {
-  id: string
-  summary: string
-  primary?: boolean
-}
 
 /**
  * Prefilled once from the shared `/api/config` query, then left alone — same
@@ -41,7 +36,7 @@ function CountdownsSettingsForm({ config }: { config: Record<string, string> | u
 
   useEffect(() => {
     let cancelled = false
-    googleCalendarIntegration
+    googleCalendarProvider
       .api!.get<CalendarListEntry[]>('/calendars')
       .then((cals) => {
         if (!cancelled) setCalendars(cals)

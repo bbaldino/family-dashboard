@@ -25,7 +25,7 @@ function stubFetch(calendarIds: string[]) {
     if (url === '/api/config') {
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ 'google-calendar.calendar_ids': stored }),
+        json: () => Promise.resolve({ 'calendar.calendar_ids': stored }),
       } as Response)
     }
     if (url === '/api/google-calendar/calendars') {
@@ -44,7 +44,7 @@ function stubFetch(calendarIds: string[]) {
  *  has actually reached the components rather than just the cache. */
 function Probe() {
   const { data } = useAllConfig()
-  return <div data-testid="probe">{data?.['google-calendar.calendar_ids'] ?? ''}</div>
+  return <div data-testid="probe">{data?.['calendar.calendar_ids'] ?? ''}</div>
 }
 
 describe('GoogleCalendarSettings', () => {

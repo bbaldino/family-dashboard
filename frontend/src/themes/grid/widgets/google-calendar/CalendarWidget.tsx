@@ -1,4 +1,5 @@
-import type { CalendarEvent, CalendarDay } from '@/integrations/google-calendar'
+import type { CalendarEvent } from '@/providers/google-calendar'
+import type { CalendarDay } from '@/integrations/calendar'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
 import { ErrorDisplay } from '@/ui/ErrorDisplay'
 import { WidgetCard } from '@/themes/grid/ui/WidgetCard'

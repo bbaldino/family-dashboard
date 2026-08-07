@@ -1,4 +1,5 @@
-import type { CalendarEvent, MonthEvents } from '@/integrations/google-calendar'
+import type { MonthEvents } from '@/integrations/calendar'
+import type { CalendarEvent } from '@/providers/google-calendar'
 
 export interface MonthTally {
   eventCount: number

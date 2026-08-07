@@ -1,17 +1,15 @@
 import { useState } from 'react'
 import { useAllConfig, useSaveConfig } from '@/platform'
-import { useCalendarList } from '@/integrations/google-calendar'
-
-function parseCalendarIds(raw: string | undefined): string[] {
-  if (!raw) return []
-  try {
-    return JSON.parse(raw)
-  } catch {
-    return []
-  }
-}
+import { useCalendarList, parseCalendarIds } from '@/providers/google-calendar'
 
 /**
+ * Connects the Google account and picks which calendars the household
+ * calendar shows — one screen because that is one job to a person, even
+ * though it now spans two things: `useCalendarList` is the *provider's*
+ * (the connection and what it can answer), while the saved selection is the
+ * `calendar` integration's policy and is written to `calendar.calendar_ids`.
+ * Admin may touch config across integrations, so this crosses no boundary.
+ *
  * Prefilled once from the shared `/api/config` query, then left alone — same
  * split as `themes/grid/GridSettingsPanel.tsx`: this outer half tracks the
  * live query and re-renders on every poll; the inner form's lazy `useState`
@@ -30,7 +28,7 @@ export function GoogleCalendarSettings() {
 
 function GoogleCalendarSettingsForm({ config }: { config: Record<string, string> | undefined }) {
   const [calendarIds, setCalendarIds] = useState<string[]>(() =>
-    parseCalendarIds(config?.['google-calendar.calendar_ids']),
+    parseCalendarIds(config?.['calendar.calendar_ids']),
   )
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
@@ -57,7 +55,7 @@ function GoogleCalendarSettingsForm({ config }: { config: Record<string, string>
     setStatus(null)
     try {
       await configSaver.mutateAsync({
-        key: 'google-calendar.calendar_ids',
+        key: 'calendar.calendar_ids',
         value: JSON.stringify(calendarIds),
       })
       setStatus('Saved!')

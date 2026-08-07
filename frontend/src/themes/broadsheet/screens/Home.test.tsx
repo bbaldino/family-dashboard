@@ -23,7 +23,7 @@ vi.mock('@/integrations/weather', () => ({
   useWeatherForecast: () => ({ data: undefined, isLoading: true }),
   useAirQuality: () => ({ data: undefined, isLoading: true }),
 }))
-vi.mock('@/integrations/google-calendar', () => ({
+vi.mock('@/integrations/calendar', () => ({
   useGoogleCalendar: () => ({ data: undefined, isLoading: true }),
 }))
 vi.mock('@/integrations/driving-time', () => ({ useDrivingTime: () => ({}) }))

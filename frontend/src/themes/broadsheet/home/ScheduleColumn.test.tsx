@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { ScheduleColumn } from './ScheduleColumn'
 
 const useGoogleCalendar = vi.hoisted(() => vi.fn())
-vi.mock('@/integrations/google-calendar', () => ({ useGoogleCalendar }))
+vi.mock('@/integrations/calendar', () => ({ useGoogleCalendar }))
 const useDrivingTime = vi.hoisted(() => vi.fn())
 vi.mock('@/integrations/driving-time', () => ({ useDrivingTime }))
 
@@ -28,7 +28,7 @@ describe('ScheduleColumn', () => {
 
   it('renders today as the hero and the rest of the week as the week-ahead strip', () => {
     // useGoogleCalendar's `data` is the CalendarDay[] itself (not
-    // `{ days: [...] }`). See src/integrations/google-calendar/useGoogleCalendar.ts.
+    // `{ days: [...] }`). See src/integrations/calendar/useGoogleCalendar.ts.
     // Index 0 is always today (see fetchCalendarEvents) — ScheduleColumn
     // relies on that rather than filtering on `isToday` itself.
     useGoogleCalendar.mockReturnValue({
