@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Timer, TimerEvent } from './types'
-import { startRepeatingAlarm } from './alarmSounds'
+import { startRepeatingAlarm } from '@/lib/alarmSounds'
 
 /** Normalize a timer from the API: ensure remainingMs is always set */
 function normalizeTimer(t: Timer): Timer {

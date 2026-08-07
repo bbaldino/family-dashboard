@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useHaEntity } from '@/hooks/useHaEntity'
-import { getAlarmById } from '@/integrations/timers'
+import { getAlarmById } from '@/lib/alarmSounds'
 import { detectRisingEdge } from './detectRisingEdge'
 
 export interface DoorbellRingConfig {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAllConfig } from '@/platform'
 import { useHaEntity } from '@/hooks/useHaEntity'
-import { getAlarmById } from '@/integrations/timers'
+import { getAlarmById } from '@/lib/alarmSounds'
 import { doorbellIntegration, detectRisingEdge } from '@/integrations/doorbell'
 import { DoorbellRingModal } from './DoorbellRingModal'
 

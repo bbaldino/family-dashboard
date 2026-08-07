@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Play } from 'lucide-react'
 import { useAllConfig, useSaveConfig } from '@/platform'
 import { Button } from '@/ui/Button'
-import { ALARM_SOUNDS, getAlarmById } from '@/integrations/timers'
+import { ALARM_SOUNDS, getAlarmById } from '@/lib/alarmSounds'
 import { doorbellIntegration } from '@/integrations/doorbell'
 
 /**

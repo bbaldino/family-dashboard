@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAllConfig, useSaveConfig } from '@/platform'
 import { Button } from '@/ui/Button'
-import { ALARM_SOUNDS, DEFAULT_ALARM_ID } from '@/integrations/timers'
+import { ALARM_SOUNDS, DEFAULT_ALARM_ID } from '@/lib/alarmSounds'
 
 /**
  * Prefilled once from the shared `/api/config` query, then left alone — same
