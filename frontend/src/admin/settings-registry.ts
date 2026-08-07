@@ -3,6 +3,7 @@ import type { Integration } from '@/platform'
 import { choresIntegration } from '@/integrations/chores'
 import { countdownsIntegration } from '@/integrations/countdowns'
 import { doorbellIntegration } from '@/integrations/doorbell'
+import { healthIntegration } from '@/integrations/health'
 import { nutrisliceIntegration } from '@/integrations/nutrislice'
 import { weatherIntegration } from '@/integrations/weather'
 import { googleCloudProvider } from '@/providers/google-cloud'
@@ -44,6 +45,7 @@ export const settingsEntries: Integration<any>[] = [
   choresIntegration,
   countdownsIntegration,
   doorbellIntegration,
+  healthIntegration,
   nutrisliceIntegration,
   weatherIntegration,
   googleCloudProvider,

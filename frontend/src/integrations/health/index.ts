@@ -1,3 +1,4 @@
+export { healthIntegration } from './config'
 export { useHealthServices, useServiceUptime, useIncidents, REFRESH_MS } from './useHealth'
 export type { ServiceUptime } from './useHealth'
 export { summarizeHealth } from './summary'
