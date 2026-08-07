@@ -1,7 +1,9 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { bucketSegments, windowEndOf, BLOCKS_24H } from './uptime'
-import { fetchJson } from './fetchJson'
+import { healthIntegration } from './config'
 import type { Incident, Service, Status, UptimeReport } from './types'
+
+const { api } = healthIntegration
 
 const DAY_SECS = 86_400
 
@@ -12,7 +14,7 @@ export const REFRESH_MS = 10_000
 export function useHealthServices() {
   return useQuery({
     queryKey: ['health', 'status'],
-    queryFn: () => fetchJson<Service[]>('/api/health/status'),
+    queryFn: () => api.get<Service[]>('/status'),
     refetchInterval: REFRESH_MS,
   })
 }
@@ -34,7 +36,7 @@ export function useServiceUptime(services: Service[]): Record<number, ServiceUpt
   const results = useQueries({
     queries: services.map((s) => ({
       queryKey: ['health', 'uptime', s.id],
-      queryFn: () => fetchJson<UptimeReport>(`/api/health/uptime/${s.id}?window=${DAY_SECS}`),
+      queryFn: () => api.get<UptimeReport>(`/uptime/${s.id}?window=${DAY_SECS}`),
       refetchInterval: 60_000,
     })),
   })
@@ -67,7 +69,7 @@ export function useServiceUptime(services: Service[]): Record<number, ServiceUpt
 export function useIncidents(limit = 40) {
   return useQuery({
     queryKey: ['health', 'incidents', limit],
-    queryFn: () => fetchJson<Incident[]>(`/api/health/incidents?limit=${limit}`),
+    queryFn: () => api.get<Incident[]>(`/incidents?limit=${limit}`),
     refetchInterval: 60_000,
   })
 }
