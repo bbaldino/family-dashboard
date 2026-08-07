@@ -2,8 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import type { PollResult } from '@/integrations/types'
 import { useIntegrationConfig } from '@/platform'
 import { countdownsIntegration } from './config'
-// Use the google-calendar integration's API to fetch events
-import { googleCalendarIntegration, type CalendarEvent } from '@/integrations/google-calendar'
+import { fetchCalendarEvents } from '@/providers/google-calendar'
 import { parseLocalDate } from '@/utils/date'
 
 export interface CountdownItem {
@@ -20,9 +19,11 @@ async function fetchCountdowns(calendarId: string, horizonDays: number): Promise
   const start = now.toISOString()
   const end = new Date(now.getTime() + horizonDays * 24 * 60 * 60 * 1000).toISOString()
 
-  const events = await googleCalendarIntegration.api.get<CalendarEvent[]>(
-    `/events?calendar=${encodeURIComponent(calendarId)}&start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`,
-  )
+  // `fetchCalendarEvents` — not `fetchEventsForCalendars` — deliberately:
+  // countdowns has exactly one calendar and no "the others are fine"
+  // fallback, so a broken calendar must reject rather than resolve to `[]`.
+  // See providers/google-calendar/events.ts for the split.
+  const events = await fetchCalendarEvents(calendarId, start, end)
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)

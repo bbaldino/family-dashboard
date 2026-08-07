@@ -6,18 +6,22 @@ import { useCountdowns } from './useCountdowns'
 import { CONFIG_QUERY_KEY } from '@/platform'
 
 /**
- * `useCountdowns` fetches through `googleCalendarIntegration.api` (a plain
- * `fetch` against this app's own `/api/google-calendar/events` route, not
- * the external-upstream `/api/fetch` proxy `useIntegrationData` uses), so
- * the stub below matches that route directly rather than `/api/fetch`.
+ * `useCountdowns` fetches through the `google-calendar` provider's
+ * `fetchCalendarEvents` (a plain `fetch` against this app's own
+ * `/api/google-calendar/events` route, not the external-upstream
+ * `/api/fetch` proxy `useIntegrationData` uses), so the stub below matches
+ * that route directly rather than `/api/fetch`.
  *
  * This suite pins the composed request (calendar id + ISO start/end derived
- * from `horizon_days`), the hourly poll cadence, and — the point of Task 1
- * per the migration plan — that `data` stays `null` (not `undefined`) until
- * the first fetch actually succeeds, exactly as the `PollResult`
- * contract guarantees. `HouseholdColumn` and the grid widget-meta both read
- * `data ?? []`, which happens to tolerate either, but the contract is
- * `PollResult<T>` and this hook still owes it.
+ * from `horizon_days`), the hourly poll cadence, that a failed fetch surfaces
+ * as an error rather than an empty list — `fetchCalendarEvents` throws,
+ * deliberately not the catching `fetchEventsForCalendars`, because
+ * countdowns has exactly one calendar and no "the others are fine"
+ * fallback — and that `data` stays `null` (not `undefined`) until the first
+ * fetch actually succeeds, exactly as the `PollResult` contract guarantees.
+ * `HouseholdColumn` and the grid widget-meta both read `data ?? []`, which
+ * happens to tolerate either, but the contract is `PollResult<T>` and this
+ * hook still owes it.
  */
 
 const NOW = new Date('2026-08-05T12:00:00')
@@ -52,6 +56,33 @@ function stubFetch() {
     }
     if (url.startsWith('/api/google-calendar/events')) {
       return { ok: true, text: async () => JSON.stringify(EVENTS_PAYLOAD) } as Response
+    }
+    throw new Error(`Unexpected fetch url: ${url}`)
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  return fetchMock
+}
+
+/**
+ * Same as `stubFetch`, but the events route comes back broken (a revoked
+ * share, a deleted calendar). Countdowns has exactly one calendar — there is
+ * no "the others are fine" fallback — so this must surface as an error, not
+ * quietly resolve to an empty list. That distinction is the reason
+ * `fetchCalendarEvents` throws while `fetchEventsForCalendars` catches: a
+ * single-calendar consumer has to be able to say its calendar broke.
+ */
+function stubFailingFetch() {
+  const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input)
+    if (url === '/api/config') {
+      return { ok: true, json: async () => CONFIG } as Response
+    }
+    if (url.startsWith('/api/google-calendar/events')) {
+      return {
+        ok: false,
+        status: 403,
+        json: async () => ({ error: 'calendar access revoked' }),
+      } as Response
     }
     throw new Error(`Unexpected fetch url: ${url}`)
   })
@@ -146,6 +177,20 @@ describe('useCountdowns', () => {
       (p) => new Date(eventUrls(fetchMock)[1].searchParams.get(p)!),
     )
     expect(end.getTime() - start.getTime()).toBe(60 * 24 * 60 * 60 * 1000)
+  })
+
+  it('surfaces a failed fetch as an error rather than an empty list', async () => {
+    stubFailingFetch()
+    const { result } = renderHook(() => useCountdowns(), {
+      wrapper: createWrapper(new QueryClient({ defaultOptions: { queries: { retry: false } } })),
+    })
+
+    await waitFor(() => expect(result.current.error).not.toBeNull())
+
+    expect(result.current.error).toBe('calendar access revoked')
+    // Not the silently-empty "nothing coming up": the hook must not have
+    // quietly resolved `data` while `error` is set.
+    expect(result.current.data).toBeNull()
   })
 
   it('polls hourly', async () => {
