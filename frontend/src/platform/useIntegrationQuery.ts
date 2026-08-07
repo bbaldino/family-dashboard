@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { fetchViaProxy, integrationQueryKey } from './proxyFetch'
 
 export interface IntegrationQueryOptions<Raw, Out> {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
@@ -33,38 +34,11 @@ export function useIntegrationQuery<Raw, Out = Raw>(
   opts: IntegrationQueryOptions<Raw, Out> = {},
 ) {
   const { method, headers, body, ttlSecs = 0, expect, select, refetchInterval, enabled } = opts
+  const spec = { url, method, headers, body, ttlSecs, expect }
 
   return useQuery({
-    queryKey: ['integration', integration.id, url, method, headers, body, ttlSecs, expect],
-    queryFn: async (): Promise<Raw> => {
-      // Omit absent fields rather than sending them as `undefined` — a plain
-      // GET must still post exactly `{url, ttl_secs}`, the shape the backend
-      // tests assert.
-      const payload: {
-        url: string | null
-        method?: string
-        headers?: Record<string, string>
-        body?: unknown
-        expect?: string
-        ttl_secs: number
-      } = { url, ttl_secs: ttlSecs }
-      if (method) payload.method = method
-      if (headers) payload.headers = headers
-      if (body !== undefined) payload.body = body
-      if (expect) payload.expect = expect
-
-      const resp = await fetch('/api/fetch', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      if (!resp.ok) {
-        const err = await resp.json().catch(() => ({ error: 'Request failed' }))
-        throw new Error(err.error || `${resp.status}`)
-      }
-      const text = await resp.text()
-      return text ? JSON.parse(text) : (undefined as Raw)
-    },
+    queryKey: integrationQueryKey(integration.id, spec),
+    queryFn: () => fetchViaProxy<Raw>(spec),
     select,
     refetchInterval:
       typeof refetchInterval === 'function'
