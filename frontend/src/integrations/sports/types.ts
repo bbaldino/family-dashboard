@@ -91,6 +91,15 @@ export interface GameAthlete {
 export interface GamesResponse {
   games: Game[]
   hasLive: boolean
+  /**
+   * League ids (`'mlb'`, `'nba'`, …) the backend could get no scoreboard for
+   * at all — ESPN refused and there was no cached copy to fall back on.
+   *
+   * Always present, usually empty. Read it alongside `games`: an empty
+   * `games` with an empty list here is a genuinely quiet day, while an empty
+   * `games` with entries here is an outage. See `scoreboardIsDown`.
+   */
+  unavailableLeagues: string[]
 }
 
 export interface TeamInfo {

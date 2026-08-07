@@ -2,7 +2,12 @@ import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { OffdayBlock } from './OffdayBlock'
 
-vi.mock('@/integrations/sports', () => ({ formatUpcomingTime: (s: string) => s }))
+vi.mock('@/integrations/sports', async () => {
+  const degraded = await vi.importActual<typeof import('@/integrations/sports/degraded')>(
+    '@/integrations/sports/degraded',
+  )
+  return { formatUpcomingTime: (s: string) => s, ...degraded }
+})
 
 describe('OffdayBlock', () => {
   it('shows a loading-aware headline instead of "No game today." while data is still loading', () => {
@@ -16,8 +21,53 @@ describe('OffdayBlock', () => {
   })
 
   it('shows "No game today." once loading has finished with no featured game', () => {
-    render(<OffdayBlock data={{ games: [], hasLive: false }} isLoading={false} />)
+    render(
+      <OffdayBlock
+        data={{ games: [], hasLive: false, unavailableLeagues: [] }}
+        isLoading={false}
+      />,
+    )
     expect(screen.getByRole('heading', { name: 'No game today.' })).toBeInTheDocument()
+  })
+})
+
+/** The failure that cost the most: ESPN started refusing our requests and the
+ *  column rendered exactly as it does on a quiet Tuesday, so nobody looked for
+ *  weeks. An empty column now has to say *which* kind of empty it is. */
+describe('OffdayBlock when the scoreboard is unreachable', () => {
+  it('says the scores are unavailable rather than claiming there is no game', () => {
+    render(
+      <OffdayBlock
+        data={{ games: [], hasLive: false, unavailableLeagues: ['mlb'] }}
+        isLoading={false}
+      />,
+    )
+
+    expect(screen.getByRole('heading', { name: 'Scores are unavailable.' })).toBeInTheDocument()
+    expect(screen.queryByText('No game today.')).not.toBeInTheDocument()
+  })
+
+  it('names the league that went quiet, so the fault is readable off the wall', () => {
+    render(
+      <OffdayBlock
+        data={{ games: [], hasLive: false, unavailableLeagues: ['mlb', 'nba'] }}
+        isLoading={false}
+      />,
+    )
+
+    expect(screen.getByText(/no word from MLB or NBA/i)).toBeInTheDocument()
+  })
+
+  it('says nothing of the sort on an ordinary empty day', () => {
+    render(
+      <OffdayBlock
+        data={{ games: [], hasLive: false, unavailableLeagues: [] }}
+        isLoading={false}
+      />,
+    )
+
+    expect(screen.queryByText(/unavailable/i)).toBeNull()
+    expect(screen.queryByText(/no word from/i)).toBeNull()
   })
 })
 
@@ -28,14 +78,24 @@ describe('OffdayBlock', () => {
  *  read as an annotation rather than as page copy. */
 describe('OffdayBlock copy', () => {
   it('does not explain what the layout will do', () => {
-    render(<OffdayBlock data={{ games: [], hasLive: false }} isLoading={false} />)
+    render(
+      <OffdayBlock
+        data={{ games: [], hasLive: false, unavailableLeagues: [] }}
+        isLoading={false}
+      />,
+    )
 
     expect(screen.queryByText(/flexes back in here/i)).toBeNull()
     expect(screen.queryByText(/column rests/i)).toBeNull()
   })
 
   it('still says plainly that there is no game', () => {
-    render(<OffdayBlock data={{ games: [], hasLive: false }} isLoading={false} />)
+    render(
+      <OffdayBlock
+        data={{ games: [], hasLive: false, unavailableLeagues: [] }}
+        isLoading={false}
+      />,
+    )
 
     expect(screen.getByRole('heading', { name: 'No game today.' })).toBeInTheDocument()
   })

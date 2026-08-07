@@ -1,12 +1,23 @@
 import type { WidgetMeta } from '@/lib/widget-types'
-import { useSportsGames } from '@/integrations/sports'
+import { scoreboardIsDown, useSportsGames } from '@/integrations/sports'
 
 export function useSportsWidgetMeta(): WidgetMeta {
   const { data } = useSportsGames()
   const games = data?.games ?? []
 
   if (games.length === 0) {
-    return { visible: false }
+    // Dropping the widget off the board is this theme's version of the
+    // silent failure: an unreachable ESPN and an out-of-season league both
+    // left an empty `games`, and the board closed over the gap either way.
+    // An outage keeps its place — smallest tile, lowest priority — so the
+    // widget can say so.
+    return scoreboardIsDown(data)
+      ? {
+          visible: true,
+          sizePreference: { orientation: 'square', relativeSize: 'small' },
+          priority: 1,
+        }
+      : { visible: false }
   }
 
   const hasLive = games.some((g) => g.state === 'live')

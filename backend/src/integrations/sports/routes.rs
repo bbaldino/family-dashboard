@@ -69,6 +69,8 @@ fn replay_response(
     Ok(Json(GamesResponse {
         games,
         has_live: any_live,
+        // Replay reads a snapshot off disk; there is no league to be out.
+        unavailable_leagues: vec![],
     }))
 }
 
@@ -142,9 +144,12 @@ pub async fn get_games(State(state): State<SportsState>) -> Result<Json<GamesRes
     let tracked: Vec<TrackedTeam> = config.get_json_or("tracked_teams", vec![]).await?;
 
     if tracked.is_empty() {
+        // Nobody has picked a team. Empty on purpose — not a league we
+        // failed to reach, so nothing goes in `unavailable_leagues`.
         return Ok(Json(GamesResponse {
             games: vec![],
             has_live: false,
+            unavailable_leagues: vec![],
         }));
     }
 
@@ -175,6 +180,7 @@ pub async fn get_games(State(state): State<SportsState>) -> Result<Json<GamesRes
 
     let mut all_games: Vec<Game> = Vec::new();
     let mut any_live = false;
+    let mut unavailable_leagues: Vec<String> = Vec::new();
 
     let had_live_previously = state.cache.has_live_flag().await;
     let max_age = if had_live_previously {
@@ -190,28 +196,17 @@ pub async fn get_games(State(state): State<SportsState>) -> Result<Json<GamesRes
             .map(|t| t.team_id.clone())
             .collect();
 
-        let scoreboard = match state.cache.get(league_id, max_age).await {
-            Some(cached) => cached,
-            None => match espn::fetch_scoreboard(&state.client, sport, league).await {
-                Ok(data) => {
-                    state.cache.set(league_id, data.clone()).await;
-                    data
-                }
-                Err(e) => {
-                    tracing::warn!(
-                        "ESPN fetch failed for {}, using stale cache: {}",
-                        league_id,
-                        e
-                    );
-                    match state.cache.get_stale(league_id).await {
-                        Some(stale) => stale,
-                        None => {
-                            tracing::error!("No cached data for {}", league_id);
-                            continue;
-                        }
-                    }
-                }
-            },
+        let resolved = resolve_scoreboard(&state.cache, league_id, max_age, async || {
+            espn::fetch_scoreboard(&state.client, sport, league).await
+        })
+        .await;
+
+        let Some(scoreboard) = resolved else {
+            // Nothing to show for this league and no way to get anything.
+            // Say so in the response — skipping it silently is what made an
+            // unreachable ESPN look like an ordinary quiet week.
+            unavailable_leagues.push((*league_id).to_string());
+            continue;
         };
 
         let mut games =
@@ -302,7 +297,54 @@ pub async fn get_games(State(state): State<SportsState>) -> Result<Json<GamesRes
     Ok(Json(GamesResponse {
         games: all_games,
         has_live: should_poll_fast,
+        unavailable_leagues,
     }))
+}
+
+/// A league's scoreboard, or `None` if there is genuinely nothing to show.
+///
+/// Three-tier, in descending order of freshness: a cache entry younger than
+/// `max_age_secs`, then a live fetch, then — if the fetch fails — whatever
+/// stale copy we still hold. That last fallback is deliberate: a scoreboard
+/// from an hour ago is far better on a kitchen wall than a blank column, and
+/// a league served from it is *not* considered unavailable.
+///
+/// `None` means all three missed, and the caller must not treat that as "no
+/// games scheduled".
+///
+/// The fetch is a parameter so this decision can be tested without ESPN.
+async fn resolve_scoreboard(
+    cache: &EspnCache,
+    league_id: &str,
+    max_age_secs: u64,
+    fetch: impl AsyncFnOnce() -> Result<serde_json::Value, AppError>,
+) -> Option<serde_json::Value> {
+    if let Some(fresh) = cache.get(league_id, max_age_secs).await {
+        return Some(fresh);
+    }
+    match fetch().await {
+        Ok(data) => {
+            cache.set(league_id, data.clone()).await;
+            Some(data)
+        }
+        Err(e) => {
+            tracing::warn!(
+                "ESPN fetch failed for {}, using stale cache: {}",
+                league_id,
+                e
+            );
+            match cache.get_stale(league_id).await {
+                Some(stale) => Some(stale),
+                None => {
+                    tracing::error!(
+                        "No cached data for {} — reporting it unavailable",
+                        league_id
+                    );
+                    None
+                }
+            }
+        }
+    }
 }
 
 async fn schedule_next_start_wakeup(
@@ -696,4 +738,77 @@ async fn fetch_cached_teams(
     let raw = espn::fetch_teams(&state.client, sport, league).await?;
     state.cache.set(&cache_key, raw.clone()).await;
     Ok(transform::transform_teams(&raw, league_id))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    fn scoreboard(marker: &str) -> serde_json::Value {
+        serde_json::json!({ "events": [], "marker": marker })
+    }
+
+    #[tokio::test]
+    async fn fresh_cache_short_circuits_the_fetch() {
+        let cache = EspnCache::new();
+        cache.set("mlb", scoreboard("cached")).await;
+        let called = AtomicBool::new(false);
+
+        let resolved = resolve_scoreboard(&cache, "mlb", 60, async || {
+            called.store(true, Ordering::SeqCst);
+            Ok(scoreboard("fetched"))
+        })
+        .await;
+
+        assert_eq!(resolved, Some(scoreboard("cached")));
+        assert!(!called.load(Ordering::SeqCst), "fetch should not have run");
+    }
+
+    #[tokio::test]
+    async fn a_successful_fetch_is_returned_and_cached() {
+        let cache = EspnCache::new();
+
+        let resolved =
+            resolve_scoreboard(&cache, "mlb", 60, async || Ok(scoreboard("fetched"))).await;
+
+        assert_eq!(resolved, Some(scoreboard("fetched")));
+        assert_eq!(
+            cache.get_stale("mlb").await,
+            Some(scoreboard("fetched")),
+            "a successful fetch should refill the cache"
+        );
+    }
+
+    /// The graceful-degradation path, and the reason this is not just "report
+    /// every fetch error": yesterday's scoreboard is still worth showing, and
+    /// a league served from it is *not* unavailable.
+    #[tokio::test]
+    async fn a_failed_fetch_falls_back_to_stale_cache() {
+        let cache = EspnCache::new();
+        cache.set("mlb", scoreboard("stale")).await;
+
+        // max_age 0 makes the entry stale, so the fetch is attempted and fails.
+        let resolved = resolve_scoreboard(&cache, "mlb", 0, async || {
+            Err(AppError::Internal("ESPN API error (403)".into()))
+        })
+        .await;
+
+        assert_eq!(resolved, Some(scoreboard("stale")));
+    }
+
+    /// The defect. ESPN refuses, nothing was ever cached, and the league
+    /// contributes no games — which on its own is indistinguishable from a
+    /// quiet sports day. `None` is what lets the caller say so.
+    #[tokio::test]
+    async fn a_failed_fetch_with_no_cache_at_all_is_unavailable() {
+        let cache = EspnCache::new();
+
+        let resolved = resolve_scoreboard(&cache, "mlb", 60, async || {
+            Err(AppError::Internal("ESPN API error (403)".into()))
+        })
+        .await;
+
+        assert_eq!(resolved, None);
+    }
 }

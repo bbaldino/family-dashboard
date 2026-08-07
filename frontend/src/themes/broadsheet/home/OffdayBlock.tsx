@@ -1,4 +1,8 @@
-import { formatUpcomingTime } from '@/integrations/sports'
+import {
+  formatUnavailableLeagues,
+  formatUpcomingTime,
+  scoreboardIsDown,
+} from '@/integrations/sports'
 import type { GamesResponse } from '@/integrations/sports'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 
@@ -10,13 +14,23 @@ const proseStyle = {
 }
 
 /**
- * No game today (or the cache hasn't produced one yet): a written line
- * instead of an empty column, plus whatever's next on the schedule for the
- * tracked teams. Takes sports data as props rather than calling
- * `useSportsGames()` itself — that hook opens its own SSE connection, and
- * `Home` already calls it once for the whole page (see `Home`'s doc
- * comment). `SportsColumn` threads the same data through so it can render
- * this before a game is even selected.
+ * The sports column with no game to lead on. Three states, and telling them
+ * apart is the point:
+ *
+ * - still loading — "Checking the schedule…",
+ * - nothing on (no teams tracked, or none of them playing) — "No game
+ *   today.", plus whatever's next on the schedule,
+ * - a league the backend couldn't reach at all — "Scores are unavailable.",
+ *   naming it.
+ *
+ * The third used to render as the second. ESPN began refusing our requests
+ * and this column went on quietly reporting an off-day for weeks; the
+ * failure was invisible precisely because its empty state was plausible.
+ *
+ * Takes sports data as props rather than calling `useSportsGames()` itself —
+ * that hook opens its own SSE connection, and `Home` already calls it once
+ * for the whole page (see `Home`'s doc comment). `SportsColumn` threads the
+ * same data through so it can render this before a game is even selected.
  */
 export function OffdayBlock({
   data,
@@ -26,10 +40,13 @@ export function OffdayBlock({
   isLoading: boolean
 }) {
   const upcoming = (data?.games ?? []).filter((g) => g.state === 'upcoming').slice(0, 3)
+  const isDown = scoreboardIsDown(data)
 
   return (
     <div>
-      <Kicker color="var(--ink-muted)">Sports · Off-day</Kicker>
+      <Kicker color={isDown ? 'var(--rust)' : 'var(--ink-muted)'}>
+        {isDown ? 'Sports · No report' : 'Sports · Off-day'}
+      </Kicker>
       <h2
         className="m-0"
         style={{
@@ -41,8 +58,22 @@ export function OffdayBlock({
           margin: '6px 0 10px',
         }}
       >
-        {isLoading ? 'Checking the schedule…' : 'No game today.'}
+        {isLoading
+          ? 'Checking the schedule…'
+          : isDown
+            ? 'Scores are unavailable.'
+            : 'No game today.'}
       </h2>
+      {isDown && (
+        /* Naming the league is what a boolean couldn't do: from the far side
+         * of the kitchen this says whether the scoreboard is out or the
+         * season simply is. Same distinction the Health screen's ledger
+         * draws, in the same voice. */
+        <p className="m-0" style={{ ...proseStyle, color: 'var(--rust)', marginBottom: 14 }}>
+          No word from {formatUnavailableLeagues(data?.unavailableLeagues ?? [])} — the scoreboard
+          is down, not quiet.
+        </p>
+      )}
       {/* Only the loading line survives here. What replaced it said the column
           "rests until the next first pitch" and would "flex back in here" —
           true of the layout, and no use to someone glancing at a wall display.

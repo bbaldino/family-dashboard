@@ -4,10 +4,15 @@ import { SportsColumn } from './SportsColumn'
 import type { GamesResponse, GameState } from '@/integrations/sports'
 
 const useSportsPreview = vi.hoisted(() => vi.fn())
-vi.mock('@/integrations/sports', () => ({
-  useSportsPreview,
-  formatUpcomingTime: (s: string) => s,
-}))
+vi.mock('@/integrations/sports', async () => {
+  // `scoreboardIsDown`/`formatUnavailableLeagues` are pure and have no
+  // transport behind them, so the real ones come through rather than being
+  // stubbed into agreeing with whatever the test expects.
+  const degraded = await vi.importActual<typeof import('@/integrations/sports/degraded')>(
+    '@/integrations/sports/degraded',
+  )
+  return { useSportsPreview, formatUpcomingTime: (s: string) => s, ...degraded }
+})
 
 const team = (abbreviation: string, score: number | null) => ({
   id: abbreviation,
@@ -58,13 +63,17 @@ describe('SportsColumn', () => {
   })
 
   it('shows the off-day block when there is no game', () => {
-    const data: GamesResponse = { games: [], hasLive: false }
+    const data: GamesResponse = { games: [], hasLive: false, unavailableLeagues: [] }
     render(<SportsColumn data={data} isLoading={false} />)
     expect(screen.getByText(/no game|off day|dark/i)).toBeInTheDocument()
   })
 
   it('shows the pregame block for a scheduled game', () => {
-    const data: GamesResponse = { games: [game('upcoming')], hasLive: false }
+    const data: GamesResponse = {
+      games: [game('upcoming')],
+      hasLive: false,
+      unavailableLeagues: [],
+    }
     render(<SportsColumn data={data} isLoading={false} />)
     // The fixture's team() helper sets `name === abbreviation`, so "LAD"
     // legitimately appears more than once (the team cap and the full-name
@@ -74,7 +83,7 @@ describe('SportsColumn', () => {
   })
 
   it('shows the score for a live game', () => {
-    const data: GamesResponse = { games: [game('live')], hasLive: true }
+    const data: GamesResponse = { games: [game('live')], hasLive: true, unavailableLeagues: [] }
     render(<SportsColumn data={data} isLoading={false} />)
     expect(screen.getByText('4')).toBeInTheDocument()
     expect(screen.getByText('3')).toBeInTheDocument()
@@ -84,6 +93,7 @@ describe('SportsColumn', () => {
     const data: GamesResponse = {
       games: [game('live', { situation: null, liveDetail: null })],
       hasLive: true,
+      unavailableLeagues: [],
     }
     expect(() => render(<SportsColumn data={data} isLoading={false} />)).not.toThrow()
   })

@@ -1,7 +1,12 @@
 import { useState } from 'react'
 import { WidgetCard } from '@/themes/grid/ui/WidgetCard'
 import { LoadingSpinner } from '@/ui/LoadingSpinner'
-import { useSportsGames, type Game } from '@/integrations/sports'
+import {
+  formatUnavailableLeagues,
+  scoreboardIsDown,
+  useSportsGames,
+  type Game,
+} from '@/integrations/sports'
 import { GameCard } from './GameCard'
 import { GameCardExpanded } from './GameCardExpanded'
 import { GameDetailModal } from '@/themes/grid/overlays/sports/GameDetailModal'
@@ -37,6 +42,21 @@ export function SportsWidget() {
           <button onClick={() => refetch()} className="ml-2 text-palette-6 underline">
             Retry
           </button>
+        </div>
+      </WidgetCard>
+    )
+  }
+
+  // A request that succeeded but came back with a league we couldn't reach.
+  // Distinct from the error branch above (the request itself failed) and
+  // from the empty branch below (nothing scheduled) — reporting it as
+  // either would be the silent failure this exists to end.
+  if (scoreboardIsDown(data)) {
+    return (
+      <WidgetCard title="Sports" category="sports">
+        <div className="text-[13px] text-text-muted py-1">
+          Scores unavailable — no word from{' '}
+          {formatUnavailableLeagues(data?.unavailableLeagues ?? [])}
         </div>
       </WidgetCard>
     )

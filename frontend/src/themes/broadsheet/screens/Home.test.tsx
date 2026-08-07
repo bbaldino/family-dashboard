@@ -33,11 +33,18 @@ const useSportsGames = vi.hoisted(() =>
     isLoading: true,
   })),
 )
-vi.mock('@/integrations/sports', () => ({
-  useSportsGames,
-  useSportsPreview: () => ({ data: undefined }),
-  formatUpcomingTime: (s: string) => s,
-}))
+vi.mock('@/integrations/sports', async () => {
+  // The degraded-state helpers are pure; let the real ones through.
+  const degraded = await vi.importActual<typeof import('@/integrations/sports/degraded')>(
+    '@/integrations/sports/degraded',
+  )
+  return {
+    useSportsGames,
+    useSportsPreview: () => ({ data: undefined }),
+    formatUpcomingTime: (s: string) => s,
+    ...degraded,
+  }
+})
 vi.mock('@/integrations/countdowns', () => ({
   useCountdowns: () => ({ data: null, isLoading: false, error: null, refetch: vi.fn() }),
 }))
@@ -159,7 +166,7 @@ describe('broadsheet Home', () => {
     // (1.5fr 1fr 0.9fr); live, sports blooms to 1.6fr and schedule shrinks
     // to 0.85fr.
     useSportsGames.mockReturnValue({
-      data: { games: [game('upcoming')], hasLive: false },
+      data: { games: [game('upcoming')], hasLive: false, unavailableLeagues: [] },
       isLoading: false,
     })
     const { unmount } = render(
@@ -172,7 +179,7 @@ describe('broadsheet Home', () => {
     unmount()
 
     useSportsGames.mockReturnValue({
-      data: { games: [game('live')], hasLive: true },
+      data: { games: [game('live')], hasLive: true, unavailableLeagues: [] },
       isLoading: false,
     })
     render(

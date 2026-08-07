@@ -117,6 +117,18 @@ pub struct Game {
 pub struct GamesResponse {
     pub games: Vec<Game>,
     pub has_live: bool,
+    /// Leagues we could get no scoreboard for at all — ESPN refused and
+    /// there was no cached copy, stale or otherwise, to fall back on.
+    ///
+    /// Without this an outage is invisible: a league that contributes no
+    /// games serialises exactly like a league with nothing scheduled, which
+    /// is how a broken ESPN integration went unnoticed for weeks. Empty is
+    /// the normal case, including when no teams are tracked at all.
+    ///
+    /// League ids rather than a bare flag, because it costs nothing here and
+    /// means the fault can be read off the network tab — "mlb is out, nba is
+    /// merely out of season" — without going to the server logs.
+    pub unavailable_leagues: Vec<String>,
 }
 
 /// A team for the team picker

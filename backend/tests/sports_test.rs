@@ -1,4 +1,40 @@
+use axum_test::TestServer;
 use serde_json::json;
+
+// Only `test_app` is needed here; the log-capture helpers this module also
+// carries belong to `fetch_test.rs`/`llm_test.rs`.
+#[allow(dead_code)]
+#[path = "helpers.rs"]
+mod helpers;
+use helpers::test_app;
+
+/// The third state. `/games` has three distinct empty-ish outcomes and only
+/// one of them is a problem:
+///
+/// 1. nobody has picked any teams — legitimately empty (this test),
+/// 2. teams are tracked and nothing is on today — legitimately empty,
+/// 3. ESPN refused and there was no stale cache — a failure that used to
+///    render identically to 1 and 2, which is how a broken integration hid
+///    for weeks.
+///
+/// So an untracked dashboard must report *nothing* unavailable, otherwise
+/// the frontend would cry outage at someone who simply has no teams.
+#[tokio::test]
+async fn games_reports_nothing_unavailable_when_no_teams_are_tracked() {
+    let (app, _pool) = test_app().await;
+    let server = TestServer::new(app);
+
+    let resp = server.get("/sports/games").await;
+    resp.assert_status_ok();
+    let body: serde_json::Value = resp.json();
+
+    assert_eq!(body["games"], json!([]));
+    assert_eq!(
+        body["unavailableLeagues"],
+        json!([]),
+        "no tracked teams is a legitimately empty response, not a degraded one"
+    );
+}
 
 #[test]
 fn parse_summary_returns_some_for_sample_fixture() {
