@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import type { UsePollingResult } from '@/hooks/usePolling'
 import { useAllConfig, useIntegrationConfig } from '@/platform'
 import { activeScenario } from '@/lib/scenario'
@@ -110,6 +110,12 @@ export function useGoogleCalendar(): CalendarData {
     },
     refetchInterval: 5 * 60 * 1000,
     enabled: !configPending,
+    // The ids are part of the key now, so changing them switches cache
+    // entries and would otherwise blank the strip until the new fetch
+    // lands. The old `usePolling` shape re-read the ids *inside* its query
+    // function, so the key never changed and the previous week stayed on
+    // screen throughout — keep that.
+    placeholderData: keepPreviousData,
   })
 
   return {

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import type { UsePollingResult } from '@/hooks/usePolling'
 import { useAllConfig, useIntegrationConfig } from '@/platform'
 import { activeScenario } from '@/lib/scenario'
@@ -94,6 +94,9 @@ export function useMonthCalendar(year: number, month: number): UsePollingResult<
       return fixture ? Promise.resolve(fixture) : fetchMonthEvents(year, month, calendarIds)
     },
     refetchInterval: 5 * 60 * 1000,
+    // See `useGoogleCalendar`: the ids are in the key now, so without this a
+    // calendar change empties the grid until the new month lands.
+    placeholderData: keepPreviousData,
     enabled: !configPending,
   })
 
