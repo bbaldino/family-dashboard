@@ -209,7 +209,10 @@ describe('useDrivingTime', () => {
   })
 
   it('populates driveInfo with duration text and a leave-by time honoring buffer_minutes', async () => {
-    stubFetch({}) // FULL_CONFIG: buffer_minutes '5'; /api/fetch resolves "650s"
+    // buffer_minutes is deliberately 12 here, not FULL_CONFIG's 5: 5 is also
+    // the code's fallback, so a test using it passes just as well against a
+    // hardcoded default and proves only that *a* buffer was applied.
+    stubFetch({ configData: { ...FULL_CONFIG, 'driving-time.buffer_minutes': '12' } })
 
     // `leaveByTime` is computed as `eventStart - durationMs - bufferMs` with
     // no dependency on when the hook happens to run, so a fixed, absolute
@@ -227,8 +230,8 @@ describe('useDrivingTime', () => {
     expect(info.durationSeconds).toBe(650)
     expect(info.durationText).toBe('11 min')
 
-    // leaveByTime = event start - drive duration - buffer_minutes (5).
-    const expectedLeaveBy = new Date(eventStart.getTime() - 650 * 1000 - 5 * 60 * 1000)
+    // leaveByTime = event start - drive duration - the *configured* buffer.
+    const expectedLeaveBy = new Date(eventStart.getTime() - 650 * 1000 - 12 * 60 * 1000)
     expect(info.leaveByTime.getTime()).toBe(expectedLeaveBy.getTime())
   })
 

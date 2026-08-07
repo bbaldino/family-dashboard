@@ -1,20 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchViaProxy, integrationQueryKey } from './proxyFetch'
+import { fetchViaProxy, integrationQueryKey, type ProxyFetchSpec } from './proxyFetch'
 
-export interface IntegrationQueryOptions<Raw, Out> {
-  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-  headers?: Record<string, string>
-  body?: unknown
-  /** Seconds the backend should cache this URL's response. 0 = no caching. */
-  ttlSecs?: number
-  /**
-   * How the backend should interpret the upstream response. Omitted (the
-   * default) means `"json"` — `/api/fetch` parses the body and relays it
-   * as-is. `"text"` is for a non-JSON upstream (an HTML page to scrape,
-   * say): the backend wraps the raw body as `{ text: string }` instead of
-   * attempting to parse it, and `Raw` here is that wrapper shape.
-   */
-  expect?: 'json' | 'text'
+/**
+ * The proxy fields come from `ProxyFetchSpec` rather than being restated
+ * here — `url` excepted, because this hook takes it as its own argument so
+ * it can accept `null` to mean "config isn't ready".
+ *
+ * Restating them is how a field gets added to one and silently never reaches
+ * the wire from the other: `fetchViaProxy` only forwards what it knows about.
+ */
+export interface IntegrationQueryOptions<Raw, Out> extends Omit<ProxyFetchSpec, 'url'> {
   select?: (raw: Raw) => Out
   /** Number, or a function of the last result — this is the scheduler. */
   refetchInterval?: number | ((data: Out | undefined) => number | false)
