@@ -1,13 +1,8 @@
-import { useMemo } from 'react'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
 import type { PollResult } from '@/integrations/types'
-import { useAllConfig, useIntegrationConfig } from '@/platform'
+import { useIntegrationConfig } from '@/platform'
 import { activeScenario } from '@/lib/scenario'
-import {
-  fetchEventsForCalendars,
-  readCalendarIdsOrDefault,
-  type CalendarEvent,
-} from '@/providers/google-calendar'
+import { useCalendarRange, type CalendarEvent } from '@/providers/google-calendar'
 import { calendarIntegration } from './config'
 import { monthFixtureFor } from './fixtures'
 import { eventLocalDateStr, parseLocalDate, toLocalDateStr } from '@/utils/date'
@@ -17,27 +12,47 @@ export interface MonthEvents {
   byDate: Record<string, CalendarEvent[]>
 }
 
-async function fetchMonthEvents(
-  year: number,
-  month: number,
-  calendarIds: string[],
-): Promise<MonthEvents> {
-  // Calculate date range: first Sunday of the grid to last Saturday
+/**
+ * The dates the grid actually displays: the Sunday on or before the 1st,
+ * through the Saturday that closes the month's last week, **end exclusive**.
+ *
+ * Wider than the month on both sides, which is the whole reason the range
+ * resolver expands an out-of-window fetch to whole months — asking for
+ * exactly this would make every page a new cache entry overlapping the last
+ * by most of its days. `themes/broadsheet/datebook/month-grid-dates.ts`
+ * mirrors this computation to decide how many week rows to render, so the two
+ * must agree: a row it draws that this does not cover would be blank rather
+ * than empty, with real events silently missing.
+ */
+function monthGridBounds(year: number, month: number): { start: Date; end: Date } {
   const firstOfMonth = new Date(year, month, 1)
-  const gridStart = new Date(firstOfMonth)
-  gridStart.setDate(gridStart.getDate() - gridStart.getDay())
+  const start = new Date(firstOfMonth)
+  start.setDate(start.getDate() - start.getDay())
 
   const lastOfMonth = new Date(year, month + 1, 0)
-  const gridEnd = new Date(lastOfMonth)
-  gridEnd.setDate(gridEnd.getDate() + (6 - gridEnd.getDay()) + 1)
+  const end = new Date(lastOfMonth)
+  end.setDate(end.getDate() + (6 - end.getDay()) + 1)
 
-  const startStr = gridStart.toISOString()
-  const endStr = gridEnd.toISOString()
+  return { start, end }
+}
 
-  const allEvents = await fetchEventsForCalendars(calendarIds, startStr, endStr)
+/**
+ * Events bucketed under every local date they occupy.
+ *
+ * **A multi-day event is walked across each of its days** rather than filed
+ * under the day it starts, because the grid is a map of days: a trip that
+ * appeared only on its first cell would read as a one-day trip. Google's
+ * all-day end date is exclusive, so 05-10 → 05-13 fills the 10th, 11th and
+ * 12th and stops.
+ *
+ * Each day is then sorted all-day events first, then timed ones in order —
+ * the grid's day cells cap at a few visible pills, so which events get cut is
+ * decided here.
+ */
+function bucketByDate(events: CalendarEvent[]): MonthEvents {
   const byDate: Record<string, CalendarEvent[]> = {}
 
-  for (const event of allEvents) {
+  for (const event of events) {
     const dateKey = eventLocalDateStr(event)
     if (!dateKey) continue
     const endKey = eventLocalDateStr({ start: event.end })
@@ -58,8 +73,8 @@ async function fetchMonthEvents(
     }
   }
 
-  for (const events of Object.values(byDate)) {
-    events.sort((a, b) => {
+  for (const dayEvents of Object.values(byDate)) {
+    dayEvents.sort((a, b) => {
       const aAllDay = !a.start.dateTime
       const bAllDay = !b.start.dateTime
       if (aAllDay && !bAllDay) return -1
@@ -73,42 +88,75 @@ async function fetchMonthEvents(
   return { byDate }
 }
 
+/** A cheap content key for a month: what it shows, not which arrays hold it. */
+function monthSignature(events: MonthEvents): string {
+  return Object.entries(events.byDate)
+    .map(([date, dayEvents]) => `${date}:${dayEvents.map((e) => e.id).join(',')}`)
+    .join('|')
+}
+
 /**
  * One month's events, bucketed by local date, for the month grid.
  *
- * Same shape as `useGoogleCalendar` and for the same reasons: the configured
- * calendar ids live in the query key (so a `calendar_ids` change is picked up
- * without a remount, on a kiosk that never reloads), the query waits for the
- * config so it never asks `primary` first and corrects itself, and the result
- * is adapted back to `PollResult` — `data` stays `null` rather than
- * `undefined` until a fetch succeeds, which `Calendar.tsx` documents relying
- * on. It shares the provider's catching fan-out for the same reason too.
+ * Reads through the provider's range resolver rather than fetching: the grid's
+ * displayed range — leading and trailing days from the adjacent months
+ * included — goes to `useCalendarRange`, which answers from the synced window
+ * when it reaches and fetches only when it does not. **Today's month and its
+ * neighbours therefore cost nothing**, which is the common case and most of
+ * the requests this saves; paging far out is the case that still fetches, and
+ * the resolver expands that to whole months so paging back is free.
+ *
+ * This is the one consumer that can ask for *anything* — both themes page
+ * months with year rollover and neither clamps — so unlike the week strip it
+ * genuinely reaches outside the window, and the resolver is what makes that
+ * safe rather than a hole in the grid.
+ *
+ * The calendar ids come from *this* integration's config and are handed down,
+ * for the reason the provider documents: countdowns keeps a different calendar
+ * under its own key, so a provider must not assume which one it is reading.
+ * Passing them through also keeps the grid reactive to a config change with no
+ * remount — the tablet is a kiosk that never reloads, so "on the next reload"
+ * means "never".
+ *
+ * A scenario fixture disables the resolver rather than merely ignoring it —
+ * both its sources, since a month grid can be pointed outside the window — so
+ * a fixture dashboard makes no upstream request at all.
+ *
+ * The result is adapted to `PollResult`: `data` is `null`, not react-query's
+ * `undefined`, until events have actually arrived, which `Calendar.tsx`
+ * documents relying on.
  */
 export function useMonthCalendar(year: number, month: number): PollResult<MonthEvents> {
-  const { isPending: configPending } = useAllConfig()
   const config = useIntegrationConfig(calendarIntegration)
-  const savedIds = config?.calendar_ids
-  const calendarIds = useMemo(() => readCalendarIdsOrDefault(savedIds), [savedIds])
+  const fixture = monthFixtureFor(activeScenario, year, month)
+  const { start, end } = useMemo(() => monthGridBounds(year, month), [year, month])
+  const range = useCalendarRange(config?.calendar_ids, start, end, { enabled: !fixture })
 
-  const query = useQuery({
-    queryKey: ['calendar', 'month', String(year), String(month), calendarIds],
-    queryFn: () => {
-      const fixture = monthFixtureFor(activeScenario, year, month)
-      return fixture ? Promise.resolve(fixture) : fetchMonthEvents(year, month, calendarIds)
-    },
-    refetchInterval: 5 * 60 * 1000,
-    // See `useGoogleCalendar`: the ids are in the key now, so without this a
-    // calendar change empties the grid until the new month lands.
-    placeholderData: keepPreviousData,
-    enabled: !configPending,
-  })
+  const monthEvents = useMemo(() => fixture ?? bucketByDate(range.events), [fixture, range.events])
+
+  // The last month we could actually build, so that neither a config change
+  // re-syncing the window nor a page to a month that has to be fetched empties
+  // the grid while it lands. The window deliberately carries no previous data
+  // of its own (its observers are positional over a runtime-length list), so
+  // this is where that job now lives. Kept against a content signature rather
+  // than array identity: the resolver hands back a fresh array every render,
+  // and storing on identity alone would be a render loop.
+  const [kept, setKept] = useState<{ signature: string; events: MonthEvents } | null>(null)
+  const signature = range.isLoading ? null : monthSignature(monthEvents)
+
+  // React's documented way to adjust state from what rendered, rather than an
+  // effect: it settles before the browser sees anything, so the grid never
+  // paints a blank frame between two months.
+  if (signature !== null && signature !== kept?.signature) {
+    setKept({ signature, events: monthEvents })
+  }
+
+  const data = range.isLoading ? (kept?.events ?? null) : monthEvents
 
   return {
-    data: query.data ?? null,
-    error: query.error ? query.error.message : null,
-    isLoading: configPending || query.isLoading,
-    refetch: async () => {
-      await query.refetch()
-    },
+    data,
+    error: range.error ? range.error.message : null,
+    isLoading: data === null && range.isLoading,
+    refetch: range.refetch,
   }
 }

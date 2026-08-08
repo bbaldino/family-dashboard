@@ -8,6 +8,18 @@ import { calendarEventsPath, fetchCalendarEvents } from './events'
 import type { CalendarEvent, CalendarRange, CalendarSourceEntry } from './types'
 import { useCalendarWindow } from './useCalendarWindow'
 
+export interface CalendarRangeOptions {
+  /**
+   * `false` stops the sync **and** any expansion fetch, for a consumer that
+   * already has its events some other way — a scenario fixture, in practice,
+   * where a live request would defeat the point of running offline. It has to
+   * cover both sources: the month grid can be pointed at a month outside the
+   * window, and a fixture that silenced only the window would still put that
+   * month's fetch on the wire.
+   */
+  enabled?: boolean
+}
+
 /**
  * How long an expansion fetch counts as fresh.
  *
@@ -124,9 +136,11 @@ export function useCalendarRange(
   savedCalendarIds: string | undefined | null,
   start: Date,
   end: Date,
+  options: CalendarRangeOptions = {},
 ): CalendarRange {
+  const { enabled = true } = options
   const { isPending: configPending } = useAllConfig()
-  const synced = useCalendarWindow(savedCalendarIds)
+  const synced = useCalendarWindow(savedCalendarIds, { enabled })
   const calendarIds = useMemo(() => readCalendarIdsOrDefault(savedCalendarIds), [savedCalendarIds])
 
   const startMs = start.getTime()
@@ -165,7 +179,7 @@ export function useCalendarRange(
       }),
       queryFn: () => fetchCalendarEvents(calendarId, startStr, endStr),
       staleTime: EXPANSION_STALE_MS,
-      enabled: !configPending,
+      enabled: enabled && !configPending,
       // No `refetchInterval`: an out-of-window month is somewhere a person
       // deliberately paged to, not the live view. The window keeps polling.
     })),
