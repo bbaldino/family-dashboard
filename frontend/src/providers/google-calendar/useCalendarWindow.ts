@@ -39,9 +39,16 @@ export interface CalendarWindow extends CalendarRange {
 
 export interface CalendarWindowOptions {
   /**
-   * `false` stops the sync without unmounting it, for a consumer that already
-   * has its events some other way — a scenario fixture, in practice, where a
-   * live request would defeat the point of running offline.
+   * `false` stops *this consumer's* sync without unmounting it, for a consumer
+   * that already has its events some other way — a scenario fixture, in
+   * practice, where a live request would defeat the point of running offline.
+   *
+   * **It silences an observer, not the window.** react-query resolves
+   * `enabled` per observer and every consumer shares one query key, so the
+   * window still goes on the wire whenever another consumer is enabled: a
+   * scenario defining a month fixture but no week fixture syncs it anyway.
+   * Fixtures are a dev affordance and that is not worth re-engineering — but
+   * do not read this flag as a guarantee of no upstream request.
    */
   enabled?: boolean
 }

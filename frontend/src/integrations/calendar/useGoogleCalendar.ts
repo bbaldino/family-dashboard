@@ -91,7 +91,9 @@ function weekSignature(days: CalendarDay[]): string {
  * means "never".
  *
  * A scenario fixture disables the sync rather than merely ignoring it: the
- * point of a fixture is a dashboard that renders with no upstream at all.
+ * point of a fixture is rendering with no upstream. That covers this hook's
+ * own observer — the shared window still syncs for any consumer whose fixture
+ * the scenario omits. See `CalendarWindowOptions.enabled`.
  *
  * **Not blanking during a calendar swap is this hook's job.** The window
  * deliberately has no `keepPreviousData` — its observers are positional over

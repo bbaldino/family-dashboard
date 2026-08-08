@@ -16,6 +16,10 @@ export interface CalendarRangeOptions {
    * cover both sources: the month grid can be pointed at a month outside the
    * window, and a fixture that silenced only the window would still put that
    * month's fetch on the wire.
+   *
+   * It covers this consumer's observers only, with the caveat
+   * `CalendarWindowOptions.enabled` spells out: another consumer without a
+   * fixture of its own still syncs the shared window.
    */
   enabled?: boolean
 }

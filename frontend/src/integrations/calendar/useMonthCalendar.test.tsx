@@ -337,13 +337,26 @@ describe('useMonthCalendar', () => {
         start: { date: '2026-05-15' },
         end: { date: '2026-05-16' },
       }
+      // A **timed** event that started the day before and is still running on
+      // the 15th. This is what makes "all-day first" load-bearing rather than
+      // a coincidence: its start string ('2026-05-14T18:00…') sorts before the
+      // all-day's ('2026-05-15'), so comparing starts alone would put the
+      // camping trip above the holiday. A day cell shows only a few pills, so
+      // this ordering decides what gets cut.
+      const camping: CalendarEvent = {
+        id: 'camping',
+        summary: 'Camping trip',
+        start: { dateTime: '2026-05-14T18:00:00-07:00' },
+        end: { dateTime: '2026-05-16T11:00:00-07:00' },
+      }
       // Deliberately out of order in the source data.
-      mockFetch([lateMeeting, earlyMeeting, holiday])
+      mockFetch([lateMeeting, camping, earlyMeeting, holiday])
 
       const { byDate } = await renderMonthCalendar(IN_YEAR, IN_MONTH)
 
       expect(byDate['2026-05-15']?.map((e) => e.id)).toEqual([
         'holiday',
+        'camping',
         'early-meeting',
         'late-meeting',
       ])

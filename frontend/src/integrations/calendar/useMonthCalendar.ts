@@ -120,7 +120,9 @@ function monthSignature(events: MonthEvents): string {
  *
  * A scenario fixture disables the resolver rather than merely ignoring it —
  * both its sources, since a month grid can be pointed outside the window — so
- * a fixture dashboard makes no upstream request at all.
+ * this hook asks for nothing. The window itself is shared, though: a scenario
+ * that defines a month fixture but no week fixture still syncs it through the
+ * week strip. See `CalendarWindowOptions.enabled`.
  *
  * The result is adapted to `PollResult`: `data` is `null`, not react-query's
  * `undefined`, until events have actually arrived, which `Calendar.tsx`
