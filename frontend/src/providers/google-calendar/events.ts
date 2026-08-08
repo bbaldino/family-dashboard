@@ -2,6 +2,19 @@ import { googleCalendarProvider } from './config'
 import type { CalendarEvent } from './types'
 
 /**
+ * The `/events` route and its query params, as a path.
+ *
+ * Split out of `fetchCalendarEvents` for the one caller that needs the URL
+ * without fetching it: `useCalendarWindow` keys its per-calendar queries on
+ * the request they make (`integrationQueryKey`), and composing that string a
+ * second time in the hook is exactly the hand-written duplicate the note
+ * below says must not exist.
+ */
+export function calendarEventsPath(calendarId: string, startStr: string, endStr: string): string {
+  return `/events?calendar=${encodeURIComponent(calendarId)}&start=${encodeURIComponent(startStr)}&end=${encodeURIComponent(endStr)}`
+}
+
+/**
  * One calendar's events in one window.
  *
  * The single place that knows the `/events` route and its query params, so no
@@ -20,7 +33,7 @@ export function fetchCalendarEvents(
   endStr: string,
 ): Promise<CalendarEvent[]> {
   return googleCalendarProvider.api.get<CalendarEvent[]>(
-    `/events?calendar=${encodeURIComponent(calendarId)}&start=${encodeURIComponent(startStr)}&end=${encodeURIComponent(endStr)}`,
+    calendarEventsPath(calendarId, startStr, endStr),
   )
 }
 
