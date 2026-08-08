@@ -11,12 +11,13 @@ import type { CalendarEvent } from './types'
  * pinned here is the request count and the *shape of the answer* rather than
  * any rendering: nothing consumes this yet.
  *
- * The sharp one is the last group. `fetchEventsForCalendars` substitutes `[]`
- * for a calendar that failed, which is right for its callers and makes an
- * unreadable calendar indistinguishable from a quiet one — on 2026-08-07
- * telling those apart took a manual 12-month probe against the backend. This
- * hook keeps one query per calendar precisely so that distinction survives,
- * and the "empty and broken are not the same" test is what holds it there.
+ * The sharp one is the last group. A calendar that fails to load still
+ * resolves `events` to `[]`, which is indistinguishable from a quiet one
+ * unless something keeps the failure separately — on 2026-08-07 telling
+ * those apart took a manual 12-month probe against the backend. This hook
+ * keeps one query per calendar precisely so `error` can hold that
+ * distinction, and the "empty and broken are not the same" test is what
+ * holds it there.
  *
  * The hook is handed the *stored* calendar-ids string rather than reading it
  * itself: which config key holds them is the consumer's business (countdowns

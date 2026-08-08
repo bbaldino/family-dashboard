@@ -19,10 +19,10 @@ async function fetchCountdowns(calendarId: string, horizonDays: number): Promise
   const start = now.toISOString()
   const end = new Date(now.getTime() + horizonDays * 24 * 60 * 60 * 1000).toISOString()
 
-  // `fetchCalendarEvents` — not `fetchEventsForCalendars` — deliberately:
-  // countdowns has exactly one calendar and no "the others are fine"
-  // fallback, so a broken calendar must reject rather than resolve to `[]`.
-  // See providers/google-calendar/events.ts for the split.
+  // Calls the throwing `fetchCalendarEvents` deliberately: countdowns has
+  // exactly one calendar and no "the others are fine" fallback, so a broken
+  // calendar must reject rather than resolve to `[]`. See
+  // providers/google-calendar/events.ts.
   const events = await fetchCalendarEvents(calendarId, start, end)
 
   const today = new Date()

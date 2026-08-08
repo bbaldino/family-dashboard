@@ -1,5 +1,5 @@
 export { googleCalendarProvider } from './config'
-export { fetchCalendarEvents, fetchEventsForCalendars } from './events'
+export { fetchCalendarEvents } from './events'
 export { readStoredCalendarIds, readCalendarIdsOrDefault } from './calendarIds'
 export { useCalendarList } from './useCalendarList'
 export { useCalendarWindow } from './useCalendarWindow'

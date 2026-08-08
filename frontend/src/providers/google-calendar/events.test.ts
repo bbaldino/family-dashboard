@@ -1,16 +1,17 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
-import { fetchCalendarEvents, fetchEventsForCalendars } from './events'
+import { fetchCalendarEvents } from './events'
 import type { CalendarEvent } from './types'
 
 /**
- * The split these tests exist to pin: `fetchCalendarEvents` is the capability
- * — it knows the route and its query params, and it *throws* when the request
- * fails. `fetchEventsForCalendars` is the policy — a fan-out that chooses to
- * swallow one calendar's failure so a revoked share cannot blank the rest.
+ * `fetchCalendarEvents` knows the `/events` route and its query params, and
+ * it *throws* when the request fails. Callers that need a failure isolated
+ * per calendar — `useCalendarWindow`, `useCalendarRange` — call this once per
+ * calendar and let react-query hold each error separately, rather than this
+ * function ever swallowing one itself.
  *
- * A single-calendar consumer (countdowns) takes the first, because routed
- * through the catching one a broken calendar would render as "nothing coming
- * up" forever.
+ * A single-calendar consumer (countdowns) needs exactly that throw: routed
+ * through something that swallowed the failure, a broken calendar would
+ * render as "nothing coming up" forever.
  */
 
 function event(id: string): CalendarEvent {
@@ -71,31 +72,5 @@ describe('fetchCalendarEvents', () => {
     await expect(
       fetchCalendarEvents('broken', '2026-08-07T00:00:00.000Z', '2026-08-14T00:00:00.000Z'),
     ).rejects.toThrow('calendar not found')
-  })
-})
-
-describe('fetchEventsForCalendars', () => {
-  it('flattens every calendar in the configured order', async () => {
-    mockEventsFetch({ family: [event('a'), event('b')], work: [event('c')] })
-
-    const events = await fetchEventsForCalendars(
-      ['family', 'work'],
-      '2026-08-07T00:00:00.000Z',
-      '2026-08-14T00:00:00.000Z',
-    )
-
-    expect(events).toEqual([event('a'), event('b'), event('c')])
-  })
-
-  it('keeps the surviving calendars when one fails', async () => {
-    mockEventsFetch({ family: [event('a')], revoked: new Error('403') })
-
-    const events = await fetchEventsForCalendars(
-      ['family', 'revoked'],
-      '2026-08-07T00:00:00.000Z',
-      '2026-08-14T00:00:00.000Z',
-    )
-
-    expect(events).toEqual([event('a')])
   })
 })

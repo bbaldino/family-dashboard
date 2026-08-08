@@ -7,8 +7,8 @@ import { defineIntegration } from '@/platform'
  *
  * A consumer of the `google-calendar` *provider*, not a service of its own —
  * it has no backend, no routes, and never touches `api`. Every request it
- * makes goes through the provider's `fetchEventsForCalendars`, which is why
- * the events still arrive from `/api/google-calendar/events`.
+ * makes goes through the provider's synced window (`useCalendarWindow`),
+ * which is why the events still arrive from `/api/google-calendar/events`.
  *
  * `calendar_ids` lives here rather than with the provider because it is
  * policy, not capability: countdowns reads a different calendar over a

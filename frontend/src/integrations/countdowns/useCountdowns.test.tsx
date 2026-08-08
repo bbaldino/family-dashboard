@@ -15,10 +15,10 @@ import { CONFIG_QUERY_KEY } from '@/platform'
  * This suite pins the composed request (calendar id + ISO start/end derived
  * from `horizon_days`), the hourly poll cadence, that a failed fetch surfaces
  * as an error rather than an empty list — `fetchCalendarEvents` throws,
- * deliberately not the catching `fetchEventsForCalendars`, because
- * countdowns has exactly one calendar and no "the others are fine"
- * fallback — and that `data` stays `null` (not `undefined`) until the first
- * fetch actually succeeds, exactly as the `PollResult` contract guarantees.
+ * deliberately, because countdowns has exactly one calendar and no "the
+ * others are fine" fallback — and that `data` stays `null` (not `undefined`)
+ * until the first fetch actually succeeds, exactly as the `PollResult`
+ * contract guarantees.
  * `HouseholdColumn` and the grid widget-meta both read `data ?? []`, which
  * happens to tolerate either, but the contract is `PollResult<T>` and this
  * hook still owes it.
@@ -67,9 +67,9 @@ function stubFetch() {
  * Same as `stubFetch`, but the events route comes back broken (a revoked
  * share, a deleted calendar). Countdowns has exactly one calendar — there is
  * no "the others are fine" fallback — so this must surface as an error, not
- * quietly resolve to an empty list. That distinction is the reason
- * `fetchCalendarEvents` throws while `fetchEventsForCalendars` catches: a
- * single-calendar consumer has to be able to say its calendar broke.
+ * quietly resolve to an empty list. That is why `fetchCalendarEvents` throws
+ * instead of swallowing the failure: a single-calendar consumer has to be
+ * able to say its calendar broke.
  */
 function stubFailingFetch() {
   const fetchMock = vi.fn(async (input: RequestInfo | URL) => {

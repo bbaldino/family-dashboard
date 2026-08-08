@@ -78,13 +78,13 @@ function calendarWindowBounds(now: Date): { start: Date; end: Date } {
  * in-window read afterwards is local filtering.
  *
  * **One query per calendar, not one query over all of them.** That is what
- * lets a failure be reported as *that calendar's* failure.
- * `fetchEventsForCalendars` catches per calendar and substitutes `[]`, which
- * is right for its callers and leaves an unreadable calendar looking exactly
- * like an empty one downstream; on 2026-08-07, telling those apart took a
- * manual 12-month probe against the backend because nothing in the app could.
- * So this uses the *throwing* `fetchCalendarEvents` and lets react-query hold
- * each query's error, which surfaces in `calendars` per id.
+ * lets a failure be reported as *that calendar's* failure: this uses the
+ * *throwing* `fetchCalendarEvents` and lets react-query hold each query's
+ * error separately, which surfaces in `calendars` per id rather than folding
+ * every calendar into one shared result where a failure could hide behind a
+ * quiet one — on 2026-08-07, telling an unreadable calendar apart from an
+ * empty one took a manual 12-month probe against the backend before this
+ * existed.
  *
  * Takes the stored calendar-ids string rather than reading config itself:
  * which key holds them is the consumer's business (countdowns keeps a

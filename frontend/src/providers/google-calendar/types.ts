@@ -16,10 +16,12 @@ export interface CalendarListEntry {
 /**
  * One configured calendar's contribution to a set of events, and its health.
  *
- * Kept per calendar rather than flattened because `fetchEventsForCalendars`
- * substitutes `[]` for a calendar it could not read, which leaves an
- * unreadable calendar looking exactly like an empty one — on 2026-08-07,
- * telling those apart took a manual 12-month probe against the backend.
+ * Kept per calendar rather than flattened because a calendar that could not
+ * be read still resolves `events` to `[]` — indistinguishable from a
+ * genuinely empty one unless `error` is tracked alongside it. On 2026-08-07,
+ * telling those apart took a manual 12-month probe against the backend
+ * before `useCalendarWindow` and `useCalendarRange` started keeping each
+ * calendar's error separately.
  */
 export interface CalendarSourceEntry {
   calendarId: string
