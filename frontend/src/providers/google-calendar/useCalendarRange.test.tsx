@@ -58,6 +58,11 @@ interface ServerOptions {
   calendarIds?: string
   /** Events per calendar id; a missing id responds 500. */
   eventsByCalendar: Record<string, CalendarEvent[]>
+  /**
+   * Fail every request that is *not* the window sync's own, so the account is
+   * plainly readable and only an out-of-window month is broken.
+   */
+  failExpansions?: boolean
 }
 
 /**
@@ -85,8 +90,19 @@ function stubFetch(options: ServerOptions) {
           json: () => Promise.resolve({ error: 'calendar unavailable' }),
         } as Response)
       }
-      const from = new Date(params.get('start') ?? '').getTime()
-      const to = new Date(params.get('end') ?? '').getTime()
+      const startStr = params.get('start') ?? ''
+      const endStr = params.get('end') ?? ''
+      const isWindow =
+        startStr === WINDOW_START.toISOString() && endStr === WINDOW_END.toISOString()
+      if (options.failExpansions && !isWindow) {
+        return Promise.resolve({
+          ok: false,
+          status: 500,
+          json: () => Promise.resolve({ error: 'month unavailable' }),
+        } as Response)
+      }
+      const from = new Date(startStr).getTime()
+      const to = new Date(endStr).getTime()
       const overlapping = events.filter((e) => {
         const bounds = eventBounds(e)
         return bounds.start < to && bounds.end > from
@@ -316,6 +332,62 @@ describe('useCalendarRange', () => {
       // The March fetch and the window both overlap it, so both return it.
       await waitFor(() => expect(result.current.events).toHaveLength(1))
       expect(result.current.events[0].id).toBe('springBreak')
+    })
+  })
+
+  describe('what counts as the range being unusable', () => {
+    it('does not report a range-level error when only the expansion failed', async () => {
+      stubFetch({
+        calendarIds: JSON.stringify(['home']),
+        eventsByCalendar: { home: [allDay('recital', '2026-03-11')] },
+        failExpansions: true,
+      })
+
+      const { result } = renderHook(() => useRangeFromConfig(OUT_START, OUT_END), {
+        wrapper: wrapperFor(newClient()),
+      })
+
+      await waitFor(() => expect(result.current.calendars[0].error).not.toBeNull())
+
+      // The account is readable — the window synced fine. `CalendarBoard`
+      // turns a range-level error into "Connect Google Calendar in Settings",
+      // which would send someone to fix something that is not broken.
+      expect(result.current.error).toBeNull()
+      // Still visible to a caller that wants to say "this month didn't load".
+      expect(result.current.calendars[0].error?.message).toBe('month unavailable')
+    })
+
+    it('keeps the in-window days of a straddling range when its expansion failed', async () => {
+      stubFetch({
+        calendarIds: JSON.stringify(['home']),
+        eventsByCalendar: {
+          home: [allDay('outsideMonday', '2026-03-30'), allDay('insideThursday', '2026-04-02')],
+        },
+        failExpansions: true,
+      })
+
+      const { result } = renderHook(() => useRangeFromConfig(STRADDLE_START, STRADDLE_END), {
+        wrapper: wrapperFor(newClient()),
+      })
+
+      await waitFor(() => expect(result.current.calendars[0].error).not.toBeNull())
+
+      // April is already in memory. Discarding it because March would not
+      // load throws away events we hold, on top of the wrong diagnosis.
+      expect(result.current.events.map((e) => e.id)).toEqual(['insideThursday'])
+      expect(result.current.error).toBeNull()
+    })
+
+    it('does report a range-level error once the window has failed for every calendar', async () => {
+      stubFetch({ calendarIds: JSON.stringify(['broken', 'alsoBroken']), eventsByCalendar: {} })
+
+      const { result } = renderHook(() => useRangeFromConfig(IN_START, IN_END), {
+        wrapper: wrapperFor(newClient()),
+      })
+
+      // Nothing is readable at all, which is the state "Connect Google
+      // Calendar in Settings" is actually for.
+      await waitFor(() => expect(result.current.error?.message).toBe('calendar unavailable'))
     })
   })
 

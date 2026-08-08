@@ -53,6 +53,10 @@ export interface CalendarRange {
    * mean several ways to lose one, and a revoked share must not blank the
    * others. Which ones failed is in `calendars` — that is where a caller
    * looks to distinguish a broken calendar from a quiet one.
+   *
+   * A resolver that also fetches beyond the synced window narrows it further:
+   * only the *window* failing everywhere counts, because one month that would
+   * not load leaves the rest of the range readable. See `useCalendarRange`.
    */
   error: Error | null
   refetch: () => Promise<void>

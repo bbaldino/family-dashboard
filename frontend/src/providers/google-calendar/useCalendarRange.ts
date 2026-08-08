@@ -200,6 +200,11 @@ export function useCalendarRange(
 
     return {
       calendarId,
+      // Whatever this calendar did contribute, failures and all. An expansion
+      // that failed must not take the in-window days down with it: a
+      // straddling range already holds those, and dropping them would render
+      // as a week with days quietly blank rather than as a month that would
+      // not load.
       events: dedupeById(contributed.filter((event) => overlaps(event, startMs, endMs))),
       // Either source failing is this calendar's failure, and which calendar
       // it was is the thing that must survive.
@@ -211,13 +216,20 @@ export function useCalendarRange(
     }
   })
 
-  const allFailed = calendars.length > 0 && calendars.every((c) => c.error !== null)
-
   return {
     events: calendars.flatMap((c) => c.events),
     calendars,
     isLoading: calendars.some((c) => c.isLoading),
-    error: allFailed ? calendars[0].error : null,
+    // The range-level error means "nothing here is usable", and a consumer
+    // treats it that way — `CalendarBoard` replaces the whole grid with
+    // "Connect Google Calendar in Settings". So it is the *window's* verdict,
+    // set only when every calendar's window failed. An expansion failure is a
+    // lesser and different thing: the account is plainly readable, today's
+    // month renders, and one month someone paged to did not load. Folding it
+    // in here would send a person to reconnect an account that is connected,
+    // and throw away the in-window half of a straddling range on the way.
+    // Which calendar failed, and whether at all, is in `calendars`.
+    error: synced.error,
     refetch: async () => {
       await Promise.all([
         ...(usesWindow ? [synced.refetch()] : []),
