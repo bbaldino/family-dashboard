@@ -1,13 +1,8 @@
-import { useMemo } from 'react'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
 import type { PollResult } from '@/integrations/types'
-import { useAllConfig, useIntegrationConfig } from '@/platform'
+import { useIntegrationConfig } from '@/platform'
 import { activeScenario } from '@/lib/scenario'
-import {
-  fetchEventsForCalendars,
-  readCalendarIdsOrDefault,
-  type CalendarEvent,
-} from '@/providers/google-calendar'
+import { useCalendarWindow, type CalendarEvent } from '@/providers/google-calendar'
 import { calendarIntegration } from './config'
 import { weekFixtureFor } from './fixtures'
 import { eventLocalDateStr, parseLocalDate, toLocalDateStr } from '@/utils/date'
@@ -29,21 +24,16 @@ function dayLabel(date: Date, today: Date): string {
   return `${date.toLocaleDateString([], { weekday: 'long' })} ${short}`
 }
 
-/** Named for what it returns rather than what it fetches, so it does not read
- *  as an overload of the provider's `fetchCalendarEvents` — that one is one
- *  calendar's raw events, this is the whole week bucketed into days. */
-async function fetchWeekDays(calendarIds: string[]): Promise<CalendarDay[]> {
-  const now = new Date()
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
-  const endOfWeek = new Date(today)
-  endOfWeek.setDate(endOfWeek.getDate() + 7)
-
-  const startStr = today.toISOString()
-  const endStr = endOfWeek.toISOString()
-
-  const allEvents = await fetchEventsForCalendars(calendarIds, startStr, endStr)
-
-  // Group by date
+/**
+ * Today and the next six days, each holding the events that start on it.
+ *
+ * Takes the whole window and keeps what lands: an event outside the seven
+ * days simply matches no bucket. That is the same result the seven-day fetch
+ * produced — it also returned events this dropped, because Google returns
+ * everything *overlapping* a range and a multi-day event running into today
+ * buckets under the day it started.
+ */
+function bucketWeekDays(events: CalendarEvent[], today: Date): CalendarDay[] {
   const dayMap = new Map<string, CalendarEvent[]>()
 
   for (let i = 0; i < 7; i++) {
@@ -52,7 +42,7 @@ async function fetchWeekDays(calendarIds: string[]): Promise<CalendarDay[]> {
     dayMap.set(toLocalDateStr(d), [])
   }
 
-  for (const event of allEvents) {
+  for (const event of events) {
     const bucket = dayMap.get(eventLocalDateStr(event))
     if (bucket) {
       bucket.push(event)
@@ -62,9 +52,9 @@ async function fetchWeekDays(calendarIds: string[]): Promise<CalendarDay[]> {
   const days: CalendarDay[] = []
   const todayStr = toLocalDateStr(today)
 
-  for (const [dateStr, events] of dayMap) {
+  for (const [dateStr, dayEvents] of dayMap) {
     const date = parseLocalDate(dateStr)
-    events.sort((a, b) => {
+    dayEvents.sort((a, b) => {
       const aTime = a.start.dateTime ?? a.start.date ?? ''
       const bTime = b.start.dateTime ?? b.start.date ?? ''
       return new Date(aTime).getTime() - new Date(bTime).getTime()
@@ -73,68 +63,85 @@ async function fetchWeekDays(calendarIds: string[]): Promise<CalendarDay[]> {
       date,
       label: dayLabel(date, today),
       isToday: dateStr === todayStr,
-      events,
+      events: dayEvents,
     })
   }
 
   return days
 }
 
+/** A cheap content key for a week: what it shows, not which arrays hold it. */
+function weekSignature(days: CalendarDay[]): string {
+  return days.map((d) => `${d.label}:${d.events.map((e) => e.id).join(',')}`).join('|')
+}
+
 /**
  * Today plus the next six days, each with its events, for the week strip.
  *
- * The calendar ids come from `useIntegrationConfig` and sit *in the query
- * key*, which is what keeps this reactive to config: editing the selected
- * calendars in admin re-asks the new ones with no remount. That used to be a
- * side effect of a raw `/api/config` read living inside the poll's fetcher —
- * invisible, and the only thing making a config change visible on a kiosk
- * that never reloads.
+ * A pure filter over the provider's synced window — it issues no request of
+ * its own. Today through today+7 is inside that window on every day of every
+ * month (the window runs from the 1st of last month to the 1st of the month
+ * six ahead), so unlike the ranged consumers this needs no containment check
+ * and cannot fall outside.
  *
- * The fan-out it calls is the provider's *catching* one: several calendars
- * mean several ways to lose one, and a revoked share must not blank the rest
- * of the week. A single-calendar consumer wants the opposite, and takes
- * `fetchCalendarEvents` instead.
+ * The calendar ids come from `useIntegrationConfig` and are handed to the
+ * window, which keeps this reactive to config: editing the selected calendars
+ * in admin re-syncs the new ones with no remount. The tablet is a
+ * wall-mounted kiosk that never reloads, so "picked up on the next reload"
+ * means "never".
  *
- * `useAllConfig`'s pending flag gates the query for the reason
- * `useCalendarEvents` documents: config reads as `null` both while it loads
- * and when it is absent, so an ungated first render would fetch `primary`
- * and then correct itself — the strip filling, blanking, and filling again.
- * That same flag also feeds `isLoading`, because `ScheduleColumn` chooses
- * between "Fetching the week ahead…" and "Nothing on the books this week."
- * on it alone.
+ * A scenario fixture disables the sync rather than merely ignoring it: the
+ * point of a fixture is a dashboard that renders with no upstream at all.
  *
- * The result is adapted back to `PollResult` — `data` is `null`, not
- * react-query's `undefined`, until a fetch has actually succeeded. See
- * `useLunchMenu` for why that distinction matters to callers.
+ * **Not blanking during a calendar swap is this hook's job.** The window
+ * deliberately has no `keepPreviousData` — its observers are positional over
+ * a runtime-length list, so carrying data across an id change could file one
+ * calendar's events under another's — so it hands back nothing while the new
+ * ids sync, and the last completed week is held here instead. Before this
+ * moved into the query key at all, the ids were re-read *inside* the
+ * fetcher and the previous week stayed up throughout; keep that.
+ *
+ * The result is adapted to `PollResult` — `data` is `null`, not react-query's
+ * `undefined`, until events have actually arrived. See `useLunchMenu` for why
+ * that distinction matters to callers. `isLoading` covers the config wait
+ * too, because `ScheduleColumn` chooses between "Fetching the week ahead…"
+ * and "Nothing on the books this week." on it alone.
  */
 export function useGoogleCalendar(): CalendarData {
-  const { isPending: configPending } = useAllConfig()
   const config = useIntegrationConfig(calendarIntegration)
-  const savedIds = config?.calendar_ids
-  const calendarIds = useMemo(() => readCalendarIdsOrDefault(savedIds), [savedIds])
+  const fixture = weekFixtureFor(activeScenario)
+  const synced = useCalendarWindow(config?.calendar_ids, { enabled: !fixture })
 
-  const query = useQuery({
-    queryKey: ['calendar', 'week', calendarIds],
-    queryFn: () => {
-      const fixture = weekFixtureFor(activeScenario)
-      return fixture ? Promise.resolve(fixture) : fetchWeekDays(calendarIds)
-    },
-    refetchInterval: 5 * 60 * 1000,
-    enabled: !configPending,
-    // The ids are part of the key now, so changing them switches cache
-    // entries and would otherwise blank the strip until the new fetch
-    // lands. The pre-react-query version of this hook re-read the ids
-    // *inside* its fetcher, so the key never changed and the previous week
-    // stayed on screen throughout — keep that.
-    placeholderData: keepPreviousData,
-  })
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const todayMs = today.getTime()
+
+  const days = useMemo(
+    () => fixture ?? bucketWeekDays(synced.events, new Date(todayMs)),
+    [fixture, synced.events, todayMs],
+  )
+
+  // The last week we could actually build, so a config change that re-syncs
+  // the window shows the previous one rather than seven empty days. Kept
+  // against its signature rather than its identity: the window hands back a
+  // fresh array every render, and storing on identity alone would be a
+  // render loop.
+  const [kept, setKept] = useState<{ signature: string; days: CalendarDay[] } | null>(null)
+  const signature = synced.isLoading ? null : weekSignature(days)
+
+  // React's documented way to adjust state from what rendered, rather than an
+  // effect: it settles before the browser sees anything, so the strip never
+  // paints a blank frame between the two weeks.
+  if (signature !== null && signature !== kept?.signature) {
+    setKept({ signature, days })
+  }
+
+  const data = synced.isLoading ? (kept?.days ?? null) : days
 
   return {
-    data: query.data ?? null,
-    error: query.error ? query.error.message : null,
-    isLoading: configPending || query.isLoading,
-    refetch: async () => {
-      await query.refetch()
-    },
+    data,
+    error: synced.error ? synced.error.message : null,
+    isLoading: data === null && synced.isLoading,
+    refetch: synced.refetch,
   }
 }

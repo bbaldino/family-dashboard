@@ -4,7 +4,7 @@ import { integrationQueryKey, useAllConfig } from '@/platform'
 import { readCalendarIdsOrDefault } from './calendarIds'
 import { googleCalendarProvider } from './config'
 import { calendarEventsPath, fetchCalendarEvents } from './events'
-import type { CalendarEvent } from './types'
+import type { CalendarRange, CalendarSourceEntry } from './types'
 
 /**
  * Matches what the week strip polled at before this existed, so the freshest
@@ -29,36 +29,21 @@ const SYNC_INTERVAL_MS = 5 * 60 * 1000
 const MONTHS_BACK = 1
 const MONTHS_FORWARD = 5
 
-/** One configured calendar's contribution to the window, and its health. */
-export interface CalendarWindowEntry {
-  calendarId: string
-  /** `[]` both while it loads and when it failed — read `error` to tell. */
-  events: CalendarEvent[]
-  /** Non-null when this calendar could not be read. */
-  error: Error | null
-  isLoading: boolean
-}
-
-export interface CalendarWindow {
-  /** Every readable calendar's events, in configured-calendar order. */
-  events: CalendarEvent[]
-  /** One entry per configured calendar, in configured order. */
-  calendars: CalendarWindowEntry[]
+/** The synced window: a `CalendarRange` that also says what it spans. */
+export interface CalendarWindow extends CalendarRange {
   /** Start of the synced window, inclusive. */
   start: Date
   /** End of the synced window, **exclusive**. */
   end: Date
-  isLoading: boolean
+}
+
+export interface CalendarWindowOptions {
   /**
-   * Set only when *no* calendar could be read.
-   *
-   * A partial failure is deliberately not an error here: several calendars
-   * mean several ways to lose one, and a revoked share must not blank the
-   * others. Which ones failed is in `calendars` — that is where a caller
-   * looks to distinguish a broken calendar from a quiet one.
+   * `false` stops the sync without unmounting it, for a consumer that already
+   * has its events some other way — a scenario fixture, in practice, where a
+   * live request would defeat the point of running offline.
    */
-  error: Error | null
-  refetch: () => Promise<void>
+  enabled?: boolean
 }
 
 /**
@@ -119,7 +104,11 @@ function calendarWindowBounds(now: Date): { start: Date; end: Date } {
  * id, which is precisely the confusion the per-calendar split exists to
  * prevent. A consumer that must not blank keeps its own previous value.
  */
-export function useCalendarWindow(savedCalendarIds: string | undefined | null): CalendarWindow {
+export function useCalendarWindow(
+  savedCalendarIds: string | undefined | null,
+  options: CalendarWindowOptions = {},
+): CalendarWindow {
+  const { enabled = true } = options
   const { isPending: configPending } = useAllConfig()
   const calendarIds = useMemo(() => readCalendarIdsOrDefault(savedCalendarIds), [savedCalendarIds])
 
@@ -145,11 +134,11 @@ export function useCalendarWindow(savedCalendarIds: string | undefined | null): 
       }),
       queryFn: () => fetchCalendarEvents(calendarId, startStr, endStr),
       refetchInterval: SYNC_INTERVAL_MS,
-      enabled: !configPending,
+      enabled: enabled && !configPending,
     })),
   })
 
-  const calendars: CalendarWindowEntry[] = calendarIds.map((calendarId, i) => ({
+  const calendars: CalendarSourceEntry[] = calendarIds.map((calendarId, i) => ({
     calendarId,
     events: results[i]?.data ?? [],
     error: (results[i]?.error as Error | null) ?? null,
