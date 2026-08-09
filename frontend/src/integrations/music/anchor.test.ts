@@ -95,7 +95,10 @@ describe('resolveAnchorGroup', () => {
   })
 
   it('resolves the leader from the anchor’s own synced_to when the anchor is a follower', () => {
-    const deck = player(DECK, 'Deck', { groupMembers: [DECK, KITCHEN] })
+    // Isolates the synced_to half of the lookup: the deck's own
+    // group_members says nothing about the kitchen, so only
+    // `kitchen.syncedTo === DECK` can find the leader here.
+    const deck = player(DECK, 'Deck')
     const kitchen = player(KITCHEN, 'Kitchen', { syncedTo: DECK })
     const { leader, members } = resolveAnchorGroup([deck, kitchen], KITCHEN)
     expect(leader?.playerId).toBe(DECK)
@@ -140,6 +143,18 @@ describe('anchorGroupLabel', () => {
     const { members } = resolveAnchorGroup([deck, kitchen, patio], KITCHEN)
     expect(anchorGroupLabel(members)).toBe('Kitchen + Deck + Patio')
   })
+
+  // Defensive: MA has always been observed to list itself in its own
+  // `group_members` (see `fixtures.ts`'s `packedPlayers` comment), but the
+  // label shouldn't depend on that convention holding. Without this, a
+  // leader that omitted itself dropped out of the label entirely — reading
+  // "Kitchen" while the Deck's queue was playing, instead of "Kitchen + Deck".
+  it('still names the leader when the leader omits itself from its own group_members', () => {
+    const deck = player(DECK, 'Deck', { groupMembers: [KITCHEN] })
+    const kitchen = player(KITCHEN, 'Kitchen', { syncedTo: DECK })
+    const { members } = resolveAnchorGroup([deck, kitchen], KITCHEN)
+    expect(anchorGroupLabel(members)).toBe('Kitchen + Deck')
+  })
 })
 
 /**
@@ -160,11 +175,11 @@ describe('deriveActiveQueue', () => {
   })
 
   it('takes the leader’s queue when the anchor is a follower — that is what the anchor is playing', () => {
+    // Isolates the synced_to half of the lookup: the deck's own
+    // group_members says nothing about the kitchen, so only
+    // `kitchen.syncedTo === DECK` can find the leader here.
     const queues = [queue(DECK, 'Deck', 'playing'), queue(KITCHEN, 'Kitchen', 'idle', null)]
-    const players = [
-      player(DECK, 'Deck', { groupMembers: [DECK, KITCHEN] }),
-      player(KITCHEN, 'Kitchen', { syncedTo: DECK }),
-    ]
+    const players = [player(DECK, 'Deck'), player(KITCHEN, 'Kitchen', { syncedTo: DECK })]
     expect(deriveActiveQueue(queues, players, KITCHEN)?.queueId).toBe(DECK)
   })
 

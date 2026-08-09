@@ -75,9 +75,22 @@ export function resolveAnchorGroup(
   // The anchor is prepended rather than filtered in, which is also what
   // dedupes it: MA's leader-reported `group_members` includes the leader's
   // own id, so a leader that *is* the anchor would otherwise appear twice.
+  //
+  // The leader itself is added explicitly rather than relying on that same
+  // self-listing convention: MA has always been observed to include the
+  // leader's own id in its own `group_members` (see `fixtures.ts`'s
+  // `packedPlayers` comment), but a leader that ever omitted itself would
+  // otherwise silently drop out of the label — reading "The Kitchen" while
+  // the Deck's queue was playing, instead of "The Kitchen + Deck".
   const members = [
     anchor,
-    ...players.filter((p) => p.playerId !== anchor.playerId && isGroupedUnder(leader, p)),
+    ...(leader.playerId === anchor.playerId ? [] : [leader]),
+    ...players.filter(
+      (p) =>
+        p.playerId !== anchor.playerId &&
+        p.playerId !== leader.playerId &&
+        isGroupedUnder(leader, p),
+    ),
   ]
   return { anchor, leader, members }
 }
