@@ -1,6 +1,7 @@
 import { useMusic, useRoomPills } from '@/integrations/music'
 import { MastheadFrame } from '@/themes/broadsheet/ui/MastheadFrame'
 import { mastheadKickerStyle, mastheadNumeralStyle } from '@/themes/broadsheet/ui/masthead-styles'
+import { mastheadTitleSize } from '@/themes/broadsheet/ui/masthead-title-size'
 import { INK2 } from './colors'
 import { RoomPill } from './RoomPill'
 import { playbackPhrase } from './playback-phrase'
@@ -72,7 +73,20 @@ export function MediaMasthead() {
           <div style={{ ...mastheadKickerStyle, textAlign: 'center' }}>
             {roomName ? playbackPhrase(activeQueue?.state ?? null) : 'Now playing'}
           </div>
-          <h1 className="m-0" style={mastheadNumeralStyle}>
+          {/* Sized to fit rather than fixed at 72px, and `truncate`d as the
+              backstop. A room label is now a group — "the Kitchen and
+              Bedroom" — and at the design size that wrapped to a second
+              line, which added 79px to this masthead's height. */}
+          <h1
+            className="m-0 truncate"
+            style={{
+              ...mastheadNumeralStyle,
+              fontSize: mastheadTitleSize(
+                roomName ? `the ${roomName}` : 'Quiet',
+                mastheadNumeralStyle.fontSize as number,
+              ),
+            }}
+          >
             {roomName ? `the ${roomName}` : 'Quiet'}
           </h1>
         </>

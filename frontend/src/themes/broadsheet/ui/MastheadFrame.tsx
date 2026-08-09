@@ -16,7 +16,7 @@ import type { ReactNode } from 'react'
  * cell would throw off the shared baseline the grid otherwise guarantees;
  * see `Masthead.tsx`'s own comment on this).
  *
- * `padding` defaults to the `22px 56px 18px` every current consumer
+ * `padding` defaults to the `16px 56px 12px` every current consumer
  * (Home, the Datebook, Media) shares verbatim. The Centre Spread's mock
  * (`nowplaying.jsx:51`) specifies a tighter `20px 56px 14px` instead — its
  * masthead carries a 62px title plus a three-column body underneath, so a
@@ -30,7 +30,7 @@ export function MastheadFrame({
   center,
   right,
   footer,
-  padding = '22px 56px 18px',
+  padding = '16px 56px 12px',
 }: {
   left: ReactNode
   center: ReactNode
