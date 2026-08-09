@@ -118,7 +118,7 @@ export function useGroupMutations() {
     mutatePlayersCache((p) => (p.player_id === leaderId ? transform(p) : p))
 
   // Membership reads from two places — the leader's `group_members` and the
-  // follower's own `synced_to` (see `useRoomPills`'s `isJoinedToAnchor`, which
+  // follower's own `synced_to` (see `anchor.ts`'s `isGroupedUnder`, which
   // ORs them because MA doesn't populate `synced_to` reliably). An optimistic
   // write therefore has to move BOTH, or the half it skips keeps reporting the
   // pre-tap answer: patching only the leader made a *removal* still read as

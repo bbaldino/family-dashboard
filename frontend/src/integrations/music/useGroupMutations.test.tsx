@@ -451,7 +451,7 @@ describe('useGroupMutations', () => {
 
   it("moves the follower's synced_to as well as the leader's group_members", async () => {
     // Membership is read as `leader.group_members.includes(id) || player.synced_to === leaderId`
-    // (useRoomPills.isJoinedToAnchor). Patching only the leader left a removal
+    // (anchor.ts's isGroupedUnder). Patching only the leader left a removal
     // still reading as joined off the follower's stale synced_to, so the pill
     // didn't move until the real refetch landed ~2s later — the exact
     // "nothing happens for a long while" that was reported on removal.

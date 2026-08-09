@@ -72,10 +72,14 @@ export function usePlayers({ isOpen, pollingPaused }: UsePlayersOptions) {
 
 /**
  * The same `/players` list as options for admin's default-player picker:
- * fetched on demand (a "Load Players" button, so opening the settings page
- * never dials Music Assistant on its own), never polled, and normalized to
- * camelCase `Player`s — settings only reads names and ids, and has no
- * optimistic cache writes to keep in the raw wire shape.
+ * fetched on demand (a "Load Players" button) and never polled itself, so
+ * *this hook* never dials Music Assistant on its own. That no longer means
+ * opening the settings page is guaranteed to find an empty cache, though —
+ * `useGroupTopology` below shares the same `PLAYERS_QUERY_KEY` and fetches
+ * once on mount, so by the time settings opens the cache may already be
+ * populated from the app's own boot-time fetch. Normalized to camelCase
+ * `Player`s — settings only reads names and ids, and has no optimistic cache
+ * writes to keep in the raw wire shape.
  *
  * Named for the *use*, not the shape: `usePlayers` and a `usePlayerList`
  * would read as the same thing, and nothing in either name would tell you
