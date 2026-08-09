@@ -10,11 +10,12 @@ import type { ReactNode } from 'react'
  * the frame lives here — its two shared type treatments (the kicker label,
  * the 72px italic-serif numeral) are in the sibling `masthead-styles.ts`.
  *
- * `footer` renders after the grid but still inside the padded, ruled
- * container — Home uses it for the weather cell's high/low line, which
- * must sit outside the `align-items: end` grid (a line added to just one
- * cell would throw off the shared baseline the grid otherwise guarantees;
- * see `Masthead.tsx`'s own comment on this).
+ * There is deliberately no slot for content below the grid. Home used to
+ * have one — a `footer` carrying the day's high/low — and it was the whole
+ * reason its masthead ran taller than the design: a full-width row buying
+ * vertical space at the top of the screen for two small numbers. That line
+ * moved to `WeatherStrip`. A masthead is three cells on one baseline; a
+ * screen wanting a fourth thing wants it somewhere else.
  *
  * `padding` defaults to the `16px 56px 12px` every current consumer
  * (Home, the Datebook, Media) shares verbatim. The Centre Spread's mock
@@ -22,20 +23,17 @@ import type { ReactNode } from 'react'
  * masthead carries a 62px title plus a three-column body underneath, so a
  * few px back from the standard rhythm is this screen's own call, not a
  * drift to paper over. An overridable prop keeps that one screen's choice
- * from becoming every screen's, the same way `footer` already lets Home
- * add content the others don't need.
+ * from becoming every screen's.
  */
 export function MastheadFrame({
   left,
   center,
   right,
-  footer,
   padding = '16px 56px 12px',
 }: {
   left: ReactNode
   center: ReactNode
   right: ReactNode
-  footer?: ReactNode
   padding?: string
 }) {
   return (
@@ -58,7 +56,6 @@ export function MastheadFrame({
         <div style={{ textAlign: 'center', minWidth: 0 }}>{center}</div>
         <div style={{ textAlign: 'right', minWidth: 0 }}>{right}</div>
       </div>
-      {footer}
     </div>
   )
 }

@@ -5,7 +5,16 @@ import { WeatherStrip } from './WeatherStrip'
 const useWeatherData = vi.hoisted(() => vi.fn())
 const useWeatherForecast = vi.hoisted(() => vi.fn())
 const useAirQuality = vi.hoisted(() => vi.fn())
-vi.mock('@/integrations/weather', () => ({ useWeatherData, useWeatherForecast, useAirQuality }))
+// `useHeroWeather` composes the other two rather than being a query of its
+// own, so it returns the object (or null) directly — see the same note in
+// `Masthead.test.tsx`.
+const useHeroWeather = vi.hoisted(() => vi.fn())
+vi.mock('@/integrations/weather', () => ({
+  useWeatherData,
+  useWeatherForecast,
+  useAirQuality,
+  useHeroWeather,
+}))
 
 const CURRENT = {
   temp: 91.2,
@@ -72,6 +81,17 @@ describe('WeatherStrip', () => {
       error: null,
       refetch: vi.fn(),
     })
+    // 94/86 rather than CURRENT's own temp_max/temp_min: `useHeroWeather`
+    // prefers the forecast's daily figures, and the point of mocking it
+    // separately is that this cell renders what that hook decided, not what
+    // it might have re-derived from `CURRENT`.
+    useHeroWeather.mockReturnValue({
+      temperature: '91',
+      high: '94',
+      low: '86',
+      condition: 'clear sky',
+      icon: '☀️',
+    })
   })
 
   it('renders with every source empty', () => {
@@ -87,16 +107,20 @@ describe('WeatherStrip', () => {
       refetch: vi.fn(),
     })
     useAirQuality.mockReturnValue({ data: null, isLoading: false, error: null, refetch: vi.fn() })
+    useHeroWeather.mockReturnValue(null)
     const { container } = render(<WeatherStrip />)
     expect(container.firstChild).toBeNull()
   })
 
-  it('renders all five cells when every source is fully populated', () => {
+  it('renders all six cells when every source is fully populated', () => {
     render(<WeatherStrip />)
     expect(screen.getByText(/UP/)).toBeInTheDocument()
     expect(screen.getByText(/DOWN/)).toBeInTheDocument()
     expect(screen.getByText('91°')).toBeInTheDocument()
     expect(screen.getByText('88°')).toBeInTheDocument()
+    expect(screen.getByText('HIGH · LOW')).toBeInTheDocument()
+    expect(screen.getByText(/94°/)).toBeInTheDocument()
+    expect(screen.getByText(/86°/)).toBeInTheDocument()
     expect(screen.getByText('55')).toBeInTheDocument()
     expect(screen.getByText('MODERATE')).toBeInTheDocument()
     expect(screen.getByText('UV · POLLEN')).toBeInTheDocument()
@@ -129,6 +153,19 @@ describe('WeatherStrip', () => {
     render(<WeatherStrip />)
     expect(screen.queryByText('91°')).toBeNull()
     // AQI (an unrelated source) still renders.
+    expect(screen.getByText('55')).toBeInTheDocument()
+  })
+
+  it('drops only the high/low cell when there is no current reading to derive it from', () => {
+    // `useHeroWeather` returns null exactly when `useWeatherData` has no
+    // data, so this is the shape a real current-weather outage produces —
+    // and the forecast and air-quality cells, on unrelated sources, still
+    // render beside the gap.
+    useWeatherData.mockReturnValue({ data: null, isLoading: false, error: null, refetch: vi.fn() })
+    useHeroWeather.mockReturnValue(null)
+    render(<WeatherStrip />)
+    expect(screen.queryByText('HIGH · LOW')).toBeNull()
+    expect(screen.getByText('91°')).toBeInTheDocument()
     expect(screen.getByText('55')).toBeInTheDocument()
   })
 

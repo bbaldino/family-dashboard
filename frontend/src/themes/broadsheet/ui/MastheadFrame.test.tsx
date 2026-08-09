@@ -50,19 +50,17 @@ describe('MastheadFrame', () => {
     expect(screen.getByText('Rooms')).toBeInTheDocument()
   })
 
-  it('renders the footer inside the ruled container, after the grid', () => {
+  it('puts nothing below the grid', () => {
+    // The frame is three cells on one baseline and nothing else. It briefly
+    // had a `footer` slot, which Home used for the day's high/low; that row
+    // was what made its masthead taller than the design, and the line now
+    // lives in `WeatherStrip`. Asserting the grid is the last thing in the
+    // container is what would catch a slot being reintroduced here.
     const { container } = render(
-      <MastheadFrame
-        left={<span>L</span>}
-        center={<span>C</span>}
-        right={<span>R</span>}
-        footer={<span>High 24° Low 11°</span>}
-      />,
+      <MastheadFrame left={<span>L</span>} center={<span>C</span>} right={<span>R</span>} />,
     )
     const outer = container.firstElementChild as HTMLElement
-    // Home puts its high/low line here precisely because it must sit outside
-    // the `align-items: end` grid — see `Masthead.tsx`'s own comment.
-    expect(outer.lastElementChild?.textContent).toBe('High 24° Low 11°')
-    expect(screen.getByText('High 24° Low 11°').closest('.grid')).toBeNull()
+    expect(outer.children).toHaveLength(1)
+    expect(outer.lastElementChild?.className).toContain('grid')
   })
 })

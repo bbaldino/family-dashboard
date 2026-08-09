@@ -91,12 +91,18 @@ export function Masthead({
        *  bottom-aligns all three cells' numerals onto one shared baseline
        *  regardless of that height difference, because it anchors each
        *  cell's *bottom* edge, and the numeral is the last (and, for
-       *  weather, only) line in every cell. The weather cell's H/L detail
-       *  line is deliberately passed as `footer`, rendered *outside* the
-       *  grid — adding a line to just one cell in-grid would make that
-       *  cell taller than its siblings, and align-items: end would then
-       *  anchor its extra height at the *top*, pushing its numeral out of
-       *  line with the other two. */}
+       *  weather, only) line in every cell.
+       *
+       *  Nothing else goes in this grid. The day's high/low used to hang
+       *  below it as a full-width `footer` row, which is what made the
+       *  masthead taller than the design: two small numbers buying a whole
+       *  line of vertical space at the top of the screen. It now lives in
+       *  `WeatherStrip`, with the rest of the day's readouts, where the row
+       *  it joins was already that tall. Anything similar belongs there too
+       *  — a line added to a single cell here would make that cell taller
+       *  than its siblings, and `align-items: end` would anchor the extra
+       *  height at the *top*, pushing that numeral off the shared
+       *  baseline. */}
       <MastheadFrame
         left={
           <>
@@ -155,27 +161,6 @@ export function Masthead({
               style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-muted)' }}
             >
               —
-            </div>
-          )
-        }
-        footer={
-          // The mock drops the old detail line entirely, but losing the
-          // high/low would be a real loss on a kitchen wall — kept,
-          // restrained to a small muted line so it doesn't compete with
-          // the 72px numerals above it. Feels-like/humidity/wind are
-          // dropped: they made the old line the longest thing in the
-          // header for the least essential information at a glance.
-          heroWeather && (
-            <div
-              style={{
-                textAlign: 'right',
-                marginTop: 4,
-                fontFamily: 'var(--font-mono)',
-                fontSize: 11,
-                color: 'var(--ink-muted)',
-              }}
-            >
-              H {heroWeather.high}° · L {heroWeather.low}°
             </div>
           )
         }

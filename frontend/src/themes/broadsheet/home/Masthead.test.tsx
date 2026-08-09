@@ -36,10 +36,15 @@ describe('Masthead', () => {
     expect(screen.getByText(/sunny/)).toBeInTheDocument()
   })
 
-  it('shows a restrained high/low beneath the temperature', () => {
+  it('leaves the high/low to the weather strip', () => {
+    // It used to render here, as a full-width line below the three-column
+    // grid, and that row was the masthead's excess height: two numbers for
+    // a whole line of vertical space at the top of the screen. `78`/`53`
+    // are deliberately distinct from the `75` current temperature, so this
+    // fails if the line comes back rather than matching it by accident.
     renderMasthead()
-    expect(screen.getByText(/78°/)).toBeInTheDocument()
-    expect(screen.getByText(/53°/)).toBeInTheDocument()
+    expect(screen.queryByText(/78°/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/53°/)).not.toBeInTheDocument()
   })
 
   it('renders the standfirst prose', () => {

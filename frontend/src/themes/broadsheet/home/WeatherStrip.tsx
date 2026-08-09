@@ -8,7 +8,12 @@ import {
   CloudFog,
   type LucideIcon,
 } from 'lucide-react'
-import { useWeatherData, useWeatherForecast, useAirQuality } from '@/integrations/weather'
+import {
+  useWeatherData,
+  useWeatherForecast,
+  useAirQuality,
+  useHeroWeather,
+} from '@/integrations/weather'
 import type { AqiLevel, UvLevel, PollenLevel } from '@/integrations/weather'
 
 /** A step deeper than `--paper` for the strip's background — the mock's
@@ -131,9 +136,16 @@ const cellLabelStyle = {
 /**
  * The full-width band above the footer, per the design mock's `GlanceStrip`
  * (`broadsheet-v2.jsx:548-609` — the mock's name; unrelated to this
- * codebase's `HouseholdColumn`). Five cells, left to right: sunrise/sunset,
- * the 3-hourly forecast, AQI, UV/pollen, wind/humidity. Rendered by `Home`
- * between the three-column body and the footer.
+ * codebase's `HouseholdColumn`). Six cells, left to right: sunrise/sunset,
+ * the 3-hourly forecast, today's high/low, AQI, UV/pollen, wind/humidity.
+ * Rendered by `Home` between the three-column body and the footer.
+ *
+ * High/low is the one cell the mock's strip doesn't have. It used to live in
+ * the masthead as a `footer` row spanning the full width beneath the
+ * three-column grid — two numbers costing a whole line of vertical space in
+ * the one place on the screen where space is most expensive. Here it joins
+ * the readouts it belongs with at no height cost: the strip's row is already
+ * as tall as its tallest cell, and this is not it.
  *
  * Every cell is independently guarded and pinned to its own grid column via
  * an explicit `gridColumn` — not just conditionally rendered in DOM order —
@@ -149,6 +161,10 @@ export function WeatherStrip() {
   const { data: current } = useWeatherData()
   const { data: forecast } = useWeatherForecast()
   const { data: air } = useAirQuality()
+  // Composed from the same two hooks already called above — `useHeroWeather`
+  // prefers the forecast's daily min/max and falls back to the current
+  // reading's, so this cell doesn't have to re-derive that rule.
+  const heroWeather = useHeroWeather()
 
   const hasSun = !!current && !!current.sunrise && !!current.sunset
   const hourly = forecast?.hourly ?? []
@@ -166,7 +182,7 @@ export function WeatherStrip() {
       data-testid="weather-strip"
       style={{
         display: 'grid',
-        gridTemplateColumns: 'auto 1fr auto auto auto',
+        gridTemplateColumns: 'auto 1fr auto auto auto auto',
         gap: 28,
         alignItems: 'center',
         padding: '8px 56px 10px',
@@ -271,9 +287,34 @@ export function WeatherStrip() {
         </div>
       )}
 
-      {/* 3: AQI */}
-      {hasAqi && air && (
+      {/* 3: Today's high/low — placed directly after the hourly walk through
+       *  the day rather than at the end of the strip, so the day's range and
+       *  the steps through it read as one thought. No separate guard in
+       *  `hasAnything`: `useHeroWeather` returns null exactly when `current`
+       *  is missing, which is the same condition `hasWind` already covers. */}
+      {heroWeather && (
         <div style={{ gridColumn: 3, textAlign: 'center', minWidth: 70 }}>
+          <div style={cellLabelStyle}>HIGH · LOW</div>
+          <div
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontSize: 15,
+              fontWeight: 500,
+              lineHeight: 1.2,
+              marginTop: 2,
+              whiteSpace: 'nowrap',
+              color: 'var(--ink)',
+            }}
+          >
+            {heroWeather.high}°{' '}
+            <span style={{ color: 'var(--ink-muted)' }}>/ {heroWeather.low}°</span>
+          </div>
+        </div>
+      )}
+
+      {/* 4: AQI */}
+      {hasAqi && air && (
+        <div style={{ gridColumn: 4, textAlign: 'center', minWidth: 70 }}>
           <div style={cellLabelStyle}>AIR · AQI</div>
           <div
             style={{
@@ -303,12 +344,12 @@ export function WeatherStrip() {
         </div>
       )}
 
-      {/* 4: UV / pollen — pollen is `null` for any US location (Open-Meteo's
+      {/* 5: UV / pollen — pollen is `null` for any US location (Open-Meteo's
        *  pollen coverage is Europe-only), so this shows UV alone rather than
        *  hiding real, working UV data over a field that's structurally
        *  unavailable here. */}
       {hasUv && air && (
-        <div style={{ gridColumn: 4, textAlign: 'center', minWidth: 60 }}>
+        <div style={{ gridColumn: 5, textAlign: 'center', minWidth: 60 }}>
           <div style={cellLabelStyle}>{hasPollen ? 'UV · POLLEN' : 'UV INDEX'}</div>
           <div
             style={{
@@ -350,9 +391,9 @@ export function WeatherStrip() {
         </div>
       )}
 
-      {/* 5: Wind / humidity */}
+      {/* 6: Wind / humidity */}
       {hasWind && current && (
-        <div style={{ gridColumn: 5, textAlign: 'right', minWidth: 90 }}>
+        <div style={{ gridColumn: 6, textAlign: 'right', minWidth: 90 }}>
           <div style={cellLabelStyle}>WIND · HUM</div>
           <div
             style={{
