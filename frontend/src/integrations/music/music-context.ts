@@ -35,6 +35,13 @@ export interface MusicActionError {
 
 export interface MusicContextValue {
   state: MusicState
+  /** The panel's own room as a display label — the anchor first, then any
+   *  rooms grouped into it: `Kitchen`, `Kitchen + Deck + Patio`. Separate
+   *  from `state.activeQueue.displayName`, which names whichever player
+   *  *owns* that queue and under grouping is a different room. `null` when
+   *  no anchor is configured or the players list hasn't arrived, in which
+   *  case a surface should fall back to the queue owner's name. */
+  anchorRoomLabel: string | null
   isPlaying: boolean
   isConnected: boolean
   /** The most recent failed action, or null. Cleared by `dismissError`. */
@@ -55,6 +62,7 @@ const noOp = async () => {}
 
 export const defaultContextValue: MusicContextValue = {
   state: emptyState,
+  anchorRoomLabel: null,
   isPlaying: false,
   isConnected: false,
   actionError: null,

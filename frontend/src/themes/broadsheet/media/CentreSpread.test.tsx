@@ -60,6 +60,21 @@ describe('CentreSpread', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it('names this panel’s own room and its group, not the queue owner’s room', () => {
+    useMusic.mockReturnValue({
+      state: { queues: [], activeQueue: { ...playingQueue, displayName: 'Deck' } },
+      anchorRoomLabel: 'Kitchen + Deck',
+      isPlaying: true,
+      pause,
+      resume,
+      next,
+      previous,
+      setVolume,
+    })
+    render(<CentreSpread onClose={vi.fn()} />)
+    expect(screen.getByText('Now playing in the Kitchen + Deck')).toBeInTheDocument()
+  })
+
   it('renders the full page for the active track', () => {
     const onClose = vi.fn()
     useMusic.mockReturnValue({

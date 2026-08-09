@@ -45,6 +45,11 @@ function fetchPlayers(): Promise<RawPlayer[]> {
   return fixture ? Promise.resolve(fixture) : musicIntegration.api.get<RawPlayer[]>('/players')
 }
 
+/** Shared by the two normalizing hooks below. The `Array.isArray` guard is
+ *  there because a misconfigured URL/token can put a non-list body in front
+ *  of them, which both treat as "no players". */
+const toPlayers = (raw: RawPlayer[]) => (Array.isArray(raw) ? raw : []).map(normalizePlayer)
+
 interface UsePlayersOptions {
   /** Only fetch/poll while the player picker is open. */
   isOpen: boolean
@@ -88,9 +93,45 @@ export function usePlayerOptions() {
     queryKey: PLAYERS_QUERY_KEY,
     queryFn: fetchPlayers,
     enabled: false,
-    // `Array.isArray` guard: the settings screen is the one place a
-    // misconfigured URL/token can put a non-list body in front of this hook,
-    // and it treated that as "no players" long before it was a query.
-    select: (raw: RawPlayer[]) => (Array.isArray(raw) ? raw : []).map(normalizePlayer),
+    select: toPlayers,
+  })
+}
+
+/**
+ * The same `/players` list as *group topology* for `MusicProvider`: who is
+ * synced to whom, so the provider can resolve the anchor's group leader and
+ * show that leader's queue (`anchor.ts`). Normalized like
+ * `usePlayerOptions`, since the provider only reads ids and names.
+ *
+ * The third hook over this one query — see `usePlayerOptions`' comment on
+ * why that's a fetch policy per caller rather than options on one hook —
+ * and the one that must **not** poll. `MusicProvider` is mounted for the
+ * life of the app, so a poll here would be a `/players` request every few
+ * seconds forever, and worse, it would land inside the window
+ * `useGroupMutations` protects: that hook writes group membership
+ * optimistically and then waits up to 15s for MA to converge, with
+ * `usePlayers`' own poll paused throughout. An independent poll from the
+ * provider would ignore that pause and overwrite a correct optimistic write
+ * with MA's stale pre-mutation state — the exact sequence that made a room
+ * pill flip back and the next tap send the wrong command (see
+ * `useGroupMutations.ts`'s header).
+ *
+ * So this observer only ever reads the shared cache: it fetches once on
+ * mount and is then kept in step by whatever else is already writing that
+ * cache — the room pills' 5s poll while the Media screen is up,
+ * `PlayerPicker`'s while it's open, and every group mutation's optimistic
+ * write plus its reconciling invalidation. The gap that leaves is grouping
+ * changed from *another* app (the Sonos app, say) while the panel is on a
+ * screen that mounts neither: the topology then stays as it was until one
+ * of them mounts again.
+ */
+export function useGroupTopology(enabled: boolean) {
+  return useQuery({
+    queryKey: PLAYERS_QUERY_KEY,
+    queryFn: fetchPlayers,
+    enabled,
+    refetchInterval: false,
+    refetchOnWindowFocus: false,
+    select: toPlayers,
   })
 }

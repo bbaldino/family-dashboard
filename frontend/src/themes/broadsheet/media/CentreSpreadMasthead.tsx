@@ -1,6 +1,8 @@
+import type { QueueState } from '@/integrations/music'
 import { MastheadFrame } from '@/themes/broadsheet/ui/MastheadFrame'
 import { mastheadKickerStyle } from '@/themes/broadsheet/ui/masthead-styles'
 import { INK2 } from './colors'
+import { playbackPhrase } from './playback-phrase'
 
 /** The screen title's own treatment, left cell — same 24px italic serif as
  *  the mock (`nowplaying.jsx:54`), close to but not `MediaMasthead`'s 26px
@@ -66,11 +68,17 @@ const closeButtonStyle = {
  */
 export function CentreSpreadMasthead({
   room,
+  playbackState,
   trackTitle,
   trackNumber,
   onClose,
 }: {
+  /** This panel's own room — the anchor and anything grouped into it — not
+   *  the queue owner's name. See `music-context.ts`'s `anchorRoomLabel`. */
   room: string | null
+  /** What that room is doing, so the left cell can say so honestly rather
+   *  than claiming playback over a paused queue. */
+  playbackState: QueueState['state'] | null
   trackTitle: string
   trackNumber: number | null
   onClose: () => void
@@ -81,7 +89,9 @@ export function CentreSpreadMasthead({
       left={
         <>
           <div style={mastheadKickerStyle}>The Centre Spread</div>
-          <div style={leftTitleStyle}>{room ? `Now playing in the ${room}` : 'Now playing'}</div>
+          <div style={leftTitleStyle}>
+            {room ? `${playbackPhrase(playbackState)} the ${room}` : 'Now playing'}
+          </div>
         </>
       }
       center={

@@ -29,6 +29,7 @@ function queue(state: QueueState['state']): QueueState {
 function mockMusic(activeQueue: QueueState | null) {
   useMusic.mockReturnValue({
     state: { queues: activeQueue ? [activeQueue] : [], activeQueue },
+    anchorRoomLabel: null,
     isPlaying: activeQueue?.state === 'playing',
     isConnected: true,
     actionError: null,

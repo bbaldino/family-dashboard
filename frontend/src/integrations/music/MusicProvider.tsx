@@ -7,6 +7,9 @@ import type { MusicState, QueueState } from './types'
 import { MusicContext, defaultContextValue } from './music-context'
 import type { MusicActionError, MusicContextValue, PlayOptions } from './music-context'
 import { musicStateFixtureFor } from './fixtures'
+import { anchorGroupLabel, deriveActiveQueue, resolveAnchorGroup } from './anchor'
+import { useAnchorId } from './useAnchorId'
+import { useGroupTopology } from './usePlayers'
 
 /**
  * Queue-state fixture for the active scenario, computed once at module load
@@ -26,22 +29,6 @@ import { musicStateFixtureFor } from './fixtures'
  */
 const fixtureQueues: QueueState[] | undefined = musicStateFixtureFor(activeScenario)
 
-function deriveActiveQueue(queues: QueueState[], defaultPlayerId?: string): QueueState | null {
-  // Playing or paused — unambiguous
-  const active =
-    queues.find((q) => q.state === 'playing') ?? queues.find((q) => q.state === 'paused')
-  if (active) return active
-
-  // Idle with a current item — prefer the default player to avoid showing
-  // a stale track from a different speaker
-  const idleWithItem = queues.filter((q) => q.state === 'idle' && q.currentItem != null)
-  if (defaultPlayerId) {
-    const defaultQueue = idleWithItem.find((q) => q.queueId === defaultPlayerId)
-    if (defaultQueue) return defaultQueue
-  }
-  return idleWithItem[0] ?? null
-}
-
 interface MusicProviderProps {
   children: ReactNode
 }
@@ -49,6 +36,13 @@ interface MusicProviderProps {
 export function MusicProvider({ children }: MusicProviderProps) {
   const config = useIntegrationConfig(musicIntegration)
   const isConfigured = Boolean(config?.service_url) || fixtureQueues !== undefined
+
+  // The panel's own room, and who it's currently grouped with. Both screens'
+  // notion of "now playing" is the anchor's group, not the house's — see
+  // `anchor.ts`. `useGroupTopology` deliberately doesn't poll; its own
+  // comment says why, and what that costs.
+  const anchorId = useAnchorId()
+  const { data: players } = useGroupTopology(isConfigured)
 
   const [queues, setQueues] = useState<QueueState[]>(() => fixtureQueues ?? [])
   // A fixture is "connected" from the start — there's no handshake to wait
@@ -241,12 +235,17 @@ export function MusicProvider({ children }: MusicProviderProps) {
     return <MusicContext.Provider value={defaultContextValue}>{children}</MusicContext.Provider>
   }
 
-  const activeQueue = deriveActiveQueue(queues, config?.default_player)
+  const activeQueue = deriveActiveQueue(queues, players ?? [], anchorId)
   const state: MusicState = { queues, activeQueue }
   const isPlaying = optimisticPlaying ?? activeQueue?.state === 'playing'
+  // The room to *name* is the anchor's group, which under grouping is not
+  // the queue owner's own name: a Kitchen+Deck group led by the Deck plays
+  // the Deck's queue, but the panel is still standing in the Kitchen.
+  const anchorRoomLabel = anchorGroupLabel(resolveAnchorGroup(players ?? [], anchorId).members)
 
   const contextValue: MusicContextValue = {
     state,
+    anchorRoomLabel,
     isPlaying,
     isConnected,
     actionError,

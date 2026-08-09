@@ -8,6 +8,7 @@ describe('CentreSpreadMasthead', () => {
     render(
       <CentreSpreadMasthead
         room="Kitchen"
+        playbackState="playing"
         trackTitle="Amber Hours"
         trackNumber={4}
         onClose={onClose}
@@ -23,6 +24,7 @@ describe('CentreSpreadMasthead', () => {
     render(
       <CentreSpreadMasthead
         room="Kitchen"
+        playbackState="playing"
         trackTitle="Amber Hours"
         trackNumber={null}
         onClose={onClose}
@@ -37,6 +39,7 @@ describe('CentreSpreadMasthead', () => {
     render(
       <CentreSpreadMasthead
         room={null}
+        playbackState="playing"
         trackTitle="Amber Hours"
         trackNumber={1}
         onClose={onClose}
@@ -45,11 +48,27 @@ describe('CentreSpreadMasthead', () => {
     expect(screen.getByText('Now playing')).toBeInTheDocument()
   })
 
+  // Both mastheads used to claim playback regardless of state — the queue
+  // behind the reported "Now playing in the Deck" was in fact paused.
+  it('says a paused room is paused rather than claiming playback', () => {
+    render(
+      <CentreSpreadMasthead
+        room="Kitchen + Deck"
+        playbackState="paused"
+        trackTitle="Amber Hours"
+        trackNumber={1}
+        onClose={vi.fn()}
+      />,
+    )
+    expect(screen.getByText('Paused in the Kitchen + Deck')).toBeInTheDocument()
+  })
+
   it('calls onClose when Close is tapped', () => {
     const onClose = vi.fn()
     render(
       <CentreSpreadMasthead
         room="Kitchen"
+        playbackState="playing"
         trackTitle="Amber Hours"
         trackNumber={1}
         onClose={onClose}

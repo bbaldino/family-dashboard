@@ -37,15 +37,16 @@ describe('MediaMasthead', () => {
     useRoomPills.mockReturnValue({ pills: [], toggle })
   })
 
-  it('shows a written fallback when nothing is playing anywhere', () => {
-    useMusic.mockReturnValue({ state: { queues: [], activeQueue: null } })
+  it('shows a written fallback when there is no room to name at all', () => {
+    useMusic.mockReturnValue({ anchorRoomLabel: null, state: { queues: [], activeQueue: null } })
     render(<MediaMasthead />)
     expect(screen.getByText('Quiet')).toBeInTheDocument()
     expect(screen.getByText('Now playing')).toBeInTheDocument()
   })
 
-  it('shows the active queue’s room as the centrepiece', () => {
+  it('falls back to the queue owner’s room when no anchor is configured', () => {
     useMusic.mockReturnValue({
+      anchorRoomLabel: null,
       state: {
         queues: [],
         activeQueue: {
@@ -62,8 +63,57 @@ describe('MediaMasthead', () => {
     expect(screen.getByText('Now playing in')).toBeInTheDocument()
   })
 
+  // The reported defect: a Kitchen-anchored panel reading "Now playing in
+  // the Deck". The queue is the group leader's, so its `displayName` is the
+  // leader's room — the masthead has to name this panel's own room instead.
+  it('names this panel’s room and its group, not the queue owner’s room', () => {
+    useMusic.mockReturnValue({
+      anchorRoomLabel: 'Kitchen + Deck',
+      state: {
+        queues: [],
+        activeQueue: {
+          queueId: 'deck',
+          displayName: 'Deck',
+          state: 'playing',
+          currentItem: null,
+          volumeLevel: 50,
+        },
+      },
+    })
+    render(<MediaMasthead />)
+    expect(screen.getByText('the Kitchen + Deck')).toBeInTheDocument()
+    expect(screen.queryByText('the Deck')).not.toBeInTheDocument()
+    expect(screen.getByText('Now playing in')).toBeInTheDocument()
+  })
+
+  it('says a paused room is paused, and a silent one is quiet', () => {
+    useMusic.mockReturnValue({
+      anchorRoomLabel: 'Kitchen',
+      state: {
+        queues: [],
+        activeQueue: {
+          queueId: 'kitchen',
+          displayName: 'Kitchen',
+          state: 'paused',
+          currentItem: null,
+          volumeLevel: 50,
+        },
+      },
+    })
+    const { rerender } = render(<MediaMasthead />)
+    expect(screen.getByText('Paused in')).toBeInTheDocument()
+
+    useMusic.mockReturnValue({
+      anchorRoomLabel: 'Kitchen',
+      state: { queues: [], activeQueue: null },
+    })
+    rerender(<MediaMasthead />)
+    expect(screen.getByText('Quiet in')).toBeInTheDocument()
+    expect(screen.getByText('the Kitchen')).toBeInTheDocument()
+  })
+
   it('renders the anchor pill active and not tappable, and a joinable room outlined and tappable', () => {
-    useMusic.mockReturnValue({ state: { queues: [], activeQueue: null } })
+    useMusic.mockReturnValue({ anchorRoomLabel: null, state: { queues: [], activeQueue: null } })
     useRoomPills.mockReturnValue({
       pills: [
         { player: kitchen, isAnchor: true, joined: true, pending: false },

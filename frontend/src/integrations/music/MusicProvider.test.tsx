@@ -10,8 +10,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 // each test resets the module registry and re-imports MusicProvider (and
 // useMusic, which must resolve to the *same* fresh music-context instance)
 // after pointing the mocked './fixtures' at the value that test needs.
+//
+// Only the queue-state fixture is mocked: the anchor and players fixtures
+// stay real, so `useAnchorId` and `useGroupTopology` behave here exactly as
+// they do with no scenario active (both return `undefined`, i.e. "use the
+// live config and the live `/players` fetch").
 const { musicStateFixtureFor } = vi.hoisted(() => ({ musicStateFixtureFor: vi.fn() }))
-vi.mock('./fixtures', () => ({ musicStateFixtureFor }))
+vi.mock('./fixtures', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./fixtures')>()),
+  musicStateFixtureFor,
+}))
 
 function MusicProbe({
   useMusic,
@@ -206,5 +214,138 @@ describe('MusicProvider action failures', () => {
 
     screen.getByText('play').click()
     await waitFor(() => expect(screen.getByTestId('error')).toHaveTextContent(''))
+  })
+})
+
+/**
+ * The provider's own wiring of the anchor rule (`anchor.ts` covers the rule
+ * itself). Reported from staging: a Kitchen-anchored panel read "Now
+ * playing in the Deck", because the derivation took the first playing —
+ * else paused — queue anywhere in the house and only used the anchor to
+ * break ties among idle ones.
+ *
+ * These go through the real `useAnchorId` and `useGroupTopology`, so they
+ * also pin that the provider actually reads `music.default_player` and the
+ * live `/players` list rather than deriving from queues alone.
+ */
+describe('MusicProvider anchoring', () => {
+  function AnchorProbe({
+    useMusic,
+  }: {
+    useMusic: () => { state: { activeQueue: { displayName: string } | null } }
+    anchorRoomLabel?: string | null
+  }) {
+    const { state, anchorRoomLabel } = useMusic() as ReturnType<typeof useMusic> & {
+      anchorRoomLabel: string | null
+    }
+    return (
+      <div>
+        <span data-testid="active-room">{state.activeQueue?.displayName ?? 'none'}</span>
+        <span data-testid="anchor-label">{anchorRoomLabel ?? 'none'}</span>
+      </div>
+    )
+  }
+
+  const deckQueue = {
+    queueId: 'deck',
+    displayName: 'Deck',
+    state: 'paused' as const,
+    currentItem: {
+      name: 'Harbor Lights',
+      artist: 'Bellwether Coast',
+      album: null,
+      imageUrl: null,
+      duration: 194,
+      elapsed: 52,
+      uri: 'fixture://track/harbor-lights',
+    },
+    volumeLevel: 20,
+  }
+  const kitchenIdleQueue = {
+    queueId: 'kitchen',
+    displayName: 'Kitchen',
+    state: 'idle' as const,
+    currentItem: null,
+    volumeLevel: 45,
+  }
+
+  function stubBackend(players: unknown[]) {
+    // `/api/config` is read with `.json()`; the integration's own api helper
+    // reads `.text()` — so both have to be answerable.
+    const bodyFor = (url: string) =>
+      String(url).includes('/api/music/players')
+        ? players
+        : { 'music.service_url': 'http://192.168.1.42:8095/', 'music.default_player': 'kitchen' }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url: string) =>
+        Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve(bodyFor(url)),
+          text: () => Promise.resolve(JSON.stringify(bodyFor(url))),
+        }),
+      ),
+    )
+    vi.stubGlobal(
+      'EventSource',
+      class {
+        addEventListener() {}
+        close() {}
+      },
+    )
+  }
+
+  async function renderProbe() {
+    const { MusicProvider, useMusic } = await freshMusicModules()
+    render(
+      wrapInQueryClient(
+        <MusicProvider>
+          <AnchorProbe useMusic={useMusic as never} />
+        </MusicProvider>,
+      ),
+    )
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    musicStateFixtureFor.mockReset()
+    vi.resetModules()
+  })
+
+  it('shows nothing when another room is playing on its own — the reported bug', async () => {
+    musicStateFixtureFor.mockReturnValue([deckQueue, kitchenIdleQueue])
+    stubBackend([
+      { player_id: 'deck', display_name: 'Deck', state: 'paused' },
+      { player_id: 'kitchen', display_name: 'Kitchen', state: 'idle' },
+    ])
+    await renderProbe()
+
+    await waitFor(() => expect(screen.getByTestId('anchor-label')).toHaveTextContent('Kitchen'))
+    expect(screen.getByTestId('active-room')).toHaveTextContent('none')
+  })
+
+  it('shows the group leader’s queue, named for the anchor’s group, when the anchor is a follower', async () => {
+    musicStateFixtureFor.mockReturnValue([deckQueue, kitchenIdleQueue])
+    // `synced_to` left null on the follower, as MA usually reports it — the
+    // leader is found from the other player's `group_members` instead.
+    stubBackend([
+      {
+        player_id: 'deck',
+        display_name: 'Deck',
+        state: 'paused',
+        group_members: ['deck', 'kitchen'],
+      },
+      { player_id: 'kitchen', display_name: 'Kitchen', state: 'idle', synced_to: null },
+    ])
+    await renderProbe()
+
+    // Waiting on the label, not the room: before config and `/players` land,
+    // the roomless fallback would show the Deck's queue too, so the room
+    // alone can't tell a resolved group from an unresolved one.
+    await waitFor(() =>
+      expect(screen.getByTestId('anchor-label')).toHaveTextContent('Kitchen + Deck'),
+    )
+    expect(screen.getByTestId('active-room')).toHaveTextContent('Deck')
   })
 })

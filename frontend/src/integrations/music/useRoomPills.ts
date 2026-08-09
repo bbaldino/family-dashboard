@@ -1,10 +1,8 @@
 import { useState } from 'react'
-import { useIntegrationConfig } from '@/platform'
-import { activeScenario } from '@/lib/scenario'
-import { musicIntegration } from './config'
 import { usePlayers, normalizePlayer } from './usePlayers'
 import { useGroupMutations } from './useGroupMutations'
-import { musicAnchorFixtureFor } from './fixtures'
+import { useAnchorId } from './useAnchorId'
+import { isGroupedUnder } from './anchor'
 import type { Player } from './types'
 
 /**
@@ -23,18 +21,10 @@ import type { Player } from './types'
  * (e.g. a Chromecast display) is never offered, rather than offered and
  * silently failing.
  *
- * Under an active `?scenario=`, the anchor comes from `musicAnchorFixtureFor`
- * instead of that config fetch. `useIntegrationConfig` always hits the real,
- * live `/api/config` — the scenario mechanism only short-circuits the music
- * *hooks*, not that fetch — so under a scenario it would keep reporting the
- * household's real Sonos id, which no `fixture-*` player id in
- * `fixtures.ts` can ever match. Left unhandled, that mismatch makes
- * `resolveAnchorAndRooms` correctly (but uselessly) resolve to no anchor,
- * and the fixtures become unable to exercise the pills at all — a real
- * defect this hook shipped with once, caught by loading a scenario in an
- * actual browser rather than trusting mocked-id unit tests. With no
- * scenario active, `musicAnchorFixtureFor` returns `undefined` and the
- * config value is used exactly as before.
+ * The anchor id itself comes from `useAnchorId`, shared with
+ * `MusicProvider` — including its scenario handling, which this hook once
+ * shipped a real defect over (every room pill silently disappeared under
+ * every `?scenario=`; see that hook's own comment).
  *
  * Reuses the same `useGroupMutations` PlayerPicker calls (see that hook's
  * own header comment on the lift) — a joining room adopts whatever the
@@ -65,16 +55,6 @@ export interface RoomPillsState {
   toggle: (playerId: string) => void
 }
 
-/** Whether `player` currently reads as grouped with `anchor`. The anchor's
- *  own `groupMembers` is the reliable signal — MA doesn't consistently
- *  populate a follower's `synced_to` (see `useGroupMutations.ts` /
- *  PlayerPicker's own comment on this) — but checking `syncedTo` too costs
- *  nothing and covers a moment `groupMembers` hasn't caught up on this
- *  player specifically. */
-export function isJoinedToAnchor(anchor: Player, player: Player): boolean {
-  return anchor.groupMembers.includes(player.playerId) || player.syncedTo === anchor.playerId
-}
-
 /** Pure: resolves the configured anchor and the rooms it can group with out
  *  of a normalized players list. Exported so the resolution logic can be
  *  tested directly against fixture data, without mounting the hook's
@@ -102,16 +82,13 @@ export function resolveAnchorAndRooms(
   const rooms = players.filter(
     (p) =>
       p.playerId !== anchor.playerId &&
-      (groupable.has(p.playerId) || isJoinedToAnchor(anchor, p) || pendingIds.has(p.playerId)),
+      (groupable.has(p.playerId) || isGroupedUnder(anchor, p) || pendingIds.has(p.playerId)),
   )
   return { anchor, rooms }
 }
 
 export function useRoomPills(): RoomPillsState {
-  const config = useIntegrationConfig(musicIntegration)
-  const fixtureAnchorId = musicAnchorFixtureFor(activeScenario)
-  const anchorId =
-    fixtureAnchorId !== undefined ? fixtureAnchorId : (config?.default_player ?? null)
+  const anchorId = useAnchorId()
 
   const { pendingIds, pollingPaused, addToGroup, removeFromGroup } = useGroupMutations()
   const { data: rawPlayers } = usePlayers({ isOpen: true, pollingPaused })
@@ -153,7 +130,7 @@ export function useRoomPills(): RoomPillsState {
         ...rooms.map((player) => ({
           player,
           isAnchor: false,
-          joined: isJoinedToAnchor(anchor, player),
+          joined: isGroupedUnder(anchor, player),
           pending: pendingIds.has(player.playerId),
         })),
       ]

@@ -26,7 +26,8 @@ vi.mock('./useGroupMutations', () => ({ useGroupMutations }))
 import { musicPlayersFixtureFor } from './fixtures'
 import { normalizePlayer } from './usePlayers'
 import type { Player } from './types'
-import { resolveAnchorAndRooms, isJoinedToAnchor, useRoomPills } from './useRoomPills'
+import { resolveAnchorAndRooms, useRoomPills } from './useRoomPills'
+import { isGroupedUnder } from './anchor'
 
 // ─── pure resolution logic, exercised directly against the fixtures ───────
 //
@@ -102,18 +103,21 @@ describe('resolveAnchorAndRooms', () => {
   })
 })
 
-describe('isJoinedToAnchor', () => {
+// The membership predicate the pills share with the provider's anchor
+// resolution (`anchor.ts`), exercised here against the pills' own fixture
+// roles — the already-joined room and the joinable-but-not-joined one.
+describe('isGroupedUnder, against the anchor', () => {
   const players = fixturePlayers()
   const anchor = players.find((p) => p.displayName === 'Kitchen')!
 
   it('reads the already-joined room (Bedroom) as joined', () => {
     const bedroom = players.find((p) => p.displayName === 'Bedroom')!
-    expect(isJoinedToAnchor(anchor, bedroom)).toBe(true)
+    expect(isGroupedUnder(anchor, bedroom)).toBe(true)
   })
 
   it('reads the joinable-but-not-joined room (Living Room) as not joined', () => {
     const livingRoom = players.find((p) => p.displayName === 'Living Room')!
-    expect(isJoinedToAnchor(anchor, livingRoom)).toBe(false)
+    expect(isGroupedUnder(anchor, livingRoom)).toBe(false)
   })
 })
 

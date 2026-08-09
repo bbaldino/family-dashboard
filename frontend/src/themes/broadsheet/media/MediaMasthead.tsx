@@ -3,6 +3,7 @@ import { MastheadFrame } from '@/themes/broadsheet/ui/MastheadFrame'
 import { mastheadKickerStyle, mastheadNumeralStyle } from '@/themes/broadsheet/ui/masthead-styles'
 import { INK2 } from './colors'
 import { RoomPill } from './RoomPill'
+import { playbackPhrase } from './playback-phrase'
 
 /** The screen title's own treatment — 26px italic serif, mock `media.jsx:89`
  *  — deliberately not the masthead's shared 72px numeral style
@@ -35,9 +36,9 @@ const MAX_ROOM_PILLS = 6
  * The Rooms row is `useRoomPills`'s join/leave list (see that hook's own
  * header comment): the anchor pill first, always active and not tappable,
  * then every room it can group with, filled when joined. It's a different
- * concept from `activeQueue` below — which room's queue is currently
- * playing — so a room can show filled here (grouped with the anchor)
- * without being the one `state` reports as active, and vice versa.
+ * concept from the centre cell below — which names the anchor's *group*,
+ * i.e. only the rooms actually grouped into this panel's own room — so a
+ * room can be offered here as joinable without appearing there.
  *
  * Every hook here can boot with no data on a cold cache: no active queue
  * (nothing playing anywhere) and no configured anchor / no players yet /
@@ -46,12 +47,17 @@ const MAX_ROOM_PILLS = 6
  * cell.
  */
 export function MediaMasthead() {
-  const { state } = useMusic()
+  const { state, anchorRoomLabel } = useMusic()
   const { pills, toggle } = useRoomPills()
   const activeQueue = state.activeQueue
 
   const visiblePills = pills.slice(0, MAX_ROOM_PILLS)
-  const roomName = activeQueue?.displayName ?? null
+  // This panel's own room — the anchor, plus whatever is grouped into it —
+  // not the queue owner's name, which under grouping is a different room
+  // (see `music-context.ts`'s `anchorRoomLabel`). The queue owner is the
+  // fallback for a household with no anchor configured, where "whatever is
+  // playing" is all there is to name.
+  const roomName = anchorRoomLabel ?? activeQueue?.displayName ?? null
 
   return (
     <MastheadFrame
@@ -64,7 +70,7 @@ export function MediaMasthead() {
       center={
         <>
           <div style={{ ...mastheadKickerStyle, textAlign: 'center' }}>
-            {roomName ? 'Now playing in' : 'Now playing'}
+            {roomName ? playbackPhrase(activeQueue?.state ?? null) : 'Now playing'}
           </div>
           <h1 className="m-0" style={mastheadNumeralStyle}>
             {roomName ? `the ${roomName}` : 'Quiet'}
