@@ -36,7 +36,7 @@ export interface MusicActionError {
 export interface MusicContextValue {
   state: MusicState
   /** The panel's own room as a display label — the anchor first, then any
-   *  rooms grouped into it: `Kitchen`, `Kitchen + Deck + Patio`. Separate
+   *  rooms grouped into it: `Kitchen`, `Kitchen, Deck and Patio`. Separate
    *  from `state.activeQueue.displayName`, which names whichever player
    *  *owns* that queue and under grouping is a different room. `null` when
    *  no anchor is configured or the players list hasn't arrived, in which

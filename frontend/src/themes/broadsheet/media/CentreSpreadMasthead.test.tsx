@@ -53,14 +53,14 @@ describe('CentreSpreadMasthead', () => {
   it('says a paused room is paused rather than claiming playback', () => {
     render(
       <CentreSpreadMasthead
-        room="Kitchen + Deck"
+        room="Kitchen and Deck"
         playbackState="paused"
         trackTitle="Amber Hours"
         trackNumber={1}
         onClose={vi.fn()}
       />,
     )
-    expect(screen.getByText('Paused in the Kitchen + Deck')).toBeInTheDocument()
+    expect(screen.getByText('Paused in the Kitchen and Deck')).toBeInTheDocument()
   })
 
   it('calls onClose when Close is tapped', () => {

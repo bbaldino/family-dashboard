@@ -81,7 +81,7 @@ export function resolveAnchorGroup(
   // leader's own id in its own `group_members` (see `fixtures.ts`'s
   // `packedPlayers` comment), but a leader that ever omitted itself would
   // otherwise silently drop out of the label — reading "The Kitchen" while
-  // the Deck's queue was playing, instead of "The Kitchen + Deck".
+  // the Deck's queue was playing, instead of "The Kitchen and Deck".
   const members = [
     anchor,
     ...(leader.playerId === anchor.playerId ? [] : [leader]),
@@ -95,12 +95,24 @@ export function resolveAnchorGroup(
   return { anchor, leader, members }
 }
 
-/** The group as a room label — `The Kitchen` / `The Kitchen + Deck + Patio`
- *  once a caller adds its own article. `null` for an empty group, which is
- *  every state where there's no anchor to name. */
+/**
+ * The group as a room label, read as prose rather than punctuation:
+ * `Kitchen`, `Kitchen and Deck`, `Kitchen, Deck and Patio`. Callers supply
+ * their own article — the mastheads render `Now playing in the {label}`.
+ *
+ * No serial comma before the final `and`: this sits under a broadsheet
+ * masthead, and newspaper style omits it.
+ *
+ * The anchor is always first (`resolveAnchorGroup` puts it there), so the
+ * room you are standing in leads the sentence however the group is led.
+ *
+ * `null` for an empty group — every state where there is no anchor to name.
+ */
 export function anchorGroupLabel(members: Player[]): string | null {
-  if (members.length === 0) return null
-  return members.map((m) => m.displayName).join(' + ')
+  const names = members.map((m) => m.displayName)
+  if (names.length === 0) return null
+  if (names.length === 1) return names[0]
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`
 }
 
 /** The old, roomless derivation: the first queue that's playing, else the

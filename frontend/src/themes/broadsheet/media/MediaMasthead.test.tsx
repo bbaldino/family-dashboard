@@ -68,7 +68,7 @@ describe('MediaMasthead', () => {
   // leader's room — the masthead has to name this panel's own room instead.
   it('names this panel’s room and its group, not the queue owner’s room', () => {
     useMusic.mockReturnValue({
-      anchorRoomLabel: 'Kitchen + Deck',
+      anchorRoomLabel: 'Kitchen and Deck',
       state: {
         queues: [],
         activeQueue: {
@@ -81,7 +81,7 @@ describe('MediaMasthead', () => {
       },
     })
     render(<MediaMasthead />)
-    expect(screen.getByText('the Kitchen + Deck')).toBeInTheDocument()
+    expect(screen.getByText('the Kitchen and Deck')).toBeInTheDocument()
     expect(screen.queryByText('the Deck')).not.toBeInTheDocument()
     expect(screen.getByText('Now playing in')).toBeInTheDocument()
   })

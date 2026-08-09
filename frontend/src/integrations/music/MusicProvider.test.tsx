@@ -344,7 +344,7 @@ describe('MusicProvider anchoring', () => {
     // the roomless fallback would show the Deck's queue too, so the room
     // alone can't tell a resolved group from an unresolved one.
     await waitFor(() =>
-      expect(screen.getByTestId('anchor-label')).toHaveTextContent('Kitchen + Deck'),
+      expect(screen.getByTestId('anchor-label')).toHaveTextContent('Kitchen and Deck'),
     )
     expect(screen.getByTestId('active-room')).toHaveTextContent('Deck')
   })

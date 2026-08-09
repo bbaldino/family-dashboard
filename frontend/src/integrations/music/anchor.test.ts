@@ -5,6 +5,7 @@ import type { Player, QueueState, TrackInfo } from './types'
 const KITCHEN = 'kitchen'
 const DECK = 'deck'
 const PATIO = 'patio'
+const OFFICE = 'office'
 
 function player(playerId: string, displayName: string, over: Partial<Player> = {}): Player {
   return {
@@ -141,19 +142,30 @@ describe('anchorGroupLabel', () => {
     const deck = player(DECK, 'Deck', { groupMembers: [DECK, KITCHEN, PATIO] })
     const patio = player(PATIO, 'Patio', { syncedTo: DECK })
     const { members } = resolveAnchorGroup([deck, kitchen, patio], KITCHEN)
-    expect(anchorGroupLabel(members)).toBe('Kitchen + Deck + Patio')
+    expect(anchorGroupLabel(members)).toBe('Kitchen, Deck and Patio')
   })
 
   // Defensive: MA has always been observed to list itself in its own
   // `group_members` (see `fixtures.ts`'s `packedPlayers` comment), but the
   // label shouldn't depend on that convention holding. Without this, a
   // leader that omitted itself dropped out of the label entirely — reading
-  // "Kitchen" while the Deck's queue was playing, instead of "Kitchen + Deck".
+  // "Kitchen" while the Deck's queue was playing, instead of "Kitchen and Deck".
   it('still names the leader when the leader omits itself from its own group_members', () => {
     const deck = player(DECK, 'Deck', { groupMembers: [KITCHEN] })
     const kitchen = player(KITCHEN, 'Kitchen', { syncedTo: DECK })
     const { members } = resolveAnchorGroup([deck, kitchen], KITCHEN)
-    expect(anchorGroupLabel(members)).toBe('Kitchen + Deck')
+    expect(anchorGroupLabel(members)).toBe('Kitchen and Deck')
+  })
+
+  // Four rooms, so the comma-joined run is longer than one item — a
+  // two-room group alone can't tell `join(', ')` from `join(' and ')`.
+  it('commas the middle rooms and reserves “and” for the last', () => {
+    const kitchen = player(KITCHEN, 'Kitchen', { groupMembers: [KITCHEN, DECK, PATIO, OFFICE] })
+    const deck = player(DECK, 'Deck', { syncedTo: KITCHEN })
+    const patio = player(PATIO, 'Patio', { syncedTo: KITCHEN })
+    const office = player(OFFICE, 'Office', { syncedTo: KITCHEN })
+    const { members } = resolveAnchorGroup([kitchen, deck, patio, office], KITCHEN)
+    expect(anchorGroupLabel(members)).toBe('Kitchen, Deck, Patio and Office')
   })
 })
 
