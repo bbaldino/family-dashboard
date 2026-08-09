@@ -2,6 +2,7 @@ import type { QueueState } from '@/integrations/music'
 import { MastheadFrame } from '@/themes/broadsheet/ui/MastheadFrame'
 import { mastheadKickerStyle } from '@/themes/broadsheet/ui/masthead-styles'
 import { INK2 } from './colors'
+import { mastheadTitleSize } from '@/themes/broadsheet/ui/masthead-title-size'
 import { playbackPhrase } from './playback-phrase'
 
 /** The screen title's own treatment, left cell — same 24px italic serif as
@@ -17,17 +18,20 @@ const leftTitleStyle = {
   color: INK2,
 }
 
-/** The centre title — 62px italic serif, deliberately not the masthead's
- *  shared 72px numeral (`masthead-styles.ts`'s `mastheadNumeralStyle`): the
- *  design brief calls this value out by name as the one place in the theme
- *  that isn't 72. A track title also needs to survive being much longer
- *  than a numeral ever is, so this clips rather than wrapping or
- *  overflowing the centre cell. */
+/** The centre title's design size — 62px italic serif, deliberately not the
+ *  masthead's shared 72px numeral (`masthead-styles.ts`'s
+ *  `mastheadNumeralStyle`): the design brief calls this value out by name as
+ *  the one place in the theme that isn't 72.
+ *
+ *  It is the size a *short* title is set at, and the ceiling. A track name
+ *  is whatever the data hands us, so longer ones step down from here — see
+ *  `mastheadTitleSize`. `truncate` remains on the element as the backstop. */
+const CENTER_TITLE_SIZE = 62
+
 const centerTitleStyle = {
   fontFamily: 'var(--font-display)',
   fontStyle: 'italic' as const,
   fontWeight: 400,
-  fontSize: 62,
   letterSpacing: '-0.03em',
   lineHeight: 0.9,
   color: 'var(--ink)',
@@ -85,7 +89,7 @@ export function CentreSpreadMasthead({
 }) {
   return (
     <MastheadFrame
-      padding="20px 56px 14px"
+      padding="14px 56px 10px"
       left={
         <>
           <div style={mastheadKickerStyle}>The Centre Spread</div>
@@ -99,7 +103,13 @@ export function CentreSpreadMasthead({
           <div style={{ ...mastheadKickerStyle, textAlign: 'center' }}>
             {trackNumber ? `Side A · Track ${trackNumber}` : 'Side A'}
           </div>
-          <h1 className="m-0 truncate" style={centerTitleStyle}>
+          <h1
+            className="m-0 truncate"
+            style={{
+              ...centerTitleStyle,
+              fontSize: mastheadTitleSize(trackTitle, CENTER_TITLE_SIZE),
+            }}
+          >
             {trackTitle}
           </h1>
         </>

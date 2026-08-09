@@ -44,9 +44,19 @@ export function MastheadFrame({
         className="grid items-end"
         style={{ gridTemplateColumns: '0.85fr 1.5fr 0.85fr', gap: 24 }}
       >
-        <div>{left}</div>
-        <div style={{ textAlign: 'center' }}>{center}</div>
-        <div style={{ textAlign: 'right' }}>{right}</div>
+        {/* `minWidth: 0` on every cell, and it is load-bearing rather than
+            defensive. A grid item defaults to `min-width: auto`, meaning it
+            refuses to shrink below its own content — so a long centre title
+            ignored the `1.5fr` entirely and grew the column to fit. Measured
+            with a 62-character track name: the columns resolved to
+            `86px / 1474px / 71px` instead of roughly `382 / 675 / 382`. The
+            side cells were crushed until their text wrapped to five and six
+            lines, which took the masthead from 113px to 306px tall and
+            pushed the Close button off the screen. The centre title's own
+            `truncate` never fired, because the column had grown to fit it. */}
+        <div style={{ minWidth: 0 }}>{left}</div>
+        <div style={{ textAlign: 'center', minWidth: 0 }}>{center}</div>
+        <div style={{ textAlign: 'right', minWidth: 0 }}>{right}</div>
       </div>
       {footer}
     </div>
