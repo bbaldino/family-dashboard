@@ -24,15 +24,37 @@ function formatClock(now: Date): { time: string; ampm: string } {
 const WEEKDAY_FORMAT = new Intl.DateTimeFormat('en-US', { weekday: 'long' })
 const MONTH_FORMAT = new Intl.DateTimeFormat('en-US', { month: 'long' })
 
-/** The date's ordinal suffix, raised and shrunk. `position: relative` is
- *  added to make the mock's literal `top: '-0.65em'` (`broadsheet-v2.jsx:109`)
- *  actually take effect — a statically-positioned element ignores `top`. */
+/**
+ * The date's ordinal suffix, raised to sit flush with the numerals' cap line.
+ *
+ * **The raise is in pixels, and that is the point.** It was the mock's literal
+ * `top: '-0.65em'` (`broadsheet-v2.jsx:109`), but `em` in `top` resolves
+ * against the *ordinal's own* font size — not the 72px numeral it is aligning
+ * to. So the offset was anchored to the wrong type and undershot: measured in
+ * the browser, the "th" top landed 8.5px below the cap line and read as
+ * sunken. An `em` here will always be wrong for the same reason, so it stays
+ * a pixel value.
+ *
+ * The arithmetic, measured from real glyph metrics in Newsreader italic (not
+ * font-box metrics — `getBoundingClientRect` on inline text reports
+ * ascent+descent for the whole font, which is identical for both and so tells
+ * you nothing): "10" at 72px stands 50px above the baseline, "th" at 34px has
+ * a 25px ascender, so a 25px raise puts the two tops level.
+ *
+ * `position: relative` is what lets `top` apply at all — a statically
+ * positioned element ignores it. Tailwind's preflight already gives `<sup>`
+ * `vertical-align: baseline`, so this offset is the only thing raising it.
+ *
+ * `marginLeft` is optical side bearing. Without it the "th" butts straight
+ * against the "0" — the measured gap was exactly 0px.
+ */
 const ordinalStyle = {
-  fontSize: 30,
+  fontSize: 34,
   fontStyle: 'italic' as const,
   fontWeight: 400,
   position: 'relative' as const,
-  top: '-0.65em',
+  top: -25,
+  marginLeft: 4.5,
 }
 
 const standfirstProseStyle = {

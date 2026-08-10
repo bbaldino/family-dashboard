@@ -64,6 +64,31 @@ describe('Masthead', () => {
     expect(screen.getByText(/A quiet day\./)).toBeInTheDocument()
   })
 
+  /**
+   * **What this can and cannot prove.** jsdom performs no layout and loads no
+   * font, so whether the ordinal's top actually lands on the numerals' cap
+   * line is not observable here — that was verified by measuring real glyph
+   * metrics in a browser, and the arithmetic is recorded on `ordinalStyle`.
+   *
+   * What this does guard is the specific mistake that caused the bug: the
+   * raise was written as `-0.65em`, and `em` in `top` resolves against the
+   * ordinal's own font size rather than the 72px numeral it aligns to, so it
+   * silently undershot by 8.5px. Any `em` here is wrong for that reason, so
+   * the unit is the thing worth pinning.
+   */
+  it('raises the ordinal by a pixel amount, never a font-relative one', () => {
+    const { container } = renderMasthead()
+    const sup = container.querySelector('h1 sup') as HTMLElement
+    expect(sup).toBeTruthy()
+    expect(sup.textContent).toBe(ordinalSuffix(new Date().getDate()))
+    expect(sup.style.top).toMatch(/px$/)
+    expect(sup.style.top).not.toMatch(/em$/)
+    // And it is actually lifted, rather than merely being expressed in px.
+    expect(parseFloat(sup.style.top)).toBeLessThan(0)
+    // Optical side bearing — without it the suffix butts against the numeral.
+    expect(parseFloat(sup.style.marginLeft)).toBeGreaterThan(0)
+  })
+
   it('does not render a "Kitchen Dashboard" wordmark', () => {
     // The Phase 4 plan invented a wordmark for the centre cell; the mock
     // never had one — the date is the centrepiece instead.
