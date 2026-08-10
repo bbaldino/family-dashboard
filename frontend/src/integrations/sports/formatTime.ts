@@ -30,3 +30,17 @@ export function formatUpcomingTime(startTime: string): string {
   }
   return `${start.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })}, ${timeStr}`
 }
+
+/**
+ * A completed game's date, for the final report's kicker: `"Sun, Aug 9"`.
+ *
+ * Rendered in the browser's own zone, which on the wall tablet is the
+ * household's. A game at 02:10Z is a Monday evening here, and filing it under
+ * Tuesday would defeat the point of dating it at all. The kicker uppercases
+ * this in CSS, so it is written in ordinary case.
+ */
+export function formatFinalDate(startTime: string): string {
+  const start = new Date(startTime)
+  if (Number.isNaN(start.getTime())) return ''
+  return start.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
+}
