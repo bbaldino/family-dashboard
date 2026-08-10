@@ -1,6 +1,7 @@
 import { formatFinalDate, useSportsFinalRecap } from '@/integrations/sports'
 import type { Game } from '@/integrations/sports'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
+import { aiSummaryText } from './ai-summary'
 
 /** One team in the score line. The winner carries full ink and weight and the
  *  loser recedes, so the result reads from across the kitchen without anyone
@@ -31,18 +32,13 @@ function Side({ team, side }: { team: Game['home']; side: 'home' | 'away' }) {
  * costs you the actual result.
  */
 export function FinalReport({ game }: { game: Game }) {
-  const { data, isLoading, error } = useSportsFinalRecap(game.id)
-
-  // Three states, not two. An empty summary on a settled query is a failure,
-  // not a pending one: treating it as pending would leave "Generating recap…"
-  // on the wall indefinitely, with nothing further coming to replace it.
-  // Saying nothing at all — which the grid theme does here — is worse still;
-  // see this file's test for why an invisible failure is the one to avoid.
-  const recap = isLoading
-    ? 'Generating recap…'
-    : error || !data?.summary
-      ? 'Recap unavailable.'
-      : data.summary
+  // Pending and failure both say so, rather than the strip going quiet — see
+  // `aiSummaryText` for why, and for the empty-summary rule it shares with
+  // `PregameBlock`'s preview.
+  const recap = aiSummaryText(useSportsFinalRecap(game.id), {
+    pending: 'Generating recap…',
+    unavailable: 'Recap unavailable.',
+  })
 
   return (
     <div className="pt-2.5 mt-4" style={{ borderTop: '1px solid var(--rule)' }}>

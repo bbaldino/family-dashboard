@@ -2,6 +2,7 @@ import { useSportsPreview, formatUpcomingTime } from '@/integrations/sports'
 import type { Game, GameAthlete } from '@/integrations/sports'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { TeamCap } from '@/themes/broadsheet/ui/TeamCap'
+import { aiSummaryText } from './ai-summary'
 
 function probablePitcher(athletes: GameAthlete[], side: 'home' | 'away'): GameAthlete | undefined {
   return athletes.find((a) => a.role === 'probable' && a.team === side)
@@ -79,7 +80,13 @@ function TeamSide({
  * upcoming one), so probable pitchers come from `game.athletes` instead.
  */
 export function PregameBlock({ game }: { game: Game }) {
-  const { data } = useSportsPreview(game.id)
+  // Pending and failure both say so, the same way the final report's recap
+  // does — a preview that silently never turns up is indistinguishable from
+  // one nobody asked for. See `aiSummaryText`.
+  const preview = aiSummaryText(useSportsPreview(game.id), {
+    pending: 'Generating preview…',
+    unavailable: 'Preview unavailable.',
+  })
 
   return (
     <div>
@@ -110,24 +117,24 @@ export function PregameBlock({ game }: { game: Game }) {
         <TeamSide side="Away" team={game.away} pitcher={probablePitcher(game.athletes, 'away')} />
         <TeamSide side="Home" team={game.home} pitcher={probablePitcher(game.athletes, 'home')} />
       </div>
-      {/* The preview only when there is one. Its old fallback announced that
+      {/* Always a line here now. The fallback this replaces announced that
           "the page will widen and the scoreboard will fill this space when
           first pitch lands" — the interface narrating its own layout, which is
-          not information about the game and read as filler on a cold cache. */}
-      {data?.summary && (
-        <p
-          className="m-0 mt-3"
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontStyle: 'italic',
-            fontSize: 13,
-            color: 'var(--ink-muted)',
-            lineHeight: 1.5,
-          }}
-        >
-          {data.summary}
-        </p>
-      )}
+          not information about the game and read as filler on a cold cache.
+          Reporting that the preview is being written, or could not be, is a
+          fact about the preview rather than about the page. */}
+      <p
+        className="m-0 mt-3"
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontStyle: 'italic',
+          fontSize: 13,
+          color: 'var(--ink-muted)',
+          lineHeight: 1.5,
+        }}
+      >
+        {preview}
+      </p>
     </div>
   )
 }
