@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.2](https://github.com/bbaldino/family-dashboard/compare/v0.5.1...v0.5.2) (2026-08-12)
+
+
+### Bug Fixes
+
+* **datebook:** stop banners clipping the tops of accented capitals ([1d8b42d](https://github.com/bbaldino/family-dashboard/commit/1d8b42d3ee4ce8971f26f7baf28e60ba51a0b054))
+
 ## [0.5.1](https://github.com/bbaldino/family-dashboard/compare/v0.5.0...v0.5.1) (2026-08-12)
 
 
