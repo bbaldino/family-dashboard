@@ -36,9 +36,14 @@ function isBirthdayEvent(event: CalendarEvent): boolean {
  *  leading/trailing adjacent-month padding days, and the Tally is for "this
  *  month" specifically. A spanning multi-day event appears once per day it
  *  touches in `byDate` (`useMonthCalendar` already expands it that way); it
- *  is de-duplicated by id here so it counts once rather than once per day. */
+ *  is de-duplicated by id here so it counts once rather than once per day.
+ *
+ *  Takes only `byDate`, not a whole `MonthEvents`. Multi-day events are also
+ *  carried separately in `spans` for the banner layout, but counting them from
+ *  there as well would double them — reading one field is the signature saying
+ *  so. */
 export function computeMonthTally(
-  monthEvents: MonthEvents,
+  monthEvents: Pick<MonthEvents, 'byDate'>,
   year: number,
   month: number,
 ): MonthTally {

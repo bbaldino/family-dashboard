@@ -37,9 +37,9 @@ export function Calendar() {
 
   const byDate = monthEvents?.byDate ?? {}
   const spans = monthEvents?.spans ?? []
-  // The tally reads `byDate`, which still carries multi-day events — see
-  // `MonthEvents.spans` for why they live in both.
-  const tally = computeMonthTally({ byDate, spans }, year, month)
+  // The tally reads `byDate` alone, which still carries multi-day events —
+  // see `MonthEvents.spans` for why they live in both.
+  const tally = computeMonthTally({ byDate }, year, month)
   const nearestCountdown = countdowns?.[0]
     ? { name: countdowns[0].name, daysUntil: countdowns[0].daysUntil }
     : null
