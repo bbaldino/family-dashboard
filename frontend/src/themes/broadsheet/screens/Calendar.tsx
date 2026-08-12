@@ -36,7 +36,10 @@ export function Calendar() {
   const { data: countdowns } = useCountdowns()
 
   const byDate = monthEvents?.byDate ?? {}
-  const tally = computeMonthTally({ byDate }, year, month)
+  const spans = monthEvents?.spans ?? []
+  // The tally reads `byDate`, which still carries multi-day events — see
+  // `MonthEvents.spans` for why they live in both.
+  const tally = computeMonthTally({ byDate, spans }, year, month)
   const nearestCountdown = countdowns?.[0]
     ? { name: countdowns[0].name, daysUntil: countdowns[0].daysUntil }
     : null
@@ -74,7 +77,7 @@ export function Calendar() {
        *  `calendar.jsx:265` (`padding: 8px 56px 0`); the 64px the footer
        *  reserves is a spacer below, same as Home. */}
       <div className="flex-1 min-h-0 overflow-hidden" style={{ padding: '8px 56px 0' }}>
-        <MonthGrid year={year} month={month} byDate={byDate} />
+        <MonthGrid year={year} month={month} byDate={byDate} spans={spans} />
       </div>
       <div style={{ flexShrink: 0, height: 64 }} />
     </div>

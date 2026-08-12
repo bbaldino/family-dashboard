@@ -42,9 +42,11 @@ describe('MonthGrid', () => {
     expect(screen.getByText("Andi Wilson's birthday")).toBeInTheDocument()
   })
 
-  it('renders a multi-day event on every day it spans, including across the month boundary', () => {
-    // ?scenario=spanning shape: the same event object present on several
-    // consecutive dateKeys, exactly how useMonthCalendar expands it.
+  it('falls back to a chip per day when no spans are supplied', () => {
+    // `spans` is optional, and without it the grid renders `byDate` exactly as
+    // it finds it. Worth pinning: `byDate` still carries multi-day events for
+    // the grid theme and the tally, so this is the path that would silently
+    // resurrect duplicate chips if the spans prop were ever dropped upstream.
     const spanning = allDay('trip', 'Grandma visiting', '2026-04-30')
     render(
       <MonthGrid
@@ -57,6 +59,61 @@ describe('MonthGrid', () => {
       />,
     )
     expect(screen.getAllByText('Grandma visiting')).toHaveLength(2)
+  })
+
+  it('draws a multi-day event as one banner instead of a chip in every cell', () => {
+    const spanning = allDay('trip', 'Grandma visiting', '2026-04-30')
+    render(
+      <MonthGrid
+        year={2026}
+        month={4}
+        byDate={{ '2026-04-30': [spanning], '2026-05-01': [spanning] }}
+        spans={[{ event: spanning, startKey: '2026-04-30', endKey: '2026-05-01' }]}
+      />,
+    )
+    expect(screen.getAllByTestId('span-banner')).toHaveLength(1)
+    // Once, in the banner — not once per day it covers.
+    expect(screen.getAllByText(/Grandma visiting/)).toHaveLength(1)
+  })
+
+  it('splits a span across a week boundary and marks the continuation', () => {
+    // 9 May 2026 is a Saturday, 10 May the Sunday after, so this crosses a row.
+    const ted = allDay('ted', 'Ted in town', '2026-05-09')
+    render(
+      <MonthGrid
+        year={2026}
+        month={4}
+        byDate={{ '2026-05-09': [ted], '2026-05-10': [ted] }}
+        spans={[{ event: ted, startKey: '2026-05-09', endKey: '2026-05-10' }]}
+      />,
+    )
+    expect(screen.getAllByTestId('span-banner')).toHaveLength(2)
+    // The second row's piece says what it is rather than repeating bare.
+    expect(screen.getByText(/cont\./)).toBeInTheDocument()
+  })
+
+  it('gives a banner lane its space back from the cell chip cap', () => {
+    // May 2026 is a six-row month, so a cell shows 2 events before "+N more".
+    // One banner lane over the row leaves room for 1, collapsing the second.
+    const trip = allDay('trip', 'Baltimore & Boston', '2026-05-04')
+    const byDate = {
+      '2026-05-04': [trip],
+      '2026-05-05': [trip],
+      '2026-05-07': [timed('a', 'Event A', '2026-05-07'), timed('b', 'Event B', '2026-05-07')],
+    }
+    const { rerender } = render(<MonthGrid year={2026} month={4} byDate={byDate} />)
+    // Without the banner both fit, so nothing is collapsed.
+    expect(screen.queryByText(/\+\d+ more/)).toBeNull()
+
+    rerender(
+      <MonthGrid
+        year={2026}
+        month={4}
+        byDate={byDate}
+        spans={[{ event: trip, startKey: '2026-05-04', endKey: '2026-05-05' }]}
+      />,
+    )
+    expect(screen.getByText('+1 more')).toBeInTheDocument()
   })
 
   it('renders exactly as many week rows as the month needs, not a hardcoded six', () => {

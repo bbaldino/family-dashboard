@@ -1,7 +1,10 @@
+import type { EventSpan } from '@/integrations/calendar'
 import type { CalendarEvent } from '@/providers/google-calendar'
 import { toLocalDateStr } from '@/utils/date'
 import { DayCell } from './DayCell'
 import { getMonthGridWeeks } from './month-grid-dates'
+import { buildSpanSegments } from './month-spans'
+import { SpanBanner } from './SpanBanner'
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -41,19 +44,34 @@ function maxEventsForWeekCount(weekCount: number): number {
  * span and each day's events pre-sorted all-day first then chronological,
  * so this component does no event shaping of its own, only lookup and the
  * per-cell display cap.
+ *
+ * **Multi-day events are drawn once, as a banner, not as a chip in every
+ * cell.** They arrive in `spans` and are filtered back out of the per-day
+ * chips here — `byDate` deliberately still carries them, because the grid
+ * theme and the month tally both read it and would otherwise lose the event
+ * entirely. Banners live in an absolutely-positioned layer over the cells so
+ * a run draws across the cell rules instead of being clipped inside one, and
+ * the cells beneath reserve `lanes * LANE_H` of space so nothing collides.
  */
 export function MonthGrid({
   year,
   month,
   byDate,
+  spans = [],
 }: {
   year: number
   month: number
   byDate: Record<string, CalendarEvent[]>
+  spans?: EventSpan[]
 }) {
   const weeks = getMonthGridWeeks(year, month)
   const todayKey = toLocalDateStr(new Date())
   const maxEvents = maxEventsForWeekCount(weeks.length)
+  const { segments, lanesByRow } = buildSpanSegments(spans, weeks)
+  // Only the spans that actually made it onto the grid are suppressed from the
+  // chips: one clipped away entirely still belongs in its cells as a chip,
+  // since no banner will be drawn for it.
+  const bannerEventIds = new Set(segments.map((segment) => segment.id))
 
   return (
     <div className="flex flex-col h-full">
@@ -79,35 +97,54 @@ export function MonthGrid({
           </div>
         ))}
       </div>
-      <div
-        data-testid="month-grid-weeks"
-        className="flex-1 min-h-0 grid"
-        style={{ gridTemplateRows: `repeat(${weeks.length}, 1fr)` }}
-      >
-        {weeks.map((week, weekIndex) => (
-          <div
-            key={week[0].toISOString()}
-            data-testid="month-grid-week"
-            className="grid grid-cols-7 min-h-0"
-          >
-            {week.map((date, dayIndex) => {
-              const dateKey = toLocalDateStr(date)
-              return (
-                <DayCell
-                  key={dateKey}
-                  date={date}
-                  events={byDate[dateKey] ?? []}
-                  isCurrentMonth={date.getMonth() === month && date.getFullYear() === year}
-                  isToday={dateKey === todayKey}
-                  isFirstCellOfGrid={weekIndex === 0 && dayIndex === 0}
-                  isLastColumn={dayIndex === 6}
-                  isLastRow={weekIndex === weeks.length - 1}
-                  maxEvents={maxEvents}
-                />
-              )
-            })}
-          </div>
-        ))}
+      <div className="flex-1 min-h-0" style={{ position: 'relative' }}>
+        <div
+          data-testid="month-grid-weeks"
+          className="h-full grid"
+          style={{ gridTemplateRows: `repeat(${weeks.length}, 1fr)` }}
+        >
+          {weeks.map((week, weekIndex) => (
+            <div
+              key={week[0].toISOString()}
+              data-testid="month-grid-week"
+              className="grid grid-cols-7 min-h-0"
+            >
+              {week.map((date, dayIndex) => {
+                const dateKey = toLocalDateStr(date)
+                const dayEvents = (byDate[dateKey] ?? []).filter(
+                  (event) => !bannerEventIds.has(event.id),
+                )
+                const lanes = lanesByRow[weekIndex] ?? 0
+                return (
+                  <DayCell
+                    key={dateKey}
+                    date={date}
+                    events={dayEvents}
+                    isCurrentMonth={date.getMonth() === month && date.getFullYear() === year}
+                    isToday={dateKey === todayKey}
+                    isFirstCellOfGrid={weekIndex === 0 && dayIndex === 0}
+                    isLastColumn={dayIndex === 6}
+                    isLastRow={weekIndex === weeks.length - 1}
+                    maxEvents={maxEvents}
+                    lanes={lanes}
+                  />
+                )
+              })}
+            </div>
+          ))}
+        </div>
+        {/* Over the cells, not inside them: a banner has to cross the cell
+            rules, and `pointerEvents: none` keeps the layer from swallowing
+            anything the cells beneath might want. */}
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+          {segments.map((segment, i) => (
+            <SpanBanner
+              key={`${segment.id}-${segment.row}-${i}`}
+              segment={segment}
+              rowCount={weeks.length}
+            />
+          ))}
+        </div>
       </div>
     </div>
   )

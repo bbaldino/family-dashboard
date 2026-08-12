@@ -23,7 +23,7 @@
  */
 import { toLocalDateStr } from '@/utils/date'
 import type { CalendarEvent } from '@/providers/google-calendar'
-import type { MonthEvents } from './useMonthCalendar'
+import { spansFromByDate, type MonthEvents } from './useMonthCalendar'
 import type { CalendarDay } from './useGoogleCalendar'
 
 export type CalendarScenario = 'empty' | 'packed' | 'spanning'
@@ -108,7 +108,7 @@ function sortDays(byDate: Record<string, CalendarEvent[]>): void {
 // ─── month grid fixtures ─────────────────────────────────────────
 
 function emptyMonth(): MonthEvents {
-  return { byDate: {} }
+  return { byDate: {}, spans: [] }
 }
 
 function packedMonth(year: number, month: number): MonthEvents {
@@ -181,7 +181,7 @@ function packedMonth(year: number, month: number): MonthEvents {
   )
 
   sortDays(byDate)
-  return { byDate }
+  return { byDate, spans: spansFromByDate(byDate) }
 }
 
 function spanningMonth(year: number, month: number): MonthEvents {
@@ -210,7 +210,7 @@ function spanningMonth(year: number, month: number): MonthEvents {
   )
 
   sortDays(byDate)
-  return { byDate }
+  return { byDate, spans: spansFromByDate(byDate) }
 }
 
 const monthFixtures: Record<CalendarScenario, (year: number, month: number) => MonthEvents> = {

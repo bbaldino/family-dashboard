@@ -1,6 +1,7 @@
 import type { CalendarEvent } from '@/providers/google-calendar'
 import { EventPill } from './EventPill'
 import { CELL_RULE, TODAY_BG } from './colors'
+import { LANE_H } from './month-spans'
 
 const MONTH_ABBR_FORMAT = new Intl.DateTimeFormat('en-US', { month: 'short' })
 
@@ -13,6 +14,7 @@ export function DayCell({
   isLastColumn,
   isLastRow,
   maxEvents,
+  lanes = 0,
 }: {
   date: Date
   events: CalendarEvent[]
@@ -32,6 +34,11 @@ export function DayCell({
    *  `maxEventsForWeekCount` in `MonthGrid.tsx` for how this is derived and
    *  measured per row-count tier. */
   maxEvents: number
+  /** Multi-day banner lanes reserved across this cell's whole week. Every
+   *  cell in a row gets the same count, including cells no banner crosses, so
+   *  the chips stay on one line across the week instead of stepping up and
+   *  down under the banners. */
+  lanes?: number
 }) {
   const dayNum = date.getDate()
   const isWeekend = date.getDay() === 0 || date.getDay() === 6
@@ -47,7 +54,12 @@ export function DayCell({
   // leading run's start can appear without being day 1).
   const showAdjacentMonthLabel = !isCurrentMonth && (dayNum === 1 || isFirstCellOfGrid)
 
-  const visible = events.slice(0, maxEvents)
+  // Every banner lane costs this cell a chip: the lanes sit in the same
+  // vertical space the chips would have used, so the cap comes down with them
+  // rather than the chips being pushed out of the cell's bottom. `max(0, …)`
+  // because a week can carry more banner lanes than a cell has chip slots.
+  const visibleCap = Math.max(0, maxEvents - lanes)
+  const visible = events.slice(0, visibleCap)
   const hiddenCount = events.length - visible.length
 
   return (
@@ -109,7 +121,7 @@ export function DayCell({
           </span>
         )}
       </div>
-      <div className="flex flex-col">
+      <div className="flex flex-col" style={{ paddingTop: lanes * LANE_H }}>
         {visible.map((event, i) => (
           <EventPill key={event.id + '-' + i} event={event} />
         ))}

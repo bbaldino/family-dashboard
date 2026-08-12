@@ -7,9 +7,32 @@ import { calendarIntegration } from './config'
 import { monthFixtureFor } from './fixtures'
 import { eventLocalDateStr, parseLocalDate, toLocalDateStr } from '@/utils/date'
 
+/**
+ * A multi-day event as one continuous run of days, for themes that draw it as
+ * a single banner rather than as a chip repeated in every cell.
+ *
+ * `startKey`/`endKey` are both **inclusive** local "YYYY-MM-DD" dates — unlike
+ * Google's all-day `end`, which is exclusive. They name exactly the days
+ * `byDate` fills for this event, so the two views can never disagree about how
+ * long something lasts.
+ */
+export interface EventSpan {
+  event: CalendarEvent
+  startKey: string
+  endKey: string
+}
+
 export interface MonthEvents {
   /** Map of "YYYY-MM-DD" → sorted events for that day */
   byDate: Record<string, CalendarEvent[]>
+  /**
+   * Multi-day events, each once. These are **also** still in `byDate`: the
+   * grid theme's `CalendarBoard` and `computeMonthTally` both read straight
+   * from it, so removing them there would silently drop a trip from the other
+   * theme's calendar and from the month's event count. A consumer that draws
+   * banners filters these ids out of its own per-day chips instead.
+   */
+  spans: EventSpan[]
 }
 
 /**
@@ -85,7 +108,49 @@ function bucketByDate(events: CalendarEvent[]): MonthEvents {
     })
   }
 
-  return { byDate }
+  return { byDate, spans: spansFromByDate(byDate) }
+}
+
+/**
+ * The multi-day events in a `byDate` map, each as one inclusive run of days.
+ *
+ * Derived from `byDate` rather than tracked while building it, so there is a
+ * single rule for how long something lasts and no way for the two views to
+ * drift. An event lands on more than one day only by being walked across them,
+ * and that walk is contiguous, so first and last key bound the run.
+ *
+ * Note this counts *days occupied*, not the raw start/end dates, and the two
+ * differ: Google's exclusive end means a timed event running 11pm to 1am
+ * carries two different date keys but fills one day. It stays a chip — a
+ * one-cell banner would be a chip with extra ceremony.
+ *
+ * Exported for the scenario fixtures, which build `byDate` directly and need
+ * their spans to come out of the same rule as real data's.
+ */
+export function spansFromByDate(byDate: Record<string, CalendarEvent[]>): EventSpan[] {
+  const daysById = new Map<string, { event: CalendarEvent; keys: string[] }>()
+
+  for (const [key, dayEvents] of Object.entries(byDate)) {
+    for (const event of dayEvents) {
+      const entry = daysById.get(event.id)
+      if (entry) entry.keys.push(key)
+      else daysById.set(event.id, { event, keys: [key] })
+    }
+  }
+
+  const spans: EventSpan[] = []
+  for (const { event, keys } of daysById.values()) {
+    if (keys.length < 2) continue
+    // Object.entries order is insertion order, not date order — a fixture may
+    // add a later day before an earlier one — so sort rather than assume.
+    keys.sort()
+    spans.push({ event, startKey: keys[0], endKey: keys[keys.length - 1] })
+  }
+  // Chronological, so the greedy lane packing downstream is deterministic:
+  // it assigns lanes in the order it receives spans, and Map iteration order
+  // depends on which day happened to be visited first.
+  spans.sort((a, b) => a.startKey.localeCompare(b.startKey) || a.endKey.localeCompare(b.endKey))
+  return spans
 }
 
 /** A cheap content key for a month: what it shows, not which arrays hold it. */
