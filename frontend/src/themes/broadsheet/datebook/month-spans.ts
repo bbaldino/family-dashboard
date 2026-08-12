@@ -30,11 +30,21 @@ export interface SpanSegment {
   lane: number
 }
 
-/** Vertical pitch between stacked banners, and the height of one. Both are
- *  the mock's own values (`calendar.jsx:196`); the 2px of slack between them
- *  is what keeps two stacked banners from reading as a single block. */
-export const LANE_H = 17
-export const BANNER_H = 15
+/**
+ * Vertical pitch between stacked banners, and the height of one. The 2px of
+ * slack between them is what keeps two stacked banners from reading as a
+ * single block.
+ *
+ * The mock's own values are 17 and 15 (`calendar.jsx:196`), and at 15 the bar
+ * is too short for the 11.5px title it carries: measured in the browser, the
+ * font's box is 11px and the ink of an accented capital rises 10px above the
+ * baseline against a 10px ceiling, so `É` rendered as a bare `E` — the accent
+ * clipped away entirely, changing the word rather than merely trimming it.
+ * Two more pixels here, with the matching line-height in `SpanBanner`, puts
+ * the ceiling at 10.55px and gives it room.
+ */
+export const LANE_H = 19
+export const BANNER_H = 17
 
 /**
  * Distance from a day cell's top to where its chips begin — the space the

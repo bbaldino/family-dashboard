@@ -59,7 +59,13 @@ export function SpanBanner({ segment, rowCount }: { segment: SpanSegment; rowCou
         style={{
           fontFamily: 'var(--font-display)',
           fontSize: 11.5,
-          lineHeight: 1,
+          // Not 1. As a flex item this span is blockified, so its `overflow:
+          // hidden` — which `text-overflow: ellipsis` requires — clips at the
+          // content box, and at line-height 1 that box is 11.5px against an
+          // 11px font box: a quarter-pixel of headroom. An accented capital's
+          // ink reaches 10px above the baseline, so `É` lost its accent and
+          // rendered as `E`. 1.4 puts the ceiling at 10.55px.
+          lineHeight: 1.4,
           color: 'var(--forest)',
           fontWeight: 600,
           whiteSpace: 'nowrap',
