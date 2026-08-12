@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.1](https://github.com/bbaldino/family-dashboard/compare/v0.5.0...v0.5.1) (2026-08-12)
+
+
+### Bug Fixes
+
+* **datebook:** take only byDate in computeMonthTally ([3ebd501](https://github.com/bbaldino/family-dashboard/commit/3ebd501a42654e3edd144288492ba415e17b27b9))
+
 ## [0.5.0](https://github.com/bbaldino/family-dashboard/compare/v0.4.3...v0.5.0) (2026-08-12)
 
 
