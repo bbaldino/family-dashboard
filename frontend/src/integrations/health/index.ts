@@ -5,12 +5,15 @@ export {
   useUptimeReport,
   useServiceHistory,
   useIncidents,
+  useUptimeWindows,
   REFRESH_MS,
 } from './useHealth'
 export type { ServiceUptime } from './useHealth'
 export { summarizeHealth } from './summary'
 export type { HealthSummary } from './summary'
 export { bucketSegments, BLOCKS_24H } from './uptime'
+export { computeUptimeWindows } from './uptime-windows'
+export type { UptimeWindow } from './uptime-windows'
 export { severity, worstOf } from './types'
 export { formatDuration, formatIncidentWhen, isOngoing } from './incidents'
 export type {

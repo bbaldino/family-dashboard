@@ -14,6 +14,7 @@ import {
   type Service,
   type Status,
   type ServiceUptime,
+  useUptimeWindows,
 } from '@/integrations/health'
 
 /** Mock `health.jsx`'s `HL_STATUS`, mapped onto broadsheet's own tokens rather
@@ -43,14 +44,6 @@ const monoStyle = {
   letterSpacing: '0.14em',
   color: 'var(--ink-muted)',
 } as const
-
-const screenTitleStyle = {
-  fontFamily: 'var(--font-display)',
-  fontStyle: 'italic' as const,
-  fontSize: 24,
-  fontWeight: 400,
-  color: 'color-mix(in srgb, var(--paper) 12%, var(--ink) 88%)',
-}
 
 /** Mock `health.jsx`'s `UptimeBar` — 48 half-hour blocks, hairline gaps. `ok`
  *  is held at 55% opacity so a healthy run reads as texture and anything wrong
@@ -424,9 +417,10 @@ function Ledger({
  */
 export function Health() {
   const now = useNow()
-  const { data: services = [], isLoading } = useHealthServices()
+  const { data: services = [] } = useHealthServices()
   const uptimeById = useServiceUptime(services)
   const { data: incidents = [], isError: ledgerFailed } = useIncidents()
+  const uptimeWindows = useUptimeWindows()
 
   const summary = summarizeHealth(services)
   const lead = summary.faults[0] ?? null
@@ -444,8 +438,32 @@ export function Health() {
       <MastheadFrame
         left={
           <>
-            <div style={mastheadKickerStyle}>Section VI</div>
-            <div style={screenTitleStyle}>The Wire</div>
+            <div style={mastheadKickerStyle}>Uptime</div>
+            <div className="flex flex-col" style={{ gap: 1 }}>
+              {uptimeWindows.map((w) => (
+                <div
+                  key={w.label}
+                  className="flex items-baseline"
+                  style={{ gap: 10, fontFamily: 'var(--font-mono)', fontSize: 10 }}
+                >
+                  <span
+                    style={{
+                      minWidth: 52,
+                      fontFamily: 'var(--font-display)',
+                      fontSize: 14,
+                      fontWeight: 600,
+                      // Below 99.5% the number is the story, not the label.
+                      color: w.pct !== null && w.pct < 99.5 ? 'var(--rust)' : 'var(--ink)',
+                    }}
+                  >
+                    {w.pct === null ? '—' : `${w.pct.toFixed(2)}%`}
+                  </span>
+                  <span style={{ color: 'var(--ink-muted)', letterSpacing: '0.06em' }}>
+                    {w.label}
+                  </span>
+                </div>
+              ))}
+            </div>
           </>
         }
         center={
@@ -453,8 +471,11 @@ export function Health() {
             <div style={{ ...mastheadKickerStyle, textAlign: 'center' }}>
               Homelab · {services.length} monitors
             </div>
+            {/* The centre names the page. It carried a verdict ("All quiet.")
+                that the standfirst directly beneath already opens with — the
+                masthead was duplicating its own subhead. */}
             <h1 className="m-0" style={mastheadNumeralStyle}>
-              {isLoading ? 'Listening…' : summary.headline}
+              Health
             </h1>
           </>
         }

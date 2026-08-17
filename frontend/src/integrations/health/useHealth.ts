@@ -1,5 +1,6 @@
 import { useQueries, useQuery } from '@tanstack/react-query'
 import { bucketSegments, windowEndOf, BLOCKS_24H } from './uptime'
+import { computeUptimeWindows, type UptimeWindow } from './uptime-windows'
 import { healthIntegration } from './config'
 import type { HistorySample, Incident, Service, Status, UptimeReport } from './types'
 
@@ -127,4 +128,34 @@ export function useIncidents(limit = 40) {
     queryFn: () => api.get<Incident[]>(`/incidents?limit=${limit}`),
     refetchInterval: 60_000,
   })
+}
+
+/** The longest window the uptime ear reports. One request covers all three:
+ *  the shorter windows are filtered out of the same list. */
+const UPTIME_LEDGER_SECS = 30 * 24 * 3600
+
+/**
+ * Fleet uptime over 24 hours, 7 days and 30 days, for the masthead's ear.
+ *
+ * Unlike `useIncidents` — which deliberately passes no window, so that
+ * upstream keeps the only opinion about what "recent" means — this one must
+ * name its own: the ear reports a 30-day figure, and upstream's default is a
+ * week. The window is computed inside the fetcher rather than in the query
+ * key, so the key stays stable and the request does not re-fire every second.
+ *
+ * See `computeUptimeWindows` for why this reads the incident ledger rather
+ * than the per-service uptime reports.
+ */
+export function useUptimeWindows(): UptimeWindow[] {
+  const { data: services } = useHealthServices()
+  const { data: incidents } = useQuery({
+    queryKey: ['health', 'incidents', 'uptime-windows'],
+    queryFn: () => {
+      const since = Math.floor(Date.now() / 1000) - UPTIME_LEDGER_SECS
+      return api.get<Incident[]>(`/incidents?since=${since}&limit=500`)
+    },
+    refetchInterval: 5 * 60_000,
+  })
+
+  return computeUptimeWindows(incidents ?? [], services?.length ?? 0, Math.floor(Date.now() / 1000))
 }
