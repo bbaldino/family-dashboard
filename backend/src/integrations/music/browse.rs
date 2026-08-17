@@ -400,6 +400,69 @@ pub async fn get_album(
     }))
 }
 
+/// One library playlist, trimmed to what the Media shelf renders.
+///
+/// No track count: MA's `library_items` listing does not carry one, and
+/// fetching each playlist's tracks to count them would be one request per
+/// card. The shelf shows name and art only.
+#[derive(Serialize)]
+pub struct Playlist {
+    pub uri: String,
+    pub name: String,
+    pub image_url: Option<String>,
+}
+
+/// The first image whose path is a full URL — the playlist's real art.
+///
+/// MA's playlist images are a mixed bag: the first is usually `logo.png`, a
+/// local provider placeholder that only resolves through MA's own image proxy,
+/// while the genuine cover (Spotify/YouTube art) is a later entry carrying a
+/// full `https://` URL. Picking the first absolute URL takes the real art
+/// where there is one and leaves the rest to the frontend's letter-placeholder
+/// cover, rather than surfacing a wall of identical MA logos.
+fn playlist_art(item: &serde_json::Value) -> Option<String> {
+    item.get("metadata")
+        .and_then(|m| m.get("images"))
+        .and_then(|imgs| imgs.as_array())?
+        .iter()
+        .filter_map(|img| img.get("path").and_then(|p| p.as_str()))
+        .find(|path| path.starts_with("http"))
+        .map(str::to_string)
+}
+
+/// The household's library playlists, for the Media page's Playlists shelf.
+///
+/// MA command: `music/playlists/library_items`.
+pub async fn get_playlists(
+    State(pool): State<SqlitePool>,
+) -> Result<Json<Vec<Playlist>>, AppError> {
+    let client = MaClient::from_config(&pool).await?;
+    let raw: serde_json::Value = client
+        .command(
+            "music/playlists/library_items",
+            serde_json::json!({ "limit": 20 }),
+        )
+        .await?;
+
+    let playlists = raw
+        .as_array()
+        .map(Vec::as_slice)
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|item| {
+            let uri = item.get("uri").and_then(|u| u.as_str())?.to_string();
+            let name = item.get("name").and_then(|n| n.as_str())?.to_string();
+            Some(Playlist {
+                uri,
+                name,
+                image_url: playlist_art(item),
+            })
+        })
+        .collect();
+
+    Ok(Json(playlists))
+}
+
 /// The function shape that pulls `artist_uri`/`album_uri` off an MA item —
 /// `extract_uris_from_track`/`extract_uris_from_album` below.
 type UriExtractor = fn(&serde_json::Value) -> (Option<String>, Option<String>);
@@ -556,6 +619,40 @@ fn extract_uris_from_album(item: &serde_json::Value) -> (Option<String>, Option<
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn playlist_art_prefers_the_first_absolute_url_over_local_placeholders() {
+        // The real shape MA returns: a local `logo.png` first, the genuine
+        // cover as a later absolute URL.
+        let item = serde_json::json!({
+            "metadata": { "images": [
+                { "type": "thumb", "path": "logo.png" },
+                { "type": "fanart", "path": "https://i.scdn.co/image/real-art" },
+            ] }
+        });
+        assert_eq!(
+            playlist_art(&item).as_deref(),
+            Some("https://i.scdn.co/image/real-art")
+        );
+    }
+
+    #[test]
+    fn playlist_art_is_none_when_every_image_is_a_local_placeholder() {
+        // All local — nothing we can resolve without MA's own proxy, so the
+        // frontend draws its letter placeholder instead of a row of MA logos.
+        let item = serde_json::json!({
+            "metadata": { "images": [
+                { "type": "thumb", "path": "logo.png" },
+                { "type": "fanart", "path": "/collage/abc_fanart.jpg" },
+            ] }
+        });
+        assert_eq!(playlist_art(&item), None);
+    }
+
+    #[test]
+    fn playlist_art_is_none_when_there_are_no_images() {
+        assert_eq!(playlist_art(&serde_json::json!({ "name": "x" })), None);
+    }
 
     #[test]
     fn parse_ma_uri_splits_provider_type_id() {

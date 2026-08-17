@@ -92,3 +92,13 @@ export interface RecentItem {
   album_uri?: string | null
   last_played?: number
 }
+
+/** A library playlist for the Media page's Playlists shelf. No track count:
+ *  MA's library listing does not carry one (see the backend's `get_playlists`),
+ *  so the card shows name and art only. `image_url` is null when MA has no
+ *  absolute-URL art for it, and the card falls back to a letter cover. */
+export interface Playlist {
+  uri: string
+  name: string
+  image_url: string | null
+}

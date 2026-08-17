@@ -38,6 +38,7 @@ pub fn router(pool: SqlitePool) -> Router {
         .route("/image", axum::routing::get(routes::proxy_image))
         .route("/artist", axum::routing::get(browse::get_artist))
         .route("/album", axum::routing::get(browse::get_album))
+        .route("/playlists", axum::routing::get(browse::get_playlists))
         .route(
             "/_admin/backfill_uris",
             axum::routing::post(browse::backfill_uris),

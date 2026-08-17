@@ -15,6 +15,7 @@ const useMusic = vi.hoisted(() => vi.fn())
 const useRoomPills = vi.hoisted(() => vi.fn())
 const useTopTracks = vi.hoisted(() => vi.fn())
 const useRecentlyPlayed = vi.hoisted(() => vi.fn())
+const usePlaylists = vi.hoisted(() => vi.fn())
 const useForYou = vi.hoisted(() => vi.fn())
 const useSearch = vi.hoisted(() => vi.fn())
 const useQueue = vi.hoisted(() => vi.fn())
@@ -25,6 +26,7 @@ vi.mock('@/integrations/music', () => ({
   useRoomPills,
   useTopTracks,
   useRecentlyPlayed,
+  usePlaylists,
   useForYou,
   useSearch,
   useQueue,
@@ -48,6 +50,7 @@ describe('broadsheet Media (The Listening Room)', () => {
     useRoomPills.mockReturnValue({ pills: [], toggle: vi.fn() })
     useTopTracks.mockReturnValue({ data: [] })
     useRecentlyPlayed.mockReturnValue({ data: [] })
+    usePlaylists.mockReturnValue({ data: [] })
     useForYou.mockReturnValue({ data: [] })
     useSearch.mockReturnValue({ data: undefined, isFetching: false })
     useQueue.mockReturnValue({ data: [] })
@@ -69,6 +72,7 @@ describe('broadsheet Media (The Listening Room)', () => {
     useMusic.mockReturnValue({ state: { queues: [], activeQueue: null }, ...musicActions })
     useTopTracks.mockReturnValue({ data: undefined })
     useRecentlyPlayed.mockReturnValue({ data: undefined })
+    usePlaylists.mockReturnValue({ data: undefined })
     useForYou.mockReturnValue({ data: undefined })
     expect(() => renderMedia()).not.toThrow()
   })

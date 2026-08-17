@@ -36,7 +36,7 @@
  * the normal fetch when it's `null` or not a scenario this integration
  * defines.
  */
-import type { QueueState, SearchResults, TopTrack, RecentItem } from './types'
+import type { QueueState, SearchResults, TopTrack, RecentItem, Playlist } from './types'
 import type { RawPlayer } from './usePlayers'
 import type { QueueItem } from './useQueue'
 import type { AlbumDetail } from './useAlbumDetail'
@@ -384,6 +384,43 @@ function packedForYou(): CuratedPlaylist[] {
 const musicForYouFixtures: Record<MusicScenario, () => CuratedPlaylist[]> = {
   empty: () => [],
   packed: packedForYou,
+}
+
+// ─── playlists ───────────────────────────────────────────────────
+
+function packedPlaylists(): Playlist[] {
+  // Eight, deliberately: the design's Playlists shelf fills the band the two
+  // grids leave empty, so the fixture has to be deep enough to show it full.
+  return [
+    'Sunday Kitchen',
+    'Late Shift',
+    'Kids in the Car',
+    'Dinner Party',
+    'Slow Morning',
+    'Road Trip',
+    'Focus Deep',
+    'Wind Down',
+  ].map((name) => ({
+    uri: `fixture://playlist/${name.toLowerCase().replace(/\s+/g, '-')}`,
+    name,
+    // Null, per this file's artwork convention — the card's letter placeholder
+    // is the common real case anyway, since MA carries absolute-URL art for
+    // only a couple of the household's playlists. The art path is covered by
+    // the component test's own inline fixture.
+    image_url: null,
+  }))
+}
+
+const musicPlaylistsFixtures: Record<MusicScenario, () => Playlist[]> = {
+  empty: () => [],
+  packed: packedPlaylists,
+}
+
+/** The `Playlist[]` fixture for `scenario`, or `undefined` if no scenario is
+ *  active or it isn't one this integration defines. */
+export function musicPlaylistsFixtureFor(scenario: string | null): Playlist[] | undefined {
+  if (!scenario || !isMusicScenario(scenario)) return undefined
+  return musicPlaylistsFixtures[scenario]()
 }
 
 /** The curated-playlist `CuratedPlaylist[]` fixture for `scenario`, or

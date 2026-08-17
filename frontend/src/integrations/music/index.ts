@@ -10,7 +10,7 @@ export { useAlbumDetail } from './useAlbumDetail'
 export type { AlbumDetail } from './useAlbumDetail'
 export { useArtistDetail } from './useArtistDetail'
 export type { ArtistDetail, ArtistTrack, ArtistAlbumSummary, TrackArtist } from './useArtistDetail'
-export { useTopTracks, useRecentlyPlayed } from './useQuickDials'
+export { useTopTracks, useRecentlyPlayed, usePlaylists } from './useQuickDials'
 export { useSearch } from './useSearch'
 export { useForYou } from './useForYou'
 export type { CuratedPlaylist } from './useForYou'
@@ -31,4 +31,5 @@ export type {
   SearchResults,
   SearchItem,
   RecentItem,
+  Playlist,
 } from './types'

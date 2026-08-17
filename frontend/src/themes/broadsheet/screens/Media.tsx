@@ -4,6 +4,7 @@ import { MediaMasthead } from '@/themes/broadsheet/media/MediaMasthead'
 import { SearchTabsRow } from '@/themes/broadsheet/media/SearchTabsRow'
 import type { MediaTab } from '@/themes/broadsheet/media/SearchTabsRow'
 import { QuickDialsShelves } from '@/themes/broadsheet/media/QuickDialsShelves'
+import { PlaylistsShelf } from '@/themes/broadsheet/media/PlaylistsShelf'
 import { ForYouShelf } from '@/themes/broadsheet/media/ForYouShelf'
 import { SearchResultsPanel } from '@/themes/broadsheet/media/SearchResultsPanel'
 import { NowSpinning } from '@/themes/broadsheet/media/NowSpinning'
@@ -120,11 +121,18 @@ export function Media() {
               onCloseMenu={closeMenu}
             />
           ) : tab === 'quick-dials' ? (
-            <QuickDialsShelves
-              openMenuUri={openMenuUri}
-              onToggleMenu={toggleMenu}
-              onCloseMenu={closeMenu}
-            />
+            <>
+              <QuickDialsShelves
+                openMenuUri={openMenuUri}
+                onToggleMenu={toggleMenu}
+                onCloseMenu={closeMenu}
+              />
+              {/* Third shelf, filling the band the two grids leave empty at the
+                  foot of the column — the dead-band fix from the design. Its
+                  own sections and this one are siblings in the flex column, so
+                  it inherits the same 14px gap. */}
+              <PlaylistsShelf />
+            </>
           ) : (
             <ForYouShelf
               openMenuUri={openMenuUri}
