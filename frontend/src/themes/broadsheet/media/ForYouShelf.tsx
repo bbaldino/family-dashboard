@@ -16,7 +16,7 @@ import { FOR_YOU_MAX_ROWS } from './shelf-capacity'
  * A playlist never gets "Play just this X" (redundant with the card's own
  * tap) or a "Go to" group (a playlist has no artist/album of its own) — see
  * `build-shelf-action-groups.ts`'s header comment — so its menu is always
- * exactly "Play radio from this" / "Play next" / "Add to queue". Still a
+ * exactly "Start radio" / "Play next" / "Add to queue". Still a
  * real, useful menu: none of those three are reachable by tapping the card. */
 export function ForYouShelf({
   openMenuUri,

@@ -54,10 +54,10 @@ describe('ForYouShelf', () => {
       data: [{ name: 'Late Night Drive', description: 'Discover Weekly', uri: 'p1', image: null }],
     })
     renderShelf({ openMenuUri: 'p1' })
-    expect(screen.getByText('Play radio from this')).toBeInTheDocument()
+    expect(screen.getByText('Start radio')).toBeInTheDocument()
     expect(screen.getByText('Play next')).toBeInTheDocument()
     expect(screen.getByText('Add to queue')).toBeInTheDocument()
-    expect(screen.queryByText('Play just this track')).not.toBeInTheDocument()
+    expect(screen.queryByText('Play track')).not.toBeInTheDocument()
     expect(screen.queryByText(/^Go to/)).not.toBeInTheDocument()
   })
 })

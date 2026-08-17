@@ -39,14 +39,14 @@ export function buildTrackActionGroups({
       label: 'Play',
       items: [
         {
-          label: 'Play just this track',
+          label: 'Play track',
           onSelect: () =>
             run(() =>
               play(track.uri, trackPlayOptions(track, { radio: false, enqueueMode: 'play' })),
             ),
         },
         {
-          label: 'Play radio from this',
+          label: 'Start radio',
           onSelect: () =>
             run(() =>
               play(track.uri, trackPlayOptions(track, { radio: true, enqueueMode: 'play' })),

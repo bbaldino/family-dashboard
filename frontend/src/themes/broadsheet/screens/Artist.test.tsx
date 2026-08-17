@@ -94,7 +94,7 @@ describe('Artist', () => {
     useArtistDetail.mockReturnValue({ data: artistData, isLoading: false, error: null })
     renderArtist()
     fireEvent.click(screen.getByLabelText('Track actions'))
-    expect(screen.getByText('Play radio from this')).toBeInTheDocument()
+    expect(screen.getByText('Start radio')).toBeInTheDocument()
     expect(play).not.toHaveBeenCalled()
   })
 

@@ -20,7 +20,7 @@ import type { TrackActionsMenuGroup } from './TrackActionsMenu'
  * this track" (`radio: false`) is a genuinely different choice from the
  * tap's own default — it's kept. For every other type, "play it as-is" is
  * already what tapping the card does, so offering it again in the menu
- * would just repeat the tap; it's dropped. "Play radio from this",
+ * would just repeat the tap; it's dropped. "Start radio",
  * "Play next", and "Add to queue" are all real, distinct actions no tap can
  * reach for *any* type MA can enqueue, so all three are offered regardless
  * of media type — this is also why `ForYouShelf`'s playlists still get a
@@ -70,14 +70,14 @@ export function buildShelfActionGroups({
         ...(isTrack
           ? [
               {
-                label: 'Play just this track',
+                label: 'Play track',
                 onSelect: () =>
                   run(() => play(item.uri, { ...base, radio: false, enqueueMode: 'play' })),
               },
             ]
           : []),
         {
-          label: 'Play radio from this',
+          label: 'Start radio',
           onSelect: () => run(() => play(item.uri, { ...base, radio: true, enqueueMode: 'play' })),
         },
         {

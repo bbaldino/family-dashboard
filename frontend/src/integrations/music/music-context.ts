@@ -33,6 +33,22 @@ export interface MusicActionError {
   at: number
 }
 
+/** A play action in flight, so a theme can acknowledge a tap while Music
+ *  Assistant cues it. The `play_media` round-trip — a radio attempt, its
+ *  fallback when the station can't be built, then a log lookup — can take a
+ *  noticeable beat, and until it returns nothing signals the tap landed. Set
+ *  the instant `play` is called and cleared when the request settles: the
+ *  same missing-feedback gap `MusicActionError` closes, but for the slow path
+ *  rather than the failed one. */
+export interface PlayPending {
+  /** The item being cued, written for the wall: `“Go”`, or `that` when a
+   *  caller played a bare URI with no name. */
+  label: string
+  /** Distinguishes consecutive cues so a re-tap restarts the notice rather
+   *  than reusing one already on screen. */
+  at: number
+}
+
 export interface MusicContextValue {
   state: MusicState
   /** The panel's own room as a display label — the anchor first, then any
@@ -47,6 +63,10 @@ export interface MusicContextValue {
   /** The most recent failed action, or null. Cleared by `dismissError`. */
   actionError: MusicActionError | null
   dismissError: () => void
+  /** A play cued but not yet confirmed by the backend, or null — set the
+   *  instant `play` is called, cleared when it settles. Mutually exclusive
+   *  with `actionError`: starting a play clears any stale failure. */
+  playPending: PlayPending | null
   play: (uri: string, options?: PlayOptions) => Promise<void>
   pause: () => Promise<void>
   resume: () => Promise<void>
@@ -67,6 +87,7 @@ export const defaultContextValue: MusicContextValue = {
   isConnected: false,
   actionError: null,
   dismissError: () => {},
+  playPending: null,
   play: noOp,
   pause: noOp,
   resume: noOp,

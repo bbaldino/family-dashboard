@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom'
 import { MusicProvider } from '@/integrations/music'
 import { Footer } from '@/themes/broadsheet/ui/Footer'
 import { ActionErrorNotice } from '@/themes/broadsheet/ui/ActionErrorNotice'
+import { PlayPendingNotice } from '@/themes/broadsheet/ui/PlayPendingNotice'
 
 /**
  * The theme's persistent chrome: the 1600x900 editorial canvas that
@@ -24,6 +25,9 @@ export function BroadsheetLayout() {
             the footer's own now-playing controls on every screen, so a failure
             has to be reportable from every screen too. */}
         <ActionErrorNotice />
+        {/* Sits in the same slot; the two are mutually exclusive — a play
+            clears any stale error as it sets the cue. */}
+        <PlayPendingNotice />
       </div>
     </MusicProvider>
   )

@@ -88,8 +88,8 @@ describe('QuickDialsShelves', () => {
     expect(screen.getByLabelText('Track actions')).toBeInTheDocument()
     // Open, since the id matches this card's shelf-scoped id — its four track
     // play actions (top tracks are always tracks) are visible.
-    expect(screen.getByText('Play just this track')).toBeInTheDocument()
-    expect(screen.getByText('Play radio from this')).toBeInTheDocument()
+    expect(screen.getByText('Play track')).toBeInTheDocument()
+    expect(screen.getByText('Start radio')).toBeInTheDocument()
   })
 
   it("scopes a card's menu id to its shelf, so the same track in two shelves opens independently", () => {
@@ -119,7 +119,7 @@ describe('QuickDialsShelves', () => {
     // both menus at once, and the second rendered clipped inside its shelf.
     renderShelves({ openMenuUri: 'frequently:u1' })
     expect(screen.getAllByLabelText('Track actions')).toHaveLength(2)
-    expect(screen.getAllByText('Play just this track')).toHaveLength(1)
+    expect(screen.getAllByText('Play track')).toHaveLength(1)
   })
 
   it("calls onToggleMenu with the tapped card's shelf-scoped id", () => {

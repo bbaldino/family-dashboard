@@ -106,7 +106,7 @@ describe('Album', () => {
     useAlbumDetail.mockReturnValue({ data: albumData, isLoading: false, error: null })
     renderAlbum()
     fireEvent.click(screen.getAllByLabelText('Track actions')[0])
-    expect(screen.getByText('Play just this track')).toBeInTheDocument()
+    expect(screen.getByText('Play track')).toBeInTheDocument()
     expect(play).not.toHaveBeenCalled()
   })
 
@@ -122,16 +122,16 @@ describe('Album', () => {
     useAlbumDetail.mockReturnValue({ data: albumData, isLoading: false, error: null })
     renderAlbum()
     fireEvent.click(screen.getAllByLabelText('Track actions')[0])
-    expect(screen.getByText('Play just this track')).toBeInTheDocument()
+    expect(screen.getByText('Play track')).toBeInTheDocument()
     fireEvent.click(screen.getByTestId('broadsheet-menu-scrim'))
-    expect(screen.queryByText('Play just this track')).not.toBeInTheDocument()
+    expect(screen.queryByText('Play track')).not.toBeInTheDocument()
   })
 
-  it('wires "Play just this track" to the track uri with radio off — not exercised by default', () => {
+  it('wires "Play track" to the track uri with radio off — not exercised by default', () => {
     useAlbumDetail.mockReturnValue({ data: albumData, isLoading: false, error: null })
     renderAlbum()
     fireEvent.click(screen.getAllByLabelText('Track actions')[0])
-    fireEvent.click(screen.getByText('Play just this track'))
+    fireEvent.click(screen.getByText('Play track'))
     expect(play).toHaveBeenCalledWith(
       'spotify--x://track/1',
       expect.objectContaining({ radio: false, enqueueMode: 'play' }),

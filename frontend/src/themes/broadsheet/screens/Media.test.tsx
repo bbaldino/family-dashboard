@@ -178,11 +178,11 @@ describe('broadsheet Media (The Listening Room)', () => {
     })
     renderMedia()
     fireEvent.click(screen.getByLabelText('Track actions'))
-    expect(screen.getByText('Play just this track')).toBeInTheDocument()
+    expect(screen.getByText('Play track')).toBeInTheDocument()
     expect(screen.getByTestId('broadsheet-menu-scrim')).toBeInTheDocument()
 
     fireEvent.click(screen.getByTestId('broadsheet-menu-scrim'))
-    expect(screen.queryByText('Play just this track')).not.toBeInTheDocument()
+    expect(screen.queryByText('Play track')).not.toBeInTheDocument()
     expect(screen.queryByTestId('broadsheet-menu-scrim')).not.toBeInTheDocument()
   })
 

@@ -10,8 +10,8 @@ import type { ArtistTrack } from '@/integrations/music'
  * `commonPlay` closure (read for reference only, nothing imported).
  *
  * The four actions differ only in `radio`/`enqueueMode`:
- * - Play just this track → `{ radio: false, enqueueMode: 'play' }`
- * - Play radio from this → `{ radio: true, enqueueMode: 'play' }`
+ * - Play track → `{ radio: false, enqueueMode: 'play' }`
+ * - Start radio → `{ radio: true, enqueueMode: 'play' }`
  * - Play next            → `{ radio: false, enqueueMode: 'next' }`
  * - Add to queue          → `{ radio: false, enqueueMode: 'add' }`
  */
