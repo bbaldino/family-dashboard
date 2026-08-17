@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { Health } from './Health'
 
 const useHealthServices = vi.hoisted(() => vi.fn())
@@ -94,5 +94,42 @@ describe('broadsheet Health', () => {
     render(<Health />)
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(3)
     expect(screen.queryByText(/100\.00%/)).not.toBeInTheDocument()
+  })
+
+  const incident = (name: string, id: number, ended: number | null) => ({
+    monitor_id: id,
+    monitor_name: name,
+    started_at: 1_800_000_000 - id * 3600,
+    ended_at: ended,
+    duration_secs: 600,
+    worst_status: 'critical' as const,
+    message: 'connection refused',
+    failing_components: [],
+  })
+
+  it('leads the ledger with history, keeping an ongoing incident from crowding it out', () => {
+    // A live fault caps the ledger tight (one of its rows is the ongoing
+    // incident). Folded newest-first, the ongoing row would push the week's
+    // history off the "last seven days" panel entirely.
+    useHealthServices.mockReturnValue({
+      data: [service({ id: 9, name: 'Music Assistant', status: 'critical' })],
+      isLoading: false,
+    })
+    useIncidents.mockReturnValue({
+      data: [
+        incident('Music Assistant', 9, null), // ongoing — newest, as the API returns it
+        incident('Plex', 1, 1_799_990_000),
+        incident('Frigate', 2, 1_799_980_000),
+      ],
+      isError: false,
+    })
+    render(<Health />)
+
+    const ledger = screen.getByText('The ledger').closest('div')!.parentElement!
+    const names = within(ledger)
+      .getAllByText(/Music Assistant|Plex|Frigate/)
+      .map((el) => el.textContent)
+    // History (Plex, Frigate) leads; the ongoing Music Assistant row sits last.
+    expect(names).toEqual(['Plex', 'Frigate', 'Music Assistant'])
   })
 })
