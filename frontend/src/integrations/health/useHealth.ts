@@ -148,7 +148,7 @@ const UPTIME_LEDGER_SECS = 30 * 24 * 3600
  */
 export function useUptimeWindows(): UptimeWindow[] {
   const { data: services } = useHealthServices()
-  const { data: incidents } = useQuery({
+  const { data: incidents, dataUpdatedAt } = useQuery({
     queryKey: ['health', 'incidents', 'uptime-windows'],
     queryFn: () => {
       const since = Math.floor(Date.now() / 1000) - UPTIME_LEDGER_SECS
@@ -157,5 +157,14 @@ export function useUptimeWindows(): UptimeWindow[] {
     refetchInterval: 5 * 60_000,
   })
 
-  return computeUptimeWindows(incidents ?? [], services?.length ?? 0, Math.floor(Date.now() / 1000))
+  // `now` is the moment the ledger was fetched (`dataUpdatedAt`), not render
+  // time — a `Date.now()` in the render body is impure, and this is the more
+  // honest instant anyway: the windows clip incidents against the same clock
+  // the incidents were read on. `dataUpdatedAt` is 0 before the first fetch,
+  // when `incidents` is undefined and the windows are empty regardless.
+  return computeUptimeWindows(
+    incidents ?? [],
+    services?.length ?? 0,
+    Math.floor(dataUpdatedAt / 1000),
+  )
 }
