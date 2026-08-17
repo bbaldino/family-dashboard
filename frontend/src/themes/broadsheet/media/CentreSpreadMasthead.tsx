@@ -1,22 +1,7 @@
-import type { QueueState } from '@/integrations/music'
 import { MastheadFrame } from '@/themes/broadsheet/ui/MastheadFrame'
 import { mastheadKickerStyle } from '@/themes/broadsheet/ui/masthead-styles'
-import { INK2 } from './colors'
+import { RoomEar } from './RoomEar'
 import { mastheadTitleSize } from '@/themes/broadsheet/ui/masthead-title-size'
-import { playbackPhrase } from './playback-phrase'
-
-/** The screen title's own treatment, left cell — same 24px italic serif as
- *  the mock (`nowplaying.jsx:54`), close to but not `MediaMasthead`'s 26px
- *  `screenTitleStyle` (a different screen, a different exact value; see
- *  that file's own comment on why its title isn't the shared 72px numeral
- *  either). */
-const leftTitleStyle = {
-  fontFamily: 'var(--font-display)',
-  fontStyle: 'italic' as const,
-  fontSize: 24,
-  fontWeight: 400,
-  color: INK2,
-}
 
 /** The centre title's design size — 62px italic serif, deliberately not the
  *  masthead's shared 72px numeral (`masthead-styles.ts`'s
@@ -71,18 +56,10 @@ const closeButtonStyle = {
  * measurements, so neither does this one.
  */
 export function CentreSpreadMasthead({
-  room,
-  playbackState,
   trackTitle,
   trackNumber,
   onClose,
 }: {
-  /** This panel's own room — the anchor and anything grouped into it — not
-   *  the queue owner's name. See `music-context.ts`'s `anchorRoomLabel`. */
-  room: string | null
-  /** What that room is doing, so the left cell can say so honestly rather
-   *  than claiming playback over a paused queue. */
-  playbackState: QueueState['state'] | null
   trackTitle: string
   trackNumber: number | null
   onClose: () => void
@@ -90,14 +67,12 @@ export function CentreSpreadMasthead({
   return (
     <MastheadFrame
       padding="14px 56px 10px"
-      left={
-        <>
-          <div style={mastheadKickerStyle}>The Centre Spread</div>
-          <div style={leftTitleStyle}>
-            {room ? `${playbackPhrase(playbackState)} the ${room}` : 'Now playing'}
-          </div>
-        </>
-      }
+      // The room picker, the same ear Media carries — so the two screens
+      // agree that rooms are selectable. It was "The Centre Spread" over a
+      // playback phrase naming this panel's room: a second name for the page,
+      // above something the ear now says per room. The room label itself is
+      // still used by `CentreSpread`'s own credits margin.
+      left={<RoomEar />}
       center={
         <>
           <div style={{ ...mastheadKickerStyle, textAlign: 'center' }}>

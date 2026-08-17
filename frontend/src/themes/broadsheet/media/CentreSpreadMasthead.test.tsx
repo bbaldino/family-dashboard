@@ -2,79 +2,67 @@ import { describe, expect, it, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { CentreSpreadMasthead } from './CentreSpreadMasthead'
 
+const useRoomPills = vi.hoisted(() => vi.fn())
+vi.mock('@/integrations/music', () => ({ useRoomPills }))
+
+const anchorPill = {
+  player: {
+    playerId: 'kitchen',
+    displayName: 'Kitchen',
+    state: 'playing',
+    available: true,
+    volumeLevel: 45,
+    groupMembers: ['kitchen'],
+    syncedTo: null,
+    canGroupWith: [],
+    groupVolume: null,
+  },
+  isAnchor: true,
+  joined: true,
+  pending: false,
+}
+
+function renderMasthead(over: Record<string, unknown> = {}) {
+  useRoomPills.mockReturnValue({ pills: [anchorPill], toggle: vi.fn() })
+  const onClose = vi.fn()
+  const utils = render(
+    <CentreSpreadMasthead trackTitle="Amber Hours" trackNumber={4} onClose={onClose} {...over} />,
+  )
+  return { ...utils, onClose }
+}
+
 describe('CentreSpreadMasthead', () => {
-  it('shows the room, track title, and "Side A · Track {n}" when a track number is present', () => {
-    const onClose = vi.fn()
-    render(
-      <CentreSpreadMasthead
-        room="Kitchen"
-        playbackState="playing"
-        trackTitle="Amber Hours"
-        trackNumber={4}
-        onClose={onClose}
-      />,
-    )
-    expect(screen.getByText('Now playing in the Kitchen')).toBeInTheDocument()
-    expect(screen.getByText('Amber Hours')).toBeInTheDocument()
+  it('states what is playing in the centre, with "Side A · Track {n}"', () => {
+    renderMasthead()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Amber Hours')
     expect(screen.getByText('Side A · Track 4')).toBeInTheDocument()
   })
 
   it('drops the "Track {n}" clause — never "of {m}" — when there is no track number', () => {
-    const onClose = vi.fn()
-    render(
-      <CentreSpreadMasthead
-        room="Kitchen"
-        playbackState="playing"
-        trackTitle="Amber Hours"
-        trackNumber={null}
-        onClose={onClose}
-      />,
-    )
+    renderMasthead({ trackNumber: null })
     expect(screen.getByText('Side A')).toBeInTheDocument()
+    expect(screen.queryByText(/Track/)).not.toBeInTheDocument()
     expect(screen.queryByText(/of \d/)).not.toBeInTheDocument()
   })
 
-  it('falls back to a roomless "Now playing" when there is no room', () => {
-    const onClose = vi.fn()
-    render(
-      <CentreSpreadMasthead
-        room={null}
-        playbackState="playing"
-        trackTitle="Amber Hours"
-        trackNumber={1}
-        onClose={onClose}
-      />,
-    )
-    expect(screen.getByText('Now playing')).toBeInTheDocument()
-  })
-
-  // Both mastheads used to claim playback regardless of state — the queue
-  // behind the reported "Now playing in the Deck" was in fact paused.
-  it('says a paused room is paused rather than claiming playback', () => {
-    render(
-      <CentreSpreadMasthead
-        room="Kitchen and Deck"
-        playbackState="paused"
-        trackTitle="Amber Hours"
-        trackNumber={1}
-        onClose={vi.fn()}
-      />,
-    )
-    expect(screen.getByText('Paused in the Kitchen and Deck')).toBeInTheDocument()
+  /**
+   * The suite's masthead rule. This ear read "The Centre Spread" over a
+   * playback phrase naming the room ("Now playing in the Kitchen") — a second
+   * name for the page above something the room ear now says per room. The
+   * centre still states what the screen is *for* (the track), which the rule
+   * allows: it states the page rather than naming it.
+   */
+  it('carries the room picker in the ear, not a second page name', () => {
+    renderMasthead()
+    expect(screen.getByText('Rooms')).toBeInTheDocument()
+    expect(screen.getByText('Kitchen')).toBeInTheDocument()
+    expect(screen.queryByText('The Centre Spread')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Now playing in/)).not.toBeInTheDocument()
   })
 
   it('calls onClose when Close is tapped', () => {
-    const onClose = vi.fn()
-    render(
-      <CentreSpreadMasthead
-        room="Kitchen"
-        playbackState="playing"
-        trackTitle="Amber Hours"
-        trackNumber={1}
-        onClose={onClose}
-      />,
-    )
-    fireEvent.click(screen.getByText('Close ✕'))
+    const { onClose } = renderMasthead()
+    fireEvent.click(screen.getByRole('button', { name: /close/i }))
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 })

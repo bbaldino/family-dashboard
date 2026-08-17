@@ -60,7 +60,14 @@ describe('CentreSpread', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('names this panel’s own room and its group, not the queue owner’s room', () => {
+  /**
+   * The masthead no longer names the room: that phrase ("Now playing in the
+   * Kitchen and Deck") was the left ear, which is now the shared room picker.
+   * `anchorRoomLabel` is still the rule for naming a group and still covered
+   * by `anchor.test.ts` and `music-context`; this screen simply no longer
+   * renders it. What is asserted here is that the group's rooms reach the ear.
+   */
+  it('lists the rooms in the masthead ear', () => {
     useMusic.mockReturnValue({
       state: { queues: [], activeQueue: { ...playingQueue, displayName: 'Deck' } },
       anchorRoomLabel: 'Kitchen and Deck',
@@ -72,7 +79,7 @@ describe('CentreSpread', () => {
       setVolume,
     })
     render(<CentreSpread onClose={vi.fn()} />)
-    expect(screen.getByText('Now playing in the Kitchen and Deck')).toBeInTheDocument()
+    expect(screen.getByText('Rooms')).toBeInTheDocument()
   })
 
   it('renders the full page for the active track', () => {
@@ -90,7 +97,6 @@ describe('CentreSpread', () => {
     expect(screen.getByTestId('broadsheet-centre-spread')).toBeInTheDocument()
     // Appears twice: the masthead's own 62px title, and the running order's head row.
     expect(screen.getAllByText('Amber Hours').length).toBeGreaterThan(0)
-    expect(screen.getByText('Now playing in the Kitchen')).toBeInTheDocument()
   })
 
   it('calls onClose when Close is tapped', () => {

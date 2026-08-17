@@ -31,7 +31,7 @@ import { CentreSpreadRunningOrder } from './CentreSpreadRunningOrder'
  * the same way `Media.tsx`'s does.
  */
 export function CentreSpread({ onClose }: { onClose: () => void }) {
-  const { state, anchorRoomLabel, isPlaying, pause, resume, next, previous, setVolume } = useMusic()
+  const { state, isPlaying, pause, resume, next, previous, setVolume } = useMusic()
   const activeQueue = state.activeQueue
   const currentItem = activeQueue?.currentItem ?? null
 
@@ -56,12 +56,7 @@ export function CentreSpread({ onClose }: { onClose: () => void }) {
       data-testid="broadsheet-centre-spread"
       className="broadsheet-root w-[1600px] h-[900px] flex flex-col"
     >
-      {/* `room` is this panel's own room and its group, falling back to the
-       *  queue owner when no anchor is configured — same rule as
-       *  `MediaMasthead`. */}
       <CentreSpreadMasthead
-        room={anchorRoomLabel ?? activeQueue.displayName}
-        playbackState={activeQueue.state}
         trackTitle={currentItem.name}
         trackNumber={currentItem.trackNumber ?? null}
         onClose={onClose}
