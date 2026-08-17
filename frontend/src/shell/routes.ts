@@ -11,6 +11,7 @@ export const ROUTE_PATHS: Record<ScreenKey, string> = {
   media: 'media',
   'media.artist': 'media/artist/:uri',
   'media.album': 'media/album/:uri',
+  sports: 'sports',
   cameras: 'cameras',
   health: 'health',
 }

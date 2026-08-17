@@ -10,6 +10,7 @@ const NAV_ITEMS: { key: ScreenKey; label: string }[] = [
   { key: 'home', label: 'Home' },
   { key: 'calendar', label: 'Calendar' },
   { key: 'media', label: 'Media' },
+  { key: 'sports', label: 'Sports' },
   { key: 'cameras', label: 'Cameras' },
   { key: 'health', label: 'Health' },
 ]
