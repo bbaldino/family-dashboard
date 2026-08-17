@@ -54,15 +54,15 @@ describe('buildShelfActionGroups', () => {
       onClose: vi.fn(),
     })
     expect(groups[0].items.map((i) => i.label)).toEqual([
-      'Play just this track',
-      'Play radio from this',
+      'Play track',
+      'Start radio',
       'Play next',
       'Add to queue',
     ])
     expect(groups[1].items.map((i) => i.label)).toEqual(['Go to artist', 'Go to album'])
   })
 
-  it('drops "Play just this track" for an album — tapping the card already plays it as-is', () => {
+  it('drops "Play track" for an album — tapping the card already plays it as-is', () => {
     const groups = buildShelfActionGroups({
       item: album,
       play: vi.fn(),
@@ -70,7 +70,7 @@ describe('buildShelfActionGroups', () => {
       onClose: vi.fn(),
     })
     expect(groups[0].items.map((i) => i.label)).toEqual([
-      'Play radio from this',
+      'Start radio',
       'Play next',
       'Add to queue',
     ])
@@ -94,7 +94,7 @@ describe('buildShelfActionGroups', () => {
       onClose: vi.fn(),
     })
     expect(groups[0].items.map((i) => i.label)).toEqual([
-      'Play radio from this',
+      'Start radio',
       'Play next',
       'Add to queue',
     ])
@@ -109,14 +109,14 @@ describe('buildShelfActionGroups', () => {
       onClose: vi.fn(),
     })
     expect(groups[0].items.map((i) => i.label)).toEqual([
-      'Play radio from this',
+      'Start radio',
       'Play next',
       'Add to queue',
     ])
     expect(groups[1].items).toEqual([])
   })
 
-  it('"Play radio from this" plays with radio for a non-track item', () => {
+  it('"Start radio" plays with radio for a non-track item', () => {
     const play = vi.fn()
     const groups = buildShelfActionGroups({
       item: album,

@@ -4,8 +4,8 @@ import { TrackActionsMenu } from './TrackActionsMenu'
 
 function groups(overrides?: { playItems?: string[]; navItems?: string[] }) {
   const playLabels = overrides?.playItems ?? [
-    'Play just this track',
-    'Play radio from this',
+    'Play track',
+    'Start radio',
     'Play next',
     'Add to queue',
   ]
@@ -26,8 +26,8 @@ describe('TrackActionsMenu', () => {
   it('renders all six actions across both groups', () => {
     render(<TrackActionsMenu kicker="Track 01" title="Galvanize" groups={groups()} />)
     for (const label of [
-      'Play just this track',
-      'Play radio from this',
+      'Play track',
+      'Start radio',
       'Play next',
       'Add to queue',
       'Go to artist',
@@ -63,8 +63,8 @@ describe('TrackActionsMenu', () => {
 
   it('highlights only the first item of the first non-empty group as the default action', () => {
     render(<TrackActionsMenu kicker="Track 01" title="Galvanize" groups={groups()} />)
-    const first = screen.getByText('Play just this track')
-    const second = screen.getByText('Play radio from this')
+    const first = screen.getByText('Play track')
+    const second = screen.getByText('Start radio')
     expect(first.style.color).toBe('var(--rust)')
     expect(first.style.fontWeight).toBe('600')
     expect(second.style.color).toBe('var(--ink)')

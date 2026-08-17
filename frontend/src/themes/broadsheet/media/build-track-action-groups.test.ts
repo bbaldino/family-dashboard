@@ -22,8 +22,8 @@ describe('buildTrackActionGroups', () => {
       onClose: vi.fn(),
     })
     expect(groups[0].items.map((i) => i.label)).toEqual([
-      'Play just this track',
-      'Play radio from this',
+      'Play track',
+      'Start radio',
       'Play next',
       'Add to queue',
     ])
@@ -50,7 +50,7 @@ describe('buildTrackActionGroups', () => {
     expect(groups[1].items.map((i) => i.label)).toEqual(['Go to artist'])
   })
 
-  it('"Play just this track" plays without radio', () => {
+  it('"Play track" plays without radio', () => {
     const play = vi.fn()
     const groups = buildTrackActionGroups({ track, play, navigate: vi.fn(), onClose: vi.fn() })
     groups[0].items[0].onSelect()
@@ -60,7 +60,7 @@ describe('buildTrackActionGroups', () => {
     )
   })
 
-  it('"Play radio from this" plays with radio', () => {
+  it('"Start radio" plays with radio', () => {
     const play = vi.fn()
     const groups = buildTrackActionGroups({ track, play, navigate: vi.fn(), onClose: vi.fn() })
     groups[0].items[1].onSelect()

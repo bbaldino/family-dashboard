@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { TrackActionsTrigger } from './TrackActionsTrigger'
 
-const groups = [{ label: 'Play', items: [{ label: 'Play just this track', onSelect: vi.fn() }] }]
+const groups = [{ label: 'Play', items: [{ label: 'Play track', onSelect: vi.fn() }] }]
 
 describe('TrackActionsTrigger', () => {
   it('renders the ⋮ glyph and no menu when closed', () => {
@@ -16,7 +16,7 @@ describe('TrackActionsTrigger', () => {
       />,
     )
     expect(screen.getByLabelText('Track actions')).toBeInTheDocument()
-    expect(screen.queryByText('Play just this track')).not.toBeInTheDocument()
+    expect(screen.queryByText('Play track')).not.toBeInTheDocument()
   })
 
   it('renders the menu when open', () => {
@@ -29,7 +29,7 @@ describe('TrackActionsTrigger', () => {
         groups={groups}
       />,
     )
-    expect(screen.getByText('Play just this track')).toBeInTheDocument()
+    expect(screen.getByText('Play track')).toBeInTheDocument()
   })
 
   it('calls onToggle, not the menu items, when the trigger itself is tapped', () => {

@@ -130,8 +130,8 @@ describe('SearchResultsPanel', () => {
     expect(screen.getByText('Go to artist')).toBeInTheDocument()
     expect(screen.queryByText('Go to album')).not.toBeInTheDocument()
     // An album's own tap already plays it start-to-finish, so the menu
-    // doesn't repeat that as "Play just this track".
-    expect(screen.queryByText('Play just this track')).not.toBeInTheDocument()
+    // doesn't repeat that as "Play track".
+    expect(screen.queryByText('Play track')).not.toBeInTheDocument()
   })
 
   it('gives an artist result no "Go to" group at all', () => {
@@ -145,7 +145,7 @@ describe('SearchResultsPanel', () => {
       isFetching: false,
     })
     renderPanel({ query: 'night', openMenuUri: 'ar1' })
-    expect(screen.getByText('Play radio from this')).toBeInTheDocument()
+    expect(screen.getByText('Start radio')).toBeInTheDocument()
     expect(screen.queryByText(/^Go to/)).not.toBeInTheDocument()
   })
 })
