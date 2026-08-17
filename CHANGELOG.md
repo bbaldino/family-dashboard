@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.6.0](https://github.com/bbaldino/family-dashboard/compare/v0.5.2...v0.6.0) (2026-08-17)
+
+
+### Features
+
+* **health:** report fleet uptime in the masthead ear ([b1df233](https://github.com/bbaldino/family-dashboard/commit/b1df233ebcf15142eedd0cc5b4e3f595ad539060))
+* **media:** add a Playlists shelf to fill the dead band ([29f6fee](https://github.com/bbaldino/family-dashboard/commit/29f6fee4ff7b95fbde6a1f66494f0f090259c17a))
+
+
+### Bug Fixes
+
+* **health:** compute uptime windows against fetch time, not render ([3228f35](https://github.com/bbaldino/family-dashboard/commit/3228f352daed5afc507300a41625aed9450971f3))
+
 ## [0.5.2](https://github.com/bbaldino/family-dashboard/compare/v0.5.1...v0.5.2) (2026-08-12)
 
 
