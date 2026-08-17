@@ -280,7 +280,12 @@ function Ledger({
   rows: number
   failed: boolean
 }) {
-  const shown = incidents.slice(0, rows)
+  // History leads. An ongoing incident is already the lead story up the page,
+  // so folding it in newest-first would crowd the week's history out from under
+  // the cap — a panel captioned "last seven days" showing only today. Ongoing
+  // rows sit at the end of the visible set instead, still counted, never first.
+  const ordered = [...incidents.filter((i) => !isOngoing(i)), ...incidents.filter(isOngoing)]
+  const shown = ordered.slice(0, rows)
 
   return (
     <div style={{ marginTop: 14, paddingTop: 10, borderTop: '2px solid var(--ink)' }}>
@@ -619,7 +624,10 @@ export function Health() {
           {/* Trimmed when a lead story is already competing for the height —
            *  the mock does the same. */}
           <div style={{ flex: '0 0 auto' }}>
-            <Ledger incidents={incidents} rows={lead ? 2 : 6} failed={ledgerFailed} />
+            {/* Three rows beside a lead fault, not two: an ongoing incident
+                takes one of them, and a "last seven days" panel that then
+                showed a single day of history read as broken. */}
+            <Ledger incidents={incidents} rows={lead ? 3 : 6} failed={ledgerFailed} />
           </div>
         </div>
       </div>
