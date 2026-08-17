@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReactNode } from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 // MusicProvider reads its scenario fixture once, at module load (see the
@@ -214,6 +214,82 @@ describe('MusicProvider action failures', () => {
 
     screen.getByText('play').click()
     await waitFor(() => expect(screen.getByTestId('error')).toHaveTextContent(''))
+  })
+})
+
+/**
+ * The other half of the same missing-feedback problem: a play that succeeds
+ * but takes a beat to start. Music Assistant's play_media round-trip (a radio
+ * attempt, its fallback, then a log lookup) can run to a noticeable pause, and
+ * with nothing shown the tap reads as ignored just like a silent failure did.
+ * `playPending` is set the instant `play` is called and cleared when it
+ * settles, so a theme can acknowledge the tap for the gap in between.
+ */
+describe('MusicProvider play pending', () => {
+  function PendingProbe({
+    useMusic,
+  }: {
+    useMusic: () => {
+      playPending: { label: string } | null
+      play: (uri: string, options?: { name?: string }) => Promise<void>
+    }
+  }) {
+    const { playPending, play } = useMusic()
+    return (
+      <div>
+        <button type="button" onClick={() => play('spotify://track/x', { name: 'Go' })}>
+          play
+        </button>
+        <span data-testid="pending">{playPending?.label ?? ''}</span>
+      </div>
+    )
+  }
+
+  beforeEach(() => {
+    musicStateFixtureFor.mockReturnValue([])
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    musicStateFixtureFor.mockReset()
+    vi.resetModules()
+  })
+
+  it('names the cued item the instant play is called, then clears it when the request settles', async () => {
+    // Hold the /play response open so the in-flight window is observable;
+    // every other fetch (config, etc.) resolves normally.
+    let releasePlay: (() => void) | null = null
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url: string) => {
+        if (String(url).includes('/api/music/play')) {
+          return new Promise((resolve) => {
+            releasePlay = () =>
+              resolve({ ok: true, json: () => Promise.resolve({}), text: () => Promise.resolve('') })
+          })
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+      }),
+    )
+    const { MusicProvider, useMusic } = await freshMusicModules()
+    render(
+      wrapInQueryClient(
+        <MusicProvider>
+          <PendingProbe useMusic={useMusic as never} />
+        </MusicProvider>,
+      ),
+    )
+
+    // Set before the round-trip returns — the cue is what makes a slow tap
+    // visibly land.
+    screen.getByText('play').click()
+    await waitFor(() => expect(screen.getByTestId('pending')).toHaveTextContent('“Go”'))
+
+    // Once the play settles, the cue clears — playback is (about to be) audible.
+    await act(async () => {
+      releasePlay?.()
+    })
+    await waitFor(() => expect(screen.getByTestId('pending')).toHaveTextContent(''))
   })
 })
 

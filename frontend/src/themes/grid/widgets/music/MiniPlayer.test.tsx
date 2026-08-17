@@ -34,6 +34,7 @@ function mockMusic(activeQueue: QueueState | null) {
     isConnected: true,
     actionError: null,
     dismissError: vi.fn(),
+    playPending: null,
     play: vi.fn(),
     pause: vi.fn(),
     resume: vi.fn(),

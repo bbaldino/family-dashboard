@@ -5,7 +5,7 @@ import { activeScenario } from '@/lib/scenario'
 import { musicIntegration } from './config'
 import type { MusicState, QueueState } from './types'
 import { MusicContext, defaultContextValue } from './music-context'
-import type { MusicActionError, MusicContextValue, PlayOptions } from './music-context'
+import type { MusicActionError, MusicContextValue, PlayOptions, PlayPending } from './music-context'
 import { musicStateFixtureFor } from './fixtures'
 import { anchorGroupLabel, deriveActiveQueue, resolveAnchorGroup } from './anchor'
 import { useAnchorId } from './useAnchorId'
@@ -51,6 +51,7 @@ export function MusicProvider({ children }: MusicProviderProps) {
   const [isConnected, setIsConnected] = useState(() => fixtureQueues !== undefined)
   const [optimisticPlaying, setOptimisticPlaying] = useState<boolean | null>(null)
   const [actionError, setActionError] = useState<MusicActionError | null>(null)
+  const [playPending, setPlayPending] = useState<PlayPending | null>(null)
   const esRef = useRef<EventSource | null>(null)
   const volumeLockUntilRef = useRef<number>(0)
 
@@ -177,20 +178,31 @@ export function MusicProvider({ children }: MusicProviderProps) {
       // The item's own name when we have it — "Couldn’t play “Go”." tells you
       // which tap died, which matters on a shelf where every card looks alike.
       const what = options?.name ? `“${options.name}”` : 'that'
-      await runAction(`Couldn’t play ${what}`, () =>
-        musicIntegration.api.post('/play', {
-          uri,
-          radio: options?.radio,
-          enqueue_mode: options?.enqueueMode,
-          media_type: options?.mediaType,
-          name: options?.name,
-          artist: options?.artist,
-          artist_uri: options?.artistUri,
-          album: options?.album,
-          album_uri: options?.albumUri,
-          image_url: options?.imageUrl,
-        }),
-      )
+      // Acknowledge the tap at once. The play_media round-trip can run to a
+      // noticeable pause (a radio attempt, its fallback when the station
+      // can't be built, then a log lookup), and without this the gap between
+      // a tap and the first sound is silent — the tap reads as ignored. A
+      // fresh cue also supersedes any stale failure notice still on screen.
+      setActionError(null)
+      setPlayPending({ label: what, at: Date.now() })
+      try {
+        await runAction(`Couldn’t play ${what}`, () =>
+          musicIntegration.api.post('/play', {
+            uri,
+            radio: options?.radio,
+            enqueue_mode: options?.enqueueMode,
+            media_type: options?.mediaType,
+            name: options?.name,
+            artist: options?.artist,
+            artist_uri: options?.artistUri,
+            album: options?.album,
+            album_uri: options?.albumUri,
+            image_url: options?.imageUrl,
+          }),
+        )
+      } finally {
+        setPlayPending(null)
+      }
     },
     [runAction],
   )
@@ -250,6 +262,7 @@ export function MusicProvider({ children }: MusicProviderProps) {
     isConnected,
     actionError,
     dismissError,
+    playPending,
     play,
     pause,
     resume,
