@@ -110,6 +110,52 @@ pub async fn fetch_summary(
         .map_err(|e| AppError::Internal(format!("ESPN summary parse failed: {}", e)))
 }
 
+/// GET any absolute ESPN URL as JSON. The section aggregation reaches three
+/// hosts — `site.api` (team detail, news), `apis/v2` (standings), and
+/// `sports.core.api` (leaders and the `$ref`s under them) — so it needs a
+/// fetcher that takes a whole URL rather than composing one from a base.
+pub async fn fetch_json(
+    client: &reqwest::Client,
+    url: &str,
+) -> Result<serde_json::Value, AppError> {
+    let resp = client
+        .get(url)
+        .send()
+        .await
+        .map_err(|e| AppError::Internal(format!("ESPN request failed: {}", e)))?;
+
+    if !resp.status().is_success() {
+        let status = resp.status();
+        return Err(AppError::Internal(format!("ESPN API error ({})", status)));
+    }
+
+    resp.json()
+        .await
+        .map_err(|e| AppError::Internal(format!("ESPN parse failed: {}", e)))
+}
+
+/// A team's detail (record, standing, next event).
+pub fn team_detail_url(sport: &str, league: &str, team_id: &str) -> String {
+    format!("{ESPN_BASE}/{sport}/{league}/teams/{team_id}")
+}
+
+/// A team's news feed.
+pub fn team_news_url(sport: &str, league: &str, team_id: &str) -> String {
+    format!("{ESPN_BASE}/{sport}/{league}/news?team={team_id}&limit=16")
+}
+
+/// A league's full standings — a different host (`apis/v2`) from the scoreboard.
+pub fn standings_url(sport: &str, league: &str) -> String {
+    format!("https://site.api.espn.com/apis/v2/sports/{sport}/{league}/standings")
+}
+
+/// A league's season leaders — the core API, whose entries are `$ref` links.
+pub fn leaders_url(sport: &str, league: &str, year: i32) -> String {
+    format!(
+        "https://sports.core.api.espn.com/v2/sports/{sport}/leagues/{league}/seasons/{year}/types/2/leaders"
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

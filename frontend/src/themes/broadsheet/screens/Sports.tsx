@@ -47,7 +47,10 @@ export function Sports() {
   const now = useNow()
   const { data } = useSportsSection()
 
-  if (!data) {
+  // An empty `leagues` (no tracked teams, or every league's fetch failed) is
+  // treated like no data at all: `SportsBody` reads `tracks[0]` for the
+  // standfirst and Form, so it must never run without at least one track.
+  if (!data || data.leagues.length === 0) {
     return (
       <div className="broadsheet-root w-[1600px] h-[900px] flex flex-col">
         <MastheadFrame
@@ -73,7 +76,7 @@ export function Sports() {
             color: 'var(--ink-muted)',
           }}
         >
-          Checking the wires…
+          {data ? 'No sports to report.' : 'Checking the wires…'}
         </div>
         <div style={{ flexShrink: 0, height: 64 }} />
       </div>

@@ -6,6 +6,7 @@ pub mod preview;
 pub mod recap;
 pub mod replay;
 pub mod routes;
+pub mod section;
 pub mod transform;
 pub mod types;
 
@@ -66,6 +67,7 @@ pub fn router(pool: SqlitePool) -> Router {
         .route("/teams/search", axum::routing::get(routes::search_teams))
         .route("/preview", axum::routing::get(routes::get_preview))
         .route("/final-recap", axum::routing::get(routes::get_final_recap))
+        .route("/section", axum::routing::get(section::get_section))
         .route("/events", axum::routing::get(routes::events))
         .with_state(state)
 }

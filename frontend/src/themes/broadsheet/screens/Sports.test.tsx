@@ -215,4 +215,14 @@ describe('Sports', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Sports')
     expect(screen.getByText(/Checking the wires/)).toBeInTheDocument()
   })
+
+  it('shows an empty state rather than crashing on a section with no tracks', () => {
+    // `SportsBody` reads `tracks[0]`, so an empty `leagues` must not reach it —
+    // the backend returns this when no team is tracked or every league fails.
+    useSportsSection.mockReturnValue({
+      data: { fixtures: [], clock: [], standfirst: '', leagues: [], elsewhere: [] },
+    })
+    expect(() => render(<Sports />)).not.toThrow()
+    expect(screen.getByText('No sports to report.')).toBeInTheDocument()
+  })
 })

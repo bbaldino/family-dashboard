@@ -5,7 +5,7 @@ use crate::integrations::sports::types::*;
 ///   "2026-10-05T04:00Z"     — minute precision, no seconds; NOT valid RFC 3339
 /// chrono::DateTime::parse_from_rfc3339 rejects the second form outright,
 /// which used to silently drop games months out through the window filter.
-fn parse_espn_timestamp(s: &str) -> Option<chrono::DateTime<chrono::Utc>> {
+pub(super) fn parse_espn_timestamp(s: &str) -> Option<chrono::DateTime<chrono::Utc>> {
     if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(s) {
         return Some(dt.with_timezone(&chrono::Utc));
     }

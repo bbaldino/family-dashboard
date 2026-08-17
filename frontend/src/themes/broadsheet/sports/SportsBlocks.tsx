@@ -35,8 +35,10 @@ export function TableBlock({
           margin: '3px 0 8px',
         }}
       >
-        {track.table.title}{' '}
-        <span style={{ fontSize: 13, color: 'var(--ink-muted)' }}>· {track.table.sub}</span>
+        {track.table.title}
+        {track.table.sub && (
+          <span style={{ fontSize: 13, color: 'var(--ink-muted)' }}> · {track.table.sub}</span>
+        )}
       </div>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
