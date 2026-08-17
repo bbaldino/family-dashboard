@@ -7,6 +7,7 @@ import { Calendar } from './screens/Calendar'
 import { Media } from './screens/Media'
 import { Album } from './screens/Album'
 import { Artist } from './screens/Artist'
+import { Sports } from './screens/Sports'
 import { Cameras } from './screens/Cameras'
 import { Health } from './screens/Health'
 import { broadsheetCanvas } from './canvas'
@@ -23,6 +24,7 @@ export const broadsheetTheme: ThemeModule = {
     media: Media,
     'media.album': Album,
     'media.artist': Artist,
+    sports: Sports,
     cameras: Cameras,
     health: Health,
   },

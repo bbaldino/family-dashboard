@@ -3,7 +3,7 @@ import type { z } from 'zod'
 import type { FieldMeta } from '@/platform'
 
 export type ScreenKey =
-  'home' | 'calendar' | 'media' | 'media.artist' | 'media.album' | 'cameras' | 'health'
+  'home' | 'calendar' | 'media' | 'media.artist' | 'media.album' | 'sports' | 'cameras' | 'health'
 
 export type CanvasSpec =
   | { model: 'fluid' }
