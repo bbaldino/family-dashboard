@@ -265,7 +265,11 @@ describe('MusicProvider play pending', () => {
         if (String(url).includes('/api/music/play')) {
           return new Promise((resolve) => {
             releasePlay = () =>
-              resolve({ ok: true, json: () => Promise.resolve({}), text: () => Promise.resolve('') })
+              resolve({
+                ok: true,
+                json: () => Promise.resolve({}),
+                text: () => Promise.resolve(''),
+              })
           })
         }
         return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
