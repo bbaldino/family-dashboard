@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.7.0](https://github.com/bbaldino/family-dashboard/compare/v0.6.0...v0.7.0) (2026-08-17)
+
+
+### Features
+
+* **broadsheet:** add the Sporting Page sports section (frontend) ([1b043de](https://github.com/bbaldino/family-dashboard/commit/1b043ded59573e4bec4f3f9cb9f98aea69cf9819))
+* **sports:** aggregate the Sporting Page from ESPN (backend) ([e5e5a84](https://github.com/bbaldino/family-dashboard/commit/e5e5a84278bce7fdc79f864ed9339898a17936df))
+
+
+### Bug Fixes
+
+* **broadsheet/media:** acknowledge a play tap with a cueing notice ([306a684](https://github.com/bbaldino/family-dashboard/commit/306a684f2b953651f6e4a86084a857622abd72bb))
+* **broadsheet/media:** rename track actions to "Start radio" / "Play track" ([f524b84](https://github.com/bbaldino/family-dashboard/commit/f524b84cd8dae0ef9dcadca5457f4206b31f3b76))
+* **broadsheet:** drop the vinyl-disc overlay and lead the health ledger with history ([218fa78](https://github.com/bbaldino/family-dashboard/commit/218fa788550648396ce1069e4b8fc24dd3e8922f))
+
 ## [0.6.0](https://github.com/bbaldino/family-dashboard/compare/v0.5.2...v0.6.0) (2026-08-17)
 
 
