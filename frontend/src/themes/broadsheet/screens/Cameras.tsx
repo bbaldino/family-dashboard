@@ -11,23 +11,6 @@ import { MastheadFrame } from '@/themes/broadsheet/ui/MastheadFrame'
 import { mastheadKickerStyle, mastheadNumeralStyle } from '@/themes/broadsheet/ui/masthead-styles'
 import { useNow } from '@/themes/broadsheet/home/useNow'
 
-/** The masthead's small screen-title treatment — 26px italic serif, mock
- *  `doorbell.jsx:57` — matches `MediaMasthead.tsx`'s identical `screenTitleStyle`
- *  exactly, but not imported from there: that constant isn't shared outside
- *  Media's own masthead (see that file's own comment on why), and this
- *  screen has nothing else in common with Media worth coupling the two
- *  files over one style object. */
-const screenTitleStyle = {
-  fontFamily: 'var(--font-display)',
-  fontStyle: 'italic' as const,
-  fontSize: 26,
-  fontWeight: 400,
-  // Mock `C.ink2` (#2e2620) has no broadsheet token — same `color-mix`
-  // approximation `media/colors.ts`'s `INK2` uses, duplicated here for the
-  // same reason `screenTitleStyle` itself isn't imported.
-  color: 'color-mix(in srgb, var(--paper) 12%, var(--ink) 88%)',
-}
-
 /** The right cell's clock — mono, mock `doorbell.jsx:69` (13px, 700 weight,
  *  0.18em tracking) for the time itself. That treatment drew the "Recording"
  *  status pill in the mock; the design brief cuts recording status entirely
@@ -40,19 +23,6 @@ const clockTimeStyle = {
   letterSpacing: '0.18em',
   fontWeight: 700,
   color: 'var(--ink)',
-} as const
-
-/** The date line beneath the clock — mono, mock `doorbell.jsx:71` (10px,
- *  0.12em tracking, muted). Seconds are dropped: `useNow` ticks every 30s
- *  (a wall clock, not a stopwatch — see that hook's own comment), so a
- *  seconds digit here would sit frozen between ticks and read as a stalled
- *  clock rather than a live one. */
-const clockDateStyle = {
-  fontFamily: 'var(--font-mono)',
-  fontSize: 10,
-  letterSpacing: '0.12em',
-  color: 'var(--ink-muted)',
-  marginTop: 4,
 } as const
 
 const CLOCK_TIME_FORMAT = new Intl.DateTimeFormat('en-US', {
@@ -95,11 +65,12 @@ const emptyStateStyle = {
  * `CamerasBoard` already does: one configured URL in an iframe, just with
  * this theme's framing and masthead instead of grid's bare `<div>`.
  *
- * The centre cell's wording is a deliberate departure from the mock's "Live
- * · front step" / "At the Door": that phrasing reads as someone currently
- * standing at the door, which this screen can't promise — it's just an
- * always-available window onto the front step, not an event notification.
- * "Keeping Watch" / "The Front Step" is true whether or not anyone's there.
+ * The centre names the page, per the suite's masthead rule. It previously
+ * read "Keeping Watch" / "The Front Step" — chosen over the mock's "At the
+ * Door" because this screen can't promise anyone is actually there — but with
+ * one camera configured that name was as fixed as a page title. The left ear
+ * that would carry live data here ("last motion", per camera) has no source:
+ * see the comment on `left` below.
  *
  * Unlike `useWebRtcStream` (`src/integrations/doorbell/useWebRtcStream.ts`), this
  * doesn't hand-roll a WebRTC peer connection — the configured URL is
@@ -152,28 +123,36 @@ export function Cameras() {
       className="broadsheet-root w-[1600px] h-[900px] flex flex-col"
     >
       <MastheadFrame
-        left={
-          <>
-            <div style={mastheadKickerStyle}>Section V</div>
-            <div style={screenTitleStyle}>The Watch Room</div>
-          </>
-        }
+        // Left ear is deliberately empty for now. The suite's masthead rule
+        // says both ears carry live data and no ear is a second name, which
+        // retired "Section V / The Watch Room" — but the design's replacement
+        // is a per-camera "last motion" list, and this screen has no camera
+        // list to build one from: it embeds a single doorbell page by URL
+        // (`doorbell.camera_url`). Left blank rather than filled with another
+        // label, until there is real data to put here.
+        left={null}
         center={
           <>
-            <div style={{ ...mastheadKickerStyle, textAlign: 'center' }}>Keeping Watch</div>
+            <div style={{ ...mastheadKickerStyle, textAlign: 'center' }}>
+              {CLOCK_DATE_FORMAT.format(now).toUpperCase()}
+            </div>
+            {/* The centre names the page. It used to name the *camera* ("The
+                Front Step") above a kicker describing the page — with one
+                camera configured, that was as fixed as a page name and told
+                you nothing the nav tab didn't. */}
             <h1 className="m-0" style={mastheadNumeralStyle}>
-              The Front Step
+              Cameras
             </h1>
           </>
         }
         right={
           <>
             <div style={{ ...mastheadKickerStyle, textAlign: 'right' }}>Now</div>
+            {/* Time only. The date moved to the centre kicker with this
+                screen's masthead rework, and printing it in both places is
+                the duplication that rework exists to remove. */}
             <div style={{ ...clockTimeStyle, textAlign: 'right' }}>
               {CLOCK_TIME_FORMAT.format(now)}
-            </div>
-            <div style={{ ...clockDateStyle, textAlign: 'right' }}>
-              {CLOCK_DATE_FORMAT.format(now).toUpperCase()}
             </div>
           </>
         }

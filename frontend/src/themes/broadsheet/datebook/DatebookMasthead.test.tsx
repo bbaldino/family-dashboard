@@ -23,6 +23,20 @@ describe('DatebookMasthead', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('May 2026')
   })
 
+  /**
+   * The suite-wide masthead rule: the centre names or states the page, both
+   * ears carry live data, and no ear is a second name. This ear used to read
+   * "The Datebook" — a label for a screen the centre and the nav tab both
+   * already identified, and the only thing in the masthead that never
+   * changed. Asserting the *absence* is the point: "Browse" alone would pass
+   * with the old label sitting beside it.
+   */
+  it('labels the nav ear as a control, not with the screen name', () => {
+    renderMasthead()
+    expect(screen.getByText('Browse')).toBeInTheDocument()
+    expect(screen.queryByText(/The Datebook/i)).not.toBeInTheDocument()
+  })
+
   it('shows the flanking months in the nav row', () => {
     renderMasthead()
     expect(screen.getByText('April 2026 · June 2026')).toBeInTheDocument()

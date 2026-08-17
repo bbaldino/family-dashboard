@@ -23,11 +23,29 @@ describe('broadsheet Cameras (the Watch Room)', () => {
     expect(root.className).toContain('h-[900px]')
   })
 
-  it('renders the masthead title and centre numeral', () => {
+  /**
+   * The suite's masthead rule: the centre names or states the page, and no
+   * ear is a second name. This screen previously carried "Section V / The
+   * Watch Room" in the left ear and named the *camera* in the centre. With
+   * one camera configured, that name never changed either.
+   *
+   * Both absences are asserted, because the positive alone would pass with
+   * the retired labels still sitting beside it.
+   */
+  it('names the page in the centre, with no page-name ear', () => {
     useIntegrationConfig.mockReturnValue({ camera_url: 'https://example.com/cam' })
     render(<Cameras />)
-    expect(screen.getByText('The Watch Room')).toBeInTheDocument()
-    expect(screen.getByText('The Front Step')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Cameras')
+    expect(screen.queryByText('The Watch Room')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Section V/)).not.toBeInTheDocument()
+  })
+
+  it('prints the date once, in the centre kicker rather than twice', () => {
+    // The right ear's clock used to repeat the date directly opposite it.
+    useIntegrationConfig.mockReturnValue({ camera_url: 'https://example.com/cam' })
+    render(<Cameras />)
+    const dated = screen.getAllByText(/^[A-Z]{3}, [A-Z]{3} \d+$/)
+    expect(dated).toHaveLength(1)
   })
 
   it('renders the configured camera URL in a framed iframe', () => {

@@ -74,7 +74,13 @@ export function DatebookMasthead({
       <MastheadFrame
         left={
           <>
-            <div style={mastheadKickerStyle}>The Datebook</div>
+            {/* "Browse", not "The Datebook". The suite's masthead rule is that
+                the centre names or states the page and both ears carry live
+                data — no ear is a second name. The centre already says which
+                month this is and the nav tab says which screen, so a third
+                label was the one thing here that never changed. This kicker
+                now labels what sits under it: a control. */}
+            <div style={mastheadKickerStyle}>Browse</div>
             <div
               className="flex items-center"
               style={{
