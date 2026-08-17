@@ -1,128 +1,129 @@
-import { useMusic, useRoomPills } from '@/integrations/music'
+import { useRoomPills } from '@/integrations/music'
 import { MastheadFrame } from '@/themes/broadsheet/ui/MastheadFrame'
 import { mastheadKickerStyle, mastheadNumeralStyle } from '@/themes/broadsheet/ui/masthead-styles'
-import { mastheadTitleSize } from '@/themes/broadsheet/ui/masthead-title-size'
-import { INK2 } from './colors'
-import { RoomPill } from './RoomPill'
-import { playbackPhrase } from './playback-phrase'
+import { useNow } from '@/themes/broadsheet/home/useNow'
+import { roomStateWord } from './room-state-word'
 
-/** The screen title's own treatment — 26px italic serif, mock `media.jsx:89`
- *  — deliberately not the masthead's shared 72px numeral style
- *  (`masthead-styles.ts`'s `mastheadNumeralStyle`), and not added to that
- *  shared file either: unlike the kicker/numeral treatments, this one isn't
- *  shared with Home's or the Datebook's masthead. */
-const screenTitleStyle = {
-  fontFamily: 'var(--font-display)',
-  fontStyle: 'italic' as const,
-  fontSize: 26,
-  fontWeight: 400,
-  color: INK2,
-}
+/** How many rooms the ear ever lists. The masthead's three cells share one
+ *  bottom-aligned baseline (`MastheadFrame`'s `align-items: end`), so this
+ *  cell growing taller than its siblings pulls that baseline out of true —
+ *  the same reason the old pill row was capped. Four rows is the mock's
+ *  three plus one, and roughly where the cell stops matching the 72px
+ *  numeral opposite it. */
+const MAX_ROOMS = 4
 
-/** How many room pills the masthead's right cell ever renders. The mock
- *  shows three (mock `media.jsx:100-102`); a real household could plausibly
- *  have a few more players than that, but the masthead's three cells share
- *  one bottom-aligned baseline (`MastheadFrame`'s `align-items: end` — see
- *  `Masthead.tsx`'s own comment on why that matters), and letting this
- *  cell's pill row wrap to a second line would grow it taller and pull that
- *  shared baseline out of alignment. Capping keeps it to one line; the rest
- *  are simply not shown; a "+N" indicator would be one more thing fighting
- *  for space in an already-tight kicker-height cell. */
-const MAX_ROOM_PILLS = 6
+const DATE_FORMAT = new Intl.DateTimeFormat('en-US', {
+  weekday: 'long',
+  month: 'long',
+  day: 'numeric',
+})
 
 /**
- * The Listening Room's masthead — the same three-column `MastheadFrame` as
- * Home's and the Datebook's. Mock: `media.jsx:86-105`.
+ * Media's masthead — the shared three-column `MastheadFrame`, following the
+ * suite's masthead rule: the centre names the page, and no ear is a second
+ * name.
  *
- * The Rooms row is `useRoomPills`'s join/leave list (see that hook's own
- * header comment): the anchor pill first, always active and not tappable,
- * then every room it can group with, filled when joined. It's a different
- * concept from the centre cell below — which names the anchor's *group*,
- * i.e. only the rooms actually grouped into this panel's own room — so a
- * room can be offered here as joinable without appearing there.
+ * **The centre names the page.** It used to carry the anchored room — "Now
+ * playing in / the Kitchen and Deck" — which the left ear now covers more
+ * completely, since it lists every room rather than only the anchor's group.
+ * The room label logic itself is untouched and still drives the Centre
+ * Spread, where naming the room is the whole point of the screen.
  *
- * Every hook here can boot with no data on a cold cache: no active queue
- * (nothing playing anywhere) and no configured anchor / no players yet /
- * an anchor not present in the players list (all `useRoomPills` collapses
- * to an empty pill list). Both get a written fallback rather than a blank
- * cell.
+ * **The left ear is the room picker**, and a control rather than a readout:
+ * directing audio to a room is this screen's primary job. It was
+ * "Section IV / The Listening Room", a name for a page the nav tab already
+ * labels. The rows are `useRoomPills`'s join/leave list — the anchor first,
+ * always joined and never tappable, then every room it can group with.
+ *
+ * **The right ear is empty.** The design puts library counts there (tracks,
+ * albums, playlists) and no route reports them: music exposes `/search`,
+ * `/recent`, `/top-tracks`, `/artist` and `/album`, none of which is a total.
+ * Left blank rather than filled with a number we would have to invent.
+ *
+ * Boots with no data on a cold cache: no configured anchor, no players yet,
+ * or an anchor missing from the players list all collapse `useRoomPills` to
+ * an empty list, which gets a written fallback rather than a blank cell.
  */
 export function MediaMasthead() {
-  const { state, anchorRoomLabel } = useMusic()
   const { pills, toggle } = useRoomPills()
-  const activeQueue = state.activeQueue
+  const now = useNow()
 
-  const visiblePills = pills.slice(0, MAX_ROOM_PILLS)
-  // This panel's own room — the anchor, plus whatever is grouped into it —
-  // not the queue owner's name, which under grouping is a different room
-  // (see `music-context.ts`'s `anchorRoomLabel`). The queue owner is the
-  // fallback for a household with no anchor configured, where "whatever is
-  // playing" is all there is to name.
-  const roomName = anchorRoomLabel ?? activeQueue?.displayName ?? null
+  const visible = pills.slice(0, MAX_ROOMS)
 
   return (
     <MastheadFrame
       left={
         <>
-          <div style={mastheadKickerStyle}>Section IV</div>
-          <div style={screenTitleStyle}>The Listening Room</div>
-        </>
-      }
-      center={
-        <>
-          <div style={{ ...mastheadKickerStyle, textAlign: 'center' }}>
-            {roomName ? playbackPhrase(activeQueue?.state ?? null) : 'Now playing'}
-          </div>
-          {/* Sized to fit rather than fixed at 72px, and `truncate`d as the
-              backstop. A room label is now a group — "the Kitchen and
-              Bedroom" — and at the design size that wrapped to a second
-              line, which added 79px to this masthead's height. */}
-          <h1
-            className="m-0 truncate"
-            style={{
-              ...mastheadNumeralStyle,
-              fontSize: mastheadTitleSize(
-                roomName ? `the ${roomName}` : 'Quiet',
-                mastheadNumeralStyle.fontSize as number,
-              ),
-            }}
-          >
-            {roomName ? `the ${roomName}` : 'Quiet'}
-          </h1>
-        </>
-      }
-      right={
-        <>
-          <div style={{ ...mastheadKickerStyle, textAlign: 'right' }}>Rooms</div>
-          {visiblePills.length > 0 ? (
-            <div
-              className="flex justify-end uppercase"
-              style={{
-                gap: 6,
-                fontFamily: 'var(--font-mono)',
-                fontSize: 10,
-                letterSpacing: '0.14em',
-              }}
-            >
-              {visiblePills.map((pill) => (
-                <RoomPill
-                  key={pill.player.playerId}
-                  label={pill.player.displayName}
-                  active={pill.joined}
-                  pending={pill.pending}
-                  onToggle={pill.isAnchor ? undefined : () => toggle(pill.player.playerId)}
-                />
-              ))}
+          <div style={mastheadKickerStyle}>Rooms</div>
+          {visible.length > 0 ? (
+            <div className="flex flex-col" style={{ gap: 2 }}>
+              {visible.map((pill) => {
+                const selectable = !pill.isAnchor
+                return (
+                  <div
+                    key={pill.player.playerId}
+                    role={selectable ? 'button' : undefined}
+                    tabIndex={selectable ? 0 : undefined}
+                    aria-pressed={selectable ? pill.joined : undefined}
+                    onClick={selectable ? () => toggle(pill.player.playerId) : undefined}
+                    className="flex items-baseline"
+                    style={{
+                      gap: 8,
+                      padding: '3px 8px 3px 6px',
+                      cursor: selectable ? 'pointer' : 'default',
+                      userSelect: 'none',
+                      opacity: pill.pending ? 0.55 : 1,
+                      background: pill.joined ? 'var(--ink)' : 'transparent',
+                      borderLeft: `2px solid ${pill.joined ? 'var(--rust)' : 'var(--rule-faint)'}`,
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-display)',
+                        fontSize: 14,
+                        fontWeight: 600,
+                        minWidth: 62,
+                        color: pill.joined ? 'var(--paper)' : 'var(--ink)',
+                      }}
+                    >
+                      {pill.player.displayName}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 10,
+                        letterSpacing: '0.06em',
+                        color: pill.joined
+                          ? 'color-mix(in srgb, var(--paper) 75%, var(--ink))'
+                          : 'var(--ink-muted)',
+                      }}
+                    >
+                      {roomStateWord(pill.player)}
+                    </span>
+                  </div>
+                )
+              })}
             </div>
           ) : (
             <div
               style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ink-muted)' }}
             >
-              —
+              No rooms
             </div>
           )}
         </>
       }
+      center={
+        <>
+          <div style={{ ...mastheadKickerStyle, textAlign: 'center' }}>
+            {DATE_FORMAT.format(now)}
+          </div>
+          <h1 className="m-0" style={mastheadNumeralStyle}>
+            Media
+          </h1>
+        </>
+      }
+      right={null}
     />
   )
 }
