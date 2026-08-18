@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.1](https://github.com/bbaldino/family-dashboard/compare/v0.7.0...v0.7.1) (2026-08-18)
+
+
+### Bug Fixes
+
+* **broadsheet/home:** clamp the live-game scoring recap so it can't overflow ([208cabb](https://github.com/bbaldino/family-dashboard/commit/208cabb33e362b6b36839e8436b87168b3d74483))
+* **broadsheet:** show more calendar events and drop the empty-cell "+N more" ([28679a6](https://github.com/bbaldino/family-dashboard/commit/28679a6132e769b5048e9db98f54628e359f2bc3))
+
 ## [0.7.0](https://github.com/bbaldino/family-dashboard/compare/v0.6.0...v0.7.0) (2026-08-17)
 
 
