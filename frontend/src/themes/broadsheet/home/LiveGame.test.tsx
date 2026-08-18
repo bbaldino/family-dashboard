@@ -156,6 +156,29 @@ describe('LiveGame', () => {
     expect(screen.queryByText('Old scoring play 0')).not.toBeInTheDocument()
   })
 
+  it('line-clamps the scoring recap so a runaway paragraph cannot overflow the block', () => {
+    // The recap is prose, not a capped list: a high-scoring, many-inning game
+    // can produce a paragraph tall enough to push the plays below it off the
+    // fixed-height block and clip the bottom. It is clamped to a fitting
+    // number of lines with an ellipsis instead.
+    const recapText = 'A recap long enough to run well past the block if left unbounded.'
+    const detail: GameLiveDetail = {
+      sport: 'mlb',
+      matchup: null,
+      recentPlays: [],
+      scoringPlays: [],
+      inProgressScoring: [],
+      scoringRecap: { text: recapText, throughInning: { half: 'bottom', number: 9 } },
+      winProbability: null,
+      leaders: { away: [], home: [] },
+    }
+    render(<LiveGame game={makeGame(detail)} />)
+    const recap = screen.getByText(recapText)
+    expect(recap.style.display).toBe('-webkit-box')
+    expect(recap.style.overflow).toBe('hidden')
+    expect(recap.style.webkitLineClamp).toBe('7')
+  })
+
   it('renders nothing for leaders or plays when liveDetail is absent', () => {
     expect(() => render(<LiveGame game={makeGame(null)} />)).not.toThrow()
   })

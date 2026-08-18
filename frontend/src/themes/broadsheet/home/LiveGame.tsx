@@ -242,10 +242,21 @@ function LineScoreTable({ game }: { game: Game }) {
  * got clipped mid-sentence. These caps make the cut land between items
  * instead of through one, the same treatment `ScheduleColumn` gives its
  * day list.
+ *
+ * The scoring recap is prose, not a list, so a count cap can't bound it — a
+ * high-scoring, many-inning game produces a paragraph long enough to push the
+ * block past its row and clip the bottom off (recent plays and the recap's own
+ * tail). Verified live at 1600x900: the block's cell is ~595px and a recap
+ * runs ~17px a line; the real feed's mid-game recaps sit around 7 lines with
+ * ~45px of slack left in the scoring section, so `MAX_RECAP_LINES` clamps the
+ * paragraph (with an ellipsis) to that fitting height — normal recaps render
+ * whole, only a runaway one is trimmed, and the line score above still carries
+ * every run by inning.
  */
 const MAX_VISIBLE_LEADERS = 3
 const MAX_VISIBLE_SCORING_PLAYS = 3
 const MAX_VISIBLE_RECENT_PLAYS = 3
+const MAX_RECAP_LINES = 7
 
 /** `T5`, `B7` — a single letter for the half plus the inning number, per the
  *  mock (`broadsheet-v2.jsx:456`, `shared.jsx`'s `scoring` entries). The real
@@ -542,6 +553,13 @@ export function LiveGame({ game }: { game: Game }) {
                     fontStyle: 'italic',
                     fontSize: 12,
                     lineHeight: 1.4,
+                    // Bound the one unbounded element in this block: a runaway
+                    // recap clamps to its fitting height with an ellipsis
+                    // rather than pushing the plays below it off the bottom.
+                    display: '-webkit-box',
+                    WebkitLineClamp: MAX_RECAP_LINES,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
                   }}
                 >
                   {scoringRecap.text}
