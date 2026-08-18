@@ -35,21 +35,41 @@ describe('DayCell', () => {
   })
 
   it('collapses events past maxEvents into a "+N more" line', () => {
-    // Mirrors the ?scenario=packed fixture's six-event day.
-    const events = Array.from({ length: 6 }, (_, i) => timed(`e${i}`, `Event ${i}`))
+    // Seven on a cap of five: two must hide, so the "+N more" line appears
+    // (six would be absorbed — see the lone-overflow test below).
+    const events = Array.from({ length: 7 }, (_, i) => timed(`e${i}`, `Event ${i}`))
     render(<DayCell {...baseProps} events={events} maxEvents={5} />)
     for (let i = 0; i < 5; i++) expect(screen.getByText(`Event ${i}`)).toBeInTheDocument()
     expect(screen.queryByText('Event 5')).not.toBeInTheDocument()
-    expect(screen.getByText('+1 more')).toBeInTheDocument()
+    expect(screen.getByText('+2 more')).toBeInTheDocument()
+  })
+
+  it('absorbs a lone overflow rather than printing a useless "+1 more"', () => {
+    // One event past the cap costs the same single line the "+1 more" would,
+    // so it is shown instead — the reader gets the event, not a count.
+    const events = Array.from({ length: 6 }, (_, i) => timed(`e${i}`, `Event ${i}`))
+    render(<DayCell {...baseProps} events={events} maxEvents={5} />)
+    for (let i = 0; i < 6; i++) expect(screen.getByText(`Event ${i}`)).toBeInTheDocument()
+    expect(screen.queryByText(/more/)).not.toBeInTheDocument()
   })
 
   it('respects a tighter maxEvents for shorter grids', () => {
-    const events = Array.from({ length: 3 }, (_, i) => timed(`e${i}`, `Event ${i}`))
+    const events = Array.from({ length: 4 }, (_, i) => timed(`e${i}`, `Event ${i}`))
     render(<DayCell {...baseProps} events={events} maxEvents={2} />)
     expect(screen.getByText('Event 0')).toBeInTheDocument()
     expect(screen.getByText('Event 1')).toBeInTheDocument()
     expect(screen.queryByText('Event 2')).not.toBeInTheDocument()
-    expect(screen.getByText('+1 more')).toBeInTheDocument()
+    expect(screen.getByText('+2 more')).toBeInTheDocument()
+  })
+
+  it('does not print a bare "+N more" when banner lanes leave no room for a chip', () => {
+    // The reported bug: when a week's banner lanes consume the whole chip
+    // budget (visibleCap 0) a cell rendered no pill but still claimed hidden
+    // events, reading as an empty day with an inexplicable "+N more".
+    const events = Array.from({ length: 2 }, (_, i) => timed(`e${i}`, `Event ${i}`))
+    render(<DayCell {...baseProps} events={events} maxEvents={1} lanes={1} />)
+    expect(screen.getByText('10')).toBeInTheDocument()
+    expect(screen.queryByText(/more/)).not.toBeInTheDocument()
   })
 
   it('renders today with a filled numeral disc', () => {

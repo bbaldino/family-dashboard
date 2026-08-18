@@ -315,14 +315,20 @@ function WeekAheadDay({
  * its per-day cost is now bounded by the event cap rather than by how much
  * the calendar happens to return — which is what makes it safe to show
  * more days than the old design could. `MAX_WEEK_AHEAD_DAYS` matches the
- * mock's `d.schedule.slice(1, 6)` (5 days); `MAX_WEEK_AHEAD_EVENTS`
- * likewise matches its per-day event cap, live-aware per the brief note on
- * `:34` — a live game narrows this column (`Home`'s `BODY_COLUMNS_LIVE`),
- * so each day gets one line instead of two while it's live.
+ * mock's `d.schedule.slice(1, 6)` (5 days).
+ *
+ * `MAX_WEEK_AHEAD_EVENTS` is 3 (2 while a game is live and narrows this
+ * column — `Home`'s `BODY_COLUMNS_LIVE`). The mock caps at 2/1, but at those
+ * numbers real weeks left ~130px of the fixed-height column empty below the
+ * last day while events hid behind "+N more". 3/2 reclaims that space;
+ * verified live at 1600x900 against `?scenario=packed` that the column still
+ * clears the body's bottom edge (the strip is a single compact line per day,
+ * so five days at three lines each stays well inside the height the hero
+ * leaves it).
  */
 const MAX_WEEK_AHEAD_DAYS = 5
-const MAX_WEEK_AHEAD_EVENTS = 2
-const MAX_WEEK_AHEAD_EVENTS_LIVE = 1
+const MAX_WEEK_AHEAD_EVENTS = 3
+const MAX_WEEK_AHEAD_EVENTS_LIVE = 2
 
 const proseStyle = {
   fontFamily: 'var(--font-display)',

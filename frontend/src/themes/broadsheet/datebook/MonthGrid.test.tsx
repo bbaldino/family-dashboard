@@ -93,16 +93,21 @@ describe('MonthGrid', () => {
   })
 
   it('gives a banner lane its space back from the cell chip cap', () => {
-    // May 2026 is a six-row month, so a cell shows 2 events before "+N more".
-    // One banner lane over the row leaves room for 1, collapsing the second.
+    // May 2026 is a six-row month: a cell shows 2 chips before "+N more" (3
+    // fit via the lone-overflow absorb). A banner lane over the row costs one
+    // of those slots, so three chips no longer fit and one collapses.
     const trip = allDay('trip', 'Baltimore & Boston', '2026-05-04')
     const byDate = {
       '2026-05-04': [trip],
       '2026-05-05': [trip],
-      '2026-05-07': [timed('a', 'Event A', '2026-05-07'), timed('b', 'Event B', '2026-05-07')],
+      '2026-05-07': [
+        timed('a', 'Event A', '2026-05-07'),
+        timed('b', 'Event B', '2026-05-07'),
+        timed('c', 'Event C', '2026-05-07'),
+      ],
     }
     const { rerender } = render(<MonthGrid year={2026} month={4} byDate={byDate} />)
-    // Without the banner both fit, so nothing is collapsed.
+    // Without the banner all three fit (the third is the absorbed overflow).
     expect(screen.queryByText(/\+\d+ more/)).toBeNull()
 
     rerender(
@@ -113,7 +118,8 @@ describe('MonthGrid', () => {
         spans={[{ event: trip, startKey: '2026-05-04', endKey: '2026-05-05' }]}
       />,
     )
-    expect(screen.getByText('+1 more')).toBeInTheDocument()
+    // The lane takes a slot, leaving room for one chip beside "+2 more".
+    expect(screen.getByText('+2 more')).toBeInTheDocument()
   })
 
   it('renders exactly as many week rows as the month needs, not a hardcoded six', () => {
@@ -129,25 +135,21 @@ describe('MonthGrid', () => {
 
   it('uses a tighter per-cell event cap for a six-row month than a four-row one', () => {
     // Verified live at 1600x900 (see MonthGrid.tsx's maxEventsForWeekCount
-    // comment): a six-row month's cell can only safely fit 2 events before
-    // "+N more"; a four-row month's can fit 4. Three events on one day
-    // should collapse in the tighter grid but render in full in the roomier
-    // one.
-    const events = [
-      timed('e0', 'Event 0', '2026-05-14'),
-      timed('e1', 'Event 1', '2026-05-14'),
-      timed('e2', 'Event 2', '2026-05-14'),
-    ]
+    // comment): a six-row month's cell safely fits 2 chips before "+N more";
+    // a four-row month's fits 5. Five events on one day should collapse in
+    // the tighter grid but render in full in the roomier one.
+    const events = Array.from({ length: 5 }, (_, i) => timed(`e${i}`, `Event ${i}`, '2026-05-14'))
     const { unmount } = render(
       <MonthGrid year={2026} month={4} byDate={{ '2026-05-14': events }} />,
     )
-    expect(screen.queryByText('Event 2')).not.toBeInTheDocument()
-    expect(screen.getByText('+1 more')).toBeInTheDocument()
+    expect(screen.queryByText('Event 4')).not.toBeInTheDocument()
+    expect(screen.getByText('+3 more')).toBeInTheDocument()
     unmount()
 
-    // February 2026 needs only four weeks.
-    render(<MonthGrid year={2026} month={1} byDate={{ '2026-02-14': events }} />)
-    expect(screen.getByText('Event 2')).toBeInTheDocument()
+    // February 2026 needs only four weeks — all five render in full.
+    const febEvents = Array.from({ length: 5 }, (_, i) => timed(`f${i}`, `Feb ${i}`, '2026-02-14'))
+    render(<MonthGrid year={2026} month={1} byDate={{ '2026-02-14': febEvents }} />)
+    expect(screen.getByText('Feb 4')).toBeInTheDocument()
     expect(screen.queryByText(/more/)).not.toBeInTheDocument()
   })
 })
