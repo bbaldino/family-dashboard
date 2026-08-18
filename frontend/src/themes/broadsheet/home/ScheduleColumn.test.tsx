@@ -90,8 +90,8 @@ describe('ScheduleColumn', () => {
     expect(screen.queryByText('Event on day 6')).not.toBeInTheDocument()
   })
 
-  it('caps each week-ahead day at 2 events, or 1 while a game is live', () => {
-    const busyDay = day('2026-05-23T00:00:00', false, ['First', 'Second', 'Third'])
+  it('caps each week-ahead day at 3 events, or 2 while a game is live', () => {
+    const busyDay = day('2026-05-23T00:00:00', false, ['First', 'Second', 'Third', 'Fourth'])
     useGoogleCalendar.mockReturnValue({
       data: [day('2026-05-22T00:00:00', true, []), busyDay],
       isLoading: false,
@@ -100,13 +100,15 @@ describe('ScheduleColumn', () => {
     const { unmount } = render(<ScheduleColumn />)
     expect(screen.getByText('First')).toBeInTheDocument()
     expect(screen.getByText('Second')).toBeInTheDocument()
-    expect(screen.queryByText('Third')).not.toBeInTheDocument()
+    expect(screen.getByText('Third')).toBeInTheDocument()
+    expect(screen.queryByText('Fourth')).not.toBeInTheDocument()
     expect(screen.getByText('+1 more')).toBeInTheDocument()
     unmount()
 
     render(<ScheduleColumn isLive />)
     expect(screen.getByText('First')).toBeInTheDocument()
-    expect(screen.queryByText('Second')).not.toBeInTheDocument()
+    expect(screen.getByText('Second')).toBeInTheDocument()
+    expect(screen.queryByText('Third')).not.toBeInTheDocument()
     expect(screen.getByText('+2 more')).toBeInTheDocument()
   })
 

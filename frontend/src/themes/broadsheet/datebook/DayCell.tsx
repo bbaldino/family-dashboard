@@ -59,7 +59,11 @@ export function DayCell({
   // rather than the chips being pushed out of the cell's bottom. `max(0, …)`
   // because a week can carry more banner lanes than a cell has chip slots.
   const visibleCap = Math.max(0, maxEvents - lanes)
-  const visible = events.slice(0, visibleCap)
+  // Absorb a lone overflow: rendering one more event costs the same single
+  // line the "+1 more" would, so never collapse exactly one — the reader gets
+  // the event instead of a count they can't act on. Past that, cap and
+  // summarise the rest.
+  const visible = events.length <= visibleCap + 1 ? events : events.slice(0, visibleCap)
   const hiddenCount = events.length - visible.length
 
   return (
@@ -125,7 +129,12 @@ export function DayCell({
         {visible.map((event, i) => (
           <EventPill key={event.id + '-' + i} event={event} />
         ))}
-        {hiddenCount > 0 && (
+        {/* Only when something is actually shown above it: a bare "+N more" on
+            a cell with no visible pill (which happens when banner lanes consume
+            the whole chip budget) reads as an empty day that inexplicably
+            claims hidden events. Suppress it — the banners crossing the row
+            already say the day is busy. */}
+        {hiddenCount > 0 && visible.length > 0 && (
           <div
             style={{
               fontFamily: 'var(--font-mono)',

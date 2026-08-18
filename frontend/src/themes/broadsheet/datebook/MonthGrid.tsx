@@ -9,29 +9,28 @@ import { SpanBanner } from './SpanBanner'
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 /**
- * Events a cell ever renders before collapsing into "+N more", by how many
- * week rows the currently displayed month needs.
+ * Chips a cell renders before collapsing into "+N more", by how many week rows
+ * the displayed month needs — a cell's height, and so its chip budget, varies
+ * with row count (see `month-grid-dates.ts`), so a flat cap sized for a roomy
+ * month overflows a tighter one.
  *
- * The design mock caps at a flat 5 (`calendar.jsx:313`), but that number
- * comes from a fixed 6-row grid at the mock's own May 2026 example — this
- * grid's row count actually varies month to month (see
- * `month-grid-dates.ts`'s header comment), so a cell's real height varies
- * too, and a flat cap sized for a roomy month overflows a tighter one.
- * Verified live at 1600x900 against `?scenario=packed` (which deliberately
- * puts six events on one day, specifically to exercise this cap): a 6-row
- * month's cell is ~104px tall, and 5 pills plus the "+N more" line need
- * ~151px regardless of the cell — a flat cap of 5 overflows a 6-row
- * month's cell by ~47px. Each tier below was independently verified live
- * (measuring `scrollHeight` vs `clientHeight` against the same
- * six-event day, navigated to a month with that many rows) rather than
- * computed from cell height alone — the header row and "+N more" line's
- * own height don't scale with the cell, so the safe cap isn't a simple
- * ratio of the flat cap against row count.
+ * Measured live at 1600x900: a 6-row month's cell is ~106px and safely holds
+ * 2 chips beside a "+N more" line — 3 chips plus that line overflowed it by
+ * ~4px (`scrollHeight` vs `clientHeight` against `?scenario=packed`'s
+ * deliberately six-event day). A 5-row cell is ~129px and holds 4; a 4-row
+ * cell ~160px and holds 5. The per-row figures come from one calibrated
+ * model — ~18px a chip over ~54px of fixed overhead (the day-number row, the
+ * cell padding, and the "+N more" line) — tuned so its 6-row value reproduces
+ * the hand-verified 2.
+ *
+ * `DayCell` absorbs a lone overflow on top of this — one extra event rather
+ * than a "+1 more" that would cost the same line — so the count actually shown
+ * in full is one higher than each figure here.
  */
 function maxEventsForWeekCount(weekCount: number): number {
   if (weekCount >= 6) return 2
-  if (weekCount === 5) return 3
-  return 4
+  if (weekCount === 5) return 4
+  return 5
 }
 
 /**
