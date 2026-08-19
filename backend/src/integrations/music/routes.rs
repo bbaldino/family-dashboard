@@ -127,6 +127,26 @@ async fn default_queue_id(pool: &SqlitePool) -> Result<String, AppError> {
         .await
 }
 
+/// Translate the app's enqueue intent (`EnqueueMode` in `music-context.ts`) to a
+/// Music Assistant queue option.
+///
+/// The app's `play` means "replace the queue and start now." MA's *own* `play`
+/// option does not do that: it inserts the item after the current one and jumps
+/// to it, leaving the rest of the queue in place — and with `radio_mode` it
+/// never enters dynamic mode, so the queue keeps its `radio_source` but
+/// `is_dynamic` stays false and playback stops after the seed instead of
+/// continuing the station. MA's `replace` clears the queue and, for a radio
+/// seed, starts a continuous dynamic station. Map the app's `play` (and the
+/// default) to `replace`; the enqueue-without-replacing modes pass through.
+fn ma_enqueue_option(mode: Option<&str>) -> &'static str {
+    match mode {
+        Some("next") => "next",
+        Some("add") => "add",
+        Some("replace_next") => "replace_next",
+        _ => "replace",
+    }
+}
+
 pub async fn play(
     State(pool): State<SqlitePool>,
     Json(req): Json<PlayRequest>,
@@ -137,14 +157,10 @@ pub async fn play(
         None => default_queue_id(&pool).await?,
     };
 
-    // Default to "play" (replaces the queue) so a fresh pick doesn't continue
-    // into leftovers from a previous session. Caller can override with "next"
-    // or "add" to enqueue without replacing.
-    let option = req
-        .enqueue_mode
-        .as_deref()
-        .filter(|m| matches!(*m, "play" | "replace" | "next" | "replace_next" | "add"))
-        .unwrap_or("play");
+    // The app's "play" means "replace the queue and start now" (music-context.ts).
+    // `ma_enqueue_option` maps it to MA's "replace" — not MA's own "play", which
+    // only inserts and never engages radio's dynamic mode.
+    let option = ma_enqueue_option(req.enqueue_mode.as_deref());
 
     let args = |radio: bool| {
         let mut args = serde_json::json!({
@@ -597,5 +613,19 @@ mod tests {
     #[test]
     fn client_supplied_uris_false_when_neither_present() {
         assert!(!client_supplied_uris(&None, &None));
+    }
+
+    #[test]
+    fn play_maps_to_ma_replace_so_a_fresh_pick_clears_the_queue() {
+        // The app's "play" is "replace and start"; MA's own "play" would insert
+        // into the existing queue and never engage radio's dynamic mode.
+        assert_eq!(ma_enqueue_option(Some("play")), "replace");
+        assert_eq!(ma_enqueue_option(None), "replace");
+    }
+
+    #[test]
+    fn enqueue_without_replacing_modes_pass_through() {
+        assert_eq!(ma_enqueue_option(Some("next")), "next");
+        assert_eq!(ma_enqueue_option(Some("add")), "add");
     }
 }
