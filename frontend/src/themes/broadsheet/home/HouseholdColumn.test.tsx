@@ -5,11 +5,13 @@ import { HouseholdColumn } from './HouseholdColumn'
 const useCountdowns = vi.hoisted(() => vi.fn())
 const useChores = vi.hoisted(() => vi.fn())
 const useLunchMenu = vi.hoisted(() => vi.fn())
+const useNow = vi.hoisted(() => vi.fn())
 const completeAssignment = vi.hoisted(() => vi.fn())
 const uncompleteAssignment = vi.hoisted(() => vi.fn())
 vi.mock('@/integrations/countdowns', () => ({ useCountdowns }))
 vi.mock('@/integrations/chores', () => ({ useChores }))
 vi.mock('@/integrations/nutrislice', () => ({ useLunchMenu }))
+vi.mock('@/themes/broadsheet/home/useNow', () => ({ useNow }))
 
 describe('HouseholdColumn', () => {
   beforeEach(() => {
@@ -18,6 +20,9 @@ describe('HouseholdColumn', () => {
     // same pattern) — clear their call history so one test's toggle doesn't
     // leak into the next.
     vi.clearAllMocks()
+    // A morning by default, so the lunch panel reads "today" (it flips to
+    // tomorrow's menu from noon on — see lunch-preview.ts).
+    useNow.mockReturnValue(new Date(2026, 7, 17, 9, 0))
     // useCountdowns: PollResult<CountdownItem[]> — data is the array
     // directly (or null), not { items: [...] }.
     useCountdowns.mockReturnValue({ data: null, isLoading: false, error: null, refetch: vi.fn() })
@@ -80,6 +85,22 @@ describe('HouseholdColumn', () => {
       .getAllByText(/^(Cafeteria · today|Chores today|Coming up|On this day)$/)
       .map((el) => el.textContent)
     expect(labels).toEqual(['Cafeteria · today', 'Chores today', 'Coming up'])
+  })
+
+  it('previews tomorrow’s menu, labelled so, from noon on', () => {
+    // The point of the tweak: once today's lunch is behind us, look ahead.
+    useNow.mockReturnValue(new Date(2026, 7, 17, 14, 0))
+    useLunchMenu.mockReturnValue({
+      data: {
+        today: { entries: [{ name: 'Pizza', withItems: [] }], extras: [] },
+        tomorrow: { entries: [{ name: 'Tacos', withItems: [] }], extras: [] },
+      },
+      isLoading: false,
+    })
+    render(<HouseholdColumn />)
+    expect(screen.getByText('Cafeteria · tomorrow')).toBeInTheDocument()
+    expect(screen.getByText('Tacos')).toBeInTheDocument()
+    expect(screen.queryByText('Pizza')).not.toBeInTheDocument()
   })
 
   it('does not render a now-playing section — that moved to the footer', () => {

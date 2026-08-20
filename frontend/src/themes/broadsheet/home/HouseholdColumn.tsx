@@ -6,24 +6,28 @@ import type { PersonAssignments, TodayResponse } from '@/integrations/chores'
 import { useLunchMenu } from '@/integrations/nutrislice'
 import type { LunchMenuData } from '@/integrations/nutrislice'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
+import { useNow } from '@/themes/broadsheet/home/useNow'
+import { pickLunchPreview } from '@/themes/broadsheet/home/lunch-preview'
 
 /* ───────────────────────── Lunch ─────────────────────────
  * Mock: broadsheet-v2.jsx:229-249. */
 
 function LunchSection({ lunch }: { lunch: LunchMenuData }) {
-  const today = lunch.today
-  const items = today
-    ? today.entries.length > 0
-      ? today.entries.map((entry) => ({
+  const now = useNow()
+  // From noon on, today's lunch is behind us — show tomorrow's, labelled so.
+  const { day, label } = pickLunchPreview(lunch, now)
+  const items = day
+    ? day.entries.length > 0
+      ? day.entries.map((entry) => ({
           name: entry.name,
           sub: (entry.withItems ?? []).join(', ') || null,
         }))
-      : today.extras.map((name) => ({ name, sub: null as string | null }))
+      : day.extras.map((name) => ({ name, sub: null as string | null }))
     : []
 
   return (
     <div>
-      <Kicker>Cafeteria · today</Kicker>
+      <Kicker>Cafeteria · {label}</Kicker>
       <h3
         className="m-0"
         style={{
@@ -36,7 +40,7 @@ function LunchSection({ lunch }: { lunch: LunchMenuData }) {
           paddingBottom: 4,
         }}
       >
-        {today ? 'School lunch' : 'No school today'}
+        {day ? 'School lunch' : label === 'today' ? 'No school today' : 'No school tomorrow'}
       </h3>
       {items.length > 0 ? (
         <ol className="m-0 p-0 flex flex-col gap-1" style={{ listStyle: 'none' }}>
