@@ -23,6 +23,11 @@ vi.mock('@/integrations/weather', () => ({
   useWeatherForecast: () => ({ data: undefined, isLoading: true }),
   useAirQuality: () => ({ data: undefined, isLoading: true }),
 }))
+vi.mock('@/integrations/house', () => ({
+  // Undefined → the masthead uses the deterministic `buildStandfirst` fallback,
+  // which is what these tests assert against.
+  useHouseStandfirst: () => ({ data: undefined }),
+}))
 vi.mock('@/integrations/calendar', () => ({
   useGoogleCalendar: () => ({ data: undefined, isLoading: true }),
 }))
