@@ -1,7 +1,7 @@
 import { useGoogleCalendar } from '@/integrations/calendar'
 import type { CalendarDay } from '@/integrations/calendar'
 import type { CalendarEvent } from '@/providers/google-calendar'
-import { useSportsGames } from '@/integrations/sports'
+import { useSportsGames, formatUpcomingTime } from '@/integrations/sports'
 import { useLunchMenu } from '@/integrations/nutrislice'
 import { Masthead } from '@/themes/broadsheet/home/Masthead'
 import { ScheduleColumn } from '@/themes/broadsheet/home/ScheduleColumn'
@@ -11,7 +11,11 @@ import { HouseholdColumn } from '@/themes/broadsheet/home/HouseholdColumn'
 import { WeatherStrip } from '@/themes/broadsheet/home/WeatherStrip'
 import { buildStandfirst } from '@/themes/broadsheet/home/standfirst'
 import { useNow } from '@/themes/broadsheet/home/useNow'
-import { isAllDay, nextEventLabel } from '@/themes/broadsheet/home/event-format'
+import { isAllDay, nextEventLabel, formatEventTime } from '@/themes/broadsheet/home/event-format'
+import { useWeatherData } from '@/integrations/weather'
+import { useHouseStandfirst } from '@/integrations/house'
+import { buildStandfirstFacts } from '@/themes/broadsheet/home/standfirst-facts'
+import type { SportsFact } from '@/themes/broadsheet/home/standfirst-facts'
 
 /** Off-day/pregame vs. live column ratios for the three-column body — the
  *  sports column widens and the schedule column narrows once a game goes
@@ -71,12 +75,42 @@ export function Home() {
   const lunchAvailable =
     !!lunchToday && (lunchToday.entries.length > 0 || lunchToday.extras.length > 0)
 
-  const standfirst = buildStandfirst({
-    eventCount: upcoming.length,
-    nextEventTitle: nextEvent ? nextEvent.summary || 'Untitled' : null,
-    sportsState,
-    lunchAvailable,
+  const { data: weather } = useWeatherData()
+
+  const sportsFact: SportsFact =
+    featuredGame == null
+      ? { kind: 'none' }
+      : featuredGame.state === 'live'
+        ? { kind: 'live' }
+        : featuredGame.state === 'upcoming'
+          ? {
+              kind: 'pregame',
+              away: featuredGame.away.name,
+              home: featuredGame.home.name,
+              firstPitch: formatUpcomingTime(featuredGame.startTime),
+            }
+          : { kind: 'none' }
+
+  // The caas standfirst is generated from the day's coarse facts and cached by
+  // the backend; the deterministic line is the instant, never-blank fallback
+  // while it loads or if it fails. See `standfirst-facts.ts` / `useHouseStandfirst`.
+  const facts = buildStandfirstFacts({
+    now,
+    events: upcoming.map((e) => ({ title: e.summary || 'Untitled', time: formatEventTime(e) })),
+    sports: sportsFact,
+    lunchItem: lunchToday?.entries[0]?.name ?? null,
+    weather: weather ? { tempF: Math.round(weather.temp), description: weather.description } : null,
   })
+  const { data: houseSummary } = useHouseStandfirst(facts)
+
+  const standfirst =
+    houseSummary?.summary ||
+    buildStandfirst({
+      eventCount: upcoming.length,
+      nextEventTitle: nextEvent ? nextEvent.summary || 'Untitled' : null,
+      sportsState,
+      lunchAvailable,
+    })
 
   return (
     <div
