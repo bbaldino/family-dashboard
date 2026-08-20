@@ -2,7 +2,6 @@ import { useGoogleCalendar } from '@/integrations/calendar'
 import type { CalendarDay } from '@/integrations/calendar'
 import type { CalendarEvent } from '@/providers/google-calendar'
 import { useSportsGames, formatUpcomingTime } from '@/integrations/sports'
-import { useLunchMenu } from '@/integrations/nutrislice'
 import { Masthead } from '@/themes/broadsheet/home/Masthead'
 import { ScheduleColumn } from '@/themes/broadsheet/home/ScheduleColumn'
 import { SportsColumn } from '@/themes/broadsheet/home/SportsColumn'
@@ -11,7 +10,12 @@ import { HouseholdColumn } from '@/themes/broadsheet/home/HouseholdColumn'
 import { WeatherStrip } from '@/themes/broadsheet/home/WeatherStrip'
 import { buildStandfirst } from '@/themes/broadsheet/home/standfirst'
 import { useNow } from '@/themes/broadsheet/home/useNow'
-import { isAllDay, nextEventLabel, formatEventTime } from '@/themes/broadsheet/home/event-format'
+import {
+  isAllDay,
+  nextEventLabel,
+  formatEventTime,
+  isBirthdayEvent,
+} from '@/themes/broadsheet/home/event-format'
 import { useWeatherData } from '@/integrations/weather'
 import { useHouseStandfirst } from '@/integrations/house'
 import { buildStandfirstFacts } from '@/themes/broadsheet/home/standfirst-facts'
@@ -52,10 +56,14 @@ export function Home() {
   const now = useNow()
   const { data: days } = useGoogleCalendar()
   const { data: sportsData, isLoading: sportsLoading } = useSportsGames()
-  const { data: lunch } = useLunchMenu()
 
   const today = days?.find((day) => day.isToday)
-  const upcoming = upcomingTodayEvents(today, now)
+  // Birthdays are handled separately (a wish, not an errand), so keep them out
+  // of the event list the standfirst and "next up" summary read from.
+  const birthdays = (today?.events ?? [])
+    .filter(isBirthdayEvent)
+    .map((e) => e.summary || 'Untitled')
+  const upcoming = upcomingTodayEvents(today, now).filter((e) => !isBirthdayEvent(e))
   const nextEvent = upcoming[0]
   // The masthead standfirst's right-hand summary (mock: `broadsheet-v2.jsx:132`)
   // — total events across the whole week the calendar hook already fetched,
@@ -70,10 +78,6 @@ export function Home() {
   const featuredGame = pickFeaturedGame(games)
   const sportsState: 'live' | 'pregame' | 'none' =
     featuredGame?.state === 'live' ? 'live' : featuredGame ? 'pregame' : 'none'
-
-  const lunchToday = lunch?.today
-  const lunchAvailable =
-    !!lunchToday && (lunchToday.entries.length > 0 || lunchToday.extras.length > 0)
 
   const { data: weather } = useWeatherData()
 
@@ -96,9 +100,9 @@ export function Home() {
   // while it loads or if it fails. See `standfirst-facts.ts` / `useHouseStandfirst`.
   const facts = buildStandfirstFacts({
     now,
+    birthdays,
     events: upcoming.map((e) => ({ title: e.summary || 'Untitled', time: formatEventTime(e) })),
     sports: sportsFact,
-    lunchItem: lunchToday?.entries[0]?.name ?? null,
     weather: weather ? { tempF: Math.round(weather.temp), description: weather.description } : null,
   })
   const { data: houseSummary } = useHouseStandfirst(facts)
@@ -109,7 +113,6 @@ export function Home() {
       eventCount: upcoming.length,
       nextEventTitle: nextEvent ? nextEvent.summary || 'Untitled' : null,
       sportsState,
-      lunchAvailable,
     })
 
   return (

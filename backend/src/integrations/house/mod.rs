@@ -129,6 +129,7 @@ Examples of the register (different days, for tone only — don't reuse their wo
 Hard rules:
 - Output ONLY the sentence — no preamble, quotes, markdown, or emoji.
 - Use ONLY the facts given. Never invent an event, name, score, place, or detail not listed; omit what isn't provided rather than guessing.
+- If a birthday is listed, open by wishing that person a happy birthday by name — turn "Grandpa's Birthday" into "Happy birthday, Grandpa!" — then follow with the rest of the day if there is any. (The one time the line may lead with a warm address rather than a fact.)
 - No live game scores or innings — a game is just "tonight," "on now," or its final result.
 - A game that hasn't started yet is "tonight" or its start time — never "underway" or "on now" until it actually is.
 - Present tense. Let the time of day colour it.

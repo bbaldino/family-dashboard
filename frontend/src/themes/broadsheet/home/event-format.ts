@@ -5,6 +5,20 @@ export function isAllDay(event: CalendarEvent): boolean {
   return !event.start.dateTime && !!event.start.date
 }
 
+/**
+ * An all-day event whose title ends in "birthday" — "Grandpa's birthday",
+ * "Grandpa Birthday". Requiring all-day and an *ending* match keeps out the
+ * household's timed "bday party" events and titles that merely mention a
+ * birthday mid-string (a "birthday cake pickup"), the same discipline the
+ * datebook Tally's birthday count relies on — this is the shared classifier
+ * for both. Broader than "'s birthday" alone so it catches the possessive-less
+ * spelling this household actually uses.
+ */
+export function isBirthdayEvent(event: CalendarEvent): boolean {
+  if (event.start.dateTime) return false
+  return /\bbirthday$/i.test((event.summary ?? '').trim())
+}
+
 /** 'ALL DAY' or a wall-clock time. Never throws — a malformed event renders blank. */
 export function formatEventTime(event: CalendarEvent): string {
   if (isAllDay(event)) return 'ALL DAY'

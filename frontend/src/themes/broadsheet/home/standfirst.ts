@@ -4,7 +4,6 @@ export interface StandfirstInput {
   /** Title of the next event today, if any. */
   nextEventTitle: string | null
   sportsState: 'live' | 'pregame' | 'none'
-  lunchAvailable: boolean
 }
 
 function scheduleClause({ eventCount, nextEventTitle }: StandfirstInput): string {
@@ -31,7 +30,6 @@ export function buildStandfirst(input: StandfirstInput): string {
 
   const sports = sportsClause(input.sportsState)
   if (sports) clauses.push(sports)
-  if (input.lunchAvailable) clauses.push('lunch is posted')
 
   const sentence =
     clauses.length === 1

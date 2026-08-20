@@ -7,7 +7,6 @@ describe('buildStandfirst', () => {
       eventCount: 2,
       nextEventTitle: 'Pick up kids',
       sportsState: 'none',
-      lunchAvailable: false,
     })
     expect(text).toContain('Pick up kids')
   })
@@ -17,7 +16,6 @@ describe('buildStandfirst', () => {
       eventCount: 0,
       nextEventTitle: null,
       sportsState: 'none',
-      lunchAvailable: false,
     })
     expect(text.length).toBeGreaterThan(20)
     expect(text).not.toContain('undefined')
@@ -29,7 +27,6 @@ describe('buildStandfirst', () => {
       eventCount: 0,
       nextEventTitle: null,
       sportsState: 'live',
-      lunchAvailable: false,
     })
     expect(text.toLowerCase()).toMatch(/game|first pitch|underway/)
   })
@@ -39,7 +36,6 @@ describe('buildStandfirst', () => {
       eventCount: 3,
       nextEventTitle: 'Piano lesson',
       sportsState: 'pregame' as const,
-      lunchAvailable: true,
     }
     expect(buildStandfirst(input)).toBe(buildStandfirst(input))
   })
@@ -50,7 +46,6 @@ describe('buildStandfirst', () => {
         eventCount: count,
         nextEventTitle: count ? 'Something' : null,
         sportsState: 'none',
-        lunchAvailable: true,
       })
       expect(text.trimEnd()).toMatch(/[.!?]$/)
     }
@@ -61,7 +56,6 @@ describe('buildStandfirst', () => {
       eventCount: 1,
       nextEventTitle: null,
       sportsState: 'none',
-      lunchAvailable: false,
     })
     expect(text).toContain('1 thing')
     expect(text).not.toContain('1 things')
