@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.2](https://github.com/bbaldino/family-dashboard/compare/v0.7.1...v0.7.2) (2026-08-20)
+
+
+### Bug Fixes
+
+* **broadsheet/media:** drop the room ear from the masthead so it stops stretching the bar ([8e3f591](https://github.com/bbaldino/family-dashboard/commit/8e3f5917a74aa83fce55e2b1af5dcf7949674107))
+* **music:** replace the queue on play so a radio pick keeps going ([e5a3009](https://github.com/bbaldino/family-dashboard/commit/e5a30091de9f249e18853944563ea5474424a76f))
+
 ## [0.7.1](https://github.com/bbaldino/family-dashboard/compare/v0.7.0...v0.7.1) (2026-08-18)
 
 
