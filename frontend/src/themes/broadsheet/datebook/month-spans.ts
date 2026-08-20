@@ -61,11 +61,18 @@ export const CHIP_TOP = 29
 
 export interface SpanLayout {
   segments: SpanSegment[]
-  /** Lanes reserved per week row. Every cell in a row reserves the same
-   *  number so the day chips beneath stay on one line across the week —
-   *  otherwise a Tuesday with a banner over it would sit lower than its
-   *  neighbours. */
-  lanesByRow: number[]
+  /** Banner lanes reserved above each cell, indexed `[row][col]`. A cell's
+   *  value is how many stacked banner lanes actually cross it — the highest
+   *  occupied lane + 1 — so the day chips beneath clear exactly the banners
+   *  over that day and nothing more.
+   *
+   *  This is per-cell, not per-row, on purpose. Reserving the whole row's
+   *  lane count on every cell (the earlier approach) meant a day no banner
+   *  crossed still reserved space for banners sitting over its neighbours,
+   *  which pushed that day's lone chip down to the bottom of an otherwise
+   *  empty cell. A cell no banner crosses now reserves 0 and keeps its chips
+   *  at the top, where they belong. */
+  reservedLanesByCell: number[][]
 }
 
 /**
@@ -143,10 +150,19 @@ export function buildSpanSegments(spans: EventSpan[], weeks: Date[][]): SpanLayo
     byRow.set(segment.row, inRow)
   }
 
-  const lanesByRow = Array.from({ length: weeks.length }, () => 0)
+  // Reserve, per cell, only the lanes that actually pass over it: the highest
+  // lane any banner covering this column occupies, plus one. Lower empty lanes
+  // still count toward the height so a chip clears a banner sitting in lane 1
+  // even when lane 0 is empty over this particular day.
+  const reservedLanesByCell = weeks.map((week) => week.map(() => 0))
   for (const segment of segments) {
-    lanesByRow[segment.row] = Math.max(lanesByRow[segment.row], segment.lane + 1)
+    for (let col = segment.col; col < segment.col + segment.cols; col++) {
+      reservedLanesByCell[segment.row][col] = Math.max(
+        reservedLanesByCell[segment.row][col],
+        segment.lane + 1,
+      )
+    }
   }
 
-  return { segments, lanesByRow }
+  return { segments, reservedLanesByCell }
 }

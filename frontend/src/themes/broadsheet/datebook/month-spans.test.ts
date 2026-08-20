@@ -47,7 +47,7 @@ describe('buildSpanSegments', () => {
   })
 
   it('stacks overlapping spans into separate lanes', () => {
-    const { segments, lanesByRow } = buildSpanSegments(
+    const { segments, reservedLanesByCell } = buildSpanSegments(
       [span('a', '2026-05-04', '2026-05-07'), span('b', '2026-05-06', '2026-05-08')],
       WEEKS,
     )
@@ -55,16 +55,31 @@ describe('buildSpanSegments', () => {
     const b = segments.find((s) => s.id === 'b')!
     expect(a.lane).toBe(0)
     expect(b.lane).toBe(1)
-    expect(lanesByRow[a.row]).toBe(2)
+    // Where the two overlap, the cell reserves both lanes.
+    expect(Math.max(...reservedLanesByCell[a.row])).toBe(2)
   })
 
   it('reuses lane 0 for spans in the same row that do not overlap', () => {
-    const { segments, lanesByRow } = buildSpanSegments(
+    const { segments, reservedLanesByCell } = buildSpanSegments(
       [span('a', '2026-05-04', '2026-05-05'), span('b', '2026-05-07', '2026-05-08')],
       WEEKS,
     )
     expect(segments.every((s) => s.lane === 0)).toBe(true)
-    expect(lanesByRow[segments[0].row]).toBe(1)
+    expect(Math.max(...reservedLanesByCell[segments[0].row])).toBe(1)
+  })
+
+  it('reserves lanes per cell, not per row, so a day no banner crosses stays clear', () => {
+    // The reported bug: a lone chip sank to the bottom of a cell because the
+    // whole row's lane count was reserved on every cell, even ones no banner
+    // touched. A day past the banner's last column must reserve 0.
+    const { segments, reservedLanesByCell } = buildSpanSegments(
+      [span('concert', '2026-05-26', '2026-05-28')],
+      WEEKS,
+    )
+    const { row, col, cols } = segments[0]
+    expect(reservedLanesByCell[row][col]).toBe(1) // first covered day
+    expect(reservedLanesByCell[row][col + cols - 1]).toBe(1) // last covered day
+    expect(reservedLanesByCell[row][col + cols]).toBe(0) // first day past it — chips at top
   })
 
   /**
@@ -87,23 +102,26 @@ describe('buildSpanSegments', () => {
   })
 
   it('drops a span that never touches the grid rather than clamping it', () => {
-    const { segments, lanesByRow } = buildSpanSegments(
+    const { segments, reservedLanesByCell } = buildSpanSegments(
       [span('far', '2027-01-04', '2027-01-08')],
       WEEKS,
     )
     expect(segments).toEqual([])
-    expect(lanesByRow.every((n) => n === 0)).toBe(true)
+    expect(reservedLanesByCell.every((row) => row.every((n) => n === 0))).toBe(true)
   })
 
   it('reserves lanes only on the rows that have banners', () => {
-    const { lanesByRow } = buildSpanSegments([span('concert', '2026-05-26', '2026-05-28')], WEEKS)
-    expect(lanesByRow).toHaveLength(WEEKS.length)
-    expect(lanesByRow.filter((n) => n > 0)).toHaveLength(1)
+    const { reservedLanesByCell } = buildSpanSegments(
+      [span('concert', '2026-05-26', '2026-05-28')],
+      WEEKS,
+    )
+    expect(reservedLanesByCell).toHaveLength(WEEKS.length)
+    expect(reservedLanesByCell.filter((row) => row.some((n) => n > 0))).toHaveLength(1)
   })
 
   it('returns an empty layout when there are no spans', () => {
-    const { segments, lanesByRow } = buildSpanSegments([], WEEKS)
+    const { segments, reservedLanesByCell } = buildSpanSegments([], WEEKS)
     expect(segments).toEqual([])
-    expect(lanesByRow).toEqual(WEEKS.map(() => 0))
+    expect(reservedLanesByCell).toEqual(WEEKS.map((week) => week.map(() => 0)))
   })
 })

@@ -66,7 +66,7 @@ export function MonthGrid({
   const weeks = getMonthGridWeeks(year, month)
   const todayKey = toLocalDateStr(new Date())
   const maxEvents = maxEventsForWeekCount(weeks.length)
-  const { segments, lanesByRow } = buildSpanSegments(spans, weeks)
+  const { segments, reservedLanesByCell } = buildSpanSegments(spans, weeks)
   // Only the spans that actually made it onto the grid are suppressed from the
   // chips: one clipped away entirely still belongs in its cells as a chip,
   // since no banner will be drawn for it.
@@ -113,7 +113,7 @@ export function MonthGrid({
                 const dayEvents = (byDate[dateKey] ?? []).filter(
                   (event) => !bannerEventIds.has(event.id),
                 )
-                const lanes = lanesByRow[weekIndex] ?? 0
+                const lanes = reservedLanesByCell[weekIndex]?.[dayIndex] ?? 0
                 return (
                   <DayCell
                     key={dateKey}

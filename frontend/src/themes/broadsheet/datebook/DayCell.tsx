@@ -34,10 +34,11 @@ export function DayCell({
    *  `maxEventsForWeekCount` in `MonthGrid.tsx` for how this is derived and
    *  measured per row-count tier. */
   maxEvents: number
-  /** Multi-day banner lanes reserved across this cell's whole week. Every
-   *  cell in a row gets the same count, including cells no banner crosses, so
-   *  the chips stay on one line across the week instead of stepping up and
-   *  down under the banners. */
+  /** Multi-day banner lanes that actually cross THIS cell — how many stacked
+   *  banners sit above it (see `reservedLanesByCell` in `month-spans.ts`). The
+   *  chips reserve `lanes * LANE_H` to clear them; a cell no banner crosses
+   *  gets 0 and keeps its chips at the top rather than sunk beneath space
+   *  reserved for its neighbours' banners. */
   lanes?: number
 }) {
   const dayNum = date.getDate()
@@ -54,10 +55,11 @@ export function DayCell({
   // leading run's start can appear without being day 1).
   const showAdjacentMonthLabel = !isCurrentMonth && (dayNum === 1 || isFirstCellOfGrid)
 
-  // Every banner lane costs this cell a chip: the lanes sit in the same
-  // vertical space the chips would have used, so the cap comes down with them
-  // rather than the chips being pushed out of the cell's bottom. `max(0, …)`
-  // because a week can carry more banner lanes than a cell has chip slots.
+  // Every banner lane crossing this cell costs it a chip: the lanes sit in the
+  // same vertical space the chips would have used, so the cap comes down with
+  // them rather than the chips being pushed out of the cell's bottom.
+  // `max(0, …)` because a cell can be crossed by more banner lanes than it has
+  // chip slots.
   const visibleCap = Math.max(0, maxEvents - lanes)
   // Absorb a lone overflow: rendering one more event costs the same single
   // line the "+1 more" would, so never collapse exactly one — the reader gets
