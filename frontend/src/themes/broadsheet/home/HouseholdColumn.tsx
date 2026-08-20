@@ -371,6 +371,12 @@ function ChoresSection({
 
 const MAX_COMING_UP = 4
 
+/** The countdown value: "Today!" on the day it arrives (`useCountdowns` filters
+ *  out anything past), otherwise the plain "Nd" days-away count. */
+function formatCountdown(daysUntil: number): string {
+  return daysUntil <= 0 ? 'Today!' : `${daysUntil}d`
+}
+
 function ComingUpSection({ items }: { items: CountdownItem[] }) {
   return (
     <div style={{ marginTop: 12, paddingTop: 8, borderTop: '1px solid var(--rule)' }}>
@@ -417,7 +423,7 @@ function ComingUpSection({ items }: { items: CountdownItem[] }) {
                 color: 'var(--rust)',
               }}
             >
-              {item.daysUntil}d
+              {formatCountdown(item.daysUntil)}
             </span>
           </li>
         ))}

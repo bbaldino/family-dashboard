@@ -50,6 +50,19 @@ describe('HouseholdColumn', () => {
     })
     render(<HouseholdColumn />)
     expect(screen.getByText(/Hawaii/)).toBeInTheDocument()
+    expect(screen.getByText('18d')).toBeInTheDocument()
+  })
+
+  it('shows "Today!" the day a countdown arrives, not "0d"', () => {
+    useCountdowns.mockReturnValue({
+      data: [{ id: '1', name: 'Hawaii', date: new Date('2026-08-17'), daysUntil: 0 }],
+      isLoading: false,
+      error: null,
+      refetch: vi.fn(),
+    })
+    render(<HouseholdColumn />)
+    expect(screen.getByText('Today!')).toBeInTheDocument()
+    expect(screen.queryByText('0d')).not.toBeInTheDocument()
   })
 
   it('stacks sections lunch, chores, coming up in that order', () => {
