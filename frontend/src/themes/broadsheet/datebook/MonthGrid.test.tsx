@@ -92,10 +92,13 @@ describe('MonthGrid', () => {
     expect(screen.getByText(/cont\./)).toBeInTheDocument()
   })
 
-  it('gives a banner lane its space back from the cell chip cap', () => {
+  it('does not steal a chip slot from a day no banner crosses', () => {
     // May 2026 is a six-row month: a cell shows 2 chips before "+N more" (3
-    // fit via the lone-overflow absorb). A banner lane over the row costs one
-    // of those slots, so three chips no longer fit and one collapses.
+    // fit via the lone-overflow absorb). A banner over Mon–Tue must reserve
+    // its lane only on the cells it crosses — Thursday's three events all
+    // still fit. Reserving the whole row's lane count on every cell (the old
+    // behaviour) collapsed this unrelated day and sank a lone chip to the
+    // bottom of an otherwise-empty cell.
     const trip = allDay('trip', 'Baltimore & Boston', '2026-05-04')
     const byDate = {
       '2026-05-04': [trip],
@@ -106,11 +109,7 @@ describe('MonthGrid', () => {
         timed('c', 'Event C', '2026-05-07'),
       ],
     }
-    const { rerender } = render(<MonthGrid year={2026} month={4} byDate={byDate} />)
-    // Without the banner all three fit (the third is the absorbed overflow).
-    expect(screen.queryByText(/\+\d+ more/)).toBeNull()
-
-    rerender(
+    render(
       <MonthGrid
         year={2026}
         month={4}
@@ -118,8 +117,9 @@ describe('MonthGrid', () => {
         spans={[{ event: trip, startKey: '2026-05-04', endKey: '2026-05-05' }]}
       />,
     )
-    // The lane takes a slot, leaving room for one chip beside "+2 more".
-    expect(screen.getByText('+2 more')).toBeInTheDocument()
+    // Thursday is untouched by the Mon–Tue banner: all three fit, no overflow.
+    expect(screen.queryByText(/\+\d+ more/)).toBeNull()
+    expect(screen.getByText('Event C')).toBeInTheDocument()
   })
 
   it('renders exactly as many week rows as the month needs, not a hardcoded six', () => {
