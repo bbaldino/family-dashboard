@@ -8,12 +8,12 @@ describe('buildStandfirstFacts', () => {
   it('assembles a full day into a coarse fact block', () => {
     const facts = buildStandfirstFacts({
       now: mondayAfternoon,
+      birthdays: [],
       events: [
         { title: 'Soccer practice', time: '4:00 PM' },
         { title: 'Piano lesson', time: '5:00 PM' },
       ],
       sports: { kind: 'pregame', away: 'the Dodgers', home: 'the Rockies', firstPitch: '7:10 PM' },
-      lunchItem: 'Glazed Chicken Drumstick',
       weather: { tempF: 79, description: 'overcast clouds' },
     })
     expect(facts).toBe(
@@ -21,8 +21,24 @@ describe('buildStandfirstFacts', () => {
         '- Monday afternoon',
         '- Calendar, still to come: Soccer practice (4:00 PM), Piano lesson (5:00 PM)',
         '- Baseball: the Dodgers at the Rockies, first pitch 7:10 PM',
-        '- School lunch: posted — Glazed Chicken Drumstick',
         '- Weather: 79°F, overcast clouds',
+      ].join('\n'),
+    )
+  })
+
+  it('surfaces birthdays as their own fact, near the top', () => {
+    const facts = buildStandfirstFacts({
+      now: mondayAfternoon,
+      birthdays: ["Grandpa's Birthday"],
+      events: [{ title: 'Soccer practice', time: '4:00 PM' }],
+      sports: { kind: 'none' },
+      weather: null,
+    })
+    expect(facts).toBe(
+      [
+        '- Monday afternoon',
+        "- Birthdays today: Grandpa's Birthday",
+        '- Calendar, still to come: Soccer practice (4:00 PM)',
       ].join('\n'),
     )
   })
@@ -30,9 +46,9 @@ describe('buildStandfirstFacts', () => {
   it('says nothing-to-come and omits absent facts', () => {
     const facts = buildStandfirstFacts({
       now: mondayAfternoon,
+      birthdays: [],
       events: [],
       sports: { kind: 'none' },
-      lunchItem: null,
       weather: null,
     })
     expect(facts).toBe(['- Monday afternoon', '- Calendar: nothing still to come today'].join('\n'))
@@ -43,9 +59,9 @@ describe('buildStandfirstFacts', () => {
     // and thrash the cache key. "on now" is stable through the game.
     const facts = buildStandfirstFacts({
       now: mondayAfternoon,
+      birthdays: [],
       events: [],
       sports: { kind: 'live' },
-      lunchItem: null,
       weather: null,
     })
     expect(facts).toContain('- Baseball: the game is on now')

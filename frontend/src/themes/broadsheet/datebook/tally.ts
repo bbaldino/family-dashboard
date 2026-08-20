@@ -1,5 +1,5 @@
 import type { MonthEvents } from '@/integrations/calendar'
-import type { CalendarEvent } from '@/providers/google-calendar'
+import { isBirthdayEvent } from '@/themes/broadsheet/home/event-format'
 
 export interface MonthTally {
   eventCount: number
@@ -9,27 +9,16 @@ export interface MonthTally {
 /**
  * The mock's Tally shows `62 events · 11 birthdays · 5 flights`. Of those:
  * - Events are directly countable from the month's data.
- * - Birthdays aren't classified anywhere in this codebase. Google surfaces
- *   *contact* birthdays as all-day events whose summary ends in
- *   "'s birthday" — a conservative heuristic, checked against this
- *   household's real calendar before relying on it (see the task report:
- *   zero events matched across a ~13-month window, because no Contacts
- *   birthday calendar is among the three calendars this household has
- *   selected — the heuristic is sound, it simply has nothing to catch here
- *   today). Anything looser (matching "birthday" anywhere, or the
- *   free-text "bday"/"b-day" spellings this household's own calendar
- *   actually uses for birthday *parties*) would also catch graduations,
- *   trips, and errands with "birthday" incidentally in the title — worse
- *   than reporting nothing.
+ * - Birthdays are classified by the shared `isBirthdayEvent` (an all-day event
+ *   whose title ends in "birthday") — see `home/event-format.ts` for the
+ *   heuristic and its reasoning. Matching only the ending, and only all-day
+ *   events, keeps out the household's timed "bday party" events and titles that
+ *   mention a birthday incidentally mid-string.
  * - Flights have no data source in this codebase at all — not fetched,
  *   not modeled anywhere — so there's no field to count them from. Not
  *   included in `MonthTally`, and the Datebook must not render a flights
  *   figure.
  */
-function isBirthdayEvent(event: CalendarEvent): boolean {
-  if (event.start.dateTime) return false // must be all-day
-  return /'s birthday$/i.test((event.summary ?? '').trim())
-}
 
 /** Counts events (and, within them, birthdays) whose day falls in
  *  `year`/`month` (0-indexed) — `monthEvents.byDate` also carries the grid's

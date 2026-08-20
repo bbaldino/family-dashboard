@@ -19,11 +19,11 @@ export type SportsFact =
 
 export interface StandfirstFactsInput {
   now: Date
-  /** Events still to come today, already time-formatted. */
+  /** All-day birthday events today, by raw title — caas phrases the wish. */
+  birthdays: string[]
+  /** Events still to come today, already time-formatted (birthdays excluded). */
   events: { title: string; time: string }[]
   sports: SportsFact
-  /** A representative posted lunch item, or null when nothing is posted. */
-  lunchItem: string | null
   weather: { tempF: number; description: string } | null
 }
 
@@ -51,6 +51,10 @@ function sportsLine(sports: SportsFact): string | null {
 export function buildStandfirstFacts(input: StandfirstFactsInput): string {
   const lines: string[] = [`- ${DAY_FORMAT.format(input.now)} ${timeOfDay(input.now)}`]
 
+  if (input.birthdays.length > 0) {
+    lines.push(`- Birthdays today: ${input.birthdays.join(', ')}`)
+  }
+
   lines.push(
     input.events.length > 0
       ? `- Calendar, still to come: ${input.events.map((e) => `${e.title} (${e.time})`).join(', ')}`
@@ -59,7 +63,6 @@ export function buildStandfirstFacts(input: StandfirstFactsInput): string {
 
   const sports = sportsLine(input.sports)
   if (sports) lines.push(`- ${sports}`)
-  if (input.lunchItem) lines.push(`- School lunch: posted — ${input.lunchItem}`)
   if (input.weather) lines.push(`- Weather: ${input.weather.tempF}°F, ${input.weather.description}`)
 
   return lines.join('\n')
