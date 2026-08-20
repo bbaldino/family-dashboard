@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.9.0](https://github.com/bbaldino/family-dashboard/compare/v0.8.0...v0.9.0) (2026-08-20)
+
+
+### Features
+
+* **home:** preview tomorrow's lunch menu once today's is past ([17311fb](https://github.com/bbaldino/family-dashboard/commit/17311fb7a22d1fca6945aae0ec17c3925572988d))
+* **home:** wish happy birthday in the standfirst, and drop the lunch mention ([e7b0ea2](https://github.com/bbaldino/family-dashboard/commit/e7b0ea2aab5eddaaee3293dc613fd41c2ea1d0a7))
+
+
+### Bug Fixes
+
+* **home:** show "Today!" instead of "0d" when a countdown arrives ([a4b51f4](https://github.com/bbaldino/family-dashboard/commit/a4b51f4f3a05116a0cff0cfb842723034ad2289a))
+
 ## [0.8.0](https://github.com/bbaldino/family-dashboard/compare/v0.7.2...v0.8.0) (2026-08-20)
 
 
