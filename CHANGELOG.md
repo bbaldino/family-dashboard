@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/bbaldino/family-dashboard/compare/v0.7.2...v0.8.0) (2026-08-20)
+
+
+### Features
+
+* **home:** generate the "From the House" standfirst with caas, cached ([8cd6f3f](https://github.com/bbaldino/family-dashboard/commit/8cd6f3f4bfda9921c0fae619cb97c21315260397))
+
 ## [0.7.2](https://github.com/bbaldino/family-dashboard/compare/v0.7.1...v0.7.2) (2026-08-20)
 
 
