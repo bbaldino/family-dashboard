@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/bbaldino/family-dashboard/compare/v0.9.0...v0.9.1) (2026-08-20)
+
+
+### Bug Fixes
+
+* **datebook:** reserve banner lanes per cell so a lone event isn't sunk ([007379f](https://github.com/bbaldino/family-dashboard/commit/007379f73aff28c37e7e816ec15758cd729af5e3))
+
 ## [0.9.0](https://github.com/bbaldino/family-dashboard/compare/v0.8.0...v0.9.0) (2026-08-20)
 
 
