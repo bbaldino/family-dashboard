@@ -23,5 +23,6 @@ pub fn router(pool: SqlitePool) -> Router {
         .nest("/sports", sports::router(pool.clone()))
         .nest("/music", music::router(pool.clone()))
         .nest("/llm", crate::llm::router(pool.clone()))
+        .nest("/images", crate::images::router(pool.clone()))
         .nest("/fetch", crate::platform::fetch::router())
 }
