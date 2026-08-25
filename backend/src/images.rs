@@ -73,7 +73,12 @@ async fn generate_route(
     axum::Json(req): axum::Json<GenerateRequest>,
 ) -> Result<Response, AppError> {
     let asset = generate_image(&pool, req.model.as_deref(), &req.prompt).await?;
+    image_response(asset).await
+}
 
+/// Read a generated/cached image off disk and return it as an HTTP response
+/// with the right Content-Type and an `X-Cache: hit|miss` header.
+pub async fn image_response(asset: ImageAsset) -> Result<Response, AppError> {
     let bytes = tokio::fs::read(&asset.path)
         .await
         .map_err(|e| AppError::Internal(format!("failed to read cached image: {e}")))?;

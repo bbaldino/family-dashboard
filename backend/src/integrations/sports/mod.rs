@@ -2,6 +2,7 @@ pub mod cache;
 pub mod enrichment;
 pub mod espn;
 pub mod final_recap;
+pub mod lead_art;
 pub mod preview;
 pub mod recap;
 pub mod replay;
@@ -67,6 +68,7 @@ pub fn router(pool: SqlitePool) -> Router {
         .route("/teams/search", axum::routing::get(routes::search_teams))
         .route("/preview", axum::routing::get(routes::get_preview))
         .route("/final-recap", axum::routing::get(routes::get_final_recap))
+        .route("/lead-art", axum::routing::get(lead_art::get_lead_art))
         .route("/section", axum::routing::get(section::get_section))
         .route("/events", axum::routing::get(routes::events))
         .with_state(state)

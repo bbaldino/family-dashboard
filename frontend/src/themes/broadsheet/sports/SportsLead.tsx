@@ -1,14 +1,31 @@
+import { useState } from 'react'
 import type { SportsTrack } from '@/integrations/sports'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { SP_RULE } from './sports-tokens'
 
 /**
- * The wire-photo plate — a halftone placeholder standing in for the real ESPN
- * article art, which the data inventory notes is present on nearly every story
- * and is what makes the page read as a newspaper rather than a feed. Swap the
- * ground for the real image once the aggregation carries it.
+ * The backend generates ink-on-cream engraving art for the lead story and
+ * caches it (first request ~6s); we point an <img> straight at the route.
  */
-function Plate({ height, caption }: { height: number; caption: string }) {
+function leadArtUrl(track: SportsTrack): string {
+  const p = new URLSearchParams({
+    league: track.league,
+    team: track.team,
+    headline: track.headline,
+  })
+  return `/api/sports/lead-art?${p.toString()}`
+}
+
+/**
+ * The lead-art plate — the generated engraving that makes the page read as a
+ * newspaper rather than a feed. Until the image loads, a light cream halftone
+ * ground with a faint "Developing" marker stands in, tuned to match the
+ * ink-on-cream art so the swap is seamless. On error the ground stays.
+ */
+function Plate({ height, caption, src }: { height: number; caption: string; src: string }) {
+  const [loaded, setLoaded] = useState(false)
+  const [errored, setErrored] = useState(false)
+
   return (
     <div>
       <div
@@ -18,9 +35,9 @@ function Plate({ height, caption }: { height: number; caption: string }) {
           overflow: 'hidden',
           borderTop: '2px solid var(--ink)',
           borderBottom: `1px solid ${SP_RULE}`,
-          background: '#2a2520',
+          background: 'var(--paper)',
           backgroundImage:
-            'radial-gradient(rgba(246,241,231,0.5) 1px, transparent 1.4px), radial-gradient(rgba(246,241,231,0.22) 1px, transparent 1.4px)',
+            'radial-gradient(rgba(42,37,32,0.14) 1px, transparent 1.4px), radial-gradient(rgba(42,37,32,0.08) 1px, transparent 1.4px)',
           backgroundSize: '5px 5px, 5px 5px',
           backgroundPosition: '0 0, 2.5px 2.5px',
         }}
@@ -32,15 +49,32 @@ function Plate({ height, caption }: { height: number; caption: string }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'rgba(246,241,231,0.55)',
+            color: 'var(--ink-muted)',
             fontFamily: 'var(--font-mono)',
             fontSize: 9,
             letterSpacing: '0.28em',
             textTransform: 'uppercase',
           }}
         >
-          Wire photo
+          Developing
         </div>
+        {!errored && (
+          <img
+            src={src}
+            alt=""
+            onLoad={() => setLoaded(true)}
+            onError={() => setErrored(true)}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              opacity: loaded ? 1 : 0,
+              transition: 'opacity 300ms ease',
+            }}
+          />
+        )}
       </div>
       {caption && (
         <div
@@ -112,7 +146,9 @@ export function SportsLead({
       >
         {track.dek}
       </p>
-      {primary && <Plate height={split ? 96 : 112} caption={track.caption} />}
+      {primary && (
+        <Plate height={split ? 96 : 112} caption={track.caption} src={leadArtUrl(track)} />
+      )}
 
       <div
         style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginTop: primary ? 10 : 2 }}
