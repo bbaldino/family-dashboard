@@ -25,7 +25,7 @@ describe('broadsheet Calendar (the Datebook)', () => {
     render(<Calendar />)
     const root = screen.getByTestId('broadsheet-calendar')
     expect(root.className).toContain('w-[1600px]')
-    expect(root.className).toContain('h-[900px]')
+    expect(root.className).toContain('h-full')
   })
 
   it('renders the weekday header even for an empty month', () => {

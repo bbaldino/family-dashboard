@@ -20,7 +20,7 @@ describe('broadsheet Cameras (the Watch Room)', () => {
     render(<Cameras />)
     const root = screen.getByTestId('broadsheet-cameras')
     expect(root.className).toContain('w-[1600px]')
-    expect(root.className).toContain('h-[900px]')
+    expect(root.className).toContain('h-full')
   })
 
   /**

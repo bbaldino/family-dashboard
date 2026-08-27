@@ -18,7 +18,7 @@ import { PlayPendingNotice } from '@/themes/broadsheet/ui/PlayPendingNotice'
 export function BroadsheetLayout() {
   return (
     <MusicProvider>
-      <div className="broadsheet-root relative w-[1600px] h-[900px] overflow-hidden">
+      <div className="broadsheet-root relative w-[1600px] h-full overflow-hidden">
         <Outlet />
         <Footer />
         {/* Layout-level, not on the Media screen: transport can be driven from

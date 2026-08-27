@@ -54,7 +54,7 @@ export function CentreSpread({ onClose }: { onClose: () => void }) {
   return (
     <div
       data-testid="broadsheet-centre-spread"
-      className="broadsheet-root w-[1600px] h-[900px] flex flex-col"
+      className="broadsheet-root w-[1600px] h-full flex flex-col"
     >
       <CentreSpreadMasthead
         trackTitle={currentItem.name}

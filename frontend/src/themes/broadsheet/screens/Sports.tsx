@@ -52,7 +52,7 @@ export function Sports() {
   // standfirst and Form, so it must never run without at least one track.
   if (!data || data.leagues.length === 0) {
     return (
-      <div className="broadsheet-root w-[1600px] h-[900px] flex flex-col">
+      <div className="broadsheet-root w-[1600px] h-full flex flex-col">
         <MastheadFrame
           padding="20px 56px 14px"
           left={null}
@@ -105,7 +105,7 @@ function SportsBody({ section, now }: { section: SportsSection; now: Date }) {
   ]
 
   return (
-    <div className="broadsheet-root w-[1600px] h-[900px] flex flex-col">
+    <div className="broadsheet-root w-[1600px] h-full flex flex-col">
       <MastheadFrame
         padding="20px 56px 14px"
         left={
