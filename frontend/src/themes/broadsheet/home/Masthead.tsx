@@ -193,7 +193,7 @@ export function Masthead({
         style={{
           gridTemplateColumns: 'auto 1fr auto',
           gap: 18,
-          padding: '10px 56px 12px',
+          padding: '10px 20px 12px',
           borderBottom: '1px solid var(--rule)',
         }}
       >

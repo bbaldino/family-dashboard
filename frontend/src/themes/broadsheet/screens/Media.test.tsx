@@ -65,7 +65,7 @@ describe('broadsheet Media (The Listening Room)', () => {
     renderMedia()
     const root = screen.getByTestId('broadsheet-media')
     expect(root.className).toContain('w-[1600px]')
-    expect(root.className).toContain('h-[900px]')
+    expect(root.className).toContain('h-full')
   })
 
   it('survives every hook returning undefined on first paint', () => {

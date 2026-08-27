@@ -93,7 +93,7 @@ export function Media() {
   return (
     <div
       data-testid="broadsheet-media"
-      className="broadsheet-root relative w-[1600px] h-[900px] flex flex-col"
+      className="broadsheet-root relative w-[1600px] h-full flex flex-col"
     >
       <MediaMasthead />
       <SearchTabsRow

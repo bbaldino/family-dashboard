@@ -438,7 +438,7 @@ export function Health() {
   return (
     <div
       data-testid="broadsheet-health"
-      className="broadsheet-root w-[1600px] h-[900px] flex flex-col"
+      className="broadsheet-root w-[1600px] h-full flex flex-col"
     >
       <MastheadFrame
         left={

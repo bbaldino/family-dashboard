@@ -60,7 +60,7 @@ export function Calendar() {
   return (
     <div
       data-testid="broadsheet-calendar"
-      className="broadsheet-root w-[1600px] h-[900px] flex flex-col"
+      className="broadsheet-root w-[1600px] h-full flex flex-col"
     >
       <DatebookMasthead
         year={year}

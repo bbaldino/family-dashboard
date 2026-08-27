@@ -120,7 +120,7 @@ export function Cameras() {
   return (
     <div
       data-testid="broadsheet-cameras"
-      className="broadsheet-root w-[1600px] h-[900px] flex flex-col"
+      className="broadsheet-root w-[1600px] h-full flex flex-col"
     >
       <MastheadFrame
         // Left ear is deliberately empty for now. The suite's masthead rule

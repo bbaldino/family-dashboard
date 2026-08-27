@@ -185,7 +185,7 @@ export function WeatherStrip() {
         gridTemplateColumns: 'auto 1fr auto auto auto auto',
         gap: 28,
         alignItems: 'center',
-        padding: '8px 56px 10px',
+        padding: '8px 20px 10px',
         borderTop: '1px solid var(--rule)',
         // No bottom border: the footer's double rule sits directly against
         // this edge, so a hairline here reads as a second, stray rule rather

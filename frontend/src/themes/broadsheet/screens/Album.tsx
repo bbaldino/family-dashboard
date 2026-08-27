@@ -42,7 +42,7 @@ export function Album() {
     return (
       <div
         data-testid="broadsheet-album"
-        className="broadsheet-root relative w-[1600px] h-[900px] flex items-center justify-center"
+        className="broadsheet-root relative w-[1600px] h-full flex items-center justify-center"
       >
         <div
           style={{
@@ -69,7 +69,7 @@ export function Album() {
   const closeMenu = () => setOpenMenuUri(null)
 
   return (
-    <div data-testid="broadsheet-album" className="broadsheet-root relative w-[1600px] h-[900px]">
+    <div data-testid="broadsheet-album" className="broadsheet-root relative w-[1600px] h-full">
       <MusicPageMasthead
         kicker="The Record"
         title={data.name}

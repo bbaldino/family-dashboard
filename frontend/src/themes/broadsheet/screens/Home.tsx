@@ -39,9 +39,10 @@ function upcomingTodayEvents(today: CalendarDay | undefined, now: Date): Calenda
 
 /**
  * The broadsheet front page: masthead over a three-column body — schedule,
- * sports, and the household rundown — filling the 1600x900 canvas the shell
- * scales to the viewport. The footer nav (and now-playing) is part of
- * `BroadsheetLayout`, not this screen.
+ * sports, and the household rundown — filling the canvas the shell scales to
+ * the viewport (1600 wide by design; its height is fluid so the page fills
+ * the screen instead of letterboxing — 900 at the design 16:9). The footer
+ * nav (and now-playing) is part of `BroadsheetLayout`, not this screen.
  *
  * Every hook here can boot with no data on a cold cache — the tablet's
  * first second after power-on — so nothing below assumes data has arrived.
@@ -116,18 +117,16 @@ export function Home() {
     })
 
   return (
-    <div
-      data-testid="broadsheet-home"
-      className="broadsheet-root w-[1600px] h-[900px] flex flex-col"
-    >
+    <div data-testid="broadsheet-home" className="broadsheet-root w-[1600px] h-full flex flex-col">
       <Masthead
         standfirst={standfirst}
         nextEventSummary={nextEventSummary}
         totalEvents={totalEvents}
       />
       {/*
-       * This is a fixed 900px canvas with no scrolling — content that runs
-       * long must clip, never spill under the footer. `overflow-hidden` here
+       * The canvas never scrolls — content that runs long must clip, never
+       * spill under the footer (its height is fluid, 900px at the design
+       * 16:9, so a shorter screen simply clips more). `overflow-hidden` here
        * is the structural guarantee; `min-h-0` on both the row and each
        * column lets them actually shrink to fit instead of growing to their
        * content's min-content size (a grid/flex item's default).
@@ -157,7 +156,7 @@ export function Home() {
       >
         <div
           className="min-h-0 overflow-hidden"
-          style={{ padding: '0 24px 0 56px', borderRight: '1px solid var(--rule)' }}
+          style={{ padding: '0 24px 0 20px', borderRight: '1px solid var(--rule)' }}
         >
           <ScheduleColumn isLive={sportsState === 'live'} />
         </div>
@@ -167,7 +166,7 @@ export function Home() {
         >
           <SportsColumn data={sportsData} isLoading={sportsLoading} />
         </div>
-        <div className="min-h-0 overflow-hidden" style={{ padding: '0 56px 0 24px' }}>
+        <div className="min-h-0 overflow-hidden" style={{ padding: '0 20px 0 24px' }}>
           <HouseholdColumn />
         </div>
       </div>

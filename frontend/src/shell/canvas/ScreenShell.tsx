@@ -26,17 +26,26 @@ export function ScreenShell({ canvas, children }: Props) {
     )
   }
 
-  const scale = Math.min(viewport.width / canvas.designWidth, viewport.height / canvas.designHeight)
+  // Fill the viewport in both axes. The canvas keeps its design *width* and
+  // scales to the viewport width; its height is whatever fills the remaining
+  // viewport height at that scale, so the layout stretches to the screen
+  // instead of letterboxing. On a true 16:9 screen (the tablet) the height
+  // resolves to the design's 900 and this is identical to the old fit; on any
+  // other aspect the fluid height lets the flex layout absorb the difference
+  // (the footer stays pinned to the real bottom). `designHeight` remains the
+  // reference the theme is authored against.
+  const scale = viewport.width / canvas.designWidth
+  const canvasHeight = viewport.height / scale
 
   return (
-    <div className="fixed inset-0 bg-bg-primary flex items-center justify-center overflow-hidden">
+    <div className="fixed inset-0 bg-bg-primary overflow-hidden">
       <div
         data-testid="theme-canvas"
         style={{
           width: canvas.designWidth,
-          height: canvas.designHeight,
+          height: canvasHeight,
           transform: `scale(${scale})`,
-          transformOrigin: 'center center',
+          transformOrigin: 'top left',
           flexShrink: 0,
         }}
       >

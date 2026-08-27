@@ -201,7 +201,7 @@ export function Footer() {
        *  rules directly above. */}
       <DoubleRule />
       <div
-        className="flex-1 min-h-0 px-14 grid items-center"
+        className="flex-1 min-h-0 px-5 grid items-center"
         style={{ gridTemplateColumns: '1.6fr 1fr', gap: 24 }}
       >
         <NowPlaying />

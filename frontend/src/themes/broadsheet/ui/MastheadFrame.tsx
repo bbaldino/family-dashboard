@@ -29,7 +29,7 @@ export function MastheadFrame({
   left,
   center,
   right,
-  padding = '16px 56px 12px',
+  padding = '16px 20px 12px',
 }: {
   left: ReactNode
   center: ReactNode

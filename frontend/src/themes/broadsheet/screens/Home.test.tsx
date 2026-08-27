@@ -124,7 +124,7 @@ describe('broadsheet Home', () => {
     )
     const root = screen.getByTestId('broadsheet-home')
     expect(root.className).toContain('w-[1600px]')
-    expect(root.className).toContain('h-[900px]')
+    expect(root.className).toContain('h-full')
   })
 
   it('clips the three-column body instead of letting it spill under the footer', () => {
