@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.1](https://github.com/bbaldino/family-dashboard/compare/v0.10.0...v0.10.1) (2026-08-27)
+
+
+### Bug Fixes
+
+* **broadsheet:** fill the viewport and tighten the edge gutter ([48983d5](https://github.com/bbaldino/family-dashboard/commit/48983d5eeb717e168450f4c6f3387e2b642dd188))
+
 ## [0.10.0](https://github.com/bbaldino/family-dashboard/compare/v0.9.1...v0.10.0) (2026-08-27)
 
 
