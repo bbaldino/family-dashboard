@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.0](https://github.com/bbaldino/family-dashboard/compare/v0.9.1...v0.10.0) (2026-08-27)
+
+
+### Features
+
+* **images:** prove the caas image-generation pipeline with a disk cache ([84c1994](https://github.com/bbaldino/family-dashboard/commit/84c19941b0df6eda57ae1cef6461cb798aacc185))
+* **sports:** generate engraving hero art for the lead wire plate ([b220a92](https://github.com/bbaldino/family-dashboard/commit/b220a9284c1441e4733438b2e6ee0c549dbcdc4c))
+
 ## [0.9.1](https://github.com/bbaldino/family-dashboard/compare/v0.9.0...v0.9.1) (2026-08-20)
 
 
