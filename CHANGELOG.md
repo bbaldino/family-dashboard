@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.2](https://github.com/bbaldino/family-dashboard/compare/v0.10.1...v0.10.2) (2026-09-11)
+
+
+### Bug Fixes
+
+* **music:** keep the live now-playing stream self-healing ([5fb91cd](https://github.com/bbaldino/family-dashboard/commit/5fb91cd6d8e2f624bf4254545dae1bff75aafda4))
+
 ## [0.10.1](https://github.com/bbaldino/family-dashboard/compare/v0.10.0...v0.10.1) (2026-08-27)
 
 
