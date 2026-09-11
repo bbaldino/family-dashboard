@@ -181,11 +181,12 @@ pub async fn play(
 
     // Radio mode asks MA to seed a station from the chosen item, which it can
     // only do via a provider that supports `similar_tracks`. Spotify is the
-    // only such provider here, it advertises the feature, and the call fails
-    // anyway — verified against this instance (MA 2.9.10): the identical
-    // request returns 200 without `radio_mode` and 500 with it, rejected in
-    // ~45ms. So a plain tap on a track, which always asks for radio, could
-    // never play anything.
+    // only such provider here, and on this instance (MA 2.9.13) `radio_mode`
+    // now succeeds and seeds a station normally. The fallback below is kept
+    // as defense-in-depth for providers or MA versions that still reject
+    // `radio_mode` (older MA releases, e.g. 2.9.10, returned 500 for it) —
+    // without it, a plain tap on a track (which always asks for radio) could
+    // fail outright instead of degrading gracefully.
     //
     // Falling back rather than dropping radio outright: when the station can
     // be built the user gets it, and when it can't they still get the track
