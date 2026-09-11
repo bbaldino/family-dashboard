@@ -236,16 +236,26 @@ pub async fn events(
     let token = config.get("api_token").await?;
     let ws_url = ws_url_from_service_url(&service_url);
 
-    // Fetch initial state before returning the SSE stream.
-    let initial_state = fetch_full_state(&pool).await?;
-
     let (tx, rx) = mpsc::channel::<Event>(64);
 
-    // Send initial state snapshot.
-    let initial_json = serde_json::to_string(&initial_state).unwrap_or_else(|_| "{}".to_string());
-    let _ = tx
-        .send(Event::default().event("state").data(initial_json))
-        .await;
+    // Fetch initial state before returning the SSE stream. This is
+    // best-effort: a transient MA HTTP hiccup here must not fail the
+    // handler, since an `EventSource` that receives an error status on
+    // connect closes permanently on the client. `ws_relay_loop` will push a
+    // fresh snapshot once it connects, so a skipped snapshot here is
+    // recovered from shortly after.
+    match fetch_full_state(&pool).await {
+        Ok(initial_state) => {
+            let initial_json =
+                serde_json::to_string(&initial_state).unwrap_or_else(|_| "{}".to_string());
+            let _ = tx
+                .send(Event::default().event("state").data(initial_json))
+                .await;
+        }
+        Err(e) => {
+            tracing::warn!("Failed to fetch initial MA state: {}", e);
+        }
+    }
 
     // Spawn background task to read WS and feed events into the channel.
     tokio::spawn(ws_relay_loop(pool.clone(), ws_url, token, tx));
@@ -318,6 +328,26 @@ async fn ws_relay_loop(pool: SqlitePool, ws_url: String, token: String, tx: mpsc
             Ok(ws_stream) => {
                 tracing::info!("Connected to MA WebSocket at {}", ws_url);
                 backoff = Duration::from_secs(1); // Reset backoff on successful connect.
+
+                // Push a fresh snapshot now that we're (re)connected, so the
+                // client resyncs any state that changed while the socket was
+                // down (including a failed initial fetch in `events()`)
+                // without needing a page reload.
+                match fetch_full_state(&pool).await {
+                    Ok(state) => {
+                        maybe_log_play(&pool, &state, &mut last_track_uri).await;
+                        let json =
+                            serde_json::to_string(&state).unwrap_or_else(|_| "{}".to_string());
+                        let event = Event::default().event("state").data(json);
+                        if tx.send(event).await.is_err() {
+                            tracing::debug!("SSE client disconnected");
+                            return;
+                        }
+                    }
+                    Err(e) => {
+                        tracing::warn!("Failed to fetch MA state on reconnect: {}", e);
+                    }
+                }
 
                 let (_write, mut read) = ws_stream.split();
 

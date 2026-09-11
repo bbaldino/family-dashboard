@@ -429,3 +429,176 @@ describe('MusicProvider anchoring', () => {
     expect(screen.getByTestId('active-room')).toHaveTextContent('Deck')
   })
 })
+
+/**
+ * The bug: a single-shot EventSource whose `onerror` did nothing but flip
+ * `isConnected` false, relying on the browser's native auto-retry — which
+ * the SSE spec permanently kills once a reconnect attempt gets back an HTTP
+ * error status. The fix manages reconnection itself: always close-then-retry
+ * on error with exponential backoff, plus an immediate retry when the tablet
+ * wakes (visibilitychange/online) while disconnected.
+ */
+describe('MusicProvider connection recovery', () => {
+  class FakeEventSource {
+    static instances: FakeEventSource[] = []
+    url: string
+    onopen: (() => void) | null = null
+    onerror: (() => void) | null = null
+    closed = false
+    constructor(url: string) {
+      this.url = url
+      FakeEventSource.instances.push(this)
+    }
+    addEventListener() {}
+    close() {
+      this.closed = true
+    }
+  }
+
+  beforeEach(() => {
+    FakeEventSource.instances = []
+    musicStateFixtureFor.mockReturnValue(undefined)
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ 'music.service_url': 'http://192.168.1.42:8095/' }),
+      }),
+    )
+    vi.stubGlobal('EventSource', FakeEventSource)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+    musicStateFixtureFor.mockReset()
+    vi.resetModules()
+  })
+
+  // Renders with real timers so the async `isConfigured` flip (which depends
+  // on the mocked config `fetch` resolving) can be awaited normally, then
+  // hands back the first connection for the caller to switch to fake timers.
+  async function renderProvider() {
+    const { MusicProvider, useMusic } = await freshMusicModules()
+    render(
+      wrapInQueryClient(
+        <MusicProvider>
+          <MusicProbe useMusic={useMusic} />
+        </MusicProvider>,
+      ),
+    )
+    await waitFor(() => expect(FakeEventSource.instances.length).toBe(1))
+    return FakeEventSource.instances[0]
+  }
+
+  it('closes the dead connection on error and reconnects once the backoff elapses', async () => {
+    const first = await renderProvider()
+    vi.useFakeTimers()
+
+    act(() => {
+      first.onerror?.()
+    })
+    expect(first.closed).toBe(true)
+    expect(FakeEventSource.instances.length).toBe(1)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(999)
+    })
+    expect(FakeEventSource.instances.length).toBe(1)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1)
+    })
+    expect(FakeEventSource.instances.length).toBe(2)
+    expect(FakeEventSource.instances[1].url).toBe('/api/music/events')
+  })
+
+  it('doubles the backoff on each consecutive failure', async () => {
+    const first = await renderProvider()
+    vi.useFakeTimers()
+
+    act(() => {
+      first.onerror?.()
+    })
+    // First reconnect fires at the base delay (1000ms).
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000)
+    })
+    expect(FakeEventSource.instances.length).toBe(2)
+    const second = FakeEventSource.instances[1]
+
+    act(() => {
+      second.onerror?.()
+    })
+    // The second consecutive failure must wait the doubled delay (2000ms) —
+    // not yet reconnected just short of it.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1999)
+    })
+    expect(FakeEventSource.instances.length).toBe(2)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1)
+    })
+    expect(FakeEventSource.instances.length).toBe(3)
+  })
+
+  it('reconnects immediately on visibilitychange while disconnected, without waiting for backoff', async () => {
+    const first = await renderProvider()
+    vi.useFakeTimers()
+    Object.defineProperty(document, 'visibilityState', {
+      value: 'visible',
+      configurable: true,
+    })
+
+    act(() => {
+      first.onerror?.()
+    })
+    expect(FakeEventSource.instances.length).toBe(1)
+
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+    expect(FakeEventSource.instances.length).toBe(2)
+
+    // The pending backoff timer from the earlier error was cancelled by the
+    // wake-triggered reconnect — letting time pass doesn't spawn a third
+    // connection from it.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000)
+    })
+    expect(FakeEventSource.instances.length).toBe(2)
+  })
+
+  it('resets the backoff to base after a successful open', async () => {
+    const first = await renderProvider()
+    vi.useFakeTimers()
+
+    act(() => {
+      first.onerror?.()
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000)
+    })
+    expect(FakeEventSource.instances.length).toBe(2)
+    const second = FakeEventSource.instances[1]
+
+    act(() => {
+      second.onopen?.()
+    })
+    act(() => {
+      second.onerror?.()
+    })
+
+    // Backoff should be back at the base delay, not doubled again.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(999)
+    })
+    expect(FakeEventSource.instances.length).toBe(2)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1)
+    })
+    expect(FakeEventSource.instances.length).toBe(3)
+  })
+})

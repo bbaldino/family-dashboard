@@ -66,63 +66,127 @@ export function MusicProvider({ children }: MusicProviderProps) {
       return
     }
 
-    const es = new EventSource('/api/music/events')
-    esRef.current = es
+    // Reconnection state for this effect instance. Native EventSource retry
+    // permanently gives up once a reconnect attempt gets back an HTTP error
+    // status (per the SSE spec it goes to CLOSED and never retries again), so
+    // we manage the close-then-reconnect cycle ourselves instead of relying
+    // on it. `cancelled` guards every closure below against firing after
+    // this effect has torn down (e.g. a queued reconnect racing unmount).
+    let cancelled = false
+    let connected = false
+    const baseDelay = 1000
+    const maxDelay = 30000
+    let backoffDelay = baseDelay
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 
-    es.addEventListener('state', (e: MessageEvent) => {
-      const data = JSON.parse(e.data) as
-        { type: 'state'; queues: QueueState[] } | { type: 'queueUpdated'; queue: QueueState }
-
-      const preserveVolume = Date.now() < volumeLockUntilRef.current
-
-      // Only clear the optimistic play/pause override when the server reports
-      // a definitive playing or paused state. Sonos often reports 'idle' during
-      // transitions, so clearing on idle would snap the button back prematurely.
-      const incomingQueues = data.type === 'state' ? data.queues : null
-      if (incomingQueues) {
-        const hasDefinitiveState = incomingQueues.some(
-          (q) => q.state === 'playing' || q.state === 'paused',
-        )
-        if (hasDefinitiveState) {
-          setOptimisticPlaying(null)
-        }
+    const clearReconnectTimer = () => {
+      if (reconnectTimer !== null) {
+        clearTimeout(reconnectTimer)
+        reconnectTimer = null
       }
-
-      if (data.type === 'state') {
-        if (preserveVolume) {
-          // Keep optimistic volume levels during the lock window
-          setQueues((prev) => {
-            const volumeMap = new Map(prev.map((q) => [q.queueId, q.volumeLevel]))
-            return data.queues.map((q) => ({
-              ...q,
-              volumeLevel: volumeMap.get(q.queueId) ?? q.volumeLevel,
-            }))
-          })
-        } else {
-          setQueues(data.queues)
-        }
-        setIsConnected(true)
-      } else if (data.type === 'queueUpdated') {
-        setQueues((prev) => {
-          const idx = prev.findIndex((q) => q.queueId === data.queue.queueId)
-          const queue =
-            preserveVolume && idx !== -1
-              ? { ...data.queue, volumeLevel: prev[idx].volumeLevel }
-              : data.queue
-          if (idx === -1) return [...prev, queue]
-          const next = [...prev]
-          next[idx] = queue
-          return next
-        })
-      }
-    })
-
-    es.onerror = () => {
-      setIsConnected(false)
     }
 
+    const connect = () => {
+      if (cancelled) return
+
+      const es = new EventSource('/api/music/events')
+      esRef.current = es
+
+      es.addEventListener('state', (e: MessageEvent) => {
+        const data = JSON.parse(e.data) as
+          { type: 'state'; queues: QueueState[] } | { type: 'queueUpdated'; queue: QueueState }
+
+        const preserveVolume = Date.now() < volumeLockUntilRef.current
+
+        // Only clear the optimistic play/pause override when the server reports
+        // a definitive playing or paused state. Sonos often reports 'idle' during
+        // transitions, so clearing on idle would snap the button back prematurely.
+        const incomingQueues = data.type === 'state' ? data.queues : null
+        if (incomingQueues) {
+          const hasDefinitiveState = incomingQueues.some(
+            (q) => q.state === 'playing' || q.state === 'paused',
+          )
+          if (hasDefinitiveState) {
+            setOptimisticPlaying(null)
+          }
+        }
+
+        if (data.type === 'state') {
+          if (preserveVolume) {
+            // Keep optimistic volume levels during the lock window
+            setQueues((prev) => {
+              const volumeMap = new Map(prev.map((q) => [q.queueId, q.volumeLevel]))
+              return data.queues.map((q) => ({
+                ...q,
+                volumeLevel: volumeMap.get(q.queueId) ?? q.volumeLevel,
+              }))
+            })
+          } else {
+            setQueues(data.queues)
+          }
+          setIsConnected(true)
+        } else if (data.type === 'queueUpdated') {
+          setQueues((prev) => {
+            const idx = prev.findIndex((q) => q.queueId === data.queue.queueId)
+            const queue =
+              preserveVolume && idx !== -1
+                ? { ...data.queue, volumeLevel: prev[idx].volumeLevel }
+                : data.queue
+            if (idx === -1) return [...prev, queue]
+            const next = [...prev]
+            next[idx] = queue
+            return next
+          })
+        }
+      })
+
+      es.onopen = () => {
+        backoffDelay = baseDelay
+        connected = true
+        setIsConnected(true)
+      }
+
+      es.onerror = () => {
+        connected = false
+        setIsConnected(false)
+        // Don't rely on the browser's native retry — explicitly close and
+        // schedule our own reconnect with exponential backoff.
+        es.close()
+        if (cancelled) return
+        clearReconnectTimer()
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = null
+          connect()
+        }, backoffDelay)
+        backoffDelay = Math.min(backoffDelay * 2, maxDelay)
+      }
+    }
+
+    connect()
+
+    // Tablet-wake recovery: when the screen comes back from sleep/background
+    // or the network comes back online, don't wait out a possibly-long
+    // backoff — reconnect right away if we're not already connected.
+    const reconnectNow = () => {
+      if (cancelled || connected) return
+      clearReconnectTimer()
+      backoffDelay = baseDelay
+      connect()
+    }
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') reconnectNow()
+    }
+
+    document.addEventListener('visibilitychange', handleVisibility)
+    window.addEventListener('online', reconnectNow)
+
     return () => {
-      es.close()
+      cancelled = true
+      clearReconnectTimer()
+      document.removeEventListener('visibilitychange', handleVisibility)
+      window.removeEventListener('online', reconnectNow)
+      esRef.current?.close()
       esRef.current = null
       setIsConnected(false)
     }
