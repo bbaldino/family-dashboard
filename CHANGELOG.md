@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.3](https://github.com/bbaldino/family-dashboard/compare/v0.10.2...v0.10.3) (2026-09-14)
+
+
+### Bug Fixes
+
+* **music:** show the real track for external sources in now-playing ([28d67ec](https://github.com/bbaldino/family-dashboard/commit/28d67ec2ff59ae1dafe5aef401bb9fd29ccbaff6))
+
 ## [0.10.2](https://github.com/bbaldino/family-dashboard/compare/v0.10.1...v0.10.2) (2026-09-11)
 
 
