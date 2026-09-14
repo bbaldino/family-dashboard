@@ -49,4 +49,14 @@ describe('SportsLead', () => {
     )
     expect(container.querySelector('img')).toBeNull()
   })
+
+  it('sizes the plate by aspect ratio, not a fixed height', () => {
+    const { container } = render(
+      <SportsLead track={track()} primary={true} split={false} showMore={false} />,
+    )
+    const img = container.querySelector('img')
+    const plate = img?.parentElement
+    expect(plate?.style.aspectRatio).toBe('21 / 9')
+    expect(plate?.style.height).toBe('')
+  })
 })

@@ -72,7 +72,7 @@ async fn generate_route(
     State(pool): State<SqlitePool>,
     axum::Json(req): axum::Json<GenerateRequest>,
 ) -> Result<Response, AppError> {
-    let asset = generate_image(&pool, req.model.as_deref(), &req.prompt).await?;
+    let asset = generate_image(&pool, req.model.as_deref(), &req.prompt, None).await?;
     image_response(asset).await
 }
 
@@ -97,7 +97,10 @@ pub async fn image_response(asset: ImageAsset) -> Result<Response, AppError> {
 
 /// Generate an image from `prompt` against the configured caas gateway,
 /// caching it content-addressed on disk. On a cache hit the gateway is not
-/// called. `model` overrides the configured default when `Some`.
+/// called. `model` overrides the configured default when `Some`. `aspect`,
+/// when `Some`, requests a specific image aspect ratio (e.g. `"21:9"`) via
+/// the gateway's `provider_options.imageConfig.aspectRatio`; when `None` no
+/// aspect is requested and the gateway's default (~square) applies.
 ///
 /// Never logs `prompt`, the returned base64, or the image bytes. On failure
 /// the error carries the model name and, for a non-2xx response, the upstream
@@ -106,6 +109,7 @@ pub async fn generate_image(
     pool: &SqlitePool,
     model: Option<&str>,
     prompt: &str,
+    aspect: Option<&str>,
 ) -> Result<ImageAsset, AppError> {
     let images = IntegrationConfig::new(pool, "images");
 
@@ -124,7 +128,7 @@ pub async fn generate_image(
     let cache_dir_str = images.get_or("cache_dir", DEFAULT_CACHE_DIR).await?;
     let cache_dir = Path::new(&cache_dir_str);
 
-    let stem = cache_stem(effective_model, prompt);
+    let stem = cache_stem(effective_model, prompt, aspect);
 
     // Cache HIT: return the stored file without touching the gateway.
     if let Some(asset) = lookup_cached(cache_dir, &stem) {
@@ -136,13 +140,20 @@ pub async fn generate_image(
         .await
         .map_err(|e| AppError::Internal(format!("failed to create cache dir: {e}")))?;
 
+    let mut body = serde_json::json!({
+        "prompt": prompt,
+        "model": effective_model,
+        "response_format": "b64_json",
+    });
+    if let Some(aspect) = aspect {
+        body["provider_options"] = serde_json::json!({
+            "imageConfig": { "aspectRatio": aspect }
+        });
+    }
+
     let resp = CLIENT
         .post(format!("{}/images/generate", base.trim_end_matches('/')))
-        .json(&serde_json::json!({
-            "prompt": prompt,
-            "model": effective_model,
-            "response_format": "b64_json",
-        }))
+        .json(&body)
         .send()
         .await
         .map_err(|e| {
@@ -206,11 +217,15 @@ pub async fn generate_image(
     })
 }
 
-/// The content-addressed cache filename stem for a (model, prompt) pair:
-/// `sha256("{model}\n{prompt}")` encoded url-safe (no padding, no slashes).
-fn cache_stem(model: &str, prompt: &str) -> String {
+/// The content-addressed cache filename stem for a (model, prompt, aspect)
+/// triple: `sha256("{model}\n{prompt}\n{aspect}")` encoded url-safe (no
+/// padding, no slashes). `aspect` is folded in (with `None` and each distinct
+/// `Some` value hashing differently) so requesting a different aspect ratio
+/// for the same model/prompt never serves a stale cached image shaped for a
+/// different aspect.
+fn cache_stem(model: &str, prompt: &str, aspect: Option<&str>) -> String {
     let mut hasher = Sha256::new();
-    hasher.update(format!("{model}\n{prompt}").as_bytes());
+    hasher.update(format!("{model}\n{prompt}\n{}", aspect.unwrap_or("")).as_bytes());
     let digest = hasher.finalize();
     base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(digest)
 }
@@ -250,28 +265,38 @@ mod tests {
 
     #[test]
     fn cache_stem_is_deterministic() {
-        let a = cache_stem("model-x", "a red barn");
-        let b = cache_stem("model-x", "a red barn");
+        let a = cache_stem("model-x", "a red barn", None);
+        let b = cache_stem("model-x", "a red barn", None);
         assert_eq!(a, b);
     }
 
     #[test]
     fn cache_stem_differs_by_prompt() {
-        let a = cache_stem("model-x", "a red barn");
-        let b = cache_stem("model-x", "a blue barn");
+        let a = cache_stem("model-x", "a red barn", None);
+        let b = cache_stem("model-x", "a blue barn", None);
         assert_ne!(a, b);
     }
 
     #[test]
     fn cache_stem_differs_by_model() {
-        let a = cache_stem("model-x", "a red barn");
-        let b = cache_stem("model-y", "a red barn");
+        let a = cache_stem("model-x", "a red barn", None);
+        let b = cache_stem("model-y", "a red barn", None);
         assert_ne!(a, b);
     }
 
     #[test]
+    fn cache_stem_differs_by_aspect() {
+        let none = cache_stem("model-x", "a red barn", None);
+        let wide_21_9 = cache_stem("model-x", "a red barn", Some("21:9"));
+        let wide_16_9 = cache_stem("model-x", "a red barn", Some("16:9"));
+        assert_ne!(none, wide_21_9, "None vs Some(21:9) must differ");
+        assert_ne!(none, wide_16_9, "None vs Some(16:9) must differ");
+        assert_ne!(wide_21_9, wide_16_9, "Some(21:9) vs Some(16:9) must differ");
+    }
+
+    #[test]
     fn cache_stem_is_url_safe() {
-        let stem = cache_stem("model-x", "a red barn");
+        let stem = cache_stem("model-x", "a red barn", Some("21:9"));
         assert!(!stem.contains('/'));
         assert!(!stem.contains('+'));
         assert!(!stem.contains('='));
