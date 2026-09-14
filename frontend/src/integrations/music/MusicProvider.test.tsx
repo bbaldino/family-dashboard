@@ -218,6 +218,108 @@ describe('MusicProvider action failures', () => {
 })
 
 /**
+ * The client-side elapsed tick used to increment unconditionally, so with
+ * sparse server updates (e.g. Spotify Connect) it would run past the track's
+ * own duration — showing e.g. 5:53 on a 2:56 song. It must clamp to
+ * `currentItem.duration` once known, while still ticking normally below it.
+ */
+describe('MusicProvider elapsed-time tick', () => {
+  function ElapsedProbe({
+    useMusic,
+  }: {
+    useMusic: () => {
+      state: { queues: { currentItem: { elapsed: number | null } | null }[] }
+    }
+  }) {
+    const { state } = useMusic()
+    return <span data-testid="elapsed">{state.queues[0]?.currentItem?.elapsed ?? ''}</span>
+  }
+
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) }))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+    musicStateFixtureFor.mockReset()
+    vi.resetModules()
+  })
+
+  it('keeps ticking normally below the cap', async () => {
+    musicStateFixtureFor.mockReturnValue([
+      {
+        queueId: 'kitchen',
+        displayName: 'Kitchen',
+        state: 'playing' as const,
+        currentItem: {
+          name: 'Amber Hours',
+          artist: 'The Night Shift',
+          album: null,
+          imageUrl: null,
+          duration: 200,
+          elapsed: 10,
+          uri: 'fixture://track/amber-hours',
+        },
+        volumeLevel: 45,
+      },
+    ])
+    const { MusicProvider, useMusic } = await freshMusicModules()
+    vi.useFakeTimers()
+
+    render(
+      wrapInQueryClient(
+        <MusicProvider>
+          <ElapsedProbe useMusic={useMusic as never} />
+        </MusicProvider>,
+      ),
+    )
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000)
+    })
+    expect(screen.getByTestId('elapsed')).toHaveTextContent('11')
+  })
+
+  it('never lets elapsed exceed the track duration', async () => {
+    musicStateFixtureFor.mockReturnValue([
+      {
+        queueId: 'kitchen',
+        displayName: 'Kitchen',
+        state: 'playing' as const,
+        currentItem: {
+          name: 'Amber Hours',
+          artist: 'The Night Shift',
+          album: null,
+          imageUrl: null,
+          duration: 200,
+          elapsed: 199,
+          uri: 'fixture://track/amber-hours',
+        },
+        volumeLevel: 45,
+      },
+    ])
+    const { MusicProvider, useMusic } = await freshMusicModules()
+    vi.useFakeTimers()
+
+    render(
+      wrapInQueryClient(
+        <MusicProvider>
+          <ElapsedProbe useMusic={useMusic as never} />
+        </MusicProvider>,
+      ),
+    )
+
+    // Advance well past the point elapsed would reach the duration — an
+    // uncapped tick would keep climbing (e.g. to 204), but it must sit at 200.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000)
+    })
+    expect(screen.getByTestId('elapsed')).toHaveTextContent('200')
+  })
+})
+
+/**
  * The other half of the same missing-feedback problem: a play that succeeds
  * but takes a beat to start. Music Assistant's play_media round-trip (a radio
  * attempt, its fallback, then a log lookup) can run to a noticeable pause, and
