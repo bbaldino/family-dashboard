@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.5](https://github.com/bbaldino/family-dashboard/compare/v0.10.4...v0.10.5) (2026-09-14)
+
+
+### Bug Fixes
+
+* **sports:** render lead art wide (21:9) so it isn't cropped ([427cb29](https://github.com/bbaldino/family-dashboard/commit/427cb2967920981ae91bff23ceca073816817567))
+
 ## [0.10.4](https://github.com/bbaldino/family-dashboard/compare/v0.10.3...v0.10.4) (2026-09-14)
 
 
