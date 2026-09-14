@@ -22,7 +22,7 @@ function leadArtUrl(track: SportsTrack): string {
  * ground with a faint "Developing" marker stands in, tuned to match the
  * ink-on-cream art so the swap is seamless. On error the ground stays.
  */
-function Plate({ height, caption, src }: { height: number; caption: string; src: string }) {
+function Plate({ caption, src }: { caption: string; src: string }) {
   const [loaded, setLoaded] = useState(false)
   const [errored, setErrored] = useState(false)
 
@@ -30,7 +30,7 @@ function Plate({ height, caption, src }: { height: number; caption: string; src:
     <div>
       <div
         style={{
-          height,
+          aspectRatio: '21 / 9',
           position: 'relative',
           overflow: 'hidden',
           borderTop: '2px solid var(--ink)',
@@ -146,9 +146,7 @@ export function SportsLead({
       >
         {track.dek}
       </p>
-      {primary && (
-        <Plate height={split ? 96 : 112} caption={track.caption} src={leadArtUrl(track)} />
-      )}
+      {primary && <Plate caption={track.caption} src={leadArtUrl(track)} />}
 
       <div
         style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginTop: primary ? 10 : 2 }}

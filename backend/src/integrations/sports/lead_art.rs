@@ -31,7 +31,7 @@ pub async fn get_lead_art(
     }
 
     let prompt = lead_art_prompt(&q.league, &q.team, &q.headline);
-    let asset = crate::images::generate_image(&state.pool, None, &prompt).await?;
+    let asset = crate::images::generate_image(&state.pool, None, &prompt, Some("21:9")).await?;
     crate::images::image_response(asset).await
 }
 
