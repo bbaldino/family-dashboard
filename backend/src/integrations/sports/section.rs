@@ -350,9 +350,17 @@ pub fn parse_standings(standings: &serde_json::Value, team_abbr: &str) -> Standi
         .map(|e| e.division.clone())
         .unwrap_or_default();
 
-    let rows: Vec<TableRow> = all
+    let mut division_entries: Vec<&StandingEntry> =
+        all.iter().filter(|e| e.division == my_division).collect();
+    // ESPN's entry order is incidental, not a ranking (a team 20+ games back
+    // can appear before a division leader). Sort best-to-worst on the
+    // reliable numeric fields — wins descending, then losses ascending —
+    // rather than the string `gb`/`pct` fields, which sort lexically wrong
+    // ("23.5" before "4.0").
+    division_entries.sort_by(|a, b| b.w.cmp(&a.w).then(a.l.cmp(&b.l)));
+
+    let rows: Vec<TableRow> = division_entries
         .iter()
-        .filter(|e| e.division == my_division)
         .map(|e| TableRow {
             t: e.abbr.clone(),
             w: e.w,
@@ -1287,6 +1295,39 @@ mod tests {
         assert!(r.rows.iter().find(|x| x.t == "LAD").unwrap().me);
         // The leader's games-behind reads as an em dash, not "-".
         assert_eq!(r.rows[0].gb, "—");
+    }
+
+    #[test]
+    fn standings_rows_are_sorted_best_to_worst_not_espns_entry_order() {
+        // ESPN's entries list a team 40 games back (a WSH analog) BEFORE two
+        // better teams in the division — the feed's incidental order, not a
+        // ranking. The table must still come out sorted by record.
+        let entry = |abbr: &str, w: i64, l: i64, gb: &str, strk: &str| {
+            serde_json::json!({
+                "team": { "abbreviation": abbr },
+                "stats": [
+                    { "name": "wins", "displayValue": w.to_string() },
+                    { "name": "losses", "displayValue": l.to_string() },
+                    { "name": "winPercent", "displayValue": ".600" },
+                    { "name": "gamesBehind", "displayValue": gb },
+                    { "name": "streak", "displayValue": strk },
+                ],
+            })
+        };
+        let standings = serde_json::json!({
+            "children": [
+                { "name": "NL East", "standings": { "entries": [
+                    entry("WSH", 50, 90, "40", "L2"),
+                    entry("PHI", 90, 50, "-", "W4"),
+                    entry("ATL", 80, 60, "10", "W1"),
+                ] } },
+            ]
+        });
+        let r = parse_standings(&standings, "PHI");
+        assert_eq!(
+            r.rows.iter().map(|x| x.t.as_str()).collect::<Vec<_>>(),
+            ["PHI", "ATL", "WSH"]
+        );
     }
 
     #[test]

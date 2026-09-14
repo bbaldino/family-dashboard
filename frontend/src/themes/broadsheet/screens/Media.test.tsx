@@ -68,6 +68,13 @@ describe('broadsheet Media (The Listening Room)', () => {
     expect(root.className).toContain('h-full')
   })
 
+  it('scrolls the shelves column instead of clipping overflow', () => {
+    renderMedia()
+    const shelves = screen.getByTestId('broadsheet-media-shelves')
+    expect(shelves.className).toContain('overflow-y-auto')
+    expect(shelves.className).not.toContain('overflow-hidden')
+  })
+
   it('survives every hook returning undefined on first paint', () => {
     useMusic.mockReturnValue({ state: { queues: [], activeQueue: null }, ...musicActions })
     useTopTracks.mockReturnValue({ data: undefined })

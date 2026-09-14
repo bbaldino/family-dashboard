@@ -191,6 +191,28 @@ fn find_player_current_media<'a>(
     None
 }
 
+/// Age a `current_media` elapsed-time snapshot forward to "now". MA's
+/// `elapsed_time` on `current_media` is a point-in-time snapshot taken at
+/// `elapsed_time_last_updated` (unix seconds), not a live clock, so the true
+/// current elapsed is the snapshot plus however long has passed since. Pure
+/// and clamped to `[0, duration]` when the duration is known.
+fn live_elapsed(
+    elapsed_time: f64,
+    last_updated: Option<i64>,
+    duration: Option<f64>,
+    now: i64,
+) -> i64 {
+    let raw = match last_updated {
+        Some(ts) => elapsed_time + (now - ts).max(0) as f64,
+        None => elapsed_time,
+    };
+    let clamped = match duration {
+        Some(d) => raw.clamp(0.0, d.max(0.0)),
+        None => raw.max(0.0),
+    };
+    clamped as i64
+}
+
 /// Build a `TrackInfo` from a player's `current_media` field. This is the
 /// fallback source for external-source playback (e.g. MA's Spotify Connect
 /// plugin), where the queue's `current_item` is only a generic placeholder
@@ -208,7 +230,15 @@ fn track_info_from_current_media(cm: &serde_json::Value) -> Option<TrackInfo> {
         album: cm["album"].as_str().map(String::from),
         image_url: cm["image_url"].as_str().map(String::from),
         duration: cm["duration"].as_f64().map(|d| d as i64),
-        elapsed: cm["elapsed_time"].as_f64().map(|d| d as i64),
+        elapsed: cm["elapsed_time"].as_f64().map(|elapsed_time| {
+            let last_updated = cm["elapsed_time_last_updated"].as_i64();
+            let duration = cm["duration"].as_f64();
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs() as i64)
+                .unwrap_or(0);
+            live_elapsed(elapsed_time, last_updated, duration, now)
+        }),
         uri: cm["uri"].as_str().map(String::from),
         year: None,
         label: None,
@@ -467,6 +497,44 @@ async fn ws_relay_loop(pool: SqlitePool, ws_url: String, token: String, tx: mpsc
 mod tests {
     use super::*;
 
+    /// MA's `elapsed_time` on `current_media` is a snapshot taken at
+    /// `elapsed_time_last_updated`; the live helper must age it forward by
+    /// however long has passed since.
+    #[test]
+    fn live_elapsed_ages_the_snapshot_forward_to_now() {
+        let last_updated = 1_800_000_000;
+        let now = last_updated + 92;
+        assert_eq!(live_elapsed(70.0, Some(last_updated), None, now), 162);
+    }
+
+    /// A snapshot aged forward past the track's duration clamps to the
+    /// duration rather than reporting an elapsed time longer than the track.
+    #[test]
+    fn live_elapsed_clamps_to_duration() {
+        let last_updated = 1_800_000_000;
+        let now = last_updated + 1_000;
+        assert_eq!(
+            live_elapsed(280.0, Some(last_updated), Some(300.0), now),
+            300
+        );
+    }
+
+    /// Without a `last_updated` timestamp there's nothing to age by, so the
+    /// raw elapsed value passes through unchanged.
+    #[test]
+    fn live_elapsed_returns_raw_value_when_last_updated_is_missing() {
+        assert_eq!(live_elapsed(211.0, None, Some(290.0), 1_800_000_500), 211);
+    }
+
+    /// Clock skew that would put `last_updated` in the future must never
+    /// drive the result negative.
+    #[test]
+    fn live_elapsed_never_goes_negative() {
+        let now = 1_800_000_000;
+        let last_updated = now + 50; // last_updated is "in the future"
+        assert_eq!(live_elapsed(0.0, Some(last_updated), None, now), 0);
+    }
+
     /// Trimmed capture of a real `player_queues/all` entry from
     /// `music.home:8095` — see the fixture file's own `_comment` for what
     /// was dropped and why. `metadata.label` is genuinely `null` here; that
@@ -569,7 +637,12 @@ mod tests {
                     "image_url": "https://i.scdn.co/image/ab67616d00001e02dfed999f959177dfc4f33cdc",
                     "duration": 290,
                     "elapsed_time": 211,
-                    "elapsed_time_last_updated": 1789407969,
+                    // No elapsed_time_last_updated here on purpose: with it
+                    // present, "now" at test time would already be well past
+                    // it and the aged-and-clamped value would swamp this
+                    // fixture's intent (falling back to current_media at
+                    // all). The aging/clamping behavior itself is pinned
+                    // directly against live_elapsed below.
                     "queue_item_id": "7dd0a1ae9f634fb5aff91cbc62e67213"
                 }
             }

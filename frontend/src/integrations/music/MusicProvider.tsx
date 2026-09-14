@@ -202,9 +202,12 @@ export function MusicProvider({ children }: MusicProviderProps) {
         if (playingIdx === -1) return prev
         const q = prev[playingIdx]
         if (!q.currentItem || q.currentItem.elapsed === null) return prev
+        const { elapsed, duration } = q.currentItem
+        const nextElapsed =
+          typeof duration === 'number' ? Math.min(elapsed + 1, duration) : elapsed + 1
         const updated: QueueState = {
           ...q,
-          currentItem: { ...q.currentItem, elapsed: q.currentItem.elapsed + 1 },
+          currentItem: { ...q.currentItem, elapsed: nextElapsed },
         }
         const next = [...prev]
         next[playingIdx] = updated
