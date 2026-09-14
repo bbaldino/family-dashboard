@@ -110,7 +110,7 @@ export function Media() {
       >
         <div
           data-testid="broadsheet-media-shelves"
-          className="min-h-0 overflow-hidden flex flex-col"
+          className="min-h-0 overflow-y-auto flex flex-col"
           style={{ gap: 14, padding: '12px 28px 12px 56px' }}
         >
           {searching ? (
