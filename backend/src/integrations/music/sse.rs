@@ -72,6 +72,18 @@ fn build_queue_states(players: &serde_json::Value, queues: &serde_json::Value) -
                 .get("current_item")
                 .and_then(|item| track_info_from_current_item(item, q));
 
+            // External-source playback (e.g. MA's Spotify Connect plugin) leaves
+            // the queue's current_item as a generic placeholder with no artist
+            // (media_item.name == "Spotify Connect", artists == []). The real
+            // metadata lives on the associated player's current_media, so fall
+            // back to that when current_item is absent or artist-less.
+            let current_item = match current_item {
+                Some(ref info) if !info.artist.is_empty() => current_item,
+                _ => find_player_current_media(players, &queue_id)
+                    .and_then(track_info_from_current_media)
+                    .or(current_item),
+            };
+
             // Try to find volume from the player associated with this queue.
             let volume_level = find_player_volume(players, &queue_id);
 
@@ -160,6 +172,49 @@ fn find_player_volume(players: &serde_json::Value, queue_id: &str) -> Option<i32
         }
     }
     None
+}
+
+/// Look up the `current_media` object for the player associated with a
+/// queue, using the same matching rule as `find_player_volume`.
+fn find_player_current_media<'a>(
+    players: &'a serde_json::Value,
+    queue_id: &str,
+) -> Option<&'a serde_json::Value> {
+    let player_arr = players.as_array()?;
+    for player in player_arr {
+        let active_source = player["active_source"].as_str().unwrap_or("");
+        let player_id = player["player_id"].as_str().unwrap_or("");
+        if active_source == queue_id || player_id == queue_id {
+            return player.get("current_media");
+        }
+    }
+    None
+}
+
+/// Build a `TrackInfo` from a player's `current_media` field. This is the
+/// fallback source for external-source playback (e.g. MA's Spotify Connect
+/// plugin), where the queue's `current_item` is only a generic placeholder
+/// and the real track metadata lives here instead. Unlike a queue's
+/// `current_item`, `current_media` has no year/label/track_number/source, so
+/// those are always `None`. Returns `None` if `title` is absent or empty.
+fn track_info_from_current_media(cm: &serde_json::Value) -> Option<TrackInfo> {
+    let name = cm["title"].as_str().unwrap_or("");
+    if name.is_empty() {
+        return None;
+    }
+    Some(TrackInfo {
+        name: name.to_string(),
+        artist: cm["artist"].as_str().unwrap_or("").to_string(),
+        album: cm["album"].as_str().map(String::from),
+        image_url: cm["image_url"].as_str().map(String::from),
+        duration: cm["duration"].as_f64().map(|d| d as i64),
+        elapsed: cm["elapsed_time"].as_f64().map(|d| d as i64),
+        uri: cm["uri"].as_str().map(String::from),
+        year: None,
+        label: None,
+        track_number: None,
+        source: None,
+    })
 }
 
 /// Connect to MA WebSocket and authenticate.
@@ -490,5 +545,102 @@ mod tests {
     fn track_info_from_current_item_returns_none_when_null() {
         let q = serde_json::json!({ "current_item": null });
         assert!(track_info_from_current_item(&q["current_item"], &q).is_none());
+    }
+
+    /// External-source playback (e.g. MA's Spotify Connect plugin): the
+    /// queue's `current_item` is a generic placeholder
+    /// (`media_item.name == "Spotify Connect"`, `artists == []`), but the
+    /// associated player's `current_media` carries the real track metadata.
+    /// `build_queue_states` must fall back to the player when the queue item
+    /// has no real artist.
+    #[test]
+    fn build_queue_states_falls_back_to_player_current_media_for_external_source() {
+        let players = serde_json::json!([
+            {
+                "player_id": "upb827eb0e4dec",
+                "active_source": "upb827eb0e4dec",
+                "state": "playing",
+                "current_media": {
+                    "uri": "spotify_connect--DaDytfpf://audio_source/main",
+                    "media_type": "audio_source",
+                    "title": "Apocalypse",
+                    "artist": "Cigarettes After Sex",
+                    "album": "Cigarettes After Sex",
+                    "image_url": "https://i.scdn.co/image/ab67616d00001e02dfed999f959177dfc4f33cdc",
+                    "duration": 290,
+                    "elapsed_time": 211,
+                    "elapsed_time_last_updated": 1789407969,
+                    "queue_item_id": "7dd0a1ae9f634fb5aff91cbc62e67213"
+                }
+            }
+        ]);
+        let queues = serde_json::json!([
+            {
+                "queue_id": "upb827eb0e4dec",
+                "display_name": "Kitchen",
+                "state": "playing",
+                "items": 1,
+                "current_item": { "media_item": { "name": "Spotify Connect", "artists": [] } }
+            }
+        ]);
+
+        let states = build_queue_states(&players, &queues);
+        assert_eq!(states.len(), 1);
+        let info = states[0].current_item.as_ref().expect("expected a track");
+
+        assert_eq!(info.name, "Apocalypse");
+        assert_eq!(info.artist, "Cigarettes After Sex");
+        assert_eq!(info.album.as_deref(), Some("Cigarettes After Sex"));
+        assert_eq!(info.duration, Some(290));
+        assert_eq!(info.elapsed, Some(211));
+        assert_eq!(
+            info.uri.as_deref(),
+            Some("spotify_connect--DaDytfpf://audio_source/main")
+        );
+    }
+
+    /// Regression: normal MA playback (the queue's `current_item` carries a
+    /// real name/artist) must keep coming from `current_item`, not be
+    /// overridden by the player's `current_media` even when both exist and
+    /// disagree. This pins the year/track_number fields that only
+    /// `current_item` carries.
+    #[test]
+    fn build_queue_states_prefers_queue_current_item_for_normal_playback() {
+        let players = serde_json::json!([
+            {
+                "player_id": "upb827eb0e4dec",
+                "active_source": "upb827eb0e4dec",
+                "state": "playing",
+                "current_media": {
+                    "title": "Some Other Song",
+                    "artist": "Some Other Artist",
+                }
+            }
+        ]);
+        let queues = serde_json::json!([
+            {
+                "queue_id": "upb827eb0e4dec",
+                "display_name": "Kitchen",
+                "state": "playing",
+                "items": 1,
+                "current_item": {
+                    "media_item": {
+                        "name": "Knee Socks",
+                        "artists": [{ "name": "Arctic Monkeys" }],
+                        "album": { "name": "AM", "year": 2013 },
+                        "track_number": 11,
+                    }
+                }
+            }
+        ]);
+
+        let states = build_queue_states(&players, &queues);
+        assert_eq!(states.len(), 1);
+        let info = states[0].current_item.as_ref().expect("expected a track");
+
+        assert_eq!(info.name, "Knee Socks");
+        assert_eq!(info.artist, "Arctic Monkeys");
+        assert_eq!(info.year, Some(2013));
+        assert_eq!(info.track_number, Some(11));
     }
 }
