@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.10.4](https://github.com/bbaldino/family-dashboard/compare/v0.10.3...v0.10.4) (2026-09-14)
+
+
+### Bug Fixes
+
+* **media:** let the broadsheet media page scroll ([db1884a](https://github.com/bbaldino/family-dashboard/commit/db1884a5126d24d8be3b70d7605d4c50124ba30b))
+* **music:** keep now-playing elapsed accurate and capped ([181f5e0](https://github.com/bbaldino/family-dashboard/commit/181f5e021a78ec99f3071df87a06f51e41f12040))
+* **sports:** sort MLB standings by record, not ESPN's entry order ([beea25c](https://github.com/bbaldino/family-dashboard/commit/beea25c8a7e932ceb6079c05ed23780bad1b6c59))
+
 ## [0.10.3](https://github.com/bbaldino/family-dashboard/compare/v0.10.2...v0.10.3) (2026-09-14)
 
 
