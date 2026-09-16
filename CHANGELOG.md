@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.6](https://github.com/bbaldino/family-dashboard/compare/v0.10.5...v0.10.6) (2026-09-16)
+
+
+### Bug Fixes
+
+* **masthead:** keep the date on one line by fitting it to the cell ([a88ae2d](https://github.com/bbaldino/family-dashboard/commit/a88ae2df2b0885bd2af125b98eb53d9e4c60022b))
+* **sports:** fetch ESPN scoreboard per-day, not by date range ([0f10c41](https://github.com/bbaldino/family-dashboard/commit/0f10c4105a8a44c529a369dc19ea4826d0561b74))
+
 ## [0.10.5](https://github.com/bbaldino/family-dashboard/compare/v0.10.4...v0.10.5) (2026-09-14)
 
 
