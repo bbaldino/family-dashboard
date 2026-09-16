@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from 'react'
 import { useHeroWeather } from '@/integrations/weather'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { MastheadFrame } from '@/themes/broadsheet/ui/MastheadFrame'
@@ -105,6 +106,32 @@ export function Masthead({
   const month = MONTH_FORMAT.format(now)
   const dayOfMonth = now.getDate()
 
+  // The date is the 72px centrepiece, but the longest days
+  // ("Wednesday, September 16th") overflow the centre cell and wrap to a
+  // second line, growing the whole top bar. Keep the full wording and drop
+  // the size just enough to hold one line, only when it wouldn't otherwise
+  // fit (short days stay a full 72px). Browser-only: jsdom reports zero
+  // widths, so `fit` no-ops in tests.
+  const dateRef = useRef<HTMLHeadingElement>(null)
+  const [dateFontSize, setDateFontSize] = useState(72)
+  useLayoutEffect(() => {
+    const el = dateRef.current
+    const cell = el?.parentElement
+    if (!el || !cell) return
+    const fit = () => {
+      el.style.fontSize = '72px'
+      const avail = cell.clientWidth
+      const needed = el.scrollWidth
+      if (!avail || !needed) return
+      setDateFontSize(needed > avail ? Math.floor((72 * avail) / needed) : 72)
+    }
+    fit()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(fit)
+    ro.observe(cell)
+    return () => ro.disconnect()
+  }, [weekday, month, dayOfMonth])
+
   return (
     <div>
       {/* Clock and date are kicker + 72px numeral; weather is the 72px
@@ -143,7 +170,11 @@ export function Masthead({
           // invention; the mock never had one.
           <>
             <div style={{ ...mastheadKickerStyle, textAlign: 'center' }}>Today</div>
-            <h1 className="m-0" style={numeralStyle}>
+            <h1
+              ref={dateRef}
+              className="m-0"
+              style={{ ...numeralStyle, fontSize: dateFontSize, whiteSpace: 'nowrap' }}
+            >
               {weekday}, {month} {dayOfMonth}
               <sup style={ordinalStyle}>{ordinalSuffix(dayOfMonth)}</sup>
             </h1>
