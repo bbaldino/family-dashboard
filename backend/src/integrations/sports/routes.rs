@@ -198,10 +198,10 @@ pub async fn get_games(State(state): State<SportsState>) -> Result<Json<GamesRes
 
         // Derived from the same `window_hours` the transform below filters on,
         // so the fetch can never come back narrower than what we intend to
-        // keep — see `scoreboard_date_range`.
-        let dates = espn::scoreboard_date_range(chrono::Utc::now(), window_hours);
+        // keep — see `scoreboard_days`.
+        let days = espn::scoreboard_days(chrono::Utc::now(), window_hours);
         let resolved = resolve_scoreboard(&state.cache, league_id, max_age, async || {
-            espn::fetch_scoreboard(&state.client, sport, league, &dates).await
+            espn::fetch_scoreboard_window(&state.client, sport, league, &days).await
         })
         .await;
 

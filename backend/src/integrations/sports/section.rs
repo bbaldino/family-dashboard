@@ -981,7 +981,12 @@ pub async fn get_section(
     let today = chrono::Utc::now().date_naive();
     let yesterday = today - chrono::Duration::days(1);
     let scores_label = format!("{}'s", yesterday.format("%A"));
-    let dates = format!("{}-{}", yesterday.format("%Y%m%d"), today.format("%Y%m%d"));
+    // ESPN's scoreboard 400s on the `dates=YYYYMMDD-YYYYMMDD` range syntax —
+    // fetch each day singly and let `fetch_scoreboard_window` merge them.
+    let days = vec![
+        yesterday.format("%Y%m%d").to_string(),
+        today.format("%Y%m%d").to_string(),
+    ];
 
     // One league context per tracked league (first tracked team wins its league).
     let mut ctxs: Vec<LeagueCtx> = Vec::new();
@@ -989,7 +994,8 @@ pub async fn get_section(
         let Some(team) = tracked.iter().find(|t| t.league == league_id) else {
             continue;
         };
-        let Ok(scoreboard) = espn::fetch_scoreboard(&state.client, sport, league, &dates).await
+        let Ok(scoreboard) =
+            espn::fetch_scoreboard_window(&state.client, sport, league, &days).await
         else {
             continue;
         };
