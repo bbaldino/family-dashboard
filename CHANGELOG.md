@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.8](https://github.com/bbaldino/family-dashboard/compare/v0.10.7...v0.10.8) (2026-09-21)
+
+
+### Bug Fixes
+
+* **sports:** give the track slots to leagues actually in season ([ba91df8](https://github.com/bbaldino/family-dashboard/commit/ba91df818594f6862bce12838f277fc220b2a0b4))
+
 ## [0.10.7](https://github.com/bbaldino/family-dashboard/compare/v0.10.6...v0.10.7) (2026-09-21)
 
 
