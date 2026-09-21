@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.7](https://github.com/bbaldino/family-dashboard/compare/v0.10.6...v0.10.7) (2026-09-21)
+
+
+### Bug Fixes
+
+* **music:** stop the transport play/pause button flickering ([9d227d0](https://github.com/bbaldino/family-dashboard/commit/9d227d070b0b6bd6597c590ad39f167153e2feb0))
+
 ## [0.10.6](https://github.com/bbaldino/family-dashboard/compare/v0.10.5...v0.10.6) (2026-09-16)
 
 
