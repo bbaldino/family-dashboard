@@ -98,19 +98,6 @@ export function MusicProvider({ children }: MusicProviderProps) {
 
         const preserveVolume = Date.now() < volumeLockUntilRef.current
 
-        // Only clear the optimistic play/pause override when the server reports
-        // a definitive playing or paused state. Sonos often reports 'idle' during
-        // transitions, so clearing on idle would snap the button back prematurely.
-        const incomingQueues = data.type === 'state' ? data.queues : null
-        if (incomingQueues) {
-          const hasDefinitiveState = incomingQueues.some(
-            (q) => q.state === 'playing' || q.state === 'paused',
-          )
-          if (hasDefinitiveState) {
-            setOptimisticPlaying(null)
-          }
-        }
-
         if (data.type === 'state') {
           if (preserveVolume) {
             // Keep optimistic volume levels during the lock window
@@ -310,11 +297,31 @@ export function MusicProvider({ children }: MusicProviderProps) {
     [runAction],
   )
 
+  // Derived above the early return below so the reconcile effect that reads
+  // it can stay a hook, called on every render regardless of `isConfigured`.
+  const activeQueue = deriveActiveQueue(queues, players ?? [], anchorId)
+
+  // Reconcile the optimistic play/pause override against the active queue's
+  // real state, rather than clearing it inside the SSE `'state'` handler
+  // above. That handler is a long-lived closure that can't see fresh state,
+  // which is exactly why it used to clear wrongly: on pause, Music Assistant
+  // still reports 'playing' for a beat and Spotify Connect settles to 'idle'
+  // rather than 'paused', so a stale "still playing" update cleared the
+  // optimistic false and the button snapped back to Play. Clearing here
+  // instead, only once the active queue's playing-ness actually matches what
+  // was requested, makes 'idle' read as "not playing" for the pause case
+  // while a transient 'idle' after resume doesn't clear the optimistic true.
+  useEffect(() => {
+    if (optimisticPlaying === null) return
+    if ((activeQueue?.state === 'playing') === optimisticPlaying) {
+      setOptimisticPlaying(null)
+    }
+  }, [activeQueue?.state, optimisticPlaying])
+
   if (!isConfigured) {
     return <MusicContext.Provider value={defaultContextValue}>{children}</MusicContext.Provider>
   }
 
-  const activeQueue = deriveActiveQueue(queues, players ?? [], anchorId)
   const state: MusicState = { queues, activeQueue }
   const isPlaying = optimisticPlaying ?? activeQueue?.state === 'playing'
   // The room to *name* is the anchor's group, which under grouping is not

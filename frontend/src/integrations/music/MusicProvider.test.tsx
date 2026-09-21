@@ -540,6 +540,173 @@ describe('MusicProvider anchoring', () => {
  * on error with exponential backoff, plus an immediate retry when the tablet
  * wakes (visibilitychange/online) while disconnected.
  */
+/**
+ * The bug: tapping pause briefly showed paused, then the icon snapped back
+ * to Play. `pause()` sets `optimisticPlaying = false`, but the SSE `'state'`
+ * handler used to clear that override the moment *any* queue reported a
+ * definitive 'playing' or 'paused' state — and on pause, Music Assistant
+ * still reports 'playing' for a beat while Spotify Connect settles to
+ * 'idle', never 'paused'. Either way the stale/non-definitive update cleared
+ * the override early and the icon flipped back. The fix reconciles against
+ * the *active queue's* state instead: the override only clears once the
+ * active queue's playing-ness actually matches what was requested, so 'idle'
+ * counts as "not playing" for a pending pause and doesn't count as "playing"
+ * for a pending resume.
+ */
+describe('MusicProvider pause/resume anti-flicker', () => {
+  class FakeEventSource {
+    static instances: FakeEventSource[] = []
+    url: string
+    onopen: (() => void) | null = null
+    onerror: (() => void) | null = null
+    closed = false
+    private listeners: Record<string, ((e: MessageEvent) => void)[]> = {}
+    constructor(url: string) {
+      this.url = url
+      FakeEventSource.instances.push(this)
+    }
+    addEventListener(type: string, cb: (e: MessageEvent) => void) {
+      ;(this.listeners[type] ??= []).push(cb)
+    }
+    close() {
+      this.closed = true
+    }
+    emit(type: string, data: unknown) {
+      for (const cb of this.listeners[type] ?? []) {
+        cb({ data: JSON.stringify(data) } as MessageEvent)
+      }
+    }
+  }
+
+  function TransportProbe({
+    useMusic,
+  }: {
+    useMusic: () => {
+      isPlaying: boolean
+      pause: () => Promise<void>
+      resume: () => Promise<void>
+    }
+  }) {
+    const { isPlaying, pause, resume } = useMusic()
+    return (
+      <div>
+        <span data-testid="playing">{String(isPlaying)}</span>
+        <button type="button" onClick={() => pause()}>
+          pause
+        </button>
+        <button type="button" onClick={() => resume()}>
+          resume
+        </button>
+      </div>
+    )
+  }
+
+  const queue = (state: 'playing' | 'paused' | 'idle') => ({
+    queueId: 'kitchen',
+    displayName: 'Kitchen',
+    state,
+    currentItem: null,
+    volumeLevel: 45,
+  })
+
+  beforeEach(() => {
+    FakeEventSource.instances = []
+    musicStateFixtureFor.mockReturnValue(undefined)
+    // No `default_player` set, so `useAnchorId` resolves to `null` and
+    // `deriveActiveQueue` falls back to the roomless "first active queue"
+    // rule — no players list needed to exercise the reconcile logic.
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ 'music.service_url': 'http://192.168.1.42:8095/' }),
+        text: () => Promise.resolve('{}'),
+      }),
+    )
+    vi.stubGlobal('EventSource', FakeEventSource)
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    musicStateFixtureFor.mockReset()
+    vi.resetModules()
+  })
+
+  async function renderProbe() {
+    const { MusicProvider, useMusic } = await freshMusicModules()
+    render(
+      wrapInQueryClient(
+        <MusicProvider>
+          <TransportProbe useMusic={useMusic as never} />
+        </MusicProvider>,
+      ),
+    )
+    await waitFor(() => expect(FakeEventSource.instances.length).toBe(1))
+    return FakeEventSource.instances[0]
+  }
+
+  it('holds pause through a stale "still playing" update, including the Spotify-Connect idle case', async () => {
+    const es = await renderProbe()
+
+    act(() => {
+      es.emit('state', { type: 'state', queues: [queue('playing')] })
+    })
+    await waitFor(() => expect(screen.getByTestId('playing')).toHaveTextContent('true'))
+
+    act(() => {
+      screen.getByText('pause').click()
+    })
+    await waitFor(() => expect(screen.getByTestId('playing')).toHaveTextContent('false'))
+
+    // A stale update still reporting 'playing' must not snap the icon back —
+    // this is the bug.
+    act(() => {
+      es.emit('state', { type: 'state', queues: [queue('playing')] })
+    })
+    expect(screen.getByTestId('playing')).toHaveTextContent('false')
+
+    // Spotify Connect settles to 'idle', never 'paused' — this must also
+    // read as "paused" and clear the override.
+    act(() => {
+      es.emit('state', { type: 'state', queues: [queue('idle')] })
+    })
+    await waitFor(() => expect(screen.getByTestId('playing')).toHaveTextContent('false'))
+
+    // The override is now cleared, so a later genuine 'playing' shows through.
+    act(() => {
+      es.emit('state', { type: 'state', queues: [queue('playing')] })
+    })
+    await waitFor(() => expect(screen.getByTestId('playing')).toHaveTextContent('true'))
+  })
+
+  it('holds resume through a transient idle update', async () => {
+    const es = await renderProbe()
+
+    act(() => {
+      es.emit('state', { type: 'state', queues: [queue('paused')] })
+    })
+    await waitFor(() => expect(screen.getByTestId('playing')).toHaveTextContent('false'))
+
+    act(() => {
+      screen.getByText('resume').click()
+    })
+    await waitFor(() => expect(screen.getByTestId('playing')).toHaveTextContent('true'))
+
+    // A transient 'idle' mid-transition must not clear the optimistic resume.
+    act(() => {
+      es.emit('state', { type: 'state', queues: [queue('idle')] })
+    })
+    expect(screen.getByTestId('playing')).toHaveTextContent('true')
+
+    // The server catching up to 'playing' clears the override — still true.
+    act(() => {
+      es.emit('state', { type: 'state', queues: [queue('playing')] })
+    })
+    await waitFor(() => expect(screen.getByTestId('playing')).toHaveTextContent('true'))
+  })
+})
+
 describe('MusicProvider connection recovery', () => {
   class FakeEventSource {
     static instances: FakeEventSource[] = []
