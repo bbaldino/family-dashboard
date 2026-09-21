@@ -143,6 +143,16 @@ pub fn season_rank(season_type: &str) -> u8 {
     }
 }
 
+/// Whether a league's season is currently underway on `today`. Off-season /
+/// not-yet-started leagues (ESPN may still label them "Regular Season") are
+/// deprioritised so the track slots go to sports actually being played.
+/// Missing dates default to active — never demote a league for absent data.
+fn season_underway(season: &SeasonInfo, today: chrono::NaiveDate) -> bool {
+    let after_start = season.start.is_none_or(|s| today >= s);
+    let before_end = season.end.is_none_or(|e| today <= e);
+    after_start && before_end
+}
+
 /// The masthead's season-clock detail for one league, from its `season` block.
 ///
 /// - before the season opens → "N days out" (the countdown)
@@ -1022,9 +1032,15 @@ pub async fn get_section(
         return Ok(axum::Json(SportsSection::default()));
     }
 
-    // Rank leagues; the top rank (at most two) leads, the rest go to Elsewhere.
-    ctxs.sort_by_key(|c| season_rank(&c.season.season_type));
-    let top_rank = season_rank(&ctxs[0].season.season_type);
+    // Rank leagues; underway seasons lead over dormant ones (ESPN may still
+    // label an off-season league "Regular Season"), season_rank as tiebreak.
+    // The top two (at most) lead, the rest go to Elsewhere.
+    ctxs.sort_by_key(|c| {
+        (
+            !season_underway(&c.season, today),
+            season_rank(&c.season.season_type),
+        )
+    });
 
     let details: Vec<TeamDetail> = ctxs.iter().map(|c| parse_team_detail(&c.team)).collect();
 
@@ -1059,8 +1075,7 @@ pub async fn get_section(
     let mut leagues = Vec::new();
     let mut elsewhere = Vec::new();
     for (ctx, detail) in ctxs.iter().zip(&details) {
-        let at_top = season_rank(&ctx.season.season_type) == top_rank;
-        if at_top && leagues.len() < 2 {
+        if leagues.len() < 2 {
             leagues.push(build_track(&state, ctx, detail, &scores_label).await);
         } else {
             // Elsewhere still wants one headline, so fetch this league's news.
@@ -1351,6 +1366,53 @@ mod tests {
         assert!(season_rank("Regular Season") < season_rank("Preseason"));
         assert!(season_rank("Preseason") < season_rank("off-season nonsense"));
         assert!(season_rank("Regular Season") < season_rank("Postseason"));
+    }
+
+    fn season_info(start: Option<&str>, end: Option<&str>) -> SeasonInfo {
+        SeasonInfo {
+            season_type: "Regular Season".to_string(),
+            start: start.map(date),
+            end: end.map(date),
+            week: None,
+            total_weeks: None,
+            year: 2026,
+        }
+    }
+
+    #[test]
+    fn season_underway_is_false_before_the_start_date() {
+        let s = season_info(Some("2026-10-01"), Some("2027-04-01"));
+        assert!(!season_underway(&s, date("2026-09-21")));
+    }
+
+    #[test]
+    fn season_underway_is_true_within_the_season_window() {
+        let s = season_info(Some("2026-03-28"), Some("2026-10-01"));
+        assert!(season_underway(&s, date("2026-08-17")));
+    }
+
+    #[test]
+    fn season_underway_is_false_after_the_end_date() {
+        let s = season_info(Some("2026-03-28"), Some("2026-10-01"));
+        assert!(!season_underway(&s, date("2026-11-01")));
+    }
+
+    #[test]
+    fn season_underway_defaults_to_true_with_no_dates() {
+        let s = season_info(None, None);
+        assert!(season_underway(&s, date("2026-09-21")));
+    }
+
+    #[test]
+    fn season_underway_is_true_with_only_a_past_start_date() {
+        let s = season_info(Some("2026-03-28"), None);
+        assert!(season_underway(&s, date("2026-09-21")));
+    }
+
+    #[test]
+    fn season_underway_is_true_with_only_a_future_end_date() {
+        let s = season_info(None, Some("2027-04-01"));
+        assert!(season_underway(&s, date("2026-09-21")));
     }
 
     #[test]
