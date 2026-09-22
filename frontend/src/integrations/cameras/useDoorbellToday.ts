@@ -17,9 +17,11 @@ export function useDoorbellToday(): { visits: Visit[]; loading: boolean; error: 
   const [error, setError] = useState(false)
 
   useEffect(() => {
+    // The effect runs once (empty deps), and the initial state above is
+    // already `loading: true, error: false`, so there's nothing to reset here
+    // — resetting synchronously in the effect body trips
+    // react-hooks/set-state-in-effect. Only the async fetch settles state.
     let cancelled = false
-    setLoading(true)
-    setError(false)
     fetch('/api/cameras/doorbell/today')
       .then((r) => {
         if (!r.ok) throw new Error(String(r.status))
