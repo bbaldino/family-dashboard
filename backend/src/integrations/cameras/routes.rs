@@ -1,7 +1,8 @@
 use axum::body::Body;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::response::{IntoResponse, Response};
+use serde::Deserialize;
 use sqlx::SqlitePool;
 
 use super::{FrigateClient, visits};
@@ -33,14 +34,29 @@ pub async fn doorbell_today(
     )))
 }
 
-/// Proxy Frigate's person-crop thumbnail for a visit's chosen event (used by
-/// the list tiles). Full-frame snapshot uses the same shape with snapshot.jpg.
+#[derive(Deserialize)]
+pub struct SnapshotQuery {
+    /// `?full=1` serves the full-frame `snapshot.jpg` (used for the player
+    /// poster); the default is the person-crop `thumbnail.jpg` (list tiles).
+    #[serde(default)]
+    full: bool,
+}
+
+/// Proxy a Frigate event image for a visit's chosen event: the person-crop
+/// `thumbnail.jpg` (list tiles) by default, or the full-frame `snapshot.jpg`
+/// when `?full=1` is set (the wall player's poster wants the full frame).
 pub async fn snapshot(
     State(pool): State<SqlitePool>,
     Path(event_id): Path<String>,
+    Query(q): Query<SnapshotQuery>,
 ) -> Result<Response, AppError> {
     let f = FrigateClient::from_config(&pool).await?;
-    let url = format!("{}/api/events/{}/thumbnail.jpg", f.base_url, event_id);
+    let image = if q.full {
+        "snapshot.jpg"
+    } else {
+        "thumbnail.jpg"
+    };
+    let url = format!("{}/api/events/{}/{}", f.base_url, event_id, image);
     let upstream = f
         .client
         .get(&url)
