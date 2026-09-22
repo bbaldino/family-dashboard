@@ -13,11 +13,11 @@ const fmtClipTime = (unix: number) =>
 const fmtDur = (s: number) => (s >= 60 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${s}s`)
 
 /**
- * The "Today" tab's master-detail. Nothing plays on its own: the player shows
- * a placeholder until you pick a visit, then a visit's chosen clip as a poster
- * with a play button — click to play, it plays that one clip and stops. Tapping
- * a visit selects its representative clip and, if the visit has more than one
- * clip, expands its clips inline so you can pick a specific one. Mock:
+ * The "Today" tab's master-detail. The player shows a placeholder until you
+ * pick something. Tapping a multi-clip visit expands its clips inline and shows
+ * its representative still (so browsing the day is quiet); tapping a specific
+ * clip — or a single-clip visit, where the visit is the clip — plays it. A clip
+ * plays once and stops; nothing auto-advances. Mock:
  * `.superpowers/brainstorm/488636-1790035444/content/today-mockup.html`.
  *
  * A "visit" is our grouping of Frigate events that fired within a few minutes
@@ -31,15 +31,21 @@ export function TodayRecordings() {
   // selected or playing until the household picks a visit.
   const [expandedVisitId, setExpandedVisitId] = useState<string | null>(null)
   const [selectedClipEventId, setSelectedClipEventId] = useState<string | null>(null)
+  // Whether the freshly-loaded clip should start playing. Picking a specific
+  // clip (or a single-clip visit, where the visit *is* the clip) plays it;
+  // picking a multi-clip visit just shows its representative still and waits
+  // for you to pick a clip. It never rolls into the next clip or visit.
+  const [autoplay, setAutoplay] = useState(false)
 
-  // Tapping a visit expands it and loads its representative (best-scored) clip
-  // into the player as a poster — never autoplaying, and never rolling into the
-  // next clip or visit.
   const pickVisit = (v: Visit) => {
     setExpandedVisitId(v.id)
     setSelectedClipEventId(v.snapshotEventId)
+    setAutoplay(v.clips.length <= 1)
   }
-  const pickClip = (eventId: string) => setSelectedClipEventId(eventId)
+  const pickClip = (eventId: string) => {
+    setSelectedClipEventId(eventId)
+    setAutoplay(true)
+  }
 
   if (error)
     return (
@@ -72,13 +78,16 @@ export function TodayRecordings() {
     <div className="today-recordings" data-testid="today-recordings">
       <div className="player-col">
         {selectedClipEventId ? (
-          // No autoplay: the poster shows and the native control starts it. Keyed
-          // on the clip id so picking another clip swaps the source cleanly.
+          // Keyed on the clip id so picking another clip remounts and (re)starts
+          // it. `autoplay` decides whether a fresh selection plays immediately or
+          // just shows its poster; there's no onEnded, so a clip plays once and
+          // stops rather than rolling into the next.
           <video
             key={selectedClipEventId}
             src={clipUrl(selectedClipEventId)}
             poster={posterUrl(selectedClipEventId)}
             controls
+            autoPlay={autoplay}
           />
         ) : (
           <div className="player-placeholder" data-testid="player-placeholder">
