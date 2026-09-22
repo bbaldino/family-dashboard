@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/bbaldino/family-dashboard/compare/v0.14.0...v0.14.1) (2026-09-22)
+
+
+### Bug Fixes
+
+* **broadsheet:** make the footer play/pause button toggle playback ([49c77a9](https://github.com/bbaldino/family-dashboard/commit/49c77a9f49ddfba81ac89a35c9fb83015bf554af))
+
 ## [0.14.0](https://github.com/bbaldino/family-dashboard/compare/v0.13.1...v0.14.0) (2026-09-22)
 
 
