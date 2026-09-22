@@ -85,18 +85,17 @@ function formatDuration(seconds: number): string {
  * chrome on every screen, so an empty gap there would show constantly, not
  * just on a bad poll.
  *
- * The mock's play/pause circle is a button; this one is a static status
- * glyph — the footer has no transport controls to wire it to, and an
- * icon that looks pressable but does nothing is worse than not drawing it
- * (the same reasoning the design brief gives for the read-only chore
- * checkbox). Progress bar and elapsed/total use `TrackInfo.elapsed`/
- * `duration`, which the real feed already reports in seconds — no new data.
+ * The play/pause circle is a real button, per the mock, toggling through
+ * the same provider actions as NowSpinning's transport. It reads the
+ * provider's `isPlaying` rather than the raw queue state so the icon flips
+ * on tap instead of waiting for Music Assistant to report back. Progress
+ * bar and elapsed/total use `TrackInfo.elapsed`/`duration`, which the real
+ * feed already reports in seconds — no new data.
  */
 function NowPlaying() {
-  const { state } = useMusic()
+  const { state, isPlaying, pause, resume } = useMusic()
   const currentItem = state.activeQueue?.currentItem ?? null
   const label = currentItem?.name ?? state.activeQueue?.displayName ?? null
-  const isPlaying = state.activeQueue?.state === 'playing'
   const hasProgress =
     currentItem?.duration != null && currentItem.duration > 0 && currentItem?.elapsed != null
   const progressPct = hasProgress
@@ -106,9 +105,17 @@ function NowPlaying() {
   return (
     <div className="flex items-center gap-3 min-w-0">
       {label && (
-        <span
-          className="flex items-center justify-center flex-shrink-0"
+        <button
+          type="button"
+          onClick={() => (isPlaying ? pause() : resume())}
+          aria-label={isPlaying ? 'Pause' : 'Play'}
           style={{
+            all: 'unset',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
             width: 34,
             height: 34,
             borderRadius: 34,
@@ -117,7 +124,7 @@ function NowPlaying() {
           }}
         >
           {isPlaying ? <Pause size={13} /> : <Play size={13} />}
-        </span>
+        </button>
       )}
       <div className="min-w-0">
         <Kicker color="var(--ink-muted)">Now playing</Kicker>
