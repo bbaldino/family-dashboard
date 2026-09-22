@@ -69,15 +69,22 @@ pub async fn snapshot(
         .bytes()
         .await
         .map_err(|e| AppError::Internal(format!("Frigate snapshot body failed: {e}")))?;
-    Ok((
-        status,
-        [
-            (header::CONTENT_TYPE, "image/jpeg"),
-            (header::CACHE_CONTROL, "public, max-age=3600"),
-        ],
-        bytes,
-    )
-        .into_response())
+    // Only label the body an image and cache it on success. A non-2xx upstream
+    // (e.g. an event with no snapshot yet) returns an error body that must not
+    // be mislabeled `image/jpeg` and cached for an hour behind that event id.
+    if status.is_success() {
+        Ok((
+            status,
+            [
+                (header::CONTENT_TYPE, "image/jpeg"),
+                (header::CACHE_CONTROL, "public, max-age=3600"),
+            ],
+            bytes,
+        )
+            .into_response())
+    } else {
+        Ok((status, [(header::CACHE_CONTROL, "no-store")], bytes).into_response())
+    }
 }
 
 /// Proxy a clip mp4, forwarding the browser's Range header so <video> can seek.

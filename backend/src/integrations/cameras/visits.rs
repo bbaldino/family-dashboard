@@ -89,7 +89,9 @@ pub fn group_visits(events: &[FrigateEvent], gap_secs: i64, min_score: f64) -> V
                 count: 1,
                 clip_event_ids: vec![e.id.clone()],
                 snapshot_event_id: e.id.clone(),
-                duration_s: (end - e.start_time).round() as i64,
+                // Set authoritatively (from the visit's final span) in the loop
+                // below, once all this visit's clips have been folded in.
+                duration_s: 0,
             }),
         }
     }
