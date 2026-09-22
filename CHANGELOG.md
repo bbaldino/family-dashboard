@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/bbaldino/family-dashboard/compare/v0.13.1...v0.14.0) (2026-09-22)
+
+
+### Features
+
+* **cameras:** autoplay a clip when it's selected ([b0d182f](https://github.com/bbaldino/family-dashboard/commit/b0d182fc78ca8a9c650c4662084dae5b31ffd66c))
+
 ## [0.13.1](https://github.com/bbaldino/family-dashboard/compare/v0.13.0...v0.13.1) (2026-09-22)
 
 
