@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useIntegrationConfig } from '@/platform'
 import {
   doorbellIntegration,
@@ -10,6 +10,31 @@ import { resolveBroadsheetDoorbellVars } from '@/themes/broadsheet/ui/broadsheet
 import { MastheadFrame } from '@/themes/broadsheet/ui/MastheadFrame'
 import { mastheadKickerStyle, mastheadNumeralStyle } from '@/themes/broadsheet/ui/masthead-styles'
 import { useNow } from '@/themes/broadsheet/home/useNow'
+import { TodayRecordings } from '@/themes/broadsheet/cameras/TodayRecordings'
+
+type CamerasTab = 'live' | 'today'
+
+/** The left ear's Live/Today tab buttons — mono, uppercase, small tracking,
+ *  matching the mockup's treatment. The active tab reads as filled ink (the
+ *  masthead rule's usual figure/ground), the inactive one as ink text on a
+ *  thin ink-bordered chip. */
+const tabButtonBaseStyle = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: 11,
+  letterSpacing: '0.1em',
+  textTransform: 'uppercase' as const,
+  padding: '4px 10px',
+  border: '1px solid var(--ink)',
+  cursor: 'pointer',
+} as const
+
+function tabButtonStyle(active: boolean) {
+  return {
+    ...tabButtonBaseStyle,
+    background: active ? 'var(--ink)' : 'transparent',
+    color: active ? 'var(--paper)' : 'var(--ink)',
+  }
+}
 
 /** The right cell's clock — mono, mock `doorbell.jsx:69` (13px, 700 weight,
  *  0.18em tracking) for the time itself. That treatment drew the "Recording"
@@ -79,6 +104,7 @@ const emptyStateStyle = {
  */
 export function Cameras() {
   const now = useNow()
+  const [tab, setTab] = useState<CamerasTab>('live')
   const config = useIntegrationConfig(doorbellIntegration)
 
   // `useIntegrationConfig` returns null both while the first fetch is still
@@ -123,14 +149,29 @@ export function Cameras() {
       className="broadsheet-root w-[1600px] h-full flex flex-col"
     >
       <MastheadFrame
-        // Left ear is deliberately empty for now. The suite's masthead rule
-        // says both ears carry live data and no ear is a second name, which
-        // retired "Section V / The Watch Room" — but the design's replacement
-        // is a per-camera "last motion" list, and this screen has no camera
-        // list to build one from: it embeds a single doorbell page by URL
-        // (`doorbell.camera_url`). Left blank rather than filled with another
-        // label, until there is real data to put here.
-        left={null}
+        // The left ear was empty until this screen grew a second view — the
+        // design's originally-intended occupant (a per-camera "last motion"
+        // list) still has no data source to build it from, but the Live/Today
+        // tab switch is exactly the kind of live, page-local control that ear
+        // is for, so it lands here instead of a fourth masthead row.
+        left={
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button
+              type="button"
+              style={tabButtonStyle(tab === 'live')}
+              onClick={() => setTab('live')}
+            >
+              Live
+            </button>
+            <button
+              type="button"
+              style={tabButtonStyle(tab === 'today')}
+              onClick={() => setTab('today')}
+            >
+              Today
+            </button>
+          </div>
+        }
         center={
           <>
             <div style={{ ...mastheadKickerStyle, textAlign: 'center' }}>
@@ -158,58 +199,62 @@ export function Cameras() {
         }
       />
 
-      <div className="flex-1 min-h-0 flex flex-col" style={{ padding: '16px 56px' }}>
-        {cameraUrl ? (
-          <div
-            data-testid="cameras-feed-frame"
-            style={{
-              flex: 1,
-              minHeight: 0,
-              position: 'relative',
-              border: '8px solid var(--ink)',
-              // The same tone the doorbell page's stage fill uses
-              // (`layouts.ts` reads it as `--doorbell-border`). Showing
-              // through while the frame is hidden, it makes the pre-theme beat
-              // the colour of what follows rather than a flash before it.
-              background: 'var(--rule-faint)',
-              overflow: 'hidden',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-            }}
-          >
-            {/* Hidden until the first payload goes out. `postMessage` can't
-             *  beat first paint, so an immediately-visible frame shows the
-             *  doorbell page's own grey defaults for a beat before the theme
-             *  lands — against this frame's near-black ground that reads as a
-             *  flash. The ink backing behind shows through meanwhile, and
-             *  `useDoorbellTheme` reveals on a deadline regardless, so a page
-             *  that never handshakes still gets seen. */}
-            {/* Keyed on the URL so a change replaces the element rather than
-             *  editing its `src`. Config resolves after first paint, so this
-             *  frame mounts on the schema default and only then switches to
-             *  the household's real URL — and an in-place `src` change does
-             *  not reliably re-navigate a frame that is already loading. It
-             *  was observed sticking on the default's origin, streaming the
-             *  wrong doorbell entirely. Replacing the element also restarts
-             *  the theming handshake, which is what we want: the new page
-             *  posts its own `doorbell:ready`. */}
-            <iframe
-              key={cameraUrl}
-              ref={iframeRef}
-              src={cameraUrl}
-              title="Front step camera"
-              className="w-full h-full border-0"
-              style={{ visibility: revealed ? 'visible' : 'hidden' }}
-              allow="autoplay; camera; microphone"
-            />
-          </div>
-        ) : (
-          <div className="flex-1 min-h-0 flex items-center justify-center">
-            <p style={emptyStateStyle}>
-              No picture from the front step. Add a camera URL in Settings → Doorbell Camera.
-            </p>
-          </div>
-        )}
-      </div>
+      {tab === 'live' && (
+        <div className="flex-1 min-h-0 flex flex-col" style={{ padding: '16px 56px' }}>
+          {cameraUrl ? (
+            <div
+              data-testid="cameras-feed-frame"
+              style={{
+                flex: 1,
+                minHeight: 0,
+                position: 'relative',
+                border: '8px solid var(--ink)',
+                // The same tone the doorbell page's stage fill uses
+                // (`layouts.ts` reads it as `--doorbell-border`). Showing
+                // through while the frame is hidden, it makes the pre-theme beat
+                // the colour of what follows rather than a flash before it.
+                background: 'var(--rule-faint)',
+                overflow: 'hidden',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+              }}
+            >
+              {/* Hidden until the first payload goes out. `postMessage` can't
+               *  beat first paint, so an immediately-visible frame shows the
+               *  doorbell page's own grey defaults for a beat before the theme
+               *  lands — against this frame's near-black ground that reads as a
+               *  flash. The ink backing behind shows through meanwhile, and
+               *  `useDoorbellTheme` reveals on a deadline regardless, so a page
+               *  that never handshakes still gets seen. */}
+              {/* Keyed on the URL so a change replaces the element rather than
+               *  editing its `src`. Config resolves after first paint, so this
+               *  frame mounts on the schema default and only then switches to
+               *  the household's real URL — and an in-place `src` change does
+               *  not reliably re-navigate a frame that is already loading. It
+               *  was observed sticking on the default's origin, streaming the
+               *  wrong doorbell entirely. Replacing the element also restarts
+               *  the theming handshake, which is what we want: the new page
+               *  posts its own `doorbell:ready`. */}
+              <iframe
+                key={cameraUrl}
+                ref={iframeRef}
+                src={cameraUrl}
+                title="Front step camera"
+                className="w-full h-full border-0"
+                style={{ visibility: revealed ? 'visible' : 'hidden' }}
+                allow="autoplay; camera; microphone"
+              />
+            </div>
+          ) : (
+            <div className="flex-1 min-h-0 flex items-center justify-center">
+              <p style={emptyStateStyle}>
+                No picture from the front step. Add a camera URL in Settings → Doorbell Camera.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'today' && <TodayRecordings />}
 
       {/* Reserves the 64px the footer occupies (`BroadsheetLayout`) — same
        *  spacer every other broadsheet screen ends with. */}
