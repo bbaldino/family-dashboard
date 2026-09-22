@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.13.0](https://github.com/bbaldino/family-dashboard/compare/v0.12.0...v0.13.0) (2026-09-22)
+
+
+### Features
+
+* **cameras:** expose per-clip event id + start time on each visit ([4844680](https://github.com/bbaldino/family-dashboard/commit/4844680c7b1aab1ab4e94165151a22eb600ad1c0))
+* **cameras:** manual clip picker for the Today tab ([06b55b4](https://github.com/bbaldino/family-dashboard/commit/06b55b43a184bd5d2b05479cea0baa6b8a0dcc69))
+
 ## [0.12.0](https://github.com/bbaldino/family-dashboard/compare/v0.11.0...v0.12.0) (2026-09-22)
 
 
