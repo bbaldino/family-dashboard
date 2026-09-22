@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.12.0](https://github.com/bbaldino/family-dashboard/compare/v0.11.0...v0.12.0) (2026-09-22)
+
+
+### Features
+
+* **cameras:** add Frigate recordings settings section ([d73b672](https://github.com/bbaldino/family-dashboard/commit/d73b6726ab74685047518c2b3d96f546ab61181b))
+* **cameras:** migrate doorbell.* config keys into cameras.* ([43f98cb](https://github.com/bbaldino/family-dashboard/commit/43f98cb0e015d88a68fb6f7931112f45b904827b))
+
+
+### Bug Fixes
+
+* **cameras:** update 'Doorbell Camera' hints to 'Cameras', restore schema comments ([6a797f2](https://github.com/bbaldino/family-dashboard/commit/6a797f229ce24eeea6273d8c437c7286161ab06d))
+
 ## [0.11.0](https://github.com/bbaldino/family-dashboard/compare/v0.10.8...v0.11.0) (2026-09-22)
 
 
