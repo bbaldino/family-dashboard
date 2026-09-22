@@ -4,6 +4,18 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CamerasSettings } from './CamerasSettings'
 import { CONFIG_QUERY_KEY, useAllConfig } from '@/platform'
 
+// `useSaveConfig` is mocked so a test can assert on exactly what a save sent,
+// without also asserting on `fetch` plumbing that `useSaveConfig.test.tsx`
+// already covers. `useAllConfig` (and everything else) stays real.
+const saveConfigMutateAsync = vi.fn()
+vi.mock('@/platform', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/platform')>()
+  return {
+    ...actual,
+    useSaveConfig: () => ({ mutateAsync: saveConfigMutateAsync, isPending: false }),
+  }
+})
+
 /**
  * The one-shot prefill. This form reads the shared `/api/config` query once,
  * at mount, and ignores every later value — because unsaved edits live only
@@ -36,6 +48,7 @@ describe('CamerasSettings', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals()
+    saveConfigMutateAsync.mockReset()
   })
 
   it('does not overwrite an in-progress edit when the config query refreshes', async () => {
@@ -74,5 +87,26 @@ describe('CamerasSettings', () => {
 
     expect(screen.getByDisplayValue('http://still-typing')).toBeInTheDocument()
     expect(screen.queryByDisplayValue('http://someone-else-changed-it')).not.toBeInTheDocument()
+  })
+
+  it('saves the Frigate recordings config', async () => {
+    saveConfigMutateAsync.mockResolvedValue(undefined)
+    stubConfig({})
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={client}>
+        <CamerasSettings />
+      </QueryClientProvider>,
+    )
+
+    const url = await screen.findByLabelText(/frigate url/i)
+    fireEvent.change(url, { target: { value: 'http://frigate.home' } })
+    fireEvent.click(screen.getByRole('button', { name: /save/i }))
+
+    await waitFor(() =>
+      expect(saveConfigMutateAsync).toHaveBeenCalledWith(
+        expect.arrayContaining([{ key: 'cameras.frigate_url', value: 'http://frigate.home' }]),
+      ),
+    )
   })
 })

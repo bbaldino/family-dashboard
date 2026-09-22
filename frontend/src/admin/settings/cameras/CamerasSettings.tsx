@@ -43,6 +43,14 @@ function CamerasSettingsForm({ config }: { config: Record<string, string> | unde
   const [chimeSoundId, setChimeSoundId] = useState(() =>
     g('doorbell_chime_sound_id', defaults.doorbell_chime_sound_id),
   )
+  // Written directly, not part of `camerasIntegration.schema` — a bad value
+  // here must not be able to fail the live camera's parse. See the "parse
+  // fate" comment in `integrations/cameras/config.ts`.
+  const [frigateUrl, setFrigateUrl] = useState(() => g('frigate_url', 'http://frigate:5000'))
+  const [frigateCamera, setFrigateCamera] = useState(() => g('doorbell_camera', 'doorbell'))
+  const [label, setLabel] = useState(() => g('label', 'person'))
+  const [minScore, setMinScore] = useState(() => g('min_score', '0.6'))
+  const [visitGap, setVisitGap] = useState(() => g('visit_gap_minutes', '8'))
   const [status, setStatus] = useState<{
     kind: 'ok' | 'error'
     text: string
@@ -75,6 +83,11 @@ function CamerasSettingsForm({ config }: { config: Record<string, string> | unde
         { key: 'cameras.doorbell_auto_dismiss_seconds', value: autoDismissSeconds },
         { key: 'cameras.doorbell_chime_enabled', value: String(chimeEnabled) },
         { key: 'cameras.doorbell_chime_sound_id', value: chimeSoundId },
+        { key: 'cameras.frigate_url', value: frigateUrl },
+        { key: 'cameras.doorbell_camera', value: frigateCamera },
+        { key: 'cameras.label', value: label },
+        { key: 'cameras.min_score', value: minScore },
+        { key: 'cameras.visit_gap_minutes', value: visitGap },
       ])
       setStatus({ kind: 'ok', text: 'Saved!' })
     } catch (err) {
@@ -232,6 +245,82 @@ function CamerasSettingsForm({ config }: { config: Record<string, string> | unde
               </button>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-sm font-semibold text-text-primary mt-2 mb-1">
+            Doorbell — Recordings (Frigate)
+          </h3>
+          <p className="text-xs text-text-muted mb-3">
+            The Today tab reads recorded clips from Frigate.
+          </p>
+        </div>
+
+        <div>
+          <label htmlFor="frigate-url" className="text-xs text-text-muted block mb-1">
+            Frigate URL
+          </label>
+          <input
+            id="frigate-url"
+            type="text"
+            value={frigateUrl}
+            onChange={(e) => setFrigateUrl(e.target.value)}
+            className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="frigate-camera" className="text-xs text-text-muted block mb-1">
+            Frigate camera name
+          </label>
+          <input
+            id="frigate-camera"
+            type="text"
+            value={frigateCamera}
+            onChange={(e) => setFrigateCamera(e.target.value)}
+            className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="frigate-label" className="text-xs text-text-muted block mb-1">
+            Object label
+          </label>
+          <input
+            id="frigate-label"
+            type="text"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="frigate-min-score" className="text-xs text-text-muted block mb-1">
+            Min score
+          </label>
+          <input
+            id="frigate-min-score"
+            type="text"
+            value={minScore}
+            onChange={(e) => setMinScore(e.target.value)}
+            className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="frigate-visit-gap" className="text-xs text-text-muted block mb-1">
+            Visit gap (minutes)
+          </label>
+          <input
+            id="frigate-visit-gap"
+            type="text"
+            value={visitGap}
+            onChange={(e) => setVisitGap(e.target.value)}
+            className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
+          />
         </div>
       </div>
 
