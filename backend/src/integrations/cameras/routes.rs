@@ -1,4 +1,7 @@
-use axum::extract::State;
+use axum::body::Body;
+use axum::extract::{Path, State};
+use axum::http::{HeaderMap, StatusCode, header};
+use axum::response::{IntoResponse, Response};
 use sqlx::SqlitePool;
 
 use super::{FrigateClient, visits};
@@ -28,4 +31,74 @@ pub async fn doorbell_today(
         f.gap_secs,
         f.min_score,
     )))
+}
+
+/// Proxy Frigate's person-crop thumbnail for a visit's chosen event (used by
+/// the list tiles). Full-frame snapshot uses the same shape with snapshot.jpg.
+pub async fn snapshot(
+    State(pool): State<SqlitePool>,
+    Path(event_id): Path<String>,
+) -> Result<Response, AppError> {
+    let f = FrigateClient::from_config(&pool).await?;
+    let url = format!("{}/api/events/{}/thumbnail.jpg", f.base_url, event_id);
+    let upstream = f
+        .client
+        .get(&url)
+        .send()
+        .await
+        .map_err(|e| AppError::Internal(format!("Frigate snapshot failed: {e}")))?;
+    let status =
+        StatusCode::from_u16(upstream.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
+    let bytes = upstream
+        .bytes()
+        .await
+        .map_err(|e| AppError::Internal(format!("Frigate snapshot body failed: {e}")))?;
+    Ok((
+        status,
+        [
+            (header::CONTENT_TYPE, "image/jpeg"),
+            (header::CACHE_CONTROL, "public, max-age=3600"),
+        ],
+        bytes,
+    )
+        .into_response())
+}
+
+/// Proxy a clip mp4, forwarding the browser's Range header so <video> can seek.
+pub async fn clip(
+    State(pool): State<SqlitePool>,
+    headers: HeaderMap,
+    Path(event_id): Path<String>,
+) -> Result<Response, AppError> {
+    let f = FrigateClient::from_config(&pool).await?;
+    let url = format!("{}/api/events/{}/clip.mp4", f.base_url, event_id);
+    let mut req = f.client.get(&url);
+    if let Some(range) = headers.get(header::RANGE) {
+        req = req.header(header::RANGE, range);
+    }
+    let upstream = req
+        .send()
+        .await
+        .map_err(|e| AppError::Internal(format!("Frigate clip failed: {e}")))?;
+
+    let status =
+        StatusCode::from_u16(upstream.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
+    // Carry the headers a seeking <video> needs.
+    let mut out = Response::builder().status(status);
+    for name in [
+        header::CONTENT_TYPE,
+        header::CONTENT_RANGE,
+        header::CONTENT_LENGTH,
+    ] {
+        if let Some(v) = upstream.headers().get(&name) {
+            out = out.header(name, v);
+        }
+    }
+    out = out.header(header::ACCEPT_RANGES, "bytes");
+    let bytes = upstream
+        .bytes()
+        .await
+        .map_err(|e| AppError::Internal(format!("Frigate clip body failed: {e}")))?;
+    out.body(Body::from(bytes))
+        .map_err(|e| AppError::Internal(format!("clip response build failed: {e}")))
 }

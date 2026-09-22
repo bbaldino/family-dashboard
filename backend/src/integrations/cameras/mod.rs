@@ -7,14 +7,13 @@ use sqlx::SqlitePool;
 pub const INTEGRATION_ID: &str = "cameras";
 
 pub fn router(pool: SqlitePool) -> Router {
-    // `/snapshot/{event_id}` and `/clip/{event_id}` land in a follow-up task
-    // alongside their handlers; registering them here without an
-    // implementation would mean dead/todo!() code, so they're deferred.
     Router::new()
         .route(
             "/doorbell/today",
             axum::routing::get(routes::doorbell_today),
         )
+        .route("/snapshot/{event_id}", axum::routing::get(routes::snapshot))
+        .route("/clip/{event_id}", axum::routing::get(routes::clip))
         .with_state(pool)
 }
 
