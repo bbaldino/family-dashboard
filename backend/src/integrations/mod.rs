@@ -1,3 +1,4 @@
+pub mod cameras;
 pub mod chores;
 pub mod config;
 pub mod config_helpers;
