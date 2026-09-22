@@ -203,10 +203,6 @@
   letter-spacing: 0.03em;
 }
 
-.broadsheet-root .clip .clip-n {
-  display: none;
-}
-
 /* The player's resting state before any visit is picked — a framed panel, not
    a black <video>, matching the video area's size and the ink-on-cream voice. */
 .broadsheet-root .player-placeholder {

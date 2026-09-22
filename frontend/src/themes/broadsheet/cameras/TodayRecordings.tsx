@@ -126,7 +126,7 @@ export function TodayRecordings() {
               </button>
               {expanded && v.clips.length > 1 && (
                 <div className="clip-list">
-                  {v.clips.map((clip, i) => (
+                  {v.clips.map((clip) => (
                     <button
                       type="button"
                       key={clip.eventId}
@@ -135,7 +135,6 @@ export function TodayRecordings() {
                     >
                       <img src={snapshotUrl(clip.eventId)} alt="" />
                       <span className="clip-t">{fmtClipTime(clip.start)}</span>
-                      <span className="clip-n">#{i + 1}</span>
                     </button>
                   ))}
                 </div>
