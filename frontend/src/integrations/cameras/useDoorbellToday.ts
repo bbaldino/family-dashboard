@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react'
 import type { Visit } from './types'
 
+type RawClip = {
+  event_id: string
+  start: number
+}
 type RawVisit = {
   id: string
   start: number
   end: number
   count: number
-  clip_event_ids: string[]
+  clips: RawClip[]
   snapshot_event_id: string
   duration_s: number
 }
@@ -35,7 +39,7 @@ export function useDoorbellToday(): { visits: Visit[]; loading: boolean; error: 
             start: v.start,
             end: v.end,
             count: v.count,
-            clipEventIds: v.clip_event_ids,
+            clips: (v.clips ?? []).map((c) => ({ eventId: c.event_id, start: c.start })),
             snapshotEventId: v.snapshot_event_id,
             durationS: v.duration_s,
           })),
