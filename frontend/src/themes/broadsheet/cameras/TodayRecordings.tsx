@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useDoorbellToday, snapshotUrl, clipUrl, posterUrl } from '@/integrations/cameras'
 import type { Visit } from '@/integrations/cameras'
 
@@ -20,7 +20,6 @@ export function TodayRecordings() {
   const { visits, loading, error } = useDoorbellToday()
   const [selected, setSelected] = useState<Visit | null>(null)
   const [clipIdx, setClipIdx] = useState(0)
-  const videoRef = useRef<HTMLVideoElement>(null)
 
   // Default selection = newest visit, derived rather than pushed into state
   // by an effect: once the hook's fetch resolves, `visits[0]` is already the
@@ -72,8 +71,12 @@ export function TodayRecordings() {
     <div className="today-recordings" data-testid="today-recordings">
       <div className="player-col">
         {currentClip && (
+          // Keyed on the clip id so advancing to the next clip/visit remounts
+          // the element and autoplays the new source — changing a <video>'s
+          // `src` prop in place does not reload the media (mirrors how
+          // `screens/Cameras.tsx` keys its live iframe on the URL).
           <video
-            ref={videoRef}
+            key={currentClip}
             src={clipUrl(currentClip)}
             poster={current ? posterUrl(current.snapshotEventId) : undefined}
             controls
