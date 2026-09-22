@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { Cameras } from './Cameras'
 
 const useIntegrationConfig = vi.hoisted(() => vi.fn())
@@ -97,5 +97,17 @@ describe('broadsheet Cameras (the Watch Room)', () => {
 
     expect(after.getAttribute('src')).toBe('https://example.com/other')
     expect(after).not.toBe(before)
+  })
+
+  it('defaults to the live tab and switches to Today', () => {
+    useIntegrationConfig.mockReturnValue({ camera_url: 'https://example.com/cam' })
+    render(<Cameras />)
+    // Live view present by default (assert on an element the live view already renders)
+    expect(screen.getByTestId('cameras-feed-frame')).toBeInTheDocument()
+    const todayButton = screen.getByRole('button', { name: /today/i })
+    expect(todayButton).toBeInTheDocument()
+    fireEvent.click(todayButton)
+    expect(screen.getByTestId('today-recordings')).toBeInTheDocument()
+    expect(screen.queryByTestId('cameras-feed-frame')).not.toBeInTheDocument()
   })
 })

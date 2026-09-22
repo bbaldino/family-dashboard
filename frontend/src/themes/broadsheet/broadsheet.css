@@ -48,3 +48,146 @@
     opacity: 0.25;
   }
 }
+
+/*
+ * The "Today" tab's master-detail player + visit list. Mock:
+ * .superpowers/brainstorm/488636-1790035444/content/today-mockup.html — its
+ * .body/.player/.cap/.list/.visit rules, ported onto this component's fixed
+ * class names (today-recordings, player-col, cap, when, meta, visit-list,
+ * info, t, c, badge, on) and this theme's --font-display/--font-mono tokens.
+ */
+.broadsheet-root .today-recordings {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 22px;
+  padding: 16px 56px;
+}
+
+.broadsheet-root .player-col {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.broadsheet-root .player-col video {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  background: #12100e;
+  border: 1px solid var(--ink);
+  border-radius: 3px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+}
+
+.broadsheet-root .cap {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 9px;
+  border-top: 1px solid var(--rule-faint);
+  padding-top: 7px;
+  flex-shrink: 0;
+}
+
+.broadsheet-root .cap .when {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 22px;
+}
+
+.broadsheet-root .cap .meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-muted);
+  letter-spacing: 0.05em;
+}
+
+.broadsheet-root .visit-list {
+  list-style: none;
+  margin: 0;
+  border-left: 1px solid var(--rule-faint);
+  padding: 0 0 0 18px;
+  max-height: 100%;
+  overflow: auto;
+}
+
+.broadsheet-root .visit-list li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 7px;
+  border-radius: 3px;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.broadsheet-root .visit-list li:hover {
+  background: rgba(180, 58, 26, 0.06);
+}
+
+.broadsheet-root .visit-list li.on {
+  border-color: var(--rust);
+  background: rgba(180, 58, 26, 0.07);
+}
+
+.broadsheet-root .visit-list li img {
+  width: 64px;
+  height: 48px;
+  flex: 0 0 auto;
+  border-radius: 2px;
+  object-fit: cover;
+  background: var(--rule-faint);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.broadsheet-root .visit-list .info .t {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.broadsheet-root .visit-list .info .c {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  color: var(--ink-muted);
+  letter-spacing: 0.05em;
+  margin-top: 3px;
+  text-transform: uppercase;
+}
+
+.broadsheet-root .visit-list li.on .info .t {
+  color: var(--rust);
+}
+
+.broadsheet-root .badge {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  background: var(--ink);
+  color: var(--paper);
+  border-radius: 10px;
+  padding: 2px 7px;
+}
+
+/* Loading / empty / error states for the Today tab — matches the Live tab's
+   written-line treatment (Cameras.tsx's emptyStateStyle) rather than framing
+   an empty box. */
+.broadsheet-root .cam-note {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--ink-muted);
+  text-align: center;
+  padding: 16px 56px;
+}
