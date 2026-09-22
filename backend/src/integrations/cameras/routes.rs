@@ -87,7 +87,16 @@ pub async fn snapshot(
     }
 }
 
-/// Proxy a clip mp4, forwarding the browser's Range header so <video> can seek.
+/// Proxy a clip mp4, streaming Frigate's response straight through instead of
+/// buffering the whole file first. Frigate's clips are faststart MP4s (moov
+/// atom up front), so the `<video>` can begin playing as the bytes arrive
+/// rather than waiting for the entire download.
+///
+/// Frigate does not support Range on `clip.mp4` — it answers `200`, never
+/// `206` — so we relay `Accept-Ranges`/`Content-Range` only if it ever does,
+/// and otherwise the browser progressively downloads and plays the full clip.
+/// The inbound Range header is still forwarded so a future range-capable
+/// Frigate would just work.
 pub async fn clip(
     State(pool): State<SqlitePool>,
     headers: HeaderMap,
@@ -106,22 +115,20 @@ pub async fn clip(
 
     let status =
         StatusCode::from_u16(upstream.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
-    // Carry the headers a seeking <video> needs.
     let mut out = Response::builder().status(status);
+    // Relay only what upstream actually provides — including a Content-Range /
+    // Accept-Ranges pair if Frigate ever answers a range, but never claiming
+    // range support it doesn't have.
     for name in [
         header::CONTENT_TYPE,
-        header::CONTENT_RANGE,
         header::CONTENT_LENGTH,
+        header::CONTENT_RANGE,
+        header::ACCEPT_RANGES,
     ] {
         if let Some(v) = upstream.headers().get(&name) {
             out = out.header(name, v);
         }
     }
-    out = out.header(header::ACCEPT_RANGES, "bytes");
-    let bytes = upstream
-        .bytes()
-        .await
-        .map_err(|e| AppError::Internal(format!("Frigate clip body failed: {e}")))?;
-    out.body(Body::from(bytes))
+    out.body(Body::from_stream(upstream.bytes_stream()))
         .map_err(|e| AppError::Internal(format!("clip response build failed: {e}")))
 }
