@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.1](https://github.com/bbaldino/family-dashboard/compare/v0.13.0...v0.13.1) (2026-09-22)
+
+
+### Performance Improvements
+
+* **cameras:** stream doorbell clips instead of buffering the whole file ([d9d1d64](https://github.com/bbaldino/family-dashboard/commit/d9d1d6492cacd50a09ebcb4801f536f42ba43c60))
+
 ## [0.13.0](https://github.com/bbaldino/family-dashboard/compare/v0.12.0...v0.13.0) (2026-09-22)
 
 
