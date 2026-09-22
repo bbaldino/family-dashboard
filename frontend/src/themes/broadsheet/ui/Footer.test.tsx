@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { Footer } from './Footer'
 
@@ -80,6 +80,41 @@ describe('Footer', () => {
       </MemoryRouter>,
     )
     expect(screen.getByText(/Kitchen Radio/)).toBeInTheDocument()
+  })
+
+  /** The circle used to be a static status glyph, so tapping it did
+   *  nothing. It now toggles playback through the same provider actions
+   *  NowSpinning uses. */
+  it.each([
+    { isPlaying: true, label: 'Pause', action: 'pause' },
+    { isPlaying: false, label: 'Play', action: 'resume' },
+  ] as const)('the $label button calls $action', ({ isPlaying, label, action }) => {
+    const pause = vi.fn()
+    const resume = vi.fn()
+    useMusic.mockReturnValue({
+      state: {
+        queues: [],
+        activeQueue: {
+          queueId: 'kitchen',
+          displayName: 'Kitchen',
+          state: isPlaying ? 'playing' : 'paused',
+          currentItem: null,
+          volumeLevel: 50,
+        },
+      },
+      isPlaying,
+      pause,
+      resume,
+    })
+    render(
+      <MemoryRouter>
+        <Footer />
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: label }))
+    expect({ pause, resume }[action]).toHaveBeenCalledOnce()
+    expect({ pause, resume }[action === 'pause' ? 'resume' : 'pause']).not.toHaveBeenCalled()
   })
 
   /** The admin page had no route into it from broadsheet at all — the only way
