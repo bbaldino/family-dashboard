@@ -117,17 +117,9 @@
 }
 
 .broadsheet-root .visit-list li {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  padding: 7px;
   border-radius: 3px;
-  cursor: pointer;
   border: 1px solid transparent;
-}
-
-.broadsheet-root .visit-list li:hover {
-  background: rgba(180, 58, 26, 0.06);
+  margin-bottom: 2px;
 }
 
 .broadsheet-root .visit-list li.on {
@@ -135,7 +127,26 @@
   background: rgba(180, 58, 26, 0.07);
 }
 
-.broadsheet-root .visit-list li img {
+.broadsheet-root .visit-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 7px;
+  border-radius: 3px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  font: inherit;
+  color: inherit;
+}
+
+.broadsheet-root .visit-row:hover {
+  background: rgba(180, 58, 26, 0.06);
+}
+
+.broadsheet-root .visit-row img {
   width: 64px;
   height: 48px;
   flex: 0 0 auto;
@@ -143,6 +154,87 @@
   object-fit: cover;
   background: var(--rule-faint);
   border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+/* A visit's individual clips, revealed when it's expanded — each a selectable
+   thumbnail with its own timestamp. Buttons (not list items) so they're
+   keyboard-reachable and distinct from the visit rows. */
+.broadsheet-root .clip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 2px 7px 8px 81px;
+}
+
+.broadsheet-root .clip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  color: var(--ink-muted);
+}
+
+.broadsheet-root .clip:hover {
+  background: rgba(180, 58, 26, 0.06);
+}
+
+.broadsheet-root .clip.on {
+  border-color: var(--rust);
+  color: var(--rust);
+}
+
+.broadsheet-root .clip img {
+  width: 56px;
+  height: 42px;
+  border-radius: 2px;
+  object-fit: cover;
+  background: var(--rule-faint);
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+
+.broadsheet-root .clip .clip-t {
+  font-size: 8.5px;
+  letter-spacing: 0.03em;
+}
+
+/* The player's resting state before any visit is picked — a framed panel, not
+   a black <video>, matching the video area's size and the ink-on-cream voice. */
+.broadsheet-root .player-placeholder {
+  flex: 1;
+  min-height: 0;
+  aspect-ratio: 16 / 9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--ink);
+  border-radius: 3px;
+  background: var(--paper);
+  background-image: radial-gradient(var(--rule-faint) 1px, transparent 1.4px);
+  background-size: 5px 5px;
+  color: var(--ink-muted);
+}
+
+.broadsheet-root .player-placeholder .ph-kicker {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--rust);
+}
+
+.broadsheet-root .player-placeholder .ph-line {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 18px;
+  color: var(--ink-muted);
 }
 
 .broadsheet-root .visit-list .info .t {

@@ -18,7 +18,7 @@ describe('useDoorbellToday', () => {
                 start: 5000,
                 end: 5002,
                 count: 1,
-                clip_event_ids: ['c'],
+                clips: [{ event_id: 'c', start: 5000 }],
                 snapshot_event_id: 'c',
                 duration_s: 2,
               },
@@ -30,7 +30,7 @@ describe('useDoorbellToday', () => {
     await waitFor(() => expect(result.current.loading).toBe(false))
     expect(result.current.error).toBe(false)
     expect(result.current.visits[0].snapshotEventId).toBe('c')
-    expect(result.current.visits[0].clipEventIds).toEqual(['c'])
+    expect(result.current.visits[0].clips).toEqual([{ eventId: 'c', start: 5000 }])
   })
 
   it('sets error when the request fails', async () => {

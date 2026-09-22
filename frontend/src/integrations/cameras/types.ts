@@ -1,9 +1,13 @@
+export type Clip = {
+  eventId: string
+  start: number
+}
 export type Visit = {
   id: string
   start: number
   end: number
   count: number
-  clipEventIds: string[]
+  clips: Clip[]
   snapshotEventId: string
   durationS: number
 }
