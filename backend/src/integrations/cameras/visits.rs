@@ -117,6 +117,19 @@ pub fn group_visits(events: &[FrigateEvent], gap_secs: i64, min_score: f64) -> V
     visits
 }
 
+// The "today" boundary is applied upstream via the Frigate query's `after=`
+// (see routes::doorbell_today), so this only parses and groups the payload.
+pub fn build_today_response(
+    raw_events: &serde_json::Value,
+    gap_secs: i64,
+    min_score: f64,
+) -> TodayResponse {
+    let events = parse_events(raw_events);
+    TodayResponse {
+        visits: group_visits(&events, gap_secs, min_score),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -155,6 +168,19 @@ mod tests {
         let visits = group_visits(&evs, 8 * 60, 0.6);
         assert_eq!(visits.len(), 1);
         assert_eq!(visits[0].clip_event_ids, vec!["b"]);
+    }
+
+    #[test]
+    fn build_today_response_shapes_frigate_payload() {
+        let raw = serde_json::json!([
+            { "id": "c", "start_time": 5000.0, "end_time": 5002.0, "data": { "top_score": 0.95 } },
+            { "id": "a", "start_time": 1000.0, "end_time": 1035.0, "data": { "top_score": 0.9 } },
+            { "id": "b", "start_time": 1065.0, "end_time": 1100.0, "data": { "top_score": 0.8 } }
+        ]);
+        let resp = build_today_response(&raw, 8 * 60, 0.6);
+        assert_eq!(resp.visits.len(), 2);
+        assert_eq!(resp.visits[0].id, "c");
+        assert_eq!(resp.visits[1].count, 2);
     }
 
     #[test]
