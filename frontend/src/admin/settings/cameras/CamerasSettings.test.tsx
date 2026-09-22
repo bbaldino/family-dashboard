@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { DoorbellSettings } from './DoorbellSettings'
+import { CamerasSettings } from './CamerasSettings'
 import { CONFIG_QUERY_KEY, useAllConfig } from '@/platform'
 
 /**
@@ -22,10 +22,10 @@ function stubConfig(config: Record<string, string>) {
  *  has actually reached the components rather than just the cache. */
 function Probe() {
   const { data } = useAllConfig()
-  return <div data-testid="probe">{data?.['doorbell.camera_url'] ?? ''}</div>
+  return <div data-testid="probe">{data?.['cameras.doorbell_live_url'] ?? ''}</div>
 }
 
-describe('DoorbellSettings', () => {
+describe('CamerasSettings', () => {
   beforeEach(() => {
     // jsdom has no Permissions API; the mic-permission probe runs on mount.
     Object.defineProperty(navigator, 'permissions', {
@@ -39,7 +39,7 @@ describe('DoorbellSettings', () => {
   })
 
   it('does not overwrite an in-progress edit when the config query refreshes', async () => {
-    const fetchMock = stubConfig({ 'doorbell.camera_url': 'http://doorbell.local/view' })
+    const fetchMock = stubConfig({ 'cameras.doorbell_live_url': 'http://doorbell.local/view' })
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     render(
       <QueryClientProvider client={client}>
@@ -49,7 +49,7 @@ describe('DoorbellSettings', () => {
          *  reached any component at all — and would go on passing against a
          *  form that re-seeded itself on every poll. */}
         <Probe />
-        <DoorbellSettings />
+        <CamerasSettings />
       </QueryClientProvider>,
     )
     await screen.findByDisplayValue('http://doorbell.local/view')
@@ -62,7 +62,8 @@ describe('DoorbellSettings', () => {
     // reach into a form someone is in the middle of filling in.
     fetchMock.mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ 'doorbell.camera_url': 'http://someone-else-changed-it' }),
+      json: () =>
+        Promise.resolve({ 'cameras.doorbell_live_url': 'http://someone-else-changed-it' }),
     })
     await act(async () => {
       await client.invalidateQueries({ queryKey: CONFIG_QUERY_KEY })

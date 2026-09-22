@@ -1,11 +1,11 @@
 import { useMemo, useRef, useState } from 'react'
 import { useIntegrationConfig } from '@/platform'
 import {
-  doorbellIntegration,
+  camerasIntegration,
   useDoorbellTheme,
   buildDoorbellCss,
   BROADSHEET_LAYOUT,
-} from '@/integrations/doorbell'
+} from '@/integrations/cameras'
 import { resolveBroadsheetDoorbellVars } from '@/themes/broadsheet/ui/broadsheet-vars'
 import { MastheadFrame } from '@/themes/broadsheet/ui/MastheadFrame'
 import { mastheadKickerStyle, mastheadNumeralStyle } from '@/themes/broadsheet/ui/masthead-styles'
@@ -82,7 +82,7 @@ const emptyStateStyle = {
  * camera feed. Mock: `docs/superpowers/designs/broadsheet/doorbell.jsx`.
  *
  * The mock shows considerably more than the data supports — camera tabs
- * (config models exactly one `camera_url`), quick spoken replies and
+ * (config models exactly one `doorbell_live_url`), quick spoken replies and
  * two-way audio (no TTS or audio-out path exists), stream stats, and a
  * "Recording" status pill (not modelled anywhere). All of that is left out
  * entirely rather than built disabled or stubbed — see the design brief's
@@ -97,7 +97,7 @@ const emptyStateStyle = {
  * that would carry live data here ("last motion", per camera) has no source:
  * see the comment on `left` below.
  *
- * Unlike `useWebRtcStream` (`src/integrations/doorbell/useWebRtcStream.ts`), this
+ * Unlike `useWebRtcStream` (`src/integrations/cameras/doorbell/useWebRtcStream.ts`), this
  * doesn't hand-roll a WebRTC peer connection — the configured URL is
  * already a complete WebRTC *page* (go2rtc's own player), so an iframe is
  * the whole client, exactly matching grid's approach.
@@ -105,19 +105,19 @@ const emptyStateStyle = {
 export function Cameras() {
   const now = useNow()
   const [tab, setTab] = useState<CamerasTab>('live')
-  const config = useIntegrationConfig(doorbellIntegration)
+  const config = useIntegrationConfig(camerasIntegration)
 
   // `useIntegrationConfig` returns null both while the first fetch is still
   // in flight and when it fails outright — the same schema default grid
   // falls back to on a fetch failure (`CamerasBoard.tsx`'s `.catch`) covers
   // both: the brief window before the real config arrives resolves to the
   // household's actual default URL rather than flashing the "not
-  // configured" message first. A *blanked* `camera_url` is different: that
+  // configured" message first. A *blanked* `doorbell_live_url` is different: that
   // only ever comes from a successful fetch (the field parses to `''`, a
   // defined value zod's `.default()` does not override), so it falls
   // through to the written line below instead.
-  const defaultCameraUrl = doorbellIntegration.schema.parse({}).camera_url
-  const cameraUrl = config ? config.camera_url || null : defaultCameraUrl
+  const defaultCameraUrl = camerasIntegration.schema.parse({}).doorbell_live_url
+  const cameraUrl = config ? config.doorbell_live_url || null : defaultCameraUrl
 
   const iframeRef = useRef<HTMLIFrameElement>(null)
 

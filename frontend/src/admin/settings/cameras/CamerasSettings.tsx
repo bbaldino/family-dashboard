@@ -3,7 +3,7 @@ import { Play } from 'lucide-react'
 import { useAllConfig, useSaveConfig } from '@/platform'
 import { Button } from '@/ui/Button'
 import { ALARM_SOUNDS, getAlarmById } from '@/lib/alarmSounds'
-import { doorbellIntegration } from '@/integrations/doorbell'
+import { camerasIntegration } from '@/integrations/cameras'
 
 /**
  * Prefilled once from the shared `/api/config` query, then left alone — same
@@ -12,34 +12,36 @@ import { doorbellIntegration } from '@/integrations/doorbell'
  * initialisers read it once at mount and ignore every later value, so a poll
  * tick can't overwrite an in-progress edit.
  */
-export function DoorbellSettings() {
+export function CamerasSettings() {
   const { data, isPending } = useAllConfig()
 
   if (isPending) {
     return <div className="text-text-muted text-sm">Loading...</div>
   }
 
-  return <DoorbellSettingsForm config={data} />
+  return <CamerasSettingsForm config={data} />
 }
 
-function DoorbellSettingsForm({ config }: { config: Record<string, string> | undefined }) {
-  const defaults = doorbellIntegration.schema.parse({})
-  const g = (k: string, d: string) => config?.[`doorbell.${k}`] ?? d
-  const [cameraUrl, setCameraUrl] = useState(() => g('camera_url', defaults.camera_url ?? ''))
+function CamerasSettingsForm({ config }: { config: Record<string, string> | undefined }) {
+  const defaults = camerasIntegration.schema.parse({})
+  const g = (k: string, d: string) => config?.[`cameras.${k}`] ?? d
+  const [cameraUrl, setCameraUrl] = useState(() =>
+    g('doorbell_live_url', defaults.doorbell_live_url ?? ''),
+  )
   const [pressSensor, setPressSensor] = useState(() =>
-    g('press_sensor_entity', defaults.press_sensor_entity),
+    g('doorbell_press_sensor', defaults.doorbell_press_sensor),
   )
   const [screensaverEntity, setScreensaverEntity] = useState(() =>
-    g('screensaver_entity', defaults.screensaver_entity),
+    g('doorbell_screensaver_entity', defaults.doorbell_screensaver_entity),
   )
   const [autoDismissSeconds, setAutoDismissSeconds] = useState(() =>
-    g('auto_dismiss_seconds', String(defaults.auto_dismiss_seconds)),
+    g('doorbell_auto_dismiss_seconds', String(defaults.doorbell_auto_dismiss_seconds)),
   )
   const [chimeEnabled, setChimeEnabled] = useState(
-    () => g('chime_enabled', String(defaults.chime_enabled)) === 'true',
+    () => g('doorbell_chime_enabled', String(defaults.doorbell_chime_enabled)) === 'true',
   )
   const [chimeSoundId, setChimeSoundId] = useState(() =>
-    g('chime_sound_id', defaults.chime_sound_id),
+    g('doorbell_chime_sound_id', defaults.doorbell_chime_sound_id),
   )
   const [status, setStatus] = useState<{
     kind: 'ok' | 'error'
@@ -67,12 +69,12 @@ function DoorbellSettingsForm({ config }: { config: Record<string, string> | und
       // refetches once for the six of them rather than six times — which is
       // what makes the camera and the ring popup pick the change up at once.
       await saveConfig.mutateAsync([
-        { key: 'doorbell.camera_url', value: cameraUrl },
-        { key: 'doorbell.press_sensor_entity', value: pressSensor },
-        { key: 'doorbell.screensaver_entity', value: screensaverEntity },
-        { key: 'doorbell.auto_dismiss_seconds', value: autoDismissSeconds },
-        { key: 'doorbell.chime_enabled', value: String(chimeEnabled) },
-        { key: 'doorbell.chime_sound_id', value: chimeSoundId },
+        { key: 'cameras.doorbell_live_url', value: cameraUrl },
+        { key: 'cameras.doorbell_press_sensor', value: pressSensor },
+        { key: 'cameras.doorbell_screensaver_entity', value: screensaverEntity },
+        { key: 'cameras.doorbell_auto_dismiss_seconds', value: autoDismissSeconds },
+        { key: 'cameras.doorbell_chime_enabled', value: String(chimeEnabled) },
+        { key: 'cameras.doorbell_chime_sound_id', value: chimeSoundId },
       ])
       setStatus({ kind: 'ok', text: 'Saved!' })
     } catch (err) {

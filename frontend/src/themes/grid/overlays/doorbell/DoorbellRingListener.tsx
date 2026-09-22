@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAllConfig } from '@/platform'
 import { useHaEntity } from '@/hooks/useHaEntity'
 import { getAlarmById } from '@/lib/alarmSounds'
-import { doorbellIntegration, detectRisingEdge } from '@/integrations/doorbell'
+import { camerasIntegration, detectRisingEdge } from '@/integrations/cameras'
 import { DoorbellRingModal } from './DoorbellRingModal'
 
 interface DoorbellRingConfig {
@@ -21,7 +21,7 @@ interface DoorbellRingConfig {
  *
  * The coercion stays here rather than moving to `useIntegrationConfig`
  * because that hook returns null for the *whole* integration if any single
- * `doorbell.*` value fails to parse, and a null config here means no
+ * `cameras.*` value fails to parse, and a null config here means no
  * doorbell popup at all — a bad `chime_sound_id` shouldn't stop the door
  * being answered.
  *
@@ -33,16 +33,22 @@ function useDoorbellConfig(): DoorbellRingConfig | null {
 
   return useMemo(() => {
     if (isPending) return null
-    const defaults = doorbellIntegration.schema.parse({})
-    const get = (k: string, d: string) => data?.[`doorbell.${k}`] ?? d
-    const seconds = parseInt(get('auto_dismiss_seconds', String(defaults.auto_dismiss_seconds)), 10)
+    const defaults = camerasIntegration.schema.parse({})
+    const get = (k: string, d: string) => data?.[`cameras.${k}`] ?? d
+    const seconds = parseInt(
+      get('doorbell_auto_dismiss_seconds', String(defaults.doorbell_auto_dismiss_seconds)),
+      10,
+    )
     return {
-      press_sensor_entity: get('press_sensor_entity', defaults.press_sensor_entity),
-      screensaver_entity: get('screensaver_entity', defaults.screensaver_entity),
-      auto_dismiss_seconds: Number.isFinite(seconds) ? seconds : defaults.auto_dismiss_seconds,
-      chime_enabled: get('chime_enabled', String(defaults.chime_enabled)) === 'true',
-      chime_sound_id: get('chime_sound_id', defaults.chime_sound_id),
-      camera_url: get('camera_url', defaults.camera_url ?? ''),
+      press_sensor_entity: get('doorbell_press_sensor', defaults.doorbell_press_sensor),
+      screensaver_entity: get('doorbell_screensaver_entity', defaults.doorbell_screensaver_entity),
+      auto_dismiss_seconds: Number.isFinite(seconds)
+        ? seconds
+        : defaults.doorbell_auto_dismiss_seconds,
+      chime_enabled:
+        get('doorbell_chime_enabled', String(defaults.doorbell_chime_enabled)) === 'true',
+      chime_sound_id: get('doorbell_chime_sound_id', defaults.doorbell_chime_sound_id),
+      camera_url: get('doorbell_live_url', defaults.doorbell_live_url ?? ''),
     }
   }, [data, isPending])
 }

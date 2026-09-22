@@ -44,7 +44,7 @@ export const CONFIG_QUERY_KEY = ['config'] as const
  *
  * Both of those read this
  * query's raw data and coerce per key rather than going through
- * `useIntegrationConfig`, deliberately: one unparseable `doorbell.*` value
+ * `useIntegrationConfig`, deliberately: one unparseable `cameras.*` value
  * would otherwise take the whole integration's config to `null` (see that
  * hook), blanking the camera and the ring popup over an unrelated key.
  *

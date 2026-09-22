@@ -1,5 +1,5 @@
 import { useIntegrationConfig } from '@/platform'
-import { doorbellIntegration, useDoorbellRing } from '@/integrations/doorbell'
+import { camerasIntegration, useDoorbellRing } from '@/integrations/cameras'
 import { DoorbellRingModal } from './DoorbellRingModal'
 
 /**
@@ -11,7 +11,7 @@ import { DoorbellRingModal } from './DoorbellRingModal'
  * untouched.
  */
 export function DoorbellRingListener() {
-  const config = useIntegrationConfig(doorbellIntegration)
+  const config = useIntegrationConfig(camerasIntegration)
 
   if (!config) return null
   return <ActiveListener config={config} />
@@ -20,18 +20,22 @@ export function DoorbellRingListener() {
 function ActiveListener({
   config,
 }: {
-  config: ReturnType<typeof doorbellIntegration.schema.parse>
+  config: ReturnType<typeof camerasIntegration.schema.parse>
 }) {
   const { isRinging, dismiss } = useDoorbellRing({
-    press_sensor_entity: config.press_sensor_entity,
-    screensaver_entity: config.screensaver_entity,
-    auto_dismiss_seconds: config.auto_dismiss_seconds,
-    chime_enabled: config.chime_enabled,
-    chime_sound_id: config.chime_sound_id,
-    camera_url: config.camera_url ?? '',
+    press_sensor_entity: config.doorbell_press_sensor,
+    screensaver_entity: config.doorbell_screensaver_entity,
+    auto_dismiss_seconds: config.doorbell_auto_dismiss_seconds,
+    chime_enabled: config.doorbell_chime_enabled,
+    chime_sound_id: config.doorbell_chime_sound_id,
+    camera_url: config.doorbell_live_url ?? '',
   })
 
   return (
-    <DoorbellRingModal isOpen={isRinging} cameraUrl={config.camera_url || null} onClose={dismiss} />
+    <DoorbellRingModal
+      isOpen={isRinging}
+      cameraUrl={config.doorbell_live_url || null}
+      onClose={dismiss}
+    />
   )
 }
