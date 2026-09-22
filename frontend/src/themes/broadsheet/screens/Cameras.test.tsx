@@ -72,7 +72,7 @@ describe('broadsheet Cameras (the Watch Room)', () => {
     render(<Cameras />)
     expect(screen.queryByTestId('cameras-feed-frame')).not.toBeInTheDocument()
     expect(screen.getByText(/No picture from the front step/)).toBeInTheDocument()
-    expect(screen.getByText(/Settings → Doorbell Camera/)).toBeInTheDocument()
+    expect(screen.getByText(/Settings → Cameras/)).toBeInTheDocument()
   })
 
   it('shows the live clock in the masthead right cell', () => {

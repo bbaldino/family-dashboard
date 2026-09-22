@@ -21,7 +21,7 @@ export function CamerasBoard() {
   if (!cameraUrl) {
     return (
       <div className="h-full flex items-center justify-center text-text-muted text-sm">
-        Configure camera URL in Settings → Doorbell Camera
+        Configure camera URL in Settings → Cameras
       </div>
     )
   }

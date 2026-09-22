@@ -1,6 +1,17 @@
 import { z } from 'zod'
 import { defineIntegration } from '@/platform'
 
+/**
+ * Parse `"true"`/`"false"` as the config table (and `CamerasSettings`' own
+ * `String(chimeEnabled)`) writes them.
+ *
+ * `z.coerce.boolean()` is emphatically **not** the tool for this: it runs
+ * JavaScript's `Boolean()`, under which the string `"false"` is truthy — so a
+ * chime explicitly switched off would read as on. A blank value falls through
+ * to `undefined` so the schema default applies, matching `driving-time`'s
+ * cleared-field handling. Anything else is left alone for `z.boolean()` to
+ * reject loudly rather than guessed at.
+ */
 function parseStoredBoolean(value: unknown): unknown {
   if (typeof value !== 'string') return value
   const normalized = value.trim().toLowerCase()
@@ -25,6 +36,14 @@ export const camerasIntegration = defineIntegration({
       .default('https://cast.baldino.me/webrtc-doorbell.html'),
     doorbell_press_sensor: z.string().default('binary_sensor.frontdoordoorbell_visitor'),
     doorbell_screensaver_entity: z.string().default('switch.kitchen_kitchen_dashboard_screensaver'),
+    // Every value in the config table is TEXT, and `CamerasSettings` writes
+    // these two as `"60"` and `"true"` — so a plain `z.number()`/`z.boolean()`
+    // here fails to parse the moment that form is ever saved, and
+    // `useIntegrationConfig` returns `null` for the *whole* integration on any
+    // parse failure. The live camera and the ring popup would both go dead.
+    // Same shape as `driving-time`'s `buffer_minutes`, blank-string case
+    // included: `.default()` sits on the inner schema, because `ZodDefault`
+    // only substitutes for `undefined` at the node it is attached to.
     doorbell_auto_dismiss_seconds: z.preprocess(
       (v) => (v === '' ? undefined : v),
       z.coerce.number().int().min(0).default(60),

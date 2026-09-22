@@ -247,7 +247,7 @@ export function Cameras() {
           ) : (
             <div className="flex-1 min-h-0 flex items-center justify-center">
               <p style={emptyStateStyle}>
-                No picture from the front step. Add a camera URL in Settings → Doorbell Camera.
+                No picture from the front step. Add a camera URL in Settings → Cameras.
               </p>
             </div>
           )}
