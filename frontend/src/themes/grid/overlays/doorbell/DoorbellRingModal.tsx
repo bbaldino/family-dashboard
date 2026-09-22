@@ -63,7 +63,7 @@ export function DoorbellRingModal({ isOpen, cameraUrl, onClose }: DoorbellRingMo
             />
           ) : (
             <div className="w-full h-full rounded-2xl shadow-2xl bg-black flex items-center justify-center text-white/60 text-sm">
-              Configure camera URL in Settings → Doorbell Camera
+              Configure camera URL in Settings → Cameras
             </div>
           )}
         </div>

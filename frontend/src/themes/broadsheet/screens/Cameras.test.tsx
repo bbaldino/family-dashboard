@@ -16,7 +16,7 @@ describe('broadsheet Cameras (the Watch Room)', () => {
   })
 
   it('fills the design canvas exactly', () => {
-    useIntegrationConfig.mockReturnValue({ camera_url: 'https://example.com/cam' })
+    useIntegrationConfig.mockReturnValue({ doorbell_live_url: 'https://example.com/cam' })
     render(<Cameras />)
     const root = screen.getByTestId('broadsheet-cameras')
     expect(root.className).toContain('w-[1600px]')
@@ -33,7 +33,7 @@ describe('broadsheet Cameras (the Watch Room)', () => {
    * the retired labels still sitting beside it.
    */
   it('names the page in the centre, with no page-name ear', () => {
-    useIntegrationConfig.mockReturnValue({ camera_url: 'https://example.com/cam' })
+    useIntegrationConfig.mockReturnValue({ doorbell_live_url: 'https://example.com/cam' })
     render(<Cameras />)
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Cameras')
     expect(screen.queryByText('The Watch Room')).not.toBeInTheDocument()
@@ -42,14 +42,14 @@ describe('broadsheet Cameras (the Watch Room)', () => {
 
   it('prints the date once, in the centre kicker rather than twice', () => {
     // The right ear's clock used to repeat the date directly opposite it.
-    useIntegrationConfig.mockReturnValue({ camera_url: 'https://example.com/cam' })
+    useIntegrationConfig.mockReturnValue({ doorbell_live_url: 'https://example.com/cam' })
     render(<Cameras />)
     const dated = screen.getAllByText(/^[A-Z]{3}, [A-Z]{3} \d+$/)
     expect(dated).toHaveLength(1)
   })
 
   it('renders the configured camera URL in a framed iframe', () => {
-    useIntegrationConfig.mockReturnValue({ camera_url: 'https://example.com/cam' })
+    useIntegrationConfig.mockReturnValue({ doorbell_live_url: 'https://example.com/cam' })
     render(<Cameras />)
     const frame = screen.getByTitle('Front step camera') as HTMLIFrameElement
     expect(frame).toBeInTheDocument()
@@ -67,16 +67,16 @@ describe('broadsheet Cameras (the Watch Room)', () => {
     expect(frame.src).toBe(`${DEFAULT_CAMERA_URL}`)
   })
 
-  it('shows a written line instead of an empty frame when camera_url is blanked', () => {
-    useIntegrationConfig.mockReturnValue({ camera_url: '' })
+  it('shows a written line instead of an empty frame when doorbell_live_url is blanked', () => {
+    useIntegrationConfig.mockReturnValue({ doorbell_live_url: '' })
     render(<Cameras />)
     expect(screen.queryByTestId('cameras-feed-frame')).not.toBeInTheDocument()
     expect(screen.getByText(/No picture from the front step/)).toBeInTheDocument()
-    expect(screen.getByText(/Settings → Doorbell Camera/)).toBeInTheDocument()
+    expect(screen.getByText(/Settings → Cameras/)).toBeInTheDocument()
   })
 
   it('shows the live clock in the masthead right cell', () => {
-    useIntegrationConfig.mockReturnValue({ camera_url: 'https://example.com/cam' })
+    useIntegrationConfig.mockReturnValue({ doorbell_live_url: 'https://example.com/cam' })
     render(<Cameras />)
     expect(screen.getByText('Now')).toBeInTheDocument()
   })
@@ -91,7 +91,7 @@ describe('broadsheet Cameras (the Watch Room)', () => {
     const { rerender } = render(<Cameras />)
     const before = screen.getByTitle('Front step camera')
 
-    useIntegrationConfig.mockReturnValue({ camera_url: 'https://example.com/other' })
+    useIntegrationConfig.mockReturnValue({ doorbell_live_url: 'https://example.com/other' })
     rerender(<Cameras />)
     const after = screen.getByTitle('Front step camera')
 
@@ -100,7 +100,7 @@ describe('broadsheet Cameras (the Watch Room)', () => {
   })
 
   it('defaults to the live tab and switches to Today', () => {
-    useIntegrationConfig.mockReturnValue({ camera_url: 'https://example.com/cam' })
+    useIntegrationConfig.mockReturnValue({ doorbell_live_url: 'https://example.com/cam' })
     render(<Cameras />)
     // Live view present by default (assert on an element the live view already renders)
     expect(screen.getByTestId('cameras-feed-frame')).toBeInTheDocument()

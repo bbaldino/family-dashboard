@@ -2,7 +2,7 @@ import type { ComponentType } from 'react'
 import type { Integration } from '@/platform'
 import { choresIntegration } from '@/integrations/chores'
 import { countdownsIntegration } from '@/integrations/countdowns'
-import { doorbellIntegration } from '@/integrations/doorbell'
+import { camerasIntegration } from '@/integrations/cameras'
 import { healthIntegration } from '@/integrations/health'
 import { nutrisliceIntegration } from '@/integrations/nutrislice'
 import { weatherIntegration } from '@/integrations/weather'
@@ -19,7 +19,7 @@ import { SportsSettings } from '@/admin/settings/sports/SportsSettings'
 import { GoogleCalendarSettings } from '@/admin/settings/google-calendar/GoogleCalendarSettings'
 import { CountdownsSettings } from '@/admin/settings/countdowns/CountdownsSettings'
 import { ChoreAdmin } from '@/admin/ChoreAdmin'
-import { DoorbellSettings } from '@/admin/settings/doorbell/DoorbellSettings'
+import { CamerasSettings } from '@/admin/settings/cameras/CamerasSettings'
 import { MusicSettings } from '@/admin/settings/music/MusicSettings'
 import { ThemeAdmin } from '@/admin/settings/theme/ThemeAdmin'
 
@@ -42,7 +42,7 @@ import { ThemeAdmin } from '@/admin/settings/theme/ThemeAdmin'
 export const settingsEntries: Integration<any>[] = [
   choresIntegration,
   countdownsIntegration,
-  doorbellIntegration,
+  camerasIntegration,
   healthIntegration,
   nutrisliceIntegration,
   weatherIntegration,
@@ -68,7 +68,7 @@ export const settingsRegistry: Record<string, ComponentType<Record<string, never
   'google-calendar': GoogleCalendarSettings,
   countdowns: CountdownsSettings,
   chores: ChoreAdmin,
-  doorbell: DoorbellSettings,
+  cameras: CamerasSettings,
   music: MusicSettings,
   theme: ThemeAdmin,
 }

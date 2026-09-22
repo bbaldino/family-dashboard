@@ -3,7 +3,7 @@ import { Play } from 'lucide-react'
 import { useAllConfig, useSaveConfig } from '@/platform'
 import { Button } from '@/ui/Button'
 import { ALARM_SOUNDS, getAlarmById } from '@/lib/alarmSounds'
-import { doorbellIntegration } from '@/integrations/doorbell'
+import { camerasIntegration } from '@/integrations/cameras'
 
 /**
  * Prefilled once from the shared `/api/config` query, then left alone — same
@@ -12,35 +12,45 @@ import { doorbellIntegration } from '@/integrations/doorbell'
  * initialisers read it once at mount and ignore every later value, so a poll
  * tick can't overwrite an in-progress edit.
  */
-export function DoorbellSettings() {
+export function CamerasSettings() {
   const { data, isPending } = useAllConfig()
 
   if (isPending) {
     return <div className="text-text-muted text-sm">Loading...</div>
   }
 
-  return <DoorbellSettingsForm config={data} />
+  return <CamerasSettingsForm config={data} />
 }
 
-function DoorbellSettingsForm({ config }: { config: Record<string, string> | undefined }) {
-  const defaults = doorbellIntegration.schema.parse({})
-  const g = (k: string, d: string) => config?.[`doorbell.${k}`] ?? d
-  const [cameraUrl, setCameraUrl] = useState(() => g('camera_url', defaults.camera_url ?? ''))
+function CamerasSettingsForm({ config }: { config: Record<string, string> | undefined }) {
+  const defaults = camerasIntegration.schema.parse({})
+  const g = (k: string, d: string) => config?.[`cameras.${k}`] ?? d
+  const [cameraUrl, setCameraUrl] = useState(() =>
+    g('doorbell_live_url', defaults.doorbell_live_url ?? ''),
+  )
   const [pressSensor, setPressSensor] = useState(() =>
-    g('press_sensor_entity', defaults.press_sensor_entity),
+    g('doorbell_press_sensor', defaults.doorbell_press_sensor),
   )
   const [screensaverEntity, setScreensaverEntity] = useState(() =>
-    g('screensaver_entity', defaults.screensaver_entity),
+    g('doorbell_screensaver_entity', defaults.doorbell_screensaver_entity),
   )
   const [autoDismissSeconds, setAutoDismissSeconds] = useState(() =>
-    g('auto_dismiss_seconds', String(defaults.auto_dismiss_seconds)),
+    g('doorbell_auto_dismiss_seconds', String(defaults.doorbell_auto_dismiss_seconds)),
   )
   const [chimeEnabled, setChimeEnabled] = useState(
-    () => g('chime_enabled', String(defaults.chime_enabled)) === 'true',
+    () => g('doorbell_chime_enabled', String(defaults.doorbell_chime_enabled)) === 'true',
   )
   const [chimeSoundId, setChimeSoundId] = useState(() =>
-    g('chime_sound_id', defaults.chime_sound_id),
+    g('doorbell_chime_sound_id', defaults.doorbell_chime_sound_id),
   )
+  // Written directly, not part of `camerasIntegration.schema` — a bad value
+  // here must not be able to fail the live camera's parse. See the "parse
+  // fate" comment in `integrations/cameras/config.ts`.
+  const [frigateUrl, setFrigateUrl] = useState(() => g('frigate_url', 'http://frigate:5000'))
+  const [frigateCamera, setFrigateCamera] = useState(() => g('doorbell_camera', 'doorbell'))
+  const [label, setLabel] = useState(() => g('label', 'person'))
+  const [minScore, setMinScore] = useState(() => g('min_score', '0.6'))
+  const [visitGap, setVisitGap] = useState(() => g('visit_gap_minutes', '8'))
   const [status, setStatus] = useState<{
     kind: 'ok' | 'error'
     text: string
@@ -67,12 +77,17 @@ function DoorbellSettingsForm({ config }: { config: Record<string, string> | und
       // refetches once for the six of them rather than six times — which is
       // what makes the camera and the ring popup pick the change up at once.
       await saveConfig.mutateAsync([
-        { key: 'doorbell.camera_url', value: cameraUrl },
-        { key: 'doorbell.press_sensor_entity', value: pressSensor },
-        { key: 'doorbell.screensaver_entity', value: screensaverEntity },
-        { key: 'doorbell.auto_dismiss_seconds', value: autoDismissSeconds },
-        { key: 'doorbell.chime_enabled', value: String(chimeEnabled) },
-        { key: 'doorbell.chime_sound_id', value: chimeSoundId },
+        { key: 'cameras.doorbell_live_url', value: cameraUrl },
+        { key: 'cameras.doorbell_press_sensor', value: pressSensor },
+        { key: 'cameras.doorbell_screensaver_entity', value: screensaverEntity },
+        { key: 'cameras.doorbell_auto_dismiss_seconds', value: autoDismissSeconds },
+        { key: 'cameras.doorbell_chime_enabled', value: String(chimeEnabled) },
+        { key: 'cameras.doorbell_chime_sound_id', value: chimeSoundId },
+        { key: 'cameras.frigate_url', value: frigateUrl },
+        { key: 'cameras.doorbell_camera', value: frigateCamera },
+        { key: 'cameras.label', value: label },
+        { key: 'cameras.min_score', value: minScore },
+        { key: 'cameras.visit_gap_minutes', value: visitGap },
       ])
       setStatus({ kind: 'ok', text: 'Saved!' })
     } catch (err) {
@@ -230,6 +245,82 @@ function DoorbellSettingsForm({ config }: { config: Record<string, string> | und
               </button>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-sm font-semibold text-text-primary mt-2 mb-1">
+            Doorbell — Recordings (Frigate)
+          </h3>
+          <p className="text-xs text-text-muted mb-3">
+            The Today tab reads recorded clips from Frigate.
+          </p>
+        </div>
+
+        <div>
+          <label htmlFor="frigate-url" className="text-xs text-text-muted block mb-1">
+            Frigate URL
+          </label>
+          <input
+            id="frigate-url"
+            type="text"
+            value={frigateUrl}
+            onChange={(e) => setFrigateUrl(e.target.value)}
+            className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="frigate-camera" className="text-xs text-text-muted block mb-1">
+            Frigate camera name
+          </label>
+          <input
+            id="frigate-camera"
+            type="text"
+            value={frigateCamera}
+            onChange={(e) => setFrigateCamera(e.target.value)}
+            className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="frigate-label" className="text-xs text-text-muted block mb-1">
+            Object label
+          </label>
+          <input
+            id="frigate-label"
+            type="text"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+            className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="frigate-min-score" className="text-xs text-text-muted block mb-1">
+            Min score
+          </label>
+          <input
+            id="frigate-min-score"
+            type="text"
+            value={minScore}
+            onChange={(e) => setMinScore(e.target.value)}
+            className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="frigate-visit-gap" className="text-xs text-text-muted block mb-1">
+            Visit gap (minutes)
+          </label>
+          <input
+            id="frigate-visit-gap"
+            type="text"
+            value={visitGap}
+            onChange={(e) => setVisitGap(e.target.value)}
+            className="w-full px-3 py-2 border border-border rounded-[var(--radius-button)] bg-bg-primary text-text-primary text-sm"
+          />
         </div>
       </div>
 

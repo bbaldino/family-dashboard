@@ -47,21 +47,21 @@ describe('DoorbellRingListener', () => {
   afterEach(() => vi.unstubAllGlobals())
 
   it('watches the configured press sensor', async () => {
-    stubConfig({ 'doorbell.press_sensor_entity': 'binary_sensor.side_door' })
+    stubConfig({ 'cameras.doorbell_press_sensor': 'binary_sensor.side_door' })
     renderListener(newClient())
 
     await waitFor(() => expect(watchedEntities()).toContain('binary_sensor.side_door'))
   })
 
   it('picks up a press sensor change with no remount', async () => {
-    const fetchMock = stubConfig({ 'doorbell.press_sensor_entity': 'binary_sensor.old' })
+    const fetchMock = stubConfig({ 'cameras.doorbell_press_sensor': 'binary_sensor.old' })
     const client = newClient()
     renderListener(client)
     await waitFor(() => expect(watchedEntities()).toContain('binary_sensor.old'))
 
     fetchMock.mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ 'doorbell.press_sensor_entity': 'binary_sensor.new' }),
+      json: () => Promise.resolve({ 'cameras.doorbell_press_sensor': 'binary_sensor.new' }),
     })
     await act(async () => {
       await client.invalidateQueries({ queryKey: CONFIG_QUERY_KEY })
@@ -71,16 +71,17 @@ describe('DoorbellRingListener', () => {
   })
 
   // The config table stores everything as a string, and the admin form writes
-  // `auto_dismiss_seconds` and `chime_enabled` as "45"/"false". Those two used
-  // to be unparseable (see `integrations/doorbell/config.test.ts`); this
-  // listener coerces them itself so that no single unreadable `doorbell.*`
-  // value can leave it rendering nothing and the doorbell silently dead.
+  // `doorbell_auto_dismiss_seconds` and `doorbell_chime_enabled` as
+  // "45"/"false". Those two used to be unparseable (see
+  // `integrations/cameras/config.test.ts`); this listener coerces them itself
+  // so that no single unreadable `cameras.*` value can leave it rendering
+  // nothing and the doorbell silently dead.
   it('stays active when the numeric and boolean keys are stored as strings', async () => {
     stubConfig({
-      'doorbell.press_sensor_entity': 'binary_sensor.side_door',
-      'doorbell.camera_url': 'https://cam.test/front',
-      'doorbell.auto_dismiss_seconds': '45',
-      'doorbell.chime_enabled': 'false',
+      'cameras.doorbell_press_sensor': 'binary_sensor.side_door',
+      'cameras.doorbell_live_url': 'https://cam.test/front',
+      'cameras.doorbell_auto_dismiss_seconds': '45',
+      'cameras.doorbell_chime_enabled': 'false',
     })
     renderListener(newClient())
 
@@ -93,7 +94,7 @@ describe('DoorbellRingListener', () => {
   })
 
   it('shares the one /api/config request rather than fetching its own', async () => {
-    const fetchMock = stubConfig({ 'doorbell.press_sensor_entity': 'binary_sensor.side_door' })
+    const fetchMock = stubConfig({ 'cameras.doorbell_press_sensor': 'binary_sensor.side_door' })
     const client = newClient()
     renderListener(client)
     renderListener(client)

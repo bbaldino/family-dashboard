@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useDoorbellTheme, buildDoorbellCss, BROADSHEET_RING_LAYOUT } from '@/integrations/doorbell'
+import { useDoorbellTheme, buildDoorbellCss, BROADSHEET_RING_LAYOUT } from '@/integrations/cameras'
 import { resolveBroadsheetDoorbellVars } from '@/themes/broadsheet/ui/broadsheet-vars'
 import { ROUTE_PATHS } from '@/shell/routes'
 
@@ -270,7 +270,7 @@ export function DoorbellRingModal({ isOpen, cameraUrl, onClose }: DoorbellRingMo
                     maxWidth: 420,
                   }}
                 >
-                  No picture from the front step. Add a camera URL in Settings → Doorbell Camera.
+                  No picture from the front step. Add a camera URL in Settings → Cameras.
                 </p>
               </div>
             )}
