@@ -20,30 +20,35 @@ const clipButtons = () => screen.getAllByRole('button').filter((b) => b.classNam
 afterEach(() => vi.unstubAllGlobals())
 
 describe('TodayRecordings', () => {
-  it('shows a placeholder until a visit is picked, then loads that visit’s clip without autoplay', async () => {
+  it('shows a placeholder until a visit is picked, then autoplays a single-clip visit', async () => {
     stub({ visits: [visit('a'), visit('b')] })
     render(<TodayRecordings />)
     await waitFor(() => expect(screen.getByTestId('player-placeholder')).toBeInTheDocument())
     expect(document.querySelector('video')).toBeNull()
 
-    fireEvent.click(screen.getAllByRole('button')[1]) // pick the 2nd visit
+    fireEvent.click(screen.getAllByRole('button')[1]) // pick the 2nd (single-clip) visit
     const video = document.querySelector('video') as HTMLVideoElement
     expect(video.getAttribute('src')).toContain('/api/cameras/clip/b')
-    expect(video.hasAttribute('autoplay')).toBe(false)
+    // A single-clip visit is the clip, so tapping it plays.
+    expect(video.hasAttribute('autoplay')).toBe(true)
     expect(screen.queryByTestId('player-placeholder')).not.toBeInTheDocument()
   })
 
-  it('expands a multi-clip visit and plays the clip you pick', async () => {
+  it('shows a multi-clip visit’s still, then autoplays the clip you pick', async () => {
     stub({ visits: [visit('m', ['m1', 'm2', 'm3'])] })
     render(<TodayRecordings />)
     await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(1))
 
-    fireEvent.click(screen.getAllByRole('button')[0]) // expand + load representative (m1)
-    expect(document.querySelector('video')?.getAttribute('src')).toContain('/api/cameras/clip/m1')
+    fireEvent.click(screen.getAllByRole('button')[0]) // expand + load representative (m1) as a still
+    let video = document.querySelector('video') as HTMLVideoElement
+    expect(video.getAttribute('src')).toContain('/api/cameras/clip/m1')
+    expect(video.hasAttribute('autoplay')).toBe(false)
     expect(clipButtons()).toHaveLength(3)
 
-    fireEvent.click(clipButtons()[2]) // pick clip #3
-    expect(document.querySelector('video')?.getAttribute('src')).toContain('/api/cameras/clip/m3')
+    fireEvent.click(clipButtons()[2]) // pick clip #3 -> plays
+    video = document.querySelector('video') as HTMLVideoElement
+    expect(video.getAttribute('src')).toContain('/api/cameras/clip/m3')
+    expect(video.hasAttribute('autoplay')).toBe(true)
   })
 
   it('shows the empty state when nobody has been by', async () => {
