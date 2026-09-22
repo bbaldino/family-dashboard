@@ -41,13 +41,21 @@ pub fn parse_events(raw: &serde_json::Value) -> Vec<FrigateEvent> {
         .unwrap_or_default()
 }
 
+/// One Frigate clip within a visit: its event id (for the snapshot/clip
+/// proxies) and its start time (so the UI can label the clip with a timestamp).
+#[derive(Debug, Clone, Serialize)]
+pub struct Clip {
+    pub event_id: String,
+    pub start: f64,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct Visit {
     pub id: String,
     pub start: f64,
     pub end: f64,
     pub count: usize,
-    pub clip_event_ids: Vec<String>,
+    pub clips: Vec<Clip>,
     pub snapshot_event_id: String,
     pub duration_s: i64,
 }
@@ -67,7 +75,7 @@ pub fn local_today_start(now: chrono::DateTime<chrono::Local>) -> i64 {
 
 /// Group events into visits: consecutive events whose gap <= `gap_secs` are one
 /// visit. Input may be any order; output is newest-visit-first, and each
-/// visit's `clip_event_ids` are chronological. Events below `min_score` drop.
+/// visit's `clips` are chronological. Events below `min_score` drop.
 pub fn group_visits(events: &[FrigateEvent], gap_secs: i64, min_score: f64) -> Vec<Visit> {
     let mut kept: Vec<&FrigateEvent> = events.iter().filter(|e| e.top_score >= min_score).collect();
     kept.sort_by(|a, b| a.start_time.total_cmp(&b.start_time));
@@ -79,7 +87,10 @@ pub fn group_visits(events: &[FrigateEvent], gap_secs: i64, min_score: f64) -> V
             Some(v) if (e.start_time - v.end) <= gap_secs as f64 => {
                 v.end = end.max(v.end);
                 v.count += 1;
-                v.clip_event_ids.push(e.id.clone());
+                v.clips.push(Clip {
+                    event_id: e.id.clone(),
+                    start: e.start_time,
+                });
                 // best-scoring event drives the snapshot; recomputed below.
             }
             _ => visits.push(Visit {
@@ -87,7 +98,10 @@ pub fn group_visits(events: &[FrigateEvent], gap_secs: i64, min_score: f64) -> V
                 start: e.start_time,
                 end,
                 count: 1,
-                clip_event_ids: vec![e.id.clone()],
+                clips: vec![Clip {
+                    event_id: e.id.clone(),
+                    start: e.start_time,
+                }],
                 snapshot_event_id: e.id.clone(),
                 // Set authoritatively (from the visit's final span) in the loop
                 // below, once all this visit's clips have been folded in.
@@ -107,11 +121,11 @@ pub fn group_visits(events: &[FrigateEvent], gap_secs: i64, min_score: f64) -> V
     for v in visits.iter_mut() {
         v.duration_s = (v.end - v.start).round() as i64;
         if let Some(best) = v
-            .clip_event_ids
+            .clips
             .iter()
-            .max_by(|a, b| score_of(a).total_cmp(&score_of(b)))
+            .max_by(|a, b| score_of(&a.event_id).total_cmp(&score_of(&b.event_id)))
         {
-            v.snapshot_event_id = best.clone();
+            v.snapshot_event_id = best.event_id.clone();
         }
     }
 
@@ -158,7 +172,17 @@ mod tests {
         // newest first
         assert_eq!(visits[0].id, "c");
         assert_eq!(visits[1].count, 2);
-        assert_eq!(visits[1].clip_event_ids, vec!["a", "b"]);
+        assert_eq!(
+            visits[1]
+                .clips
+                .iter()
+                .map(|c| c.event_id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["a", "b"]
+        );
+        // clips carry their start times, in chronological order
+        assert_eq!(visits[1].clips[0].start, 1000.0);
+        assert_eq!(visits[1].clips[1].start, 1065.0);
         // best (highest score) chosen for the snapshot
         assert_eq!(visits[1].snapshot_event_id, "a");
         assert_eq!(visits[1].duration_s, 100); // 1100 - 1000
@@ -169,7 +193,8 @@ mod tests {
         let evs = vec![ev("a", 1000.0, 1002.0, 0.4), ev("b", 1001.0, 1003.0, 0.95)];
         let visits = group_visits(&evs, 8 * 60, 0.6);
         assert_eq!(visits.len(), 1);
-        assert_eq!(visits[0].clip_event_ids, vec!["b"]);
+        assert_eq!(visits[0].clips.len(), 1);
+        assert_eq!(visits[0].clips[0].event_id, "b");
     }
 
     #[test]
