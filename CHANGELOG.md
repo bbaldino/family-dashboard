@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.11.0](https://github.com/bbaldino/family-dashboard/compare/v0.10.8...v0.11.0) (2026-09-22)
+
+
+### Features
+
+* **cameras:** /doorbell/today endpoint backed by Frigate ([404cb02](https://github.com/bbaldino/family-dashboard/commit/404cb026f05a54bcb67c6af04c6c0e9080d1cc37))
+* **cameras:** frontend hook + types for today's doorbell visits ([2ae88c6](https://github.com/bbaldino/family-dashboard/commit/2ae88c6307aadc1e6c916f5c32e88cc4641cef49))
+* **cameras:** Live/Today tabs on the cameras screen ([94bb069](https://github.com/bbaldino/family-dashboard/commit/94bb06998c45c01166908b19bcad6fe7f95789fc))
+* **cameras:** proxy Frigate snapshots and clips (Range) ([49a9483](https://github.com/bbaldino/family-dashboard/commit/49a9483994f30b11265a2111961538b80130b8df))
+* **cameras:** serve full-frame snapshot for player poster via ?full=1 ([fe16a4a](https://github.com/bbaldino/family-dashboard/commit/fe16a4aceb2683a06670881ff6476a30a2ed1b98))
+* **cameras:** Today recordings player + visit list ([9de175f](https://github.com/bbaldino/family-dashboard/commit/9de175f214e92178ebd6c51c71f8eddbe07d012f))
+* **cameras:** visit-grouping and today-boundary logic ([53be5c0](https://github.com/bbaldino/family-dashboard/commit/53be5c0bbf2c6deeec813377c4a0b0ffd9b8ba81))
+
+
+### Bug Fixes
+
+* **cameras:** drop redundant in-effect setState that failed lint ([d142862](https://github.com/bbaldino/family-dashboard/commit/d14286214c0c33ae557a53a67148c27380da0e98))
+* **cameras:** remount video per clip so auto-advance reloads the source ([a4605e3](https://github.com/bbaldino/family-dashboard/commit/a4605e3f485d1308c88384ef81658b4bb0dcfe05))
+
 ## [0.10.8](https://github.com/bbaldino/family-dashboard/compare/v0.10.7...v0.10.8) (2026-09-21)
 
 
