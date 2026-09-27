@@ -1,0 +1,97 @@
+import type { Game } from '@/integrations/sports'
+import { Kicker } from '@/themes/broadsheet/ui/Kicker'
+
+/** Games shown before the rest collapse to "+N more" — the live panel above
+ *  is dense, and this strip is a footnote to it, not a second lead. */
+const MAX_ALSO_TODAY_GAMES = 2
+
+const monoStyle = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: 11,
+  letterSpacing: '0.06em',
+} as const
+
+/** `ARI 20 · SF 29`, away first, as every other score line in the theme. */
+function scoreline(game: Game): string {
+  const side = (team: Game['home']) => `${team.abbreviation} ${team.score ?? '—'}`
+  return `${side(game.away)} · ${side(game.home)}`
+}
+
+/** A live game leads with its score and trails its clock; a final leads with
+ *  the result label (`Final/10` carries extra innings) the way `FinalReport`
+ *  heads its own strip. */
+function entryText(game: Game): string {
+  if (game.state === 'final') return `${game.periodLabel ?? 'Final'} · ${scoreline(game)}`
+  return game.periodLabel ? `${scoreline(game)} · ${game.periodLabel}` : scoreline(game)
+}
+
+/**
+ * The games a live game would otherwise hide: every other live game and
+ * every final in the backend's window, as compact entries beneath `LiveGame`.
+ *
+ * A live game takes the column, and until this strip it took it whole — a
+ * second live game, or one that had just finished, vanished from Home with no
+ * trace. The backend's sort (live first, then finals most recent first) is
+ * already the order wanted here, so it isn't re-derived.
+ *
+ * **One row, not a line per game.** Measured on the 1920×1080 canvas with a
+ * fully dense MLB panel above (matchup, three leaders a side, a scoring
+ * recap, three recent plays), a stacked list overran the column's foot and
+ * clipped its second line; the column is wide enough to carry both entries
+ * side by side.
+ *
+ * The league leads each entry: two games can share a city's abbreviation (the
+ * 49ers and the Giants are both `SF`), and the entry has no logo to tell them
+ * apart.
+ */
+export function AlsoToday({ games, featuredId }: { games: Game[]; featuredId: string }) {
+  const others = games.filter(
+    (g) => g.id !== featuredId && (g.state === 'live' || g.state === 'final'),
+  )
+  if (others.length === 0) return null
+
+  const visible = others.slice(0, MAX_ALSO_TODAY_GAMES)
+  const hiddenCount = others.length - visible.length
+
+  return (
+    <div
+      data-testid="also-today"
+      className="pt-2.5 mt-3 flex items-baseline gap-5 min-w-0"
+      style={{ borderTop: '1px solid var(--rule)' }}
+    >
+      <Kicker color="var(--ink-muted)">Also today</Kicker>
+      <ul className="m-0 p-0 flex items-baseline gap-5 min-w-0" style={{ listStyle: 'none' }}>
+        {visible.map((game) => (
+          <li key={game.id} className="flex items-baseline gap-2 min-w-0">
+            <span style={{ ...monoStyle, fontSize: 9, color: 'var(--ink-muted)' }}>
+              {game.league.toUpperCase()}
+            </span>
+            {game.state === 'live' && (
+              <span
+                className="rounded-full flex-shrink-0"
+                style={{ width: 6, height: 6, background: 'var(--rust)', alignSelf: 'center' }}
+              />
+            )}
+            <span
+              className="truncate"
+              style={{
+                ...monoStyle,
+                color: game.state === 'live' ? 'var(--ink)' : 'var(--ink-muted)',
+              }}
+            >
+              {entryText(game)}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {hiddenCount > 0 && (
+        <span
+          className="flex-shrink-0"
+          style={{ ...monoStyle, fontSize: 9, color: 'var(--ink-muted)' }}
+        >
+          +{hiddenCount} more
+        </span>
+      )}
+    </div>
+  )
+}
