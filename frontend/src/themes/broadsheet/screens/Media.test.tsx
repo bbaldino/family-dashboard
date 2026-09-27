@@ -21,7 +21,8 @@ const useSearch = vi.hoisted(() => vi.fn())
 const useQueue = vi.hoisted(() => vi.fn())
 const getImageUrl = vi.hoisted(() => vi.fn(() => null))
 
-vi.mock('@/integrations/music', () => ({
+vi.mock('@/integrations/music', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/integrations/music')>()),
   useMusic,
   useRoomPills,
   useTopTracks,
