@@ -51,13 +51,22 @@ async fn fetch_full_state(pool: &SqlitePool) -> Result<SseEvent, AppError> {
         .command("player_queues/all", serde_json::Value::Null)
         .await?;
 
-    let mut queues = build_queue_states(&players, &queues_raw);
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0);
+    let mut queues = build_queue_states(&players, &queues_raw, now);
     rewrite_image_urls(&mut queues);
     Ok(SseEvent::State { queues })
 }
 
 /// Transform MA's raw players + queues JSON into our simplified QueueState list.
-fn build_queue_states(players: &serde_json::Value, queues: &serde_json::Value) -> Vec<QueueState> {
+/// `now` (unix seconds) ages the external-source elapsed snapshot forward.
+fn build_queue_states(
+    players: &serde_json::Value,
+    queues: &serde_json::Value,
+    now: i64,
+) -> Vec<QueueState> {
     let empty = vec![];
     let queue_arr = queues.as_array().unwrap_or(&empty);
 
@@ -80,7 +89,7 @@ fn build_queue_states(players: &serde_json::Value, queues: &serde_json::Value) -
             let current_item = match current_item {
                 Some(ref info) if !info.artist.is_empty() => current_item,
                 _ => find_player_current_media(players, &queue_id)
-                    .and_then(track_info_from_current_media)
+                    .and_then(|cm| track_info_from_current_media(cm, q, now))
                     .or(current_item),
             };
 
@@ -191,8 +200,8 @@ fn find_player_current_media<'a>(
     None
 }
 
-/// Age a `current_media` elapsed-time snapshot forward to "now". MA's
-/// `elapsed_time` on `current_media` is a point-in-time snapshot taken at
+/// Age an elapsed-time snapshot forward to "now". MA's `elapsed_time` is a
+/// point-in-time snapshot taken at
 /// `elapsed_time_last_updated` (unix seconds), not a live clock, so the true
 /// current elapsed is the snapshot plus however long has passed since. Pure
 /// and clamped to `[0, duration]` when the duration is known.
@@ -219,7 +228,19 @@ fn live_elapsed(
 /// and the real track metadata lives here instead. Unlike a queue's
 /// `current_item`, `current_media` has no year/label/track_number/source, so
 /// those are always `None`. Returns `None` if `title` is absent or empty.
-fn track_info_from_current_media(cm: &serde_json::Value) -> Option<TrackInfo> {
+///
+/// Elapsed comes from the queue's clock (`q`), not `current_media`'s. At a
+/// track change MA emits `player_updated` with the new title but the
+/// previous track's position on `current_media`, then silently resets it
+/// with no further player event — so a refetch on that event would cache the
+/// stale position for the whole track. The queue's `elapsed_time` is right
+/// throughout, and MA follows the reset with a `queue_updated` that
+/// refetches it.
+fn track_info_from_current_media(
+    cm: &serde_json::Value,
+    q: &serde_json::Value,
+    now: i64,
+) -> Option<TrackInfo> {
     let name = cm["title"].as_str().unwrap_or("");
     if name.is_empty() {
         return None;
@@ -230,14 +251,10 @@ fn track_info_from_current_media(cm: &serde_json::Value) -> Option<TrackInfo> {
         album: cm["album"].as_str().map(String::from),
         image_url: cm["image_url"].as_str().map(String::from),
         duration: cm["duration"].as_f64().map(|d| d as i64),
-        elapsed: cm["elapsed_time"].as_f64().map(|elapsed_time| {
-            let last_updated = cm["elapsed_time_last_updated"].as_i64();
-            let duration = cm["duration"].as_f64();
-            let now = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_secs() as i64)
-                .unwrap_or(0);
-            live_elapsed(elapsed_time, last_updated, duration, now)
+        elapsed: q["elapsed_time"].as_f64().map(|elapsed_time| {
+            // The queue stamps this as fractional unix seconds.
+            let last_updated = q["elapsed_time_last_updated"].as_f64().map(|t| t as i64);
+            live_elapsed(elapsed_time, last_updated, cm["duration"].as_f64(), now)
         }),
         uri: cm["uri"].as_str().map(String::from),
         year: None,
@@ -636,13 +653,6 @@ mod tests {
                     "album": "Cigarettes After Sex",
                     "image_url": "https://i.scdn.co/image/ab67616d00001e02dfed999f959177dfc4f33cdc",
                     "duration": 290,
-                    "elapsed_time": 211,
-                    // No elapsed_time_last_updated here on purpose: with it
-                    // present, "now" at test time would already be well past
-                    // it and the aged-and-clamped value would swamp this
-                    // fixture's intent (falling back to current_media at
-                    // all). The aging/clamping behavior itself is pinned
-                    // directly against live_elapsed below.
                     "queue_item_id": "7dd0a1ae9f634fb5aff91cbc62e67213"
                 }
             }
@@ -653,11 +663,12 @@ mod tests {
                 "display_name": "Kitchen",
                 "state": "playing",
                 "items": 1,
+                "elapsed_time": 211.0,
                 "current_item": { "media_item": { "name": "Spotify Connect", "artists": [] } }
             }
         ]);
 
-        let states = build_queue_states(&players, &queues);
+        let states = build_queue_states(&players, &queues, 1_800_000_000);
         assert_eq!(states.len(), 1);
         let info = states[0].current_item.as_ref().expect("expected a track");
 
@@ -707,7 +718,7 @@ mod tests {
             }
         ]);
 
-        let states = build_queue_states(&players, &queues);
+        let states = build_queue_states(&players, &queues, 1_800_000_000);
         assert_eq!(states.len(), 1);
         let info = states[0].current_item.as_ref().expect("expected a track");
 
@@ -715,5 +726,46 @@ mod tests {
         assert_eq!(info.artist, "Arctic Monkeys");
         assert_eq!(info.year, Some(2013));
         assert_eq!(info.track_number, Some(11));
+    }
+
+    /// Regression, from a live MA WebSocket capture at a Spotify Connect
+    /// track change: `player_updated` arrives with the new title but the
+    /// previous track's position (346s into a 209s song) on `current_media`,
+    /// freshly stamped, while the queue's clock has already reset. The
+    /// position must come from the queue, or the progress bar sits at the
+    /// end of the song for the whole track.
+    #[test]
+    fn build_queue_states_takes_external_source_position_from_the_queue_clock() {
+        let now = 1_790_470_600;
+        let players = serde_json::json!([
+            {
+                "player_id": "upb827eb0e4dec",
+                "active_source": "upb827eb0e4dec",
+                "current_media": {
+                    "title": "stupid song",
+                    "artist": "Some Artist",
+                    "duration": 209,
+                    "elapsed_time": 346,
+                    "elapsed_time_last_updated": now,
+                }
+            }
+        ]);
+        let queues = serde_json::json!([
+            {
+                "queue_id": "upb827eb0e4dec",
+                "display_name": "Kitchen",
+                "state": "playing",
+                "elapsed_time": 1.4789,
+                "elapsed_time_last_updated": (now - 10) as f64 + 0.6,
+                "current_item": { "media_item": { "name": "Spotify Connect", "artists": [] } }
+            }
+        ]);
+
+        let states = build_queue_states(&players, &queues, now);
+        let info = states[0].current_item.as_ref().expect("expected a track");
+
+        assert_eq!(info.name, "stupid song");
+        assert_eq!(info.duration, Some(209));
+        assert_eq!(info.elapsed, Some(11));
     }
 }
