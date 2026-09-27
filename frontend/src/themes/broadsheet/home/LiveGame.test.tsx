@@ -283,4 +283,69 @@ describe('LiveGame', () => {
     expect(screen.getByText(/80% MIL/)).toBeInTheDocument()
     expect(screen.queryByText(/81% MIL/)).not.toBeInTheDocument()
   })
+
+  it('heads a baseball line score with runs, hits and errors', () => {
+    render(
+      <LiveGame
+        game={{
+          ...makeGame(null),
+          linescores: [{ period: 1, homeScore: '1', awayScore: '0' }],
+        }}
+      />,
+    )
+    for (const heading of ['R', 'H', 'E']) {
+      expect(screen.getByRole('columnheader', { name: heading })).toBeInTheDocument()
+    }
+  })
+
+  /** Regression, from the live ARI @ SF game: a football line score carried
+   *  baseball's R/H/E headers, with H and E always blank ("–"). */
+  it('heads a football line score with a total only, not runs/hits/errors', () => {
+    const detail: GameLiveDetail = {
+      sport: 'nfl',
+      winProbability: null,
+      leaders: { away: [], home: [] },
+    }
+    render(
+      <LiveGame
+        game={{
+          ...makeGame(detail),
+          league: 'nfl',
+          home: { ...team('SF', 36), hits: null, errors: null },
+          away: { ...team('ARI', 30), hits: null, errors: null },
+          linescores: [
+            { period: 1, homeScore: '7', awayScore: '0' },
+            { period: 2, homeScore: '10', awayScore: '6' },
+          ],
+        }}
+      />,
+    )
+    expect(screen.getByRole('columnheader', { name: 'T' })).toBeInTheDocument()
+    for (const heading of ['R', 'H', 'E']) {
+      expect(screen.queryByRole('columnheader', { name: heading })).not.toBeInTheDocument()
+    }
+  })
+
+  it('shows each football side its own leaders', () => {
+    const detail: GameLiveDetail = {
+      sport: 'nfl',
+      winProbability: null,
+      leaders: {
+        home: [{ category: 'Passing Yards', playerName: 'Brock Purdy', displayValue: '297 YDS' }],
+        away: [
+          { category: 'Passing Yards', playerName: 'Jacoby Brissett', displayValue: '280 YDS' },
+        ],
+      },
+    }
+    render(
+      <LiveGame
+        game={{ ...makeGame(detail), league: 'nfl', home: team('SF', 36), away: team('ARI', 30) }}
+      />,
+    )
+    const homeColumn = screen.getByText('Leaders · SF').parentElement!
+    const awayColumn = screen.getByText('Leaders · ARI').parentElement!
+    expect(homeColumn).toHaveTextContent('Brock Purdy')
+    expect(awayColumn).toHaveTextContent('Jacoby Brissett')
+    expect(awayColumn).not.toHaveTextContent('Brock Purdy')
+  })
 })

@@ -141,7 +141,8 @@ export function GameCardExpanded({ game, allGames, onClick }: GameCardExpandedPr
   const isLive = game.state === 'live'
   const isFinal = game.state === 'final'
   const isUpcoming = game.state === 'upcoming'
-  const hasMlbLiveCard = isLive && game.league === 'mlb' && !!game.liveDetail
+  const mlbLiveDetail = isLive && game.liveDetail?.sport === 'mlb' ? game.liveDetail : null
+  const hasMlbLiveCard = mlbLiveDetail !== null
 
   return (
     <div className="cursor-pointer" onClick={onClick}>
@@ -184,7 +185,7 @@ export function GameCardExpanded({ game, allGames, onClick }: GameCardExpandedPr
       </div>
 
       {/* Live MLB: full live card (situation, linescore, plays, leaders) */}
-      {hasMlbLiveCard && game.liveDetail && <MlbLiveCard game={game} detail={game.liveDetail} />}
+      {mlbLiveDetail && <MlbLiveCard game={game} detail={mlbLiveDetail} />}
 
       {/* Live: sport-specific situation */}
       {isLive && !hasMlbLiveCard && game.situation?.type === 'mlb' && (

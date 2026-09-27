@@ -1,0 +1,99 @@
+{
+  "_comment": "Trimmed capture of ESPN site/v2 football/nfl summary for event 401872958 (ARI at SF, 2026-09-27), fetched just after the final whistle. Kept: header.competitions[0].competitors (id/homeAway/abbreviation — the only place home/away is stated), the two leaders groups cut to two categories each, and the last winprobability entry. Note leaders[].team carries NO homeAway field on NFL summaries — that absence is what this fixture pins. Dropped: boxscore, drives, scoringPlays, news, odds, etc.",
+  "header": {
+    "competitions": [
+      {
+        "status": {
+          "type": {
+            "state": "post"
+          }
+        },
+        "competitors": [
+          {
+            "id": "25",
+            "homeAway": "home",
+            "team": {
+              "id": "25",
+              "abbreviation": "SF"
+            }
+          },
+          {
+            "id": "22",
+            "homeAway": "away",
+            "team": {
+              "id": "22",
+              "abbreviation": "ARI"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "leaders": [
+    {
+      "team": {
+        "id": "25",
+        "abbreviation": "SF"
+      },
+      "leaders": [
+        {
+          "displayName": "Passing Yards",
+          "leaders": [
+            {
+              "displayValue": "15/27, 297 YDS, 4 TD",
+              "athlete": {
+                "displayName": "Brock Purdy"
+              }
+            }
+          ]
+        },
+        {
+          "displayName": "Rushing Yards",
+          "leaders": [
+            {
+              "displayValue": "15 CAR, 75 YDS, 1 TD",
+              "athlete": {
+                "displayName": "Christian McCaffrey"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "team": {
+        "id": "22",
+        "abbreviation": "ARI"
+      },
+      "leaders": [
+        {
+          "displayName": "Passing Yards",
+          "leaders": [
+            {
+              "displayValue": "38/52, 280 YDS, 2 TD",
+              "athlete": {
+                "displayName": "Jacoby Brissett"
+              }
+            }
+          ]
+        },
+        {
+          "displayName": "Rushing Yards",
+          "leaders": [
+            {
+              "displayValue": "21 CAR, 90 YDS",
+              "athlete": {
+                "displayName": "Jeremiyah Love"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "winprobability": [
+    {
+      "homeWinPercentage": 1.0
+    }
+  ]
+}

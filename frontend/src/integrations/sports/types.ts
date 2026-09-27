@@ -188,8 +188,14 @@ export interface MlbLiveDetail {
   leaders: GameLeaders
 }
 
-export type SportSpecificLiveDetail = MlbLiveDetail
-// | NbaLiveDetail (future)
+/** A sport without a dedicated live shape — only what ESPN's summary gives
+ *  every sport alike. Nothing baseball-specific rides on these. */
+export interface BasicLiveDetail {
+  sport: 'nfl' | 'nba' | 'nhl'
+  leaders: GameLeaders
+}
+
+export type SportSpecificLiveDetail = MlbLiveDetail | BasicLiveDetail
 
 export interface LiveGameDetailBase {
   winProbability: WinProbability | null
@@ -199,3 +205,6 @@ export interface LiveGameDetailBase {
 // (Rust: #[serde(flatten)] on the sport_specific enum). So the JSON shape is
 // LiveGameDetailBase & SportSpecificLiveDetail merged at the same level.
 export type GameLiveDetail = LiveGameDetailBase & SportSpecificLiveDetail
+
+/** A `GameLiveDetail` narrowed to baseball (`detail.sport === 'mlb'`). */
+export type MlbGameLiveDetail = LiveGameDetailBase & MlbLiveDetail

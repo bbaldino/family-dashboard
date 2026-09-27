@@ -59,7 +59,7 @@ fn replay_response(
     let mut games: Vec<Game> = all_games.into_iter().filter(|g| g.id == *game_id).collect();
 
     if let Some(game) = games.iter_mut().find(|g| g.id == *game_id)
-        && let Some(mut detail) = transform::parse_summary_to_live_detail(&snapshot.summary)
+        && let Some(mut detail) = transform::parse_summary_to_live_detail(&snapshot.summary, "mlb")
     {
         attach_scoring_recap(state, game, &mut detail);
         game.live_detail = Some(detail);
@@ -78,8 +78,11 @@ fn replay_response(
 /// cached, or kick off a background generation if it isn't. Completed
 /// scoring plays = `scoring_plays` minus the tail `in_progress_scoring`
 /// (the in-progress half-inning, which is always the chronological end).
+/// Other sports have no inning-keyed scoring to recap, so they're left as is.
 fn attach_scoring_recap(state: &SportsState, game: &Game, detail: &mut LiveGameDetail) {
-    let SportSpecificLive::Mlb(mlb) = &mut detail.sport_specific;
+    let SportSpecificLive::Mlb(mlb) = &mut detail.sport_specific else {
+        return;
+    };
 
     if mlb.scoring_plays.len() <= mlb.in_progress_scoring.len() {
         return; // nothing in a completed inning yet
@@ -244,7 +247,8 @@ pub async fn get_games(State(state): State<SportsState>) -> Result<Json<GamesRes
             };
 
             if let Some(summary) = summary_json
-                && let Some(mut detail) = transform::parse_summary_to_live_detail(&summary)
+                && let Some(mut detail) =
+                    transform::parse_summary_to_live_detail(&summary, league_id)
             {
                 if is_live {
                     // Live-only: LLM narrates in-progress scoring. Finals get

@@ -119,18 +119,73 @@ async fn games_names_a_league_it_could_not_reach() {
 fn parse_summary_returns_some_for_sample_fixture() {
     let raw = include_str!("fixtures/mlb_summary_sample.json");
     let value: serde_json::Value = serde_json::from_str(raw).expect("fixture parses");
-    let detail =
-        dashboard_backend::integrations::sports::transform::parse_summary_to_live_detail(&value);
+    let detail = dashboard_backend::integrations::sports::transform::parse_summary_to_live_detail(
+        &value, "mlb",
+    );
     assert!(
         detail.is_some(),
         "expected a LiveGameDetail from the sample summary"
     );
 }
 
+/// Real NFL summary (trimmed): the live detail must be tagged with its own
+/// sport, not "mlb", and carry none of the baseball-only fields.
+#[test]
+fn parse_summary_tags_an_nfl_game_as_nfl_without_baseball_fields() {
+    let raw = include_str!("fixtures/nfl_summary_sample.json");
+    let value: serde_json::Value = serde_json::from_str(raw).expect("fixture parses");
+    let detail = dashboard_backend::integrations::sports::transform::parse_summary_to_live_detail(
+        &value, "nfl",
+    )
+    .expect("expected a LiveGameDetail from the NFL summary");
+    let json = serde_json::to_value(&detail).unwrap();
+
+    assert_eq!(json["sport"], "nfl");
+    for baseball_only in [
+        "matchup",
+        "recentPlays",
+        "scoringPlays",
+        "inProgressScoring",
+        "scoringRecap",
+    ] {
+        assert!(
+            json.get(baseball_only).is_none(),
+            "{baseball_only} is baseball-only and must not appear on an NFL detail"
+        );
+    }
+}
+
+/// ESPN's NFL summary gives `leaders[].team` no `homeAway` — only the
+/// header's competitors say which side is home. Leaders must be split by
+/// matching team id against those, not all dumped under "away".
+#[test]
+fn parse_summary_splits_nfl_leaders_by_the_headers_home_and_away() {
+    let raw = include_str!("fixtures/nfl_summary_sample.json");
+    let value: serde_json::Value = serde_json::from_str(raw).expect("fixture parses");
+    let detail = dashboard_backend::integrations::sports::transform::parse_summary_to_live_detail(
+        &value, "nfl",
+    )
+    .expect("expected a LiveGameDetail from the NFL summary");
+    let json = serde_json::to_value(&detail).unwrap();
+
+    let names = |side: &str| -> Vec<String> {
+        json["leaders"][side]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|l| l["playerName"].as_str().unwrap().to_string())
+            .collect()
+    };
+    // SF (id 25) is home; ARI (id 22) is away.
+    assert_eq!(names("home"), vec!["Brock Purdy", "Christian McCaffrey"]);
+    assert_eq!(names("away"), vec!["Jacoby Brissett", "Jeremiyah Love"]);
+}
+
 #[test]
 fn parse_summary_returns_none_for_empty_object() {
     let detail = dashboard_backend::integrations::sports::transform::parse_summary_to_live_detail(
         &json!({}),
+        "mlb",
     );
     assert!(detail.is_none());
 }
