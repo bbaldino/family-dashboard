@@ -1,4 +1,4 @@
-import { useQueue } from '@/integrations/music'
+import { isSpotifyConnectUri, useQueue } from '@/integrations/music'
 import type { QueueItem } from '@/integrations/music'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { MAX_RUNNING_ORDER_ROWS } from './centre-spread-capacity'
@@ -57,6 +57,11 @@ const artistStyle = {
  * for how the cap was measured. The remainder is named as "+N more" rather
  * than silently dropped, the convention every other capped list in this
  * theme follows.
+ *
+ * **Spotify Connect says so instead.** Cast from the Spotify app, the queue
+ * lives in Spotify; MA's holds only a "Spotify Connect" placeholder, which
+ * would otherwise list as "1 up next". The column names where the queue is
+ * rather than showing that, and skips the fetch.
  */
 export function CentreSpreadRunningOrder({
   queueId,
@@ -65,8 +70,9 @@ export function CentreSpreadRunningOrder({
   queueId: string
   current: { title: string; artist: string; uri: string | null }
 }) {
-  const { data } = useQueue(queueId)
-  const items = data ?? []
+  const spotifyConnect = isSpotifyConnectUri(current.uri)
+  const { data } = useQueue(spotifyConnect ? null : queueId)
+  const items = spotifyConnect ? [] : (data ?? [])
 
   // The queue passthrough includes the currently-playing item itself —
   // everything from one past it onward is what's actually "up next" (same
@@ -85,16 +91,18 @@ export function CentreSpreadRunningOrder({
     >
       <div className="flex items-baseline justify-between">
         <Kicker>Running order</Kicker>
-        <span
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 9,
-            color: 'var(--ink-muted)',
-            letterSpacing: '0.12em',
-          }}
-        >
-          {upcoming.length} up next
-        </span>
+        {!spotifyConnect && (
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 9,
+              color: 'var(--ink-muted)',
+              letterSpacing: '0.12em',
+            }}
+          >
+            {upcoming.length} up next
+          </span>
+        )}
       </div>
 
       <div style={{ ...rowGridStyle, borderTop: '2px solid var(--ink)', marginTop: 8 }}>
@@ -130,6 +138,20 @@ export function CentreSpreadRunningOrder({
           now
         </span>
       </div>
+
+      {spotifyConnect && (
+        <p
+          className="m-0"
+          style={{
+            ...artistStyle,
+            fontSize: 13.5,
+            padding: '12px 0',
+            borderTop: '1px dotted var(--rule)',
+          }}
+        >
+          Playing from Spotify — the queue is managed in the Spotify app.
+        </p>
+      )}
 
       <ul
         className="m-0 p-0 min-h-0 overflow-hidden"

@@ -4,7 +4,10 @@ import { CentreSpreadRunningOrder } from './CentreSpreadRunningOrder'
 import { MAX_RUNNING_ORDER_ROWS } from './centre-spread-capacity'
 
 const useQueue = vi.hoisted(() => vi.fn())
-vi.mock('@/integrations/music', () => ({ useQueue }))
+vi.mock('@/integrations/music', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/integrations/music')>()),
+  useQueue,
+}))
 
 const current = {
   title: 'Amber Hours',
@@ -103,5 +106,33 @@ describe('CentreSpreadRunningOrder', () => {
       render(<CentreSpreadRunningOrder queueId="kitchen" current={current} />),
     ).not.toThrow()
     expect(screen.getByText('0 up next')).toBeInTheDocument()
+  })
+
+  /** Spotify Connect: Spotify owns the queue, and MA's holds only a
+   *  "Spotify Connect" placeholder — listing it as "1 up next" is wrong. */
+  it('says the queue is in the Spotify app instead of listing MA’s placeholder', () => {
+    useQueue.mockReturnValue({
+      data: [
+        {
+          queue_item_id: 'qi-sc',
+          media_item: { name: 'Spotify Connect', uri: 'placeholder://spotify-connect' },
+        },
+      ],
+    })
+    render(
+      <CentreSpreadRunningOrder
+        queueId="kitchen"
+        current={{
+          title: 'American Girls',
+          artist: 'Harry Styles',
+          uri: 'spotify_connect--DaDytfpf://audio_source/main',
+        }}
+      />,
+    )
+    expect(screen.getByText('American Girls')).toBeInTheDocument()
+    expect(screen.getByText(/queue is managed in the Spotify app/i)).toBeInTheDocument()
+    expect(screen.queryByText('Spotify Connect')).not.toBeInTheDocument()
+    expect(screen.queryByText(/up next$/)).not.toBeInTheDocument()
+    expect(useQueue).toHaveBeenCalledWith(null)
   })
 })

@@ -5,7 +5,12 @@ import { CentreSpread } from './CentreSpread'
 const useMusic = vi.hoisted(() => vi.fn())
 const useRoomPills = vi.hoisted(() => vi.fn())
 const useQueue = vi.hoisted(() => vi.fn())
-vi.mock('@/integrations/music', () => ({ useMusic, useRoomPills, useQueue }))
+vi.mock('@/integrations/music', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/integrations/music')>()),
+  useMusic,
+  useRoomPills,
+  useQueue,
+}))
 
 const pause = vi.fn()
 const resume = vi.fn()
