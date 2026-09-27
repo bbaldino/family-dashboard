@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.15.0](https://github.com/bbaldino/family-dashboard/compare/v0.14.1...v0.15.0) (2026-09-27)
+
+
+### Features
+
+* **broadsheet:** say the queue is in Spotify during Spotify Connect ([f630e01](https://github.com/bbaldino/family-dashboard/commit/f630e01dd060e4fa6162b1c7426cdc1af15b3992))
+
+
+### Bug Fixes
+
+* **music:** take Spotify Connect progress from the queue's clock ([fb5c6ec](https://github.com/bbaldino/family-dashboard/commit/fb5c6eca29cf6a8033eaa37eb9662a284d9d630d))
+
 ## [0.14.1](https://github.com/bbaldino/family-dashboard/compare/v0.14.0...v0.14.1) (2026-09-22)
 
 
