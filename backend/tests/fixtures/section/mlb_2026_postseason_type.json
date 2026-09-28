@@ -1,0 +1,6 @@
+{
+  "_comment": "ESPN core API season type 3 (Postseason) for MLB 2026 — the postseason window.",
+  "name": "Postseason",
+  "startDate": "2026-09-29T07:00Z",
+  "endDate": "2026-11-12T07:59Z"
+}

@@ -13,7 +13,7 @@ use super::espn;
 mod leaders;
 mod news;
 mod scores;
-mod season;
+pub mod season;
 mod standings;
 mod team;
 

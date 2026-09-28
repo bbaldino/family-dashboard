@@ -226,6 +226,14 @@ pub fn leaders_url(sport: &str, league: &str, year: i32) -> String {
     )
 }
 
+/// A season type's document in the core API (`types/3` is the postseason) —
+/// carries that type's `startDate`/`endDate`.
+pub fn season_type_url(sport: &str, league: &str, year: i32, season_type: u8) -> String {
+    format!(
+        "https://sports.core.api.espn.com/v2/sports/{sport}/leagues/{league}/seasons/{year}/types/{season_type}"
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -385,6 +393,14 @@ mod tests {
         assert_eq!(ids, vec!["401", "402", "403"]);
         assert_eq!(merged["leagues"][0]["name"], "American League");
         assert_eq!(merged["season"]["year"], 2026);
+    }
+
+    #[test]
+    fn season_type_url_points_at_the_core_api_type() {
+        assert_eq!(
+            season_type_url("baseball", "mlb", 2026, 3),
+            "https://sports.core.api.espn.com/v2/sports/baseball/leagues/mlb/seasons/2026/types/3"
+        );
     }
 
     #[test]

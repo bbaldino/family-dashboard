@@ -65,6 +65,69 @@ pub fn clock_detail(
     }
 }
 
+/// Where a league is in its year. Decides a column's shape, and — by
+/// declaration order, which `Ord` follows — the page's column order.
+#[derive(serde::Serialize, Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(rename_all = "lowercase")]
+pub enum Phase {
+    Postseason,
+    Regular,
+    Preseason,
+    Offseason,
+}
+
+/// The postseason's `[start, end)` dates from the core API's season-type
+/// document (`…/seasons/{year}/types/3`).
+pub fn parse_post_window(v: &serde_json::Value) -> Option<(chrono::NaiveDate, chrono::NaiveDate)> {
+    Some((
+        parse_date(v.get("startDate"))?,
+        parse_date(v.get("endDate"))?,
+    ))
+}
+
+/// The league's phase on `today`. The postseason window wins outright: MLB's
+/// scoreboard keeps reporting "Regular Season" through its whole postseason.
+/// The window's end is exclusive — on or after it, the league is done for the
+/// year. A "Regular Season" whose dates don't cover today is a dormant league.
+pub fn phase_for(
+    season: &SeasonInfo,
+    post_window: Option<(chrono::NaiveDate, chrono::NaiveDate)>,
+    today: chrono::NaiveDate,
+) -> Phase {
+    if let Some((start, end)) = post_window
+        && today >= start
+        && today < end
+    {
+        return Phase::Postseason;
+    }
+    if let Some((_, end)) = post_window
+        && today >= end
+    {
+        return Phase::Offseason;
+    }
+    match season.season_type.as_str() {
+        "Preseason" => Phase::Preseason,
+        "Regular Season" if season_underway(season, today) => Phase::Regular,
+        _ => Phase::Offseason,
+    }
+}
+
+/// The small right-hand phase label on a column's card kicker.
+pub fn phase_detail(phase: Phase, season: &SeasonInfo, today: chrono::NaiveDate) -> String {
+    match phase {
+        Phase::Postseason => "Postseason".to_string(),
+        Phase::Regular => match season.week {
+            Some(w) => format!("Week {w}"),
+            None => "Regular season".to_string(),
+        },
+        Phase::Preseason => "Preseason".to_string(),
+        Phase::Offseason => match season.start {
+            Some(start) if start > today => format!("Season opens {}", start.format("%b %-d")),
+            _ => "Off-season".to_string(),
+        },
+    }
+}
+
 // ─── Season block (from the scoreboard) ──────────────────────────────────
 
 pub struct SeasonInfo {
@@ -135,8 +198,22 @@ mod tests {
     const NFL_CALENDAR: &str =
         include_str!("../../../../tests/fixtures/section/nfl_scoreboard_calendar.json");
 
+    const MLB_POST_TYPE: &str =
+        include_str!("../../../../tests/fixtures/section/mlb_2026_postseason_type.json");
+
     fn date(s: &str) -> chrono::NaiveDate {
         chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").unwrap()
+    }
+
+    fn season(kind: &str, start: &str, end: &str, week: Option<i64>) -> SeasonInfo {
+        SeasonInfo {
+            season_type: kind.to_string(),
+            start: Some(date(start)),
+            end: Some(date(end)),
+            week,
+            total_weeks: None,
+            year: 2026,
+        }
     }
 
     /// ESPN's NFL calendar has one entry per season type (preseason, regular,
@@ -267,5 +344,82 @@ mod tests {
             None,
         );
         assert_eq!(d, "preseason wk 2");
+    }
+
+    #[test]
+    fn post_window_parses_the_core_api_season_type() {
+        let v: serde_json::Value = serde_json::from_str(MLB_POST_TYPE).unwrap();
+        assert_eq!(
+            parse_post_window(&v),
+            Some((date("2026-09-29"), date("2026-11-12")))
+        );
+    }
+
+    /// MLB's scoreboard still says "Regular Season" during the postseason;
+    /// the postseason window is what decides.
+    #[test]
+    fn a_date_inside_the_post_window_is_postseason_whatever_the_scoreboard_says() {
+        let s = season("Regular Season", "2026-02-19", "2026-11-12", None);
+        let w = Some((date("2026-09-29"), date("2026-11-12")));
+        assert_eq!(phase_for(&s, w, date("2026-10-03")), Phase::Postseason);
+        assert_eq!(phase_for(&s, w, date("2026-09-28")), Phase::Regular);
+        assert_eq!(phase_for(&s, w, date("2026-11-12")), Phase::Offseason);
+    }
+
+    #[test]
+    fn preseason_and_dormant_seasons_classify() {
+        let pre = season("Preseason", "2026-08-01", "2027-02-15", Some(2));
+        assert_eq!(phase_for(&pre, None, date("2026-08-17")), Phase::Preseason);
+        // ESPN keeps labelling a finished league "Regular Season".
+        let done = season("Regular Season", "2025-10-21", "2026-06-20", None);
+        assert_eq!(phase_for(&done, None, date("2026-09-28")), Phase::Offseason);
+    }
+
+    #[test]
+    fn phases_order_postseason_first() {
+        let mut v = vec![
+            Phase::Offseason,
+            Phase::Regular,
+            Phase::Preseason,
+            Phase::Postseason,
+        ];
+        v.sort();
+        assert_eq!(
+            v,
+            [
+                Phase::Postseason,
+                Phase::Regular,
+                Phase::Preseason,
+                Phase::Offseason
+            ]
+        );
+    }
+
+    #[test]
+    fn phase_detail_reads_per_phase() {
+        let nfl = season("Regular Season", "2026-09-01", "2027-02-15", Some(3));
+        assert_eq!(
+            phase_detail(Phase::Regular, &nfl, date("2026-09-28")),
+            "Week 3"
+        );
+        let mlb = season("Regular Season", "2026-02-19", "2026-11-12", None);
+        assert_eq!(
+            phase_detail(Phase::Regular, &mlb, date("2026-08-01")),
+            "Regular season"
+        );
+        assert_eq!(
+            phase_detail(Phase::Postseason, &mlb, date("2026-10-03")),
+            "Postseason"
+        );
+        let nba = season("Regular Season", "2026-10-21", "2027-06-20", None);
+        assert_eq!(
+            phase_detail(Phase::Offseason, &nba, date("2026-09-28")),
+            "Season opens Oct 21"
+        );
+        let over = season("Regular Season", "2025-10-21", "2026-06-20", None);
+        assert_eq!(
+            phase_detail(Phase::Offseason, &over, date("2026-09-28")),
+            "Off-season"
+        );
     }
 }
