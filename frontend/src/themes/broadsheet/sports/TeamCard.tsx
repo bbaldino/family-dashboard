@@ -52,12 +52,20 @@ export function TeamCard({ column }: { column: SportColumn }) {
     .join(' · ')
 
   return (
-    <div data-testid="team-card" style={{ paddingBottom: 8, borderBottom: '1px solid var(--ink)' }}>
+    <div
+      data-testid="team-card"
+      style={{
+        paddingBottom: 8,
+        // Only the regular season's table follows without a rule of its own;
+        // In brief and the postseason list open with theirs.
+        borderBottom: phase === 'regular' ? '1px solid var(--ink)' : undefined,
+      }}
+    >
       <div className="flex items-baseline justify-between" style={{ gap: 8 }}>
         <Kicker>
           {column.league} · {column.team}
         </Kicker>
-        <span style={monoMuted}>{column.phaseDetail}</span>
+        <span style={{ ...monoMuted, whiteSpace: 'nowrap' }}>{column.phaseDetail}</span>
       </div>
 
       {phase === 'postseason' && status && (

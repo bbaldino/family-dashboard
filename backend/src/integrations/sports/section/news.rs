@@ -85,42 +85,38 @@ fn newest_first(items: &mut [BriefItem]) {
 }
 
 /// The column's In brief: the team's own stories, then the league's, each
-/// newest first. A league story already in the team list (same id, or the
-/// same headline) appears once, as a team item.
+/// newest first. A story appears once (same id, or the same headline): a
+/// league story already in the team list stays a team item, and a feed that
+/// repeats a story keeps its first copy.
 pub fn brief_items(
     team: &[serde_json::Value],
     league: &[serde_json::Value],
     team_tag: &str,
     league_tag: &str,
 ) -> Vec<BriefItem> {
-    let team_kept: Vec<&serde_json::Value> = team.iter().filter(|a| keep_article(a)).collect();
-    let ids: std::collections::HashSet<String> = team_kept
-        .iter()
-        .filter_map(|a| super::super::transform::json_id(&a["id"]))
-        .collect();
-    let heads: std::collections::HashSet<String> = team_kept
-        .iter()
-        .map(|a| normalise(a["headline"].as_str().unwrap_or("")))
-        .collect();
-
-    let mut team_items: Vec<BriefItem> = team_kept
-        .iter()
-        .map(|a| to_item(a, BriefSource::Team, team_tag))
-        .collect();
-    let mut league_items: Vec<BriefItem> = league
-        .iter()
-        .filter(|a| keep_article(a))
-        .filter(|a| {
-            let dup_id =
-                super::super::transform::json_id(&a["id"]).is_some_and(|id| ids.contains(&id));
-            let dup_head = heads.contains(&normalise(a["headline"].as_str().unwrap_or("")));
-            !dup_id && !dup_head
-        })
-        .map(|a| to_item(a, BriefSource::League, league_tag))
-        .collect();
-    newest_first(&mut team_items);
-    newest_first(&mut league_items);
-    team_items.extend(league_items);
+    let mut ids = std::collections::HashSet::new();
+    let mut heads = std::collections::HashSet::new();
+    let mut first_copy = |a: &serde_json::Value| {
+        let id = super::super::transform::json_id(&a["id"]);
+        let head = normalise(a["headline"].as_str().unwrap_or(""));
+        if id.as_ref().is_some_and(|id| ids.contains(id)) || heads.contains(&head) {
+            return false;
+        }
+        ids.extend(id);
+        heads.insert(head);
+        true
+    };
+    let mut items = |feed: &[serde_json::Value], source, tag: &str| {
+        let mut items: Vec<BriefItem> = feed
+            .iter()
+            .filter(|a| keep_article(a) && first_copy(a))
+            .map(|a| to_item(a, source, tag))
+            .collect();
+        newest_first(&mut items);
+        items
+    };
+    let mut team_items = items(team, BriefSource::Team, team_tag);
+    team_items.extend(items(league, BriefSource::League, league_tag));
     team_items
 }
 
@@ -194,6 +190,29 @@ mod tests {
         assert_eq!(
             items.iter().map(|i| i.h.as_str()).collect::<Vec<_>>(),
             ["Muncy walks it off"]
+        );
+    }
+
+    /// ESPN's team feed can list one story twice (a re-post under a new id,
+    /// or the same id twice): it reads once, in either feed.
+    #[test]
+    fn a_story_repeated_within_a_feed_appears_once() {
+        let story = |id: i64, head: &str| serde_json::json!({ "id": id, "headline": head, "description": "A real dek.", "published": "2026-09-28T10:00:00Z" });
+        let team = [
+            story(1, "Snell strikes out ten"),
+            story(2, "Snell strikes out ten"),
+            story(3, "Muncy walks it off"),
+            story(3, "Muncy walks it off!"),
+        ];
+        let league = [story(8, "Judge hits 60th"), story(9, "Judge hits 60th")];
+        let items = brief_items(&team, &league, "Dodgers", "MLB");
+        assert_eq!(
+            items.iter().map(|i| i.h.as_str()).collect::<Vec<_>>(),
+            [
+                "Snell strikes out ten",
+                "Muncy walks it off",
+                "Judge hits 60th"
+            ]
         );
     }
 

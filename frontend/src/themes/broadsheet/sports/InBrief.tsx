@@ -20,8 +20,8 @@ export const BRIEF_FRAME_HEIGHT = FRAME.marginTop + FRAME.paddingTop + FRAME.rul
 
 /**
  * A column's headlines: the team's own first, then the league's (tagged in
- * rust so the two read apart). The newest `deks` items carry their one-line
- * summary; the rest are headline only. Headlines and deks each clamp to two
+ * rust so the two read apart). The newest `deks` items carry their summary
+ * as a dek; the rest are headline only. Headlines and deks each clamp to two
  * lines, so every item has a known maximum height.
  *
  * Up to `max` items are candidates; the first `shown` of them (all of them
@@ -29,7 +29,8 @@ export const BRIEF_FRAME_HEIGHT = FRAME.marginTop + FRAME.paddingTop + FRAME.rul
  * candidates stay mounted, laid out but invisible, so a fitting parent
  * (`LeagueColumn`) can measure them by `data-brief-item` — as it measures the
  * heading (`data-brief-head`) and the "+N more" line (`data-brief-more`),
- * which is kept mounted for measuring even when nothing is held back.
+ * which is kept mounted for measuring even when nothing is held back, and
+ * hidden when `more` is false (the parent measured no room for it).
  */
 export function InBrief({
   items,
@@ -37,12 +38,14 @@ export function InBrief({
   deks,
   now,
   shown,
+  more = true,
 }: {
   items: BriefItem[]
   max: number
   deks: number
   now: Date
   shown?: number
+  more?: boolean
 }) {
   const candidates = items.slice(0, max)
   const count = Math.min(shown ?? candidates.length, candidates.length)
@@ -74,7 +77,7 @@ export function InBrief({
       )}
       {candidates.map((b, i) => (
         <div
-          key={`${b.tag}-${b.h}`}
+          key={`${i}-${b.tag}-${b.h}`}
           data-brief-item={i}
           style={i < count ? shownFitStyle : hiddenFitStyle}
           aria-hidden={i < count ? undefined : true}
@@ -117,8 +120,8 @@ export function InBrief({
       {candidates.length > 0 && (
         <div
           data-brief-more=""
-          style={hidden > 0 ? shownFitStyle : hiddenFitStyle}
-          aria-hidden={hidden > 0 ? undefined : true}
+          style={more && hidden > 0 ? shownFitStyle : hiddenFitStyle}
+          aria-hidden={more && hidden > 0 ? undefined : true}
         >
           <div style={{ ...meta, paddingTop: 4, borderTop: `1px dotted ${SP_RULE}` }}>
             +{hidden} more

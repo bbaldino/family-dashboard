@@ -23,18 +23,20 @@ export function fitLeadingCount(heights: number[], available: number): number {
  * `available`, counting the "+N more" line's `more` height whenever the run
  * leaves any of the column's `total` items unshown. Unlike the extras, the
  * brief is never all-or-nothing: whatever fits whole is shown, and the rest
- * is named. Returns 0 when not even one item fits.
+ * is named. `more` in the result says whether the "+N more" line is shown —
+ * only when items are held back and it fits too; when not even one item
+ * fits, the line alone shows if it has room, and otherwise nothing does.
  */
 export function fitBriefCount(
   heights: number[],
   available: number,
   more: number,
   total: number,
-): number {
+): { shown: number; more: boolean } {
   let used = heights.reduce((a, h) => a + h, 0)
   for (let n = heights.length; n > 0; n--) {
-    if (used + (n < total ? more : 0) <= available) return n
+    if (used + (n < total ? more : 0) <= available) return { shown: n, more: n < total }
     used -= heights[n - 1]
   }
-  return 0
+  return { shown: 0, more: total > 0 && more <= available }
 }

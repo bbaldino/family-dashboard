@@ -60,7 +60,7 @@ export interface LastGame {
 }
 
 /** The followed team's next scheduled game. `label` names a playoff game
- *  ("NLDS · Game 1") when there is one, otherwise null. */
+ *  ("NLDS Game 1") when there is one, otherwise null. */
 export interface NextGame {
   opponent: string
   homeAway: 'home' | 'away'
@@ -141,8 +141,8 @@ export interface PostseasonRound {
   series: SeriesRow[]
 }
 
-/** The postseason bracket, by round: series in progress, finished rounds
- *  summarised, rounds still to come. */
+/** The postseason as a round-by-round series list (no drawn bracket): series
+ *  in progress, finished rounds summarised, rounds still to come. */
 export interface PostseasonView {
   current: PostseasonRound[]
   completed: { round: string; summary: string }[]
@@ -159,9 +159,11 @@ export interface BriefItem {
 }
 
 /** One league column: the followed team's card plus whichever blocks its
- *  phase supports — a regular-season column carries `table`/`scores`, a
- *  postseason one carries `postseason`; any block can be null when its own
- *  fetch failed. */
+ *  phase supports — a regular-season column carries `table`/`scores`/`hot`/
+ *  `cold` (and `leaders` when any came back), a postseason one carries
+ *  `postseason`; a block the phase doesn't use is null. A failed standings
+ *  fetch doesn't null the table — it arrives with empty rows and reads
+ *  "Table unavailable."; `hot`/`cold` come back empty the same way. */
 export interface SportColumn {
   league: string
   team: string

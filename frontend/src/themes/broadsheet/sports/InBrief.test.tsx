@@ -54,6 +54,34 @@ describe('InBrief', () => {
     expect(screen.getByText('+3 more')).toBeInTheDocument()
   })
 
+  it('keeps a repeated headline as its own item', () => {
+    const errors: unknown[] = []
+    const orig = console.error
+    console.error = (...args: unknown[]) => errors.push(args)
+    try {
+      render(<InBrief items={[item(1), item(1)]} max={5} deks={0} now={now} />)
+    } finally {
+      console.error = orig
+    }
+    expect(screen.getAllByText('Headline 1')).toHaveLength(2)
+    expect(errors.filter((e) => String(e).includes('same key'))).toEqual([])
+  })
+
+  it('hides the "+N more" line when told it does not fit', () => {
+    const { container } = render(
+      <InBrief
+        items={[1, 2].map((i) => item(i))}
+        max={5}
+        deks={0}
+        shown={0}
+        more={false}
+        now={now}
+      />,
+    )
+    const more = container.querySelector<HTMLElement>('[data-brief-more]')
+    expect(more?.style.visibility).toBe('hidden')
+  })
+
   it('says so when there is no news', () => {
     render(<InBrief items={[]} max={5} deks={2} now={now} />)
     expect(screen.getByText('No news right now.')).toBeInTheDocument()

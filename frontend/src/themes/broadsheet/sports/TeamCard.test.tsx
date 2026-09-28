@@ -118,4 +118,23 @@ describe('TeamCard', () => {
     expect(screen.queryByText('LAST')).not.toBeInTheDocument()
     expect(screen.queryByText('NEXT')).not.toBeInTheDocument()
   })
+
+  it('keeps the phase label on one line in a narrow column', () => {
+    render(
+      <TeamCard column={column({ phase: 'offseason', phaseDetail: 'Off-season', card: card() })} />,
+    )
+    expect(screen.getByText('Off-season').style.whiteSpace).toBe('nowrap')
+  })
+
+  it('rules off the card only where the next block draws no rule of its own', () => {
+    // In brief and the postseason list open with their own ink rule; a card
+    // rule above them would draw two parallel lines.
+    for (const phase of ['offseason', 'preseason', 'postseason'] as const) {
+      const { unmount } = render(<TeamCard column={column({ phase })} />)
+      expect(screen.getByTestId('team-card').style.borderBottom).toBe('')
+      unmount()
+    }
+    render(<TeamCard column={column()} />)
+    expect(screen.getByTestId('team-card').style.borderBottom).toBe('1px solid var(--ink)')
+  })
 })

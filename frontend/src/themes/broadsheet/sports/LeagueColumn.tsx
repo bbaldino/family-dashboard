@@ -81,7 +81,7 @@ function FittedTail({
   extras: { key: string; node: ReactNode }[]
 }) {
   const boxRef = useRef<HTMLDivElement>(null)
-  const [shown, setShown] = useState(max)
+  const [fit, setFit] = useState({ shown: max, more: true })
 
   const measure = useCallback(() => {
     const box = boxRef.current
@@ -91,7 +91,8 @@ function FittedTail({
       (el) => el.offsetHeight,
     )
     const available = box.clientHeight - BRIEF_FRAME_HEIGHT - height('[data-brief-head]')
-    setShown(fitBriefCount(heights, available, height('[data-brief-more]'), items.length))
+    const next = fitBriefCount(heights, available, height('[data-brief-more]'), items.length)
+    setFit((prev) => (prev.shown === next.shown && prev.more === next.more ? prev : next))
   }, [items.length])
 
   useLayoutEffect(measure)
@@ -114,7 +115,7 @@ function FittedTail({
       data-testid="league-tail"
       className="flex-1 min-h-0 flex flex-col relative overflow-hidden"
     >
-      <InBrief items={items} max={max} deks={deks} now={now} shown={shown} />
+      <InBrief items={items} max={max} deks={deks} now={now} shown={fit.shown} more={fit.more} />
       {extras.length > 0 && <FittedExtras blocks={extras} />}
     </div>
   )
@@ -123,9 +124,9 @@ function FittedTail({
 /**
  * One league's column, shaped by its phase: the regular season stacks the
  * team card, division table, league scores and In brief (as many items as
- * fit), with form and leaders only as room allows; the postseason swaps table and scores for the
- * whole field's series list; preseason and off-season keep to a compact card
- * and In brief.
+ * fit), with form and leaders only as room allows; the postseason swaps
+ * table and scores for the whole field's series list; preseason and
+ * off-season keep to a compact card and In brief.
  */
 export function LeagueColumn({ column, now }: { column: SportColumn; now: Date }) {
   const caps = COLUMN_CAPS
