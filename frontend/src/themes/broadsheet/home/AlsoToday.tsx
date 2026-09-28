@@ -1,8 +1,8 @@
 import type { Game } from '@/integrations/sports'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 
-/** Games shown before the rest collapse to "+N more" — the live panel above
- *  is dense, and this strip is a footnote to it, not a second lead. */
+/** Games shown before the rest collapse to "+N more" — the summaries above
+ *  are dense, and this strip is a footnote to them, not a second lead. */
 const MAX_ALSO_TODAY_GAMES = 2
 
 const monoStyle = {
@@ -26,13 +26,12 @@ function entryText(game: Game): string {
 }
 
 /**
- * The games a live game would otherwise hide: every other live game and
- * every final in the backend's window, as compact entries beneath `LiveGame`.
- *
- * A live game takes the column, and until this strip it took it whole — a
- * second live game, or one that had just finished, vanished from Home with no
- * trace. The backend's sort (live first, then finals most recent first) is
- * already the order wanted here, so it isn't re-derived.
+ * The games whose full summaries didn't fit the column: every live game and
+ * final not in `shownIds`, as compact entries at the column's foot, so a game
+ * that can't have a summary still doesn't vanish from Home. Upcoming games
+ * are never listed — only the featured one has a summary at all. The
+ * backend's sort (live first, then finals most recent first) is already the
+ * order wanted here, so it isn't re-derived.
  *
  * **One row, not a line per game.** Measured on the 1920×1080 canvas with a
  * fully dense MLB panel above (matchup, three leaders a side, a scoring
@@ -44,9 +43,9 @@ function entryText(game: Game): string {
  * 49ers and the Giants are both `SF`), and the entry has no logo to tell them
  * apart.
  */
-export function AlsoToday({ games, featuredId }: { games: Game[]; featuredId: string }) {
+export function AlsoToday({ games, shownIds }: { games: Game[]; shownIds: ReadonlySet<string> }) {
   const others = games.filter(
-    (g) => g.id !== featuredId && (g.state === 'live' || g.state === 'final'),
+    (g) => !shownIds.has(g.id) && (g.state === 'live' || g.state === 'final'),
   )
   if (others.length === 0) return null
 

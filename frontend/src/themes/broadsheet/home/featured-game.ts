@@ -1,10 +1,9 @@
 import type { Game } from '@/integrations/sports'
 
 /**
- * Prefer a live game; otherwise the next upcoming one. Finals/postponed
- * games don't get a dedicated treatment on the Home screen, so both
- * `SportsColumn` (which dispatches on this pick) and `Home` (which derives
- * the body's live/not-live column ratios from it) fall back the same way.
+ * Prefer a live game; otherwise the next upcoming one. Both `SportsColumn`
+ * (whose summaries this leads, via `orderSummaries`) and `Home` (which
+ * derives the body's live/not-live column ratios from it) pick the same way.
  *
  * Lives in its own module, not `SportsColumn.tsx`, because a file that
  * exports a component can only export components — react-refresh enforces
@@ -16,27 +15,38 @@ export function pickFeaturedGame(games: Game[]): Game | undefined {
 }
 
 /**
- * The most recent completed game, or `undefined` if there are none.
+ * Every game the Home sports column has a summary for, most relevant first:
+ * the featured game (live, else the next upcoming), then any other live
+ * games, then finals, most recent first. With nothing live or upcoming, the
+ * most recent final leads. Upcoming games past the featured one and
+ * postponed games have no summary, so they aren't here.
  *
- * There is deliberately no time bound here. The backend only ever returns
- * finals that started within its configured `window_hours`, so a final being
- * present *is* the "recent enough" condition — re-deriving a second window
- * here would give two notions of it, free to drift apart.
+ * `SportsColumn` shows as many of these whole as fit, in this order, and
+ * lists the rest in the "Also today" strip.
+ *
+ * There is deliberately no time bound on finals. The backend only ever
+ * returns finals that started within its configured `window_hours`, so a
+ * final being present *is* the "recent enough" condition — re-deriving a
+ * second window here would give two notions of it, free to drift apart.
  */
-export function pickPriorFinal(games: Game[]): Game | undefined {
-  let latest: Game | undefined
-  let latestMs = -Infinity
+export function orderSummaries(games: Game[]): Game[] {
+  const featured = pickFeaturedGame(games)
+  const others = games.filter((g) => g !== featured)
+  const live = others.filter((g) => g.state === 'live')
+  const finals = others.filter((g) => g.state === 'final').sort(newestFirst)
+  return [...(featured ? [featured] : []), ...live, ...finals]
+}
 
-  for (const game of games) {
-    if (game.state !== 'final') continue
-    // Parsed, never compared as text: `startTime` arrives both as `...T20:10Z`
-    // and with a numeric offset, and those two forms do not sort against each
-    // other lexically.
-    const ms = new Date(game.startTime).getTime()
-    if (Number.isNaN(ms) || ms <= latestMs) continue
-    latestMs = ms
-    latest = game
+/** Parsed, never compared as text: `startTime` arrives both as `...T20:10Z`
+ *  and with a numeric offset, and those two forms do not sort against each
+ *  other lexically. An unparseable time sorts last rather than dropping the
+ *  game — its result is still worth showing. */
+function newestFirst(a: Game, b: Game): number {
+  const ms = (g: Game) => {
+    const t = new Date(g.startTime).getTime()
+    return Number.isNaN(t) ? -Infinity : t
   }
-
-  return latest
+  const diff = ms(b) - ms(a)
+  // Two unparseable times give -Infinity - -Infinity = NaN; call them equal.
+  return Number.isNaN(diff) ? 0 : diff
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { afterEach, describe, expect, it, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { SportsColumn } from './SportsColumn'
 import type { GamesResponse, GameState } from '@/integrations/sports'
@@ -70,6 +70,42 @@ const game = (state: GameState, extra: Record<string, unknown> = {}) => ({
   ...extra,
 })
 
+/**
+ * jsdom lays nothing out — every height reads 0 — so the fit is driven by
+ * stubbed heights, keyed on the attributes `SportsColumn` measures by: the
+ * column's own `data-testid`, each summary's `data-summary-id`, and the
+ * strip's slot. Anything unlisted reads 0, as jsdom would.
+ */
+function stubLayout({
+  column,
+  blocks,
+  strip = 40,
+}: {
+  column: number
+  blocks: Record<string, number>
+  strip?: number
+}) {
+  vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockImplementation(function (
+    this: HTMLElement,
+  ) {
+    return this.dataset.testid === 'sports-column' ? column : 0
+  })
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (
+    this: HTMLElement,
+  ) {
+    const id = this.dataset.summaryId
+    if (id !== undefined) return blocks[id] ?? 0
+    return this.dataset.stripSlot !== undefined ? strip : 0
+  })
+}
+
+const summary = (container: HTMLElement, id: string) =>
+  container.querySelector(`[data-summary-id="${id}"]`) as HTMLElement
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
 describe('SportsColumn', () => {
   beforeEach(() => {
     useSportsPreview.mockReturnValue({ data: undefined })
@@ -137,18 +173,31 @@ describe('the prior-game final report', () => {
     expect(screen.getAllByText('MIL').length).toBeGreaterThan(0)
   })
 
-  // The "or the next game had started" half of the rule: once the next game
-  // is under way it takes the column, and the full report drops out on its
-  // own — its score carries on as a line in the "Also today" strip instead.
-  // No timer, no clock arithmetic.
-  it('does not appear during a live game', () => {
+  // A live game leads, and the full report follows it when there is room —
+  // when there isn't, its score carries on as a line in the "Also today"
+  // strip instead. No timer, no clock arithmetic.
+  it('follows a live game when it fits beneath it', () => {
+    stubLayout({ column: 800, blocks: { g1: 500, yesterday: 120 } })
     const data: GamesResponse = {
       games: [game('live'), finished],
       hasLive: true,
       unavailableLeagues: [],
     }
-    render(<SportsColumn data={data} isLoading={false} />)
-    expect(screen.queryByText('Recap unavailable.')).toBeNull()
+    const { container } = render(<SportsColumn data={data} isLoading={false} />)
+    expect(summary(container, 'yesterday')).toBeVisible()
+    expect(screen.queryByTestId('also-today')).toBeNull()
+  })
+
+  it('drops to the strip beneath a live game that leaves no room for it', () => {
+    stubLayout({ column: 800, blocks: { g1: 760, yesterday: 120 } })
+    const data: GamesResponse = {
+      games: [game('live'), finished],
+      hasLive: true,
+      unavailableLeagues: [],
+    }
+    const { container } = render(<SportsColumn data={data} isLoading={false} />)
+    expect(summary(container, 'yesterday')).not.toBeVisible()
+    expect(screen.getByTestId('also-today')).toHaveTextContent('LAD 4 · MIL 3')
   })
 
   // Why the lead order gained a rung: with only a finished game, the column
@@ -193,6 +242,11 @@ describe('the "Also today" strip', () => {
   beforeEach(() => {
     useSportsPreview.mockReturnValue({ data: undefined })
     useSportsFinalRecap.mockReturnValue({ data: undefined, isLoading: false, error: null })
+    // The lead fills the column, so every other game falls to the strip.
+    stubLayout({
+      column: 800,
+      blocks: { featured: 790, 'other-live': 200, f1: 120, f2: 120 },
+    })
   })
 
   it('lists another live game and a final beneath the live game, but not the live game itself', () => {
@@ -239,5 +293,80 @@ describe('the "Also today" strip', () => {
     }
     render(<SportsColumn data={data} isLoading={false} />)
     expect(screen.queryByTestId('also-today')).toBeNull()
+  })
+})
+
+/** The column used to show one summary however much room it had: with two
+ *  finals and nothing else on, the 49ers' result led and the Dodgers–Giants
+ *  final beside it was nowhere on Home. It now stacks as many whole
+ *  summaries as measure to fit, and only the rest drop to the strip. */
+describe('fitting summaries to the column', () => {
+  const finalGame = (id: string, away: string, home: string, startTime: string) =>
+    game('final', { id, startTime, home: team(home, 1), away: team(away, 5) })
+  const nfl = finalGame('nfl', 'ARI', 'SF', '2026-09-27T20:05:00Z')
+  const mlb = finalGame('mlb', 'LAD', 'SFG', '2026-09-27T19:05:00Z')
+  const older = finalGame('older', 'NYY', 'BOS', '2026-09-27T17:05:00Z')
+
+  beforeEach(() => {
+    useSportsPreview.mockReturnValue({ data: undefined })
+    useSportsFinalRecap.mockReturnValue({ data: undefined, isLoading: false, error: null })
+  })
+
+  it('stacks two finals when both fit, newest first, with no strip', () => {
+    stubLayout({ column: 800, blocks: { nfl: 150, mlb: 150 } })
+    const data: GamesResponse = { games: [mlb, nfl], hasLive: false, unavailableLeagues: [] }
+    const { container } = render(<SportsColumn data={data} isLoading={false} />)
+
+    expect(summary(container, 'nfl')).toBeVisible()
+    expect(summary(container, 'mlb')).toBeVisible()
+    const shown = [...container.querySelectorAll('[data-summary-id]')].map(
+      (el) => (el as HTMLElement).dataset.summaryId,
+    )
+    expect(shown).toEqual(['nfl', 'mlb'])
+    expect(screen.queryByTestId('also-today')).toBeNull()
+  })
+
+  it('follows a pregame preview with as many finals as fit, and lists the rest', () => {
+    stubLayout({ column: 600, blocks: { g1: 380, nfl: 150, mlb: 150 } })
+    const data: GamesResponse = {
+      games: [game('upcoming'), mlb, nfl],
+      hasLive: false,
+      unavailableLeagues: [],
+    }
+    const { container } = render(<SportsColumn data={data} isLoading={false} />)
+
+    expect(summary(container, 'g1')).toBeVisible()
+    expect(summary(container, 'nfl')).toBeVisible()
+    expect(summary(container, 'mlb')).not.toBeVisible()
+    const strip = screen.getByTestId('also-today')
+    expect(strip).toHaveTextContent('LAD 5 · SFG 1')
+    expect(strip).not.toHaveTextContent('ARI')
+  })
+
+  it('stacks a second live game beneath the first, and lists the final that no longer fits', () => {
+    const second = game('live', { id: 'second', home: team('SF', 29), away: team('ARI', 20) })
+    stubLayout({ column: 900, blocks: { g1: 420, second: 400, older: 150 } })
+    const data: GamesResponse = {
+      games: [game('live'), second, older],
+      hasLive: true,
+      unavailableLeagues: [],
+    }
+    const { container } = render(<SportsColumn data={data} isLoading={false} />)
+
+    expect(summary(container, 'g1')).toBeVisible()
+    expect(summary(container, 'second')).toBeVisible()
+    expect(summary(container, 'older')).not.toBeVisible()
+    expect(screen.getByTestId('also-today')).toHaveTextContent('NYY 5 · BOS 1')
+  })
+
+  // Hidden summaries stay mounted so they can be measured, but must be
+  // invisible to assistive tech as well as to the eye.
+  it('hides a summary that does not fit from assistive tech too', () => {
+    stubLayout({ column: 300, blocks: { nfl: 280, mlb: 150 } })
+    const data: GamesResponse = { games: [mlb, nfl], hasLive: false, unavailableLeagues: [] }
+    const { container } = render(<SportsColumn data={data} isLoading={false} />)
+
+    expect(summary(container, 'mlb')).toHaveAttribute('aria-hidden', 'true')
+    expect(summary(container, 'nfl')).not.toHaveAttribute('aria-hidden')
   })
 })
