@@ -128,6 +128,9 @@ export interface SeriesRow {
   /** The followed team is one of the two sides. */
   mine: boolean
   nextStartsAt: string | null
+  /** A one-game round (the NFL's): `aWins`/`bWins` are the game's score once
+   *  it starts; before then `a` is the away side and `b` the home. */
+  singleGame: boolean
 }
 
 /** One round of the postseason currently in progress — its own series, plural

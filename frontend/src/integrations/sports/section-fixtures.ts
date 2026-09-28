@@ -328,6 +328,7 @@ const series = (
   done: false,
   mine: false,
   nextStartsAt: soon(26),
+  singleGame: false,
   ...over,
 })
 

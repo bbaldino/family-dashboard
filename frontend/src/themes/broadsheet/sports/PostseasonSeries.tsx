@@ -17,9 +17,41 @@ function trimToBudget(rounds: PostseasonRound[], maxSeries: number): SeriesRow[]
   ).rows
 }
 
+/** One side of a series row, bold when it leads. */
+function Side({ abbr, n, lead }: { abbr: string; n: number; lead: boolean }) {
+  return lead ? (
+    <b>
+      {abbr} {n}
+    </b>
+  ) : (
+    <>
+      {abbr} {n}
+    </>
+  )
+}
+
+/** A row's two sides: the series (or a single game's score) with only the
+ *  leader bold — neither on a tie — or, for a single game not yet started,
+ *  just the matchup, away at home. */
+function Matchup({ s }: { s: SeriesRow }) {
+  if (s.singleGame && !s.live && !s.done) {
+    return (
+      <span>
+        {s.a} at {s.b}
+      </span>
+    )
+  }
+  return (
+    <span>
+      <Side abbr={s.a} n={s.aWins} lead={s.aWins > s.bWins} /> ·{' '}
+      <Side abbr={s.b} n={s.bWins} lead={s.bWins > s.aWins} />
+    </span>
+  )
+}
+
 /**
  * The league's whole postseason as a round-by-round list: each running round's
- * series (leader first and bold, the followed team's washed), finished rounds
+ * series (leader first, bold only while it leads; the followed team's washed), finished rounds
  * folded to one line, and rounds still to come with their start. Series rows
  * across the current rounds are capped at `maxSeries`.
  */
@@ -53,12 +85,7 @@ export function PostseasonSeries({ view, maxSeries }: { view: PostseasonView; ma
                   fontSize: 11.5,
                 }}
               >
-                <span>
-                  <b>
-                    {s.a} {s.aWins}
-                  </b>{' '}
-                  · {s.b} {s.bWins}
-                </span>
+                <Matchup s={s} />
                 <span
                   style={{ ...SP_SUB_LABEL, color: s.live ? 'var(--rust)' : 'var(--ink-muted)' }}
                 >

@@ -5,6 +5,11 @@
 //! best-of on the competition's `series`, and schedules later rounds against
 //! placeholder opponents with negative ids ("-2", "Yankees/Red Sox"). It does
 //! not give the bracket tree, so this is a round-by-round list, not a bracket.
+//!
+//! The NFL's rounds are single games with no `series` block ("NFC Wild Card
+//! Playoffs", "Super Bowl LX"); those read as games — matchup, then score —
+//! rather than as best-of series. The Pro Bowl Games (AFC v NFC, ids 31/32)
+//! share the postseason's dates but are no round of it, and are skipped.
 
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::Serialize;
@@ -39,6 +44,9 @@ pub struct SeriesRow {
     pub done: bool,
     pub mine: bool,
     pub next_starts_at: Option<String>,
+    /// A one-game round (the NFL's): `a_wins`/`b_wins` are the game's score
+    /// once it starts, and before then `a` is the away side, `b` the home.
+    pub single_game: bool,
 }
 
 #[derive(Serialize, Debug)]
@@ -94,6 +102,8 @@ struct Side {
     abbr: String,
     placeholder: bool,
     winner: bool,
+    home: bool,
+    score: u32,
 }
 
 struct PostEvent {
@@ -111,6 +121,14 @@ struct PostEvent {
     summary: Option<String>,
 }
 
+/// The Pro Bowl Games: an all-star exhibition between the conferences
+/// (competitor ids 31 and 32), scheduled among the playoffs.
+fn exhibition(round: &str, cs: &[serde_json::Value]) -> bool {
+    let conference =
+        |c: &serde_json::Value| matches!(json_id(&c["id"]).as_deref(), Some("31" | "32"));
+    round.contains("Pro Bowl") || cs.iter().all(conference)
+}
+
 fn parse_event(e: &serde_json::Value) -> Option<PostEvent> {
     if e["season"]["type"].as_i64() != Some(3) {
         return None;
@@ -118,7 +136,7 @@ fn parse_event(e: &serde_json::Value) -> Option<PostEvent> {
     let comp = &e["competitions"][0];
     let (round, game) = round_of(comp["notes"][0]["headline"].as_str()?);
     let cs = comp["competitors"].as_array()?;
-    if cs.len() != 2 {
+    if cs.len() != 2 || exhibition(&round, cs) {
         return None;
     }
     let side = |c: &serde_json::Value| {
@@ -135,6 +153,8 @@ fn parse_event(e: &serde_json::Value) -> Option<PostEvent> {
             abbr,
             placeholder,
             winner: c["winner"].as_bool().unwrap_or(false),
+            home: c["homeAway"].as_str() == Some("home"),
+            score: super::team::score_of(&c["score"]).unwrap_or(0).max(0) as u32,
         }
     };
     let series = comp.get("series").filter(|s| !s.is_null());
@@ -145,10 +165,12 @@ fn parse_event(e: &serde_json::Value) -> Option<PostEvent> {
         game,
         start: parse_espn_timestamp(&starts_at),
         starts_at,
-        state: e["status"]["type"]["state"]
-            .as_str()
-            .unwrap_or("")
-            .to_string(),
+        // A postponed game is `post` but never completed: neither played nor
+        // to come, so it gets a state of its own.
+        state: match e["status"]["type"]["state"].as_str().unwrap_or("") {
+            "post" if !super::team::is_final(e) => "postponed".to_string(),
+            s => s.to_string(),
+        },
         short_detail: e["status"]["type"]["shortDetail"]
             .as_str()
             .unwrap_or("")
@@ -207,6 +229,20 @@ impl Series<'_> {
     fn best_of(&self) -> Option<u32> {
         self.events.iter().find_map(|e| e.best_of)
     }
+    /// A one-game round: no best-of and a single game (the NFL's playoffs).
+    fn single_game(&self) -> bool {
+        self.best_of().is_none() && self.events.len() == 1
+    }
+    /// What the series is counted in, first event's side order: the game's
+    /// score for a single game, else wins.
+    fn tally(&self) -> (u32, u32) {
+        if self.single_game() {
+            let [s0, s1] = &self.first().sides;
+            (s0.score, s1.score)
+        } else {
+            self.wins()
+        }
+    }
     fn done(&self) -> bool {
         match self.latest_with_series().and_then(|e| e.completed) {
             Some(c) => c,
@@ -225,10 +261,16 @@ fn series_key(e: &PostEvent) -> (String, String, String) {
 }
 
 fn row(series: &Series, team_id: &str, now: DateTime<Utc>) -> SeriesRow {
-    let [s0, s1] = &series.first().sides;
-    let (w0, w1) = series.wins();
-    // The leader reads first; a tie keeps ESPN's order.
-    let (a, aw, b, bw) = if w1 > w0 {
+    let first = series.first();
+    let [s0, s1] = &first.sides;
+    let (w0, w1) = series.tally();
+    let single = series.single_game();
+    // The leader reads first; a tie keeps ESPN's order — except a single game
+    // not yet started, which reads away at home.
+    let (a, aw, b, bw) = if single && first.state == "pre" {
+        let (away, home) = if s0.home { (s1, s0) } else { (s0, s1) };
+        (&away.abbr, 0, &home.abbr, 0)
+    } else if w1 > w0 {
         (&s1.abbr, w1, &s0.abbr, w0)
     } else {
         (&s0.abbr, w0, &s1.abbr, w1)
@@ -242,7 +284,11 @@ fn row(series: &Series, team_id: &str, now: DateTime<Utc>) -> SeriesRow {
     let detail = if let Some(e) = live {
         e.short_detail.clone()
     } else if done {
-        "Final".to_string()
+        if single {
+            first.short_detail.clone()
+        } else {
+            "Final".to_string()
+        }
     } else if let Some(e) = next {
         e.game
             .map(|g| format!("G{g}"))
@@ -267,11 +313,16 @@ fn row(series: &Series, team_id: &str, now: DateTime<Utc>) -> SeriesRow {
         } else {
             None
         },
+        single_game: single,
     }
 }
 
-/// "LEADER leads 2–1" / "tied 2–2" / "series opens", plus best-of.
+/// "LEADER leads 2–1" / "tied 2–2" / "series opens", plus best-of. A single
+/// game reads as the game: "next: SF at SEA", or live "LAR 21–17 CAR · 3rd".
 fn status_text(round: &str, series: &Series) -> String {
+    if series.single_game() {
+        return format!("{round} · {}", game_text(series));
+    }
     let [s0, s1] = &series.first().sides;
     let (w0, w1) = series.wins();
     let state = if w0 == 0 && w1 == 0 {
@@ -286,6 +337,43 @@ fn status_text(round: &str, series: &Series) -> String {
     match series.best_of() {
         Some(n) => format!("{round} · {state} · best of {n}"),
         None => format!("{round} · {state}"),
+    }
+}
+
+/// A single game not yet over: "next: AWAY at HOME" before it starts, the
+/// score leader-first and ESPN's clock once it has.
+fn game_text(series: &Series) -> String {
+    let e = series.first();
+    let [s0, s1] = &e.sides;
+    if e.state == "pre" {
+        let (away, home) = if s0.home { (s1, s0) } else { (s0, s1) };
+        return format!("next: {} at {}", away.abbr, home.abbr);
+    }
+    let (lead, other) = if s1.score > s0.score {
+        (s1, s0)
+    } else {
+        (s0, s1)
+    };
+    format!(
+        "{} {}–{} {} · {}",
+        lead.abbr, lead.score, other.score, other.abbr, e.short_detail
+    )
+}
+
+/// A finished series in one phrase, winner first: "LAD def CIN 2–0", or a
+/// single game's score, "LAR 34–31 CAR".
+fn result_text(series: &Series) -> String {
+    let [s0, s1] = &series.first().sides;
+    let (w0, w1) = series.tally();
+    let (w, l, ww, lw) = if w0 >= w1 {
+        (s0, s1, w0, w1)
+    } else {
+        (s1, s0, w1, w0)
+    };
+    if series.single_game() {
+        format!("{} {ww}–{lw} {}", w.abbr, l.abbr)
+    } else {
+        format!("{} def {} {ww}–{lw}", w.abbr, l.abbr)
     }
 }
 
@@ -341,16 +429,7 @@ pub fn build_postseason(
         } else if real.iter().all(|s| s.done()) && real.len() == series.len() {
             let summary = real
                 .iter()
-                .map(|s| {
-                    let [s0, s1] = &s.first().sides;
-                    let (w0, w1) = s.wins();
-                    let (w, l, ww, lw) = if w0 >= w1 {
-                        (s0, s1, w0, w1)
-                    } else {
-                        (s1, s0, w1, w0)
-                    };
-                    format!("{} def {} {ww}–{lw}", w.abbr, l.abbr)
-                })
+                .map(|s| result_text(s))
                 .collect::<Vec<_>>()
                 .join(" · ");
             view.completed.push(CompletedRound {
@@ -394,7 +473,7 @@ fn team_status(
     }
     if let Some((round, s)) = real_mine.last() {
         let [s0, s1] = &s.first().sides;
-        let (w0, w1) = s.wins();
+        let (w0, w1) = s.tally();
         let (_, them, mw, tw) = if s0.id == team_id {
             (s0, s1, w0, w1)
         } else {
@@ -584,6 +663,200 @@ mod tests {
         assert_eq!(
             build_postseason(&b, "15", now).1,
             TeamPostStatus::Alive("NLWC · series opens · best of 3".into())
+        );
+    }
+
+    // ─── NFL: single-game rounds, no `series` block ─────────────────────
+
+    /// One NFL playoff game in ESPN's real scoreboard shape (captured from
+    /// the 2025 season's postseason days): `series` is null, the note names
+    /// the whole round, and the competitors list home first.
+    fn nfl_game(
+        id: &str,
+        date: &str,
+        state: &str,
+        detail: &str,
+        note: &str,
+        home: (&str, &str, &str),
+        away: (&str, &str, &str),
+    ) -> serde_json::Value {
+        let score = |s: &str| s.parse::<i64>().unwrap_or(0);
+        let side = |(tid, abbr, pts): (&str, &str, &str), other: &str, home_away: &str| {
+            serde_json::json!({
+                "id": tid,
+                "homeAway": home_away,
+                "winner": state == "post" && score(pts) > score(other),
+                "score": pts,
+                "team": { "id": tid, "abbreviation": abbr },
+            })
+        };
+        serde_json::json!({
+            "id": id,
+            "date": date,
+            "season": { "year": 2025, "type": 3, "slug": "post-season" },
+            "status": { "type": {
+                "state": state,
+                "completed": state == "post",
+                "shortDetail": detail,
+            } },
+            "competitions": [{
+                "notes": [{ "type": "event", "headline": note }],
+                "series": null,
+                "competitors": [side(home, away.2, "home"), side(away, home.2, "away")],
+            }],
+        })
+    }
+
+    const NFC_WC: &str = "NFC Wild Card Playoffs";
+    const NFC_DIV: &str = "NFC Divisional Playoffs";
+
+    /// Wild Card weekend done (real 2025 results), a Divisional game still
+    /// to come, and the Pro Bowl Games (AFC 31 v NFC 32) in between.
+    fn nfl_january() -> Vec<serde_json::Value> {
+        let day = |events: Vec<serde_json::Value>| serde_json::json!({ "events": events });
+        vec![
+            day(vec![
+                nfl_game(
+                    "401772979",
+                    "2026-01-10T21:30Z",
+                    "post",
+                    "Final",
+                    NFC_WC,
+                    ("29", "CAR", "31"),
+                    ("14", "LAR", "34"),
+                ),
+                nfl_game(
+                    "401772981",
+                    "2026-01-11T01:00Z",
+                    "post",
+                    "Final",
+                    NFC_WC,
+                    ("3", "CHI", "31"),
+                    ("9", "GB", "27"),
+                ),
+            ]),
+            day(vec![nfl_game(
+                "401772984",
+                "2026-01-18T01:00Z",
+                "pre",
+                "1/17 - 8:00 PM EST",
+                NFC_DIV,
+                ("26", "SEA", "0"),
+                ("25", "SF", "0"),
+            )]),
+            day(vec![nfl_game(
+                "401831718",
+                "2026-01-20T01:00Z",
+                "pre",
+                "2/3 - 8:00 PM EST",
+                "Pro Bowl Games",
+                ("31", "AFC", "0"),
+                ("32", "NFC", "0"),
+            )]),
+        ]
+    }
+
+    #[test]
+    fn a_finished_single_game_round_folds_to_its_scores() {
+        let (v, _) = build_postseason(&nfl_january(), "26", at("2026-01-15T12:00:00Z"));
+        let wc = v.completed.iter().find(|r| r.round == NFC_WC).unwrap();
+        assert_eq!(wc.summary, "LAR 34–31 CAR · CHI 31–27 GB");
+    }
+
+    #[test]
+    fn an_upcoming_single_game_reads_as_its_matchup_not_a_series() {
+        let now = at("2026-01-15T12:00:00Z");
+        let (v, status) = build_postseason(&nfl_january(), "26", now);
+        let div = round(&v, NFC_DIV);
+        assert_eq!(div.best_of, None);
+        let g = &div.series[0];
+        assert!(g.single_game && g.mine && !g.live && !g.done);
+        assert_eq!(
+            (g.a.as_str(), g.b.as_str()),
+            ("SF", "SEA"),
+            "away, then home"
+        );
+        assert_eq!(g.detail, "Next");
+        assert_eq!(g.next_starts_at.as_deref(), Some("2026-01-18T01:00Z"));
+        assert_eq!(
+            status,
+            TeamPostStatus::Alive("NFC Divisional Playoffs · next: SF at SEA".into())
+        );
+    }
+
+    #[test]
+    fn a_team_out_after_one_game_reads_the_score() {
+        let now = at("2026-01-15T12:00:00Z");
+        assert_eq!(
+            build_postseason(&nfl_january(), "29", now).1,
+            TeamPostStatus::Ended("Out in NFC Wild Card Playoffs, 31–34 to LAR".into())
+        );
+        assert_eq!(
+            build_postseason(&nfl_january(), "14", now).1,
+            TeamPostStatus::Alive("Won the NFC Wild Card Playoffs 34–31".into())
+        );
+    }
+
+    #[test]
+    fn the_pro_bowl_is_not_a_postseason_round() {
+        let (v, _) = build_postseason(&nfl_january(), "26", at("2026-01-15T12:00:00Z"));
+        let rounds: Vec<&str> = v
+            .current
+            .iter()
+            .map(|r| r.round.as_str())
+            .chain(v.completed.iter().map(|r| r.round.as_str()))
+            .chain(v.upcoming.iter().map(|r| r.round.as_str()))
+            .collect();
+        assert!(!rounds.iter().any(|r| r.contains("Pro Bowl")), "{rounds:?}");
+        assert_eq!(
+            build_postseason(&nfl_january(), "32", at("2026-01-15T12:00:00Z")).1,
+            TeamPostStatus::Missed
+        );
+    }
+
+    #[test]
+    fn a_live_single_game_row_carries_the_score_and_clock() {
+        let live = serde_json::json!({ "events": [nfl_game(
+            "401772979",
+            "2026-01-10T21:30Z",
+            "in",
+            "5:12 - 3rd",
+            NFC_WC,
+            ("29", "CAR", "17"),
+            ("14", "LAR", "21"),
+        )] });
+        let (v, status) = build_postseason(&[live], "14", at("2026-01-10T23:00:00Z"));
+        let g = &round(&v, NFC_WC).series[0];
+        assert!(g.live && g.single_game && !g.done);
+        assert_eq!(
+            (g.a.as_str(), g.a_wins, g.b.as_str(), g.b_wins),
+            ("LAR", 21, "CAR", 17)
+        );
+        assert_eq!(g.detail, "5:12 - 3rd");
+        assert_eq!(g.next_starts_at, None);
+        assert_eq!(
+            status,
+            TeamPostStatus::Alive("NFC Wild Card Playoffs · LAR 21–17 CAR · 5:12 - 3rd".into())
+        );
+    }
+
+    /// Nothing left to play after the Super Bowl: the winner is champion.
+    #[test]
+    fn the_super_bowl_winner_has_ended_as_champion() {
+        let sb = serde_json::json!({ "events": [nfl_game(
+            "401772988",
+            "2026-02-08T23:30Z",
+            "post",
+            "Final",
+            "Super Bowl LX",
+            ("17", "NE", "13"),
+            ("26", "SEA", "29"),
+        )] });
+        let (v, status) = build_postseason(&[sb], "26", at("2026-02-09T12:00:00Z"));
+        assert_eq!(v.completed[0].summary, "SEA 29–13 NE");
+        assert_eq!(
+            status,
+            TeamPostStatus::Ended("Won the Super Bowl LX, 29–13 over NE".into())
         );
     }
 
