@@ -1,0 +1,1755 @@
+{
+  "_comment": "Trimmed ESPN site/v2 MLB scoreboards, one per day, 2025-09-30 through 2025-10-10: the full 2025 Wild Card round (ALWC/NLWC, best of 3) and Division Series (ALDS/NLDS, best of 5), all final. Events trimmed to id, date, season.type, status.type, and competitions[0] notes/series/competitors — what build_postseason reads. Fetched per day because ESPN rejects date ranges.",
+  "days": [
+    {
+      "date": "20250930",
+      "scoreboard": {
+        "events": [
+          {
+            "id": "401809251",
+            "date": "2025-09-30T17:00Z",
+            "shortName": "DET @ CLE",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "ALWC - Game 1"
+                  }
+                ],
+                "series": {
+                  "summary": "DET leads series 1-0",
+                  "completed": false,
+                  "totalCompetitions": 3,
+                  "competitors": [
+                    {
+                      "id": "5",
+                      "wins": 0
+                    },
+                    {
+                      "id": "6",
+                      "wins": 1
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "5",
+                    "homeAway": "home",
+                    "winner": false,
+                    "score": "1",
+                    "team": {
+                      "abbreviation": "CLE"
+                    }
+                  },
+                  {
+                    "id": "6",
+                    "homeAway": "away",
+                    "winner": true,
+                    "score": "2",
+                    "team": {
+                      "abbreviation": "DET"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401809260",
+            "date": "2025-09-30T19:00Z",
+            "shortName": "SD @ CHC",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "NLWC - Game 1"
+                  }
+                ],
+                "series": {
+                  "summary": "CHC lead series 1-0",
+                  "completed": false,
+                  "totalCompetitions": 3,
+                  "competitors": [
+                    {
+                      "id": "16",
+                      "wins": 1
+                    },
+                    {
+                      "id": "25",
+                      "wins": 0
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "16",
+                    "homeAway": "home",
+                    "winner": true,
+                    "score": "3",
+                    "team": {
+                      "abbreviation": "CHC"
+                    }
+                  },
+                  {
+                    "id": "25",
+                    "homeAway": "away",
+                    "winner": false,
+                    "score": "1",
+                    "team": {
+                      "abbreviation": "SD"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401809254",
+            "date": "2025-09-30T22:00Z",
+            "shortName": "BOS @ NYY",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "ALWC - Game 1"
+                  }
+                ],
+                "series": {
+                  "summary": "BOS leads series 1-0",
+                  "completed": false,
+                  "totalCompetitions": 3,
+                  "competitors": [
+                    {
+                      "id": "10",
+                      "wins": 0
+                    },
+                    {
+                      "id": "2",
+                      "wins": 1
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "10",
+                    "homeAway": "home",
+                    "winner": false,
+                    "score": "1",
+                    "team": {
+                      "abbreviation": "NYY"
+                    }
+                  },
+                  {
+                    "id": "2",
+                    "homeAway": "away",
+                    "winner": true,
+                    "score": "3",
+                    "team": {
+                      "abbreviation": "BOS"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401809257",
+            "date": "2025-10-01T01:00Z",
+            "shortName": "CIN @ LAD",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "NLWC - Game 1"
+                  }
+                ],
+                "series": {
+                  "summary": "LAD lead series 1-0",
+                  "completed": false,
+                  "totalCompetitions": 3,
+                  "competitors": [
+                    {
+                      "id": "19",
+                      "wins": 1
+                    },
+                    {
+                      "id": "17",
+                      "wins": 0
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "19",
+                    "homeAway": "home",
+                    "winner": true,
+                    "score": "10",
+                    "team": {
+                      "abbreviation": "LAD"
+                    }
+                  },
+                  {
+                    "id": "17",
+                    "homeAway": "away",
+                    "winner": false,
+                    "score": "5",
+                    "team": {
+                      "abbreviation": "CIN"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "date": "20251001",
+      "scoreboard": {
+        "events": [
+          {
+            "id": "401809252",
+            "date": "2025-10-01T17:00Z",
+            "shortName": "DET @ CLE",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "ALWC - Game 2"
+                  }
+                ],
+                "series": {
+                  "summary": "Series tied 1-1",
+                  "completed": false,
+                  "totalCompetitions": 3,
+                  "competitors": [
+                    {
+                      "id": "5",
+                      "wins": 1
+                    },
+                    {
+                      "id": "6",
+                      "wins": 1
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "5",
+                    "homeAway": "home",
+                    "winner": true,
+                    "score": "6",
+                    "team": {
+                      "abbreviation": "CLE"
+                    }
+                  },
+                  {
+                    "id": "6",
+                    "homeAway": "away",
+                    "winner": false,
+                    "score": "1",
+                    "team": {
+                      "abbreviation": "DET"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401809261",
+            "date": "2025-10-01T19:00Z",
+            "shortName": "SD @ CHC",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "NLWC - Game 2"
+                  }
+                ],
+                "series": {
+                  "summary": "Series tied 1-1",
+                  "completed": false,
+                  "totalCompetitions": 3,
+                  "competitors": [
+                    {
+                      "id": "16",
+                      "wins": 1
+                    },
+                    {
+                      "id": "25",
+                      "wins": 1
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "16",
+                    "homeAway": "home",
+                    "winner": false,
+                    "score": "0",
+                    "team": {
+                      "abbreviation": "CHC"
+                    }
+                  },
+                  {
+                    "id": "25",
+                    "homeAway": "away",
+                    "winner": true,
+                    "score": "3",
+                    "team": {
+                      "abbreviation": "SD"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401809255",
+            "date": "2025-10-01T22:00Z",
+            "shortName": "BOS @ NYY",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "ALWC - Game 2"
+                  }
+                ],
+                "series": {
+                  "summary": "Series tied 1-1",
+                  "completed": false,
+                  "totalCompetitions": 3,
+                  "competitors": [
+                    {
+                      "id": "10",
+                      "wins": 1
+                    },
+                    {
+                      "id": "2",
+                      "wins": 1
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "10",
+                    "homeAway": "home",
+                    "winner": true,
+                    "score": "4",
+                    "team": {
+                      "abbreviation": "NYY"
+                    }
+                  },
+                  {
+                    "id": "2",
+                    "homeAway": "away",
+                    "winner": false,
+                    "score": "3",
+                    "team": {
+                      "abbreviation": "BOS"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401809258",
+            "date": "2025-10-02T01:00Z",
+            "shortName": "CIN @ LAD",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "NLWC - Game 2"
+                  }
+                ],
+                "series": {
+                  "summary": "LAD win series 2-0",
+                  "completed": true,
+                  "totalCompetitions": 3,
+                  "competitors": [
+                    {
+                      "id": "19",
+                      "wins": 2
+                    },
+                    {
+                      "id": "17",
+                      "wins": 0
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "19",
+                    "homeAway": "home",
+                    "winner": true,
+                    "score": "8",
+                    "team": {
+                      "abbreviation": "LAD"
+                    }
+                  },
+                  {
+                    "id": "17",
+                    "homeAway": "away",
+                    "winner": false,
+                    "score": "4",
+                    "team": {
+                      "abbreviation": "CIN"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "date": "20251002",
+      "scoreboard": {
+        "events": [
+          {
+            "id": "401809253",
+            "date": "2025-10-02T19:00Z",
+            "shortName": "DET @ CLE",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "ALWC - Game 3"
+                  }
+                ],
+                "series": {
+                  "summary": "DET wins series 2-1",
+                  "completed": true,
+                  "totalCompetitions": 3,
+                  "competitors": [
+                    {
+                      "id": "5",
+                      "wins": 1
+                    },
+                    {
+                      "id": "6",
+                      "wins": 2
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "5",
+                    "homeAway": "home",
+                    "winner": false,
+                    "score": "3",
+                    "team": {
+                      "abbreviation": "CLE"
+                    }
+                  },
+                  {
+                    "id": "6",
+                    "homeAway": "away",
+                    "winner": true,
+                    "score": "6",
+                    "team": {
+                      "abbreviation": "DET"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401809262",
+            "date": "2025-10-02T21:00Z",
+            "shortName": "SD @ CHC",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "NLWC - Game 3"
+                  }
+                ],
+                "series": {
+                  "summary": "CHC win series 2-1",
+                  "completed": true,
+                  "totalCompetitions": 3,
+                  "competitors": [
+                    {
+                      "id": "16",
+                      "wins": 2
+                    },
+                    {
+                      "id": "25",
+                      "wins": 1
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "16",
+                    "homeAway": "home",
+                    "winner": true,
+                    "score": "3",
+                    "team": {
+                      "abbreviation": "CHC"
+                    }
+                  },
+                  {
+                    "id": "25",
+                    "homeAway": "away",
+                    "winner": false,
+                    "score": "1",
+                    "team": {
+                      "abbreviation": "SD"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401809256",
+            "date": "2025-10-03T00:00Z",
+            "shortName": "BOS @ NYY",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "ALWC - Game 3"
+                  }
+                ],
+                "series": {
+                  "summary": "NYY win series 2-1",
+                  "completed": true,
+                  "totalCompetitions": 3,
+                  "competitors": [
+                    {
+                      "id": "10",
+                      "wins": 2
+                    },
+                    {
+                      "id": "2",
+                      "wins": 1
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "10",
+                    "homeAway": "home",
+                    "winner": true,
+                    "score": "4",
+                    "team": {
+                      "abbreviation": "NYY"
+                    }
+                  },
+                  {
+                    "id": "2",
+                    "homeAway": "away",
+                    "winner": false,
+                    "score": "0",
+                    "team": {
+                      "abbreviation": "BOS"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "date": "20251004",
+      "scoreboard": {
+        "events": [
+          {
+            "id": "401809273",
+            "date": "2025-10-04T18:08Z",
+            "shortName": "CHC @ MIL",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "NLDS - Game 1"
+                  }
+                ],
+                "series": {
+                  "summary": "MIL leads series 1-0",
+                  "completed": false,
+                  "totalCompetitions": 5,
+                  "competitors": [
+                    {
+                      "id": "8",
+                      "wins": 1
+                    },
+                    {
+                      "id": "16",
+                      "wins": 0
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "8",
+                    "homeAway": "home",
+                    "winner": true,
+                    "score": "9",
+                    "team": {
+                      "abbreviation": "MIL"
+                    }
+                  },
+                  {
+                    "id": "16",
+                    "homeAway": "away",
+                    "winner": false,
+                    "score": "3",
+                    "team": {
+                      "abbreviation": "CHC"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401809263",
+            "date": "2025-10-04T20:08Z",
+            "shortName": "NYY @ TOR",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "ALDS - Game 1"
+                  }
+                ],
+                "series": {
+                  "summary": "TOR leads series 1-0",
+                  "completed": false,
+                  "totalCompetitions": 5,
+                  "competitors": [
+                    {
+                      "id": "14",
+                      "wins": 1
+                    },
+                    {
+                      "id": "10",
+                      "wins": 0
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "14",
+                    "homeAway": "home",
+                    "winner": true,
+                    "score": "10",
+                    "team": {
+                      "abbreviation": "TOR"
+                    }
+                  },
+                  {
+                    "id": "10",
+                    "homeAway": "away",
+                    "winner": false,
+                    "score": "1",
+                    "team": {
+                      "abbreviation": "NYY"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401809278",
+            "date": "2025-10-04T22:38Z",
+            "shortName": "LAD @ PHI",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "NLDS - Game 1"
+                  }
+                ],
+                "series": {
+                  "summary": "LAD lead series 1-0",
+                  "completed": false,
+                  "totalCompetitions": 5,
+                  "competitors": [
+                    {
+                      "id": "22",
+                      "wins": 0
+                    },
+                    {
+                      "id": "19",
+                      "wins": 1
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "22",
+                    "homeAway": "home",
+                    "winner": false,
+                    "score": "3",
+                    "team": {
+                      "abbreviation": "PHI"
+                    }
+                  },
+                  {
+                    "id": "19",
+                    "homeAway": "away",
+                    "winner": true,
+                    "score": "5",
+                    "team": {
+                      "abbreviation": "LAD"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401809268",
+            "date": "2025-10-05T00:38Z",
+            "shortName": "DET @ SEA",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final/11"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "ALDS - Game 1"
+                  }
+                ],
+                "series": {
+                  "summary": "DET leads series 1-0",
+                  "completed": false,
+                  "totalCompetitions": 5,
+                  "competitors": [
+                    {
+                      "id": "12",
+                      "wins": 0
+                    },
+                    {
+                      "id": "6",
+                      "wins": 1
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "12",
+                    "homeAway": "home",
+                    "winner": false,
+                    "score": "2",
+                    "team": {
+                      "abbreviation": "SEA"
+                    }
+                  },
+                  {
+                    "id": "6",
+                    "homeAway": "away",
+                    "winner": true,
+                    "score": "3",
+                    "team": {
+                      "abbreviation": "DET"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "date": "20251005",
+      "scoreboard": {
+        "events": [
+          {
+            "id": "401809264",
+            "date": "2025-10-05T20:08Z",
+            "shortName": "NYY @ TOR",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "ALDS - Game 2"
+                  }
+                ],
+                "series": {
+                  "summary": "TOR leads series 2-0",
+                  "completed": false,
+                  "totalCompetitions": 5,
+                  "competitors": [
+                    {
+                      "id": "14",
+                      "wins": 2
+                    },
+                    {
+                      "id": "10",
+                      "wins": 0
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "14",
+                    "homeAway": "home",
+                    "winner": true,
+                    "score": "13",
+                    "team": {
+                      "abbreviation": "TOR"
+                    }
+                  },
+                  {
+                    "id": "10",
+                    "homeAway": "away",
+                    "winner": false,
+                    "score": "7",
+                    "team": {
+                      "abbreviation": "NYY"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401809269",
+            "date": "2025-10-06T00:03Z",
+            "shortName": "DET @ SEA",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "ALDS - Game 2"
+                  }
+                ],
+                "series": {
+                  "summary": "Series tied 1-1",
+                  "completed": false,
+                  "totalCompetitions": 5,
+                  "competitors": [
+                    {
+                      "id": "12",
+                      "wins": 1
+                    },
+                    {
+                      "id": "6",
+                      "wins": 1
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "12",
+                    "homeAway": "home",
+                    "winner": true,
+                    "score": "3",
+                    "team": {
+                      "abbreviation": "SEA"
+                    }
+                  },
+                  {
+                    "id": "6",
+                    "homeAway": "away",
+                    "winner": false,
+                    "score": "2",
+                    "team": {
+                      "abbreviation": "DET"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "date": "20251006",
+      "scoreboard": {
+        "events": [
+          {
+            "id": "401809279",
+            "date": "2025-10-06T22:08Z",
+            "shortName": "LAD @ PHI",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "NLDS - Game 2"
+                  }
+                ],
+                "series": {
+                  "summary": "LAD lead series 2-0",
+                  "completed": false,
+                  "totalCompetitions": 5,
+                  "competitors": [
+                    {
+                      "id": "22",
+                      "wins": 0
+                    },
+                    {
+                      "id": "19",
+                      "wins": 2
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "22",
+                    "homeAway": "home",
+                    "winner": false,
+                    "score": "3",
+                    "team": {
+                      "abbreviation": "PHI"
+                    }
+                  },
+                  {
+                    "id": "19",
+                    "homeAway": "away",
+                    "winner": true,
+                    "score": "4",
+                    "team": {
+                      "abbreviation": "LAD"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401809274",
+            "date": "2025-10-07T01:08Z",
+            "shortName": "CHC @ MIL",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "NLDS - Game 2"
+                  }
+                ],
+                "series": {
+                  "summary": "MIL leads series 2-0",
+                  "completed": false,
+                  "totalCompetitions": 5,
+                  "competitors": [
+                    {
+                      "id": "8",
+                      "wins": 2
+                    },
+                    {
+                      "id": "16",
+                      "wins": 0
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "8",
+                    "homeAway": "home",
+                    "winner": true,
+                    "score": "7",
+                    "team": {
+                      "abbreviation": "MIL"
+                    }
+                  },
+                  {
+                    "id": "16",
+                    "homeAway": "away",
+                    "winner": false,
+                    "score": "3",
+                    "team": {
+                      "abbreviation": "CHC"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "date": "20251007",
+      "scoreboard": {
+        "events": [
+          {
+            "id": "401809270",
+            "date": "2025-10-07T20:08Z",
+            "shortName": "SEA @ DET",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "ALDS - Game 3"
+                  }
+                ],
+                "series": {
+                  "summary": "SEA leads series 2-1",
+                  "completed": false,
+                  "totalCompetitions": 5,
+                  "competitors": [
+                    {
+                      "id": "6",
+                      "wins": 1
+                    },
+                    {
+                      "id": "12",
+                      "wins": 2
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "6",
+                    "homeAway": "home",
+                    "winner": false,
+                    "score": "4",
+                    "team": {
+                      "abbreviation": "DET"
+                    }
+                  },
+                  {
+                    "id": "12",
+                    "homeAway": "away",
+                    "winner": true,
+                    "score": "8",
+                    "team": {
+                      "abbreviation": "SEA"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401809265",
+            "date": "2025-10-08T00:08Z",
+            "shortName": "TOR @ NYY",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "ALDS - Game 3"
+                  }
+                ],
+                "series": {
+                  "summary": "TOR leads series 2-1",
+                  "completed": false,
+                  "totalCompetitions": 5,
+                  "competitors": [
+                    {
+                      "id": "10",
+                      "wins": 1
+                    },
+                    {
+                      "id": "14",
+                      "wins": 2
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "10",
+                    "homeAway": "home",
+                    "winner": true,
+                    "score": "9",
+                    "team": {
+                      "abbreviation": "NYY"
+                    }
+                  },
+                  {
+                    "id": "14",
+                    "homeAway": "away",
+                    "winner": false,
+                    "score": "6",
+                    "team": {
+                      "abbreviation": "TOR"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "date": "20251008",
+      "scoreboard": {
+        "events": [
+          {
+            "id": "401809271",
+            "date": "2025-10-08T19:08Z",
+            "shortName": "SEA @ DET",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "ALDS - Game 4"
+                  }
+                ],
+                "series": {
+                  "summary": "Series tied 2-2",
+                  "completed": false,
+                  "totalCompetitions": 5,
+                  "competitors": [
+                    {
+                      "id": "6",
+                      "wins": 2
+                    },
+                    {
+                      "id": "12",
+                      "wins": 2
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "6",
+                    "homeAway": "home",
+                    "winner": true,
+                    "score": "9",
+                    "team": {
+                      "abbreviation": "DET"
+                    }
+                  },
+                  {
+                    "id": "12",
+                    "homeAway": "away",
+                    "winner": false,
+                    "score": "3",
+                    "team": {
+                      "abbreviation": "SEA"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401809275",
+            "date": "2025-10-08T21:08Z",
+            "shortName": "MIL @ CHC",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "NLDS - Game 3"
+                  }
+                ],
+                "series": {
+                  "summary": "MIL leads series 2-1",
+                  "completed": false,
+                  "totalCompetitions": 5,
+                  "competitors": [
+                    {
+                      "id": "16",
+                      "wins": 1
+                    },
+                    {
+                      "id": "8",
+                      "wins": 2
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "16",
+                    "homeAway": "home",
+                    "winner": true,
+                    "score": "4",
+                    "team": {
+                      "abbreviation": "CHC"
+                    }
+                  },
+                  {
+                    "id": "8",
+                    "homeAway": "away",
+                    "winner": false,
+                    "score": "3",
+                    "team": {
+                      "abbreviation": "MIL"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401809266",
+            "date": "2025-10-08T23:08Z",
+            "shortName": "TOR @ NYY",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "ALDS - Game 4"
+                  }
+                ],
+                "series": {
+                  "summary": "TOR wins series 3-1",
+                  "completed": true,
+                  "totalCompetitions": 5,
+                  "competitors": [
+                    {
+                      "id": "10",
+                      "wins": 1
+                    },
+                    {
+                      "id": "14",
+                      "wins": 3
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "10",
+                    "homeAway": "home",
+                    "winner": false,
+                    "score": "2",
+                    "team": {
+                      "abbreviation": "NYY"
+                    }
+                  },
+                  {
+                    "id": "14",
+                    "homeAway": "away",
+                    "winner": true,
+                    "score": "5",
+                    "team": {
+                      "abbreviation": "TOR"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401809280",
+            "date": "2025-10-09T01:08Z",
+            "shortName": "PHI @ LAD",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "NLDS - Game 3"
+                  }
+                ],
+                "series": {
+                  "summary": "LAD lead series 2-1",
+                  "completed": false,
+                  "totalCompetitions": 5,
+                  "competitors": [
+                    {
+                      "id": "19",
+                      "wins": 2
+                    },
+                    {
+                      "id": "22",
+                      "wins": 1
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "19",
+                    "homeAway": "home",
+                    "winner": false,
+                    "score": "2",
+                    "team": {
+                      "abbreviation": "LAD"
+                    }
+                  },
+                  {
+                    "id": "22",
+                    "homeAway": "away",
+                    "winner": true,
+                    "score": "8",
+                    "team": {
+                      "abbreviation": "PHI"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "date": "20251009",
+      "scoreboard": {
+        "events": [
+          {
+            "id": "401809281",
+            "date": "2025-10-09T22:08Z",
+            "shortName": "PHI @ LAD",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final/11"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "NLDS - Game 4"
+                  }
+                ],
+                "series": {
+                  "summary": "LAD win series 3-1",
+                  "completed": true,
+                  "totalCompetitions": 5,
+                  "competitors": [
+                    {
+                      "id": "19",
+                      "wins": 3
+                    },
+                    {
+                      "id": "22",
+                      "wins": 1
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "19",
+                    "homeAway": "home",
+                    "winner": true,
+                    "score": "2",
+                    "team": {
+                      "abbreviation": "LAD"
+                    }
+                  },
+                  {
+                    "id": "22",
+                    "homeAway": "away",
+                    "winner": false,
+                    "score": "1",
+                    "team": {
+                      "abbreviation": "PHI"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401809276",
+            "date": "2025-10-10T01:08Z",
+            "shortName": "MIL @ CHC",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "NLDS - Game 4"
+                  }
+                ],
+                "series": {
+                  "summary": "Series tied 2-2",
+                  "completed": false,
+                  "totalCompetitions": 5,
+                  "competitors": [
+                    {
+                      "id": "16",
+                      "wins": 2
+                    },
+                    {
+                      "id": "8",
+                      "wins": 2
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "16",
+                    "homeAway": "home",
+                    "winner": true,
+                    "score": "6",
+                    "team": {
+                      "abbreviation": "CHC"
+                    }
+                  },
+                  {
+                    "id": "8",
+                    "homeAway": "away",
+                    "winner": false,
+                    "score": "0",
+                    "team": {
+                      "abbreviation": "MIL"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "date": "20251010",
+      "scoreboard": {
+        "events": [
+          {
+            "id": "401809272",
+            "date": "2025-10-11T00:08Z",
+            "shortName": "DET @ SEA",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "post",
+                "completed": true,
+                "shortDetail": "Final/15"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "ALDS - Game 5"
+                  }
+                ],
+                "series": {
+                  "summary": "SEA wins series 3-2",
+                  "completed": true,
+                  "totalCompetitions": 5,
+                  "competitors": [
+                    {
+                      "id": "12",
+                      "wins": 3
+                    },
+                    {
+                      "id": "6",
+                      "wins": 2
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "12",
+                    "homeAway": "home",
+                    "winner": true,
+                    "score": "3",
+                    "team": {
+                      "abbreviation": "SEA"
+                    }
+                  },
+                  {
+                    "id": "6",
+                    "homeAway": "away",
+                    "winner": false,
+                    "score": "2",
+                    "team": {
+                      "abbreviation": "DET"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
