@@ -234,6 +234,13 @@ pub fn season_type_url(sport: &str, league: &str, year: i32, season_type: u8) ->
     )
 }
 
+/// A team's schedule for a season — `site.web.api`, a different host again.
+pub fn team_schedule_url(sport: &str, league: &str, team_id: &str, year: i32) -> String {
+    format!(
+        "https://site.web.api.espn.com/apis/site/v2/sports/{sport}/{league}/teams/{team_id}/schedule?season={year}"
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -400,6 +407,14 @@ mod tests {
         assert_eq!(
             season_type_url("baseball", "mlb", 2026, 3),
             "https://sports.core.api.espn.com/v2/sports/baseball/leagues/mlb/seasons/2026/types/3"
+        );
+    }
+
+    #[test]
+    fn team_schedule_url_points_at_the_site_web_api_host() {
+        assert_eq!(
+            team_schedule_url("baseball", "mlb", "19", 2026),
+            "https://site.web.api.espn.com/apis/site/v2/sports/baseball/mlb/teams/19/schedule?season=2026"
         );
     }
 

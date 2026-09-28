@@ -15,7 +15,7 @@ mod news;
 mod scores;
 pub mod season;
 mod standings;
-mod team;
+pub mod team;
 
 use leaders::build_leaders;
 use news::{NewsShape, shape_news};

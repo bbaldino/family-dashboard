@@ -165,10 +165,7 @@ async fn fetch_schedule_and_parse(
     year: i32,
     limit: usize,
 ) -> Vec<RecentGame> {
-    let url = format!(
-        "https://site.web.api.espn.com/apis/site/v2/sports/{}/{}/teams/{}/schedule?season={}",
-        sport, league, team_id, year
-    );
+    let url = super::espn::team_schedule_url(sport, league, team_id, year);
     match client.get(&url).send().await {
         Ok(r) if r.status().is_success() => match r.json::<serde_json::Value>().await {
             Ok(json) => parse_recent_games(&json, team_id, limit),

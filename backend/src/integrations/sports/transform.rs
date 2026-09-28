@@ -484,7 +484,7 @@ fn parse_matchup(summary: &serde_json::Value) -> Option<Matchup> {
 
 /// ESPN's JSON inconsistently encodes athlete IDs as either strings ("42001")
 /// or numbers (30508). Accept both and return a string.
-fn json_id(v: &serde_json::Value) -> Option<String> {
+pub(super) fn json_id(v: &serde_json::Value) -> Option<String> {
     match v {
         serde_json::Value::String(s) if !s.is_empty() => Some(s.clone()),
         serde_json::Value::Number(n) => Some(n.to_string()),
