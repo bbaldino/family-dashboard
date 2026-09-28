@@ -12,44 +12,61 @@
  *  ink). Same formula the datebook's `CELL_RULE` uses. */
 export const SP_RULE = 'color-mix(in srgb, var(--rule) 25%, var(--paper))'
 
-/** A hair darker than the page, for the wire-plate placeholder ground (mock
- *  `SP.paperDeep`). */
-export const SP_PAPER_DEEP = 'color-mix(in srgb, var(--ink) 8%, var(--paper))'
-
 /** The deeper body ink for table figures and deks (mock `SP.ink2`, #2e2620). */
 export const SP_INK2 = 'color-mix(in srgb, var(--paper) 12%, var(--ink) 88%)'
-
-/** The secondary accent — league labels and stat abbreviations (mock
- *  `SP.accent2`, a muted gold). No broadsheet token leans warm-yellow, so this
- *  reuses the datebook's `ACCENT2` muted-rust formula for the same
- *  "secondary accent, distinct from the vivid primary" role. */
-export const SP_ACCENT2 = 'color-mix(in srgb, var(--rust) 55%, var(--ink-muted) 45%)'
 
 /** The followed team's own table row — a barely-there rust wash (mock
  *  `rgba(180,58,26,0.05)`). */
 export const SP_ME_ROW = 'color-mix(in srgb, var(--rust) 5%, transparent)'
 
 /**
- * How many rows each column seats before rolling the rest into a "+N more"
- * line. **Measured against our own rendering, not adopted from the mock.**
+ * Row caps per column shape. Scores and series are fixed caps; `brief` is a
+ * **maximum** — `LeagueColumn` fits In brief to the room actually left under
+ * the card, the (never-truncated, agate-height) division table and the
+ * scores, showing as many whole items as fit up to this cap and naming the
+ * rest in "+N more". Headlines and deks clamp to two lines (`clampLines`),
+ * so no item is taller than its clamp and no copy can clip a column.
  *
- * The mock's caps are higher (scores 12, tableRows 10, leaderCats 5), but our
- * Newsreader Variable renders a hair taller than the mock's Google-Fonts
- * Newsreader — its rows don't fit our column box even though that box is a few
- * pixels taller than the mock's. Verified against `scrollHeight - clientHeight`
- * at 1600×900, the metric the changelog is explicit is the right one (a
- * gap-to-footer reading filters out clipped content by construction): at these
- * values every column reads zero, and one row more clips col 2 by 24px, col 3
- * by 3px, or col 4 by 16px.
+ * Measured at 1920×1080 (the 1600×900 canvas): each column's In brief ends
+ * inside the room it was given — slack ≥ 0, nothing clipped — in the four
+ * scenarios, live, and a worst case with every headline and dek at its
+ * two-line maximum, including an eight-team (NHL-sized) division and an
+ * eight-series first round.
  *
- * `split` seats far fewer per track — two tracks share each column, and column
- * 2 is the tightest of all, carrying two tables plus Form plus Elsewhere. Its
- * tables run three rows apiece (top of each division, which is the point of a
- * pennant-race split); four clips it by 32px. Leaders are `[primary, secondary]`
- * — the second front gets one category, the first two. Every split value was
- * measured the same way as the single-front ones.
+ * - `regular.scores` is 4: with agate table rows (5 rows 126px, 8 rows 192px,
+ *   down from ~38px a row) it leaves live MLB 3 brief items and NFL 4.
+ * - `briefDeks` is 1 (the spec allows 1–2): a second dek costs a whole
+ *   headline — live MLB shows 2 items with it, 3 without.
+ * - `regular.brief` 6, `postseason.brief` 4 and `compact.brief` 9 are the
+ *   most a column shows even with room to spare: a column is a front page,
+ *   not the whole wire.
+ * - `postseason.series` is 8 — the most concurrent series any supported
+ *   league's first round has, so it never actually trims.
  */
-export const CAPS = {
-  single: { scores: 10, tableRows: 8, leaderCats: 4 },
-  split: { scores: 4, tableRows: 3, leaderCats: [2, 1] as const },
+export const COLUMN_CAPS = {
+  regular: { scores: 4, brief: 6 },
+  postseason: { series: 8, brief: 4 },
+  compact: { brief: 9 },
+  briefDeks: 1,
+}
+
+/** Clamp a free-text block to `lines` whole lines with an ellipsis — how the
+ *  section bounds text it doesn't control (ESPN headlines, deks, round
+ *  summaries), so every row has a known maximum height whatever the copy.
+ *  `LiveGame`'s scoring recap spells out the same four properties inline. */
+export const clampLines = (lines: number) => ({
+  display: '-webkit-box',
+  WebkitLineClamp: lines,
+  WebkitBoxOrient: 'vertical' as const,
+  overflow: 'hidden',
+})
+
+/** The small uppercase sub-label style shared by `LeagueScores`'s "Around the
+ *  <league>" header and `PostseasonSeries`'s round/status labels. */
+export const SP_SUB_LABEL = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: 9,
+  letterSpacing: '0.16em',
+  textTransform: 'uppercase' as const,
+  color: 'var(--ink-muted)',
 }

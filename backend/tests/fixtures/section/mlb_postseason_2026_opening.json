@@ -1,0 +1,443 @@
+{
+  "_comment": "Trimmed ESPN site/v2 MLB scoreboards for 2026-09-29 (Wild Card Game 1s, real teams, state pre, series 0-0) and 2026-10-03 (Division Series Game 1s, opponents still placeholders with negative ids like -2 / Yankees/Red Sox). Captured 2026-09-28 the day before the 2026 postseason opened.",
+  "days": [
+    {
+      "date": "20260929",
+      "scoreboard": {
+        "events": [
+          {
+            "id": "401907965",
+            "date": "2026-09-29T18:00Z",
+            "shortName": "PHI @ ATL",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "pre",
+                "completed": false,
+                "shortDetail": "9/29 - 2:00 PM EDT"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "NLWC - Game 1"
+                  }
+                ],
+                "series": {
+                  "summary": "Series starts 9/29",
+                  "completed": false,
+                  "totalCompetitions": 3,
+                  "competitors": [
+                    {
+                      "id": "15",
+                      "wins": 0
+                    },
+                    {
+                      "id": "22",
+                      "wins": 0
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "15",
+                    "homeAway": "home",
+                    "winner": null,
+                    "score": "0",
+                    "team": {
+                      "abbreviation": "ATL"
+                    }
+                  },
+                  {
+                    "id": "22",
+                    "homeAway": "away",
+                    "winner": null,
+                    "score": "0",
+                    "team": {
+                      "abbreviation": "PHI"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401907896",
+            "date": "2026-09-29T21:00Z",
+            "shortName": "CHW @ HOU",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "pre",
+                "completed": false,
+                "shortDetail": "9/29 - 5:00 PM EDT"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "ALWC - Game 1"
+                  }
+                ],
+                "series": {
+                  "summary": "Series starts 9/29",
+                  "completed": false,
+                  "totalCompetitions": 3,
+                  "competitors": [
+                    {
+                      "id": "18",
+                      "wins": 0
+                    },
+                    {
+                      "id": "4",
+                      "wins": 0
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "18",
+                    "homeAway": "home",
+                    "winner": null,
+                    "score": "0",
+                    "team": {
+                      "abbreviation": "HOU"
+                    }
+                  },
+                  {
+                    "id": "4",
+                    "homeAway": "away",
+                    "winner": null,
+                    "score": "0",
+                    "team": {
+                      "abbreviation": "CHW"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401907924",
+            "date": "2026-09-30T00:00Z",
+            "shortName": "BOS @ NYY",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "pre",
+                "completed": false,
+                "shortDetail": "9/29 - 8:00 PM EDT"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "ALWC - Game 1"
+                  }
+                ],
+                "series": {
+                  "summary": "Series starts 9/29",
+                  "completed": false,
+                  "totalCompetitions": 3,
+                  "competitors": [
+                    {
+                      "id": "10",
+                      "wins": 0
+                    },
+                    {
+                      "id": "2",
+                      "wins": 0
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "10",
+                    "homeAway": "home",
+                    "winner": null,
+                    "score": "0",
+                    "team": {
+                      "abbreviation": "NYY"
+                    }
+                  },
+                  {
+                    "id": "2",
+                    "homeAway": "away",
+                    "winner": null,
+                    "score": "0",
+                    "team": {
+                      "abbreviation": "BOS"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401907974",
+            "date": "2026-09-30T02:00Z",
+            "shortName": "CHC @ SD",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "pre",
+                "completed": false,
+                "shortDetail": "9/29 - 10:00 PM EDT"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "NLWC - Game 1"
+                  }
+                ],
+                "series": {
+                  "summary": "Series starts 9/29",
+                  "completed": false,
+                  "totalCompetitions": 3,
+                  "competitors": [
+                    {
+                      "id": "25",
+                      "wins": 0
+                    },
+                    {
+                      "id": "16",
+                      "wins": 0
+                    }
+                  ]
+                },
+                "competitors": [
+                  {
+                    "id": "25",
+                    "homeAway": "home",
+                    "winner": null,
+                    "score": "0",
+                    "team": {
+                      "abbreviation": "SD"
+                    }
+                  },
+                  {
+                    "id": "16",
+                    "homeAway": "away",
+                    "winner": null,
+                    "score": "0",
+                    "team": {
+                      "abbreviation": "CHC"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "date": "20261003",
+      "scoreboard": {
+        "events": [
+          {
+            "id": "401907985",
+            "date": "2026-10-03T04:00Z",
+            "shortName": "TBD @ TB",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "pre",
+                "completed": false,
+                "shortDetail": "TBD"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "ALDS - Game 1"
+                  }
+                ],
+                "series": null,
+                "competitors": [
+                  {
+                    "id": "30",
+                    "homeAway": "home",
+                    "winner": null,
+                    "score": "0",
+                    "team": {
+                      "abbreviation": "TB"
+                    }
+                  },
+                  {
+                    "id": "-2",
+                    "homeAway": "away",
+                    "winner": null,
+                    "score": "0",
+                    "team": {
+                      "abbreviation": "Yankees/Red Sox"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401907990",
+            "date": "2026-10-03T04:00Z",
+            "shortName": "TBD @ CLE",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "pre",
+                "completed": false,
+                "shortDetail": "TBD"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "ALDS - Game 1"
+                  }
+                ],
+                "series": null,
+                "competitors": [
+                  {
+                    "id": "5",
+                    "homeAway": "home",
+                    "winner": null,
+                    "score": "0",
+                    "team": {
+                      "abbreviation": "CLE"
+                    }
+                  },
+                  {
+                    "id": "-2",
+                    "homeAway": "away",
+                    "winner": null,
+                    "score": "0",
+                    "team": {
+                      "abbreviation": "White Sox/Astros"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401908002",
+            "date": "2026-10-03T04:00Z",
+            "shortName": "TBD @ MIL",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "pre",
+                "completed": false,
+                "shortDetail": "TBD"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "NLDS - Game 1"
+                  }
+                ],
+                "series": null,
+                "competitors": [
+                  {
+                    "id": "8",
+                    "homeAway": "home",
+                    "winner": null,
+                    "score": "0",
+                    "team": {
+                      "abbreviation": "MIL"
+                    }
+                  },
+                  {
+                    "id": "-2",
+                    "homeAway": "away",
+                    "winner": null,
+                    "score": "0",
+                    "team": {
+                      "abbreviation": "Padres/Cubs"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "401908007",
+            "date": "2026-10-03T04:00Z",
+            "shortName": "TBD @ LAD",
+            "season": {
+              "type": 3
+            },
+            "status": {
+              "type": {
+                "state": "pre",
+                "completed": false,
+                "shortDetail": "TBD"
+              }
+            },
+            "competitions": [
+              {
+                "notes": [
+                  {
+                    "type": "event",
+                    "headline": "NLDS - Game 1"
+                  }
+                ],
+                "series": null,
+                "competitors": [
+                  {
+                    "id": "19",
+                    "homeAway": "home",
+                    "winner": null,
+                    "score": "0",
+                    "team": {
+                      "abbreviation": "LAD"
+                    }
+                  },
+                  {
+                    "id": "-2",
+                    "homeAway": "away",
+                    "winner": null,
+                    "score": "0",
+                    "team": {
+                      "abbreviation": "Phillies/Braves"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

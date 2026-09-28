@@ -1,0 +1,88 @@
+{
+  "_comment": "Trimmed ESPN site/v2 /teams/25 (49ers), captured 2026-09-28 the day after ARI @ SF: nextEvent[0] still points at that FINISHED game (state post) — the stale-next bug this pins. Kept: identity, standingSummary, record items, nextEvent[0] trimmed to the shared event shape.",
+  "team": {
+    "id": "25",
+    "abbreviation": "SF",
+    "displayName": "San Francisco 49ers",
+    "shortDisplayName": "49ers",
+    "standingSummary": "1st in NFC West",
+    "record": {
+      "items": [
+        {
+          "type": "total",
+          "summary": "3-0"
+        },
+        {
+          "type": "home",
+          "summary": "2-0"
+        },
+        {
+          "type": "road",
+          "summary": "1-0"
+        }
+      ]
+    },
+    "nextEvent": [
+      {
+        "id": "401872958",
+        "date": "2026-09-27T20:05Z",
+        "shortName": "ARI @ SF",
+        "season": {
+          "type": 2
+        },
+        "status": {
+          "type": {
+            "state": "post",
+            "completed": true,
+            "shortDetail": "Final"
+          }
+        },
+        "competitions": [
+          {
+            "notes": [],
+            "series": null,
+            "broadcasts": [
+              {
+                "type": {
+                  "shortName": "TV"
+                },
+                "market": {
+                  "type": "National"
+                },
+                "media": {
+                  "shortName": "FOX"
+                }
+              }
+            ],
+            "competitors": [
+              {
+                "id": "25",
+                "homeAway": "home",
+                "winner": true,
+                "score": {
+                  "value": 36.0,
+                  "displayValue": "36"
+                },
+                "team": {
+                  "abbreviation": "SF"
+                }
+              },
+              {
+                "id": "22",
+                "homeAway": "away",
+                "winner": false,
+                "score": {
+                  "value": 30.0,
+                  "displayValue": "30"
+                },
+                "team": {
+                  "abbreviation": "ARI"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

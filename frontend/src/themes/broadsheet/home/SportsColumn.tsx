@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { CSSProperties } from 'react'
 import type { Game, GamesResponse } from '@/integrations/sports'
 import { OffdayBlock } from './OffdayBlock'
 import { PregameBlock } from './PregameBlock'
@@ -8,6 +7,7 @@ import { FinalReport } from './FinalReport'
 import { AlsoToday } from './AlsoToday'
 import { orderSummaries } from './featured-game'
 import { fitSummaryCount } from './summary-fit'
+import { shownFitStyle, hiddenFitStyle } from '@/themes/broadsheet/fit-styles'
 
 /** Space above a live game that follows another summary. `FinalReport`
  *  brings its own rule and margin, and the pregame block only ever leads, so
@@ -27,24 +27,6 @@ function Summary({ game, lead }: { game: Game; lead: boolean }) {
   }
   if (game.state === 'upcoming') return <PregameBlock game={game} />
   return <FinalReport game={game} />
-}
-
-/** `flow-root` so each block's `offsetHeight` includes its children's
- *  margins (`FinalReport`'s top margin would otherwise collapse through the
- *  wrapper and go uncounted). */
-const shownStyle: CSSProperties = { display: 'flow-root' }
-
-/** Laid out at the column's width but out of flow and invisible, so it can
- *  still be measured — and so it can come back the moment there's room for
- *  it, without remounting. */
-const hiddenStyle: CSSProperties = {
-  ...shownStyle,
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  right: 0,
-  visibility: 'hidden',
-  pointerEvents: 'none',
 }
 
 /**
@@ -132,7 +114,7 @@ export function SportsColumn({
               key={game.id}
               data-summary-id={game.id}
               aria-hidden={shown ? undefined : true}
-              style={shown ? shownStyle : hiddenStyle}
+              style={shown ? shownFitStyle : hiddenFitStyle}
             >
               <Summary game={game} lead={i === 0} />
             </div>

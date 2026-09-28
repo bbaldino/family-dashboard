@@ -1,0 +1,224 @@
+{
+  "_comment": "Trimmed ESPN site/v2 NFL league news (no team filter), captured 2026-09-28; first 6 articles, fields used by the brief only.",
+  "articles": [
+    {
+      "id": 40699880,
+      "headline": "Fantasy football buzz: Giants trade for McCarthy, Bucs lose Mayfield for three weeks",
+      "description": "How do QB moves in New York and Tampa Bay affect the Giants' and Bucaneers' receivers?",
+      "published": "2026-09-28T17:25:24Z",
+      "type": "Story",
+      "categories": [
+        {
+          "type": "league"
+        },
+        {
+          "type": "topic"
+        },
+        {
+          "type": "topic"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "league"
+        }
+      ]
+    },
+    {
+      "id": 50043976,
+      "headline": "Tracking Jaguars CB/WR Travis Hunter through 2026 season",
+      "description": "Every week, we will look at how many snaps the two-way corner/receiver plays on offense and defense. Is there a trend in his usage?",
+      "published": "2026-09-28T17:02:07Z",
+      "type": "Story",
+      "categories": [
+        {
+          "type": "league"
+        },
+        {
+          "type": "team"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "contributor"
+        }
+      ]
+    },
+    {
+      "id": 50052997,
+      "headline": "Rich Eisen reflects on JJ McCarthy's Vikings tenure after trade to Giants",
+      "description": "Rich Eisen reflects on JJ McCarthy's Vikings tenure after trade to Giants",
+      "published": "2026-09-28T17:06:01Z",
+      "type": "Media",
+      "categories": [
+        {
+          "type": "league"
+        },
+        {
+          "type": "series"
+        },
+        {
+          "type": "contributor"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "team"
+        },
+        {
+          "type": "team"
+        },
+        {
+          "type": "editorialindicator"
+        }
+      ]
+    },
+    {
+      "id": 50052996,
+      "headline": "Buccaneers' Mayfield (thumb) out at least three weeks, Bowles says",
+      "description": "Buccaneers quarterback Baker Mayfield is expected to miss at least three weeks with the dislocated thumb on his throwing hand he suffered Sunday, coach Todd Bowles announced Monday.",
+      "published": "2026-09-28T17:19:55Z",
+      "type": "HeadlineNews",
+      "categories": [
+        {
+          "type": "topic"
+        },
+        {
+          "type": "league"
+        },
+        {
+          "type": "team"
+        },
+        {
+          "type": "athlete"
+        }
+      ]
+    },
+    {
+      "id": 50052968,
+      "headline": "Sources: Panthers CB Jaycee Horn out indefinitely with torn quad",
+      "description": "Panthers cornerback Jaycee Horn will seek a second opinion on his torn quad, sources told NFL Network, but he is headed for injured reserve and could miss the rest of the 2026 season.",
+      "published": "2026-09-28T17:24:50Z",
+      "type": "HeadlineNews",
+      "categories": [
+        {
+          "type": "team"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "league"
+        },
+        {
+          "type": "athlete"
+        },
+        {
+          "type": "topic"
+        }
+      ]
+    },
+    {
+      "id": 50043471,
+      "headline": "2026 NFL trade deadline updates: Latest in-season deals, news",
+      "description": "The NFL trade deadline is Nov. 10, but deals have already started. We're tracking all moves, including J.J. McCarthy to the Giants.",
+      "published": "2026-09-28T16:53:38Z",
+      "type": "Story",
+      "categories": [
+        {
+          "type": "league"
+        },
+        {
+          "type": "topic"
+        },
+        {
+          "type": "topic"
+        },
+        {
+          "type": "topic"
+        },
+        {
+          "type": "team"
+        },
+        {
+          "type": "team"
+        },
+        {
+          "type": "contributor"
+        }
+      ]
+    }
+  ]
+}

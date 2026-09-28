@@ -1,365 +1,501 @@
-import type { SportsSection } from './section-types'
+import type {
+  BriefItem,
+  PostseasonView,
+  SeriesRow,
+  SportColumn,
+  SportsSection,
+  TeamCardData,
+} from './section-types'
 
 /**
- * Fixture sections for `?scenario=`, transcribed verbatim from the design
- * mock's `SPORTS_DATA` (`public/mock5/sports.jsx`). Two scenarios cover the
- * two structural modes the screen has to get right:
+ * Fixture sections for `?scenario=`, one per shape the page has to get right:
  *
- * - `sports-summer` — a **single front**: MLB in regular season clearly on top,
- *   the NFL only in preseason and the NBA off, so both drop to `elsewhere`.
- * - `sports-autumn` — a **split front**: MLB and NFL both in regular season,
- *   tied at the top rank, running as two parallel tracks down all four columns.
+ * - `sports-summer` — MLB alone in season (one wide column), NFL preseason and
+ *   NBA off-season as narrow columns.
+ * - `sports-autumn` — NFL and MLB both regular season, NBA preseason.
+ * - `sports-postseason` — MLB in the NLDS with the Dodgers alive, NFL regular.
+ * - `sports-eliminated` — the Dodgers out; the MLB column still follows the field.
  *
- * These are the only way the Sports screen can be exercised until the backend
- * aggregation (stage 2) exists — the same fixtures-first path the media screens
- * took while Music Assistant was unreachable.
+ * Numbers are plausible, not real; the backend's own tests pin real ESPN shapes.
  */
 
-const summer: SportsSection = {
-  fixtures: [
-    { team: 'Dodgers', detail: 'vs KC · Thu 7:10p' },
-    { team: '49ers', detail: 'at DEN · Sat 1:25p' },
-    { team: 'Warriors', detail: 'camp opens Sep 30' },
-  ],
-  clock: [
-    { league: 'MLB', detail: '42 games left' },
-    { league: 'NFL', detail: 'preseason wk 1' },
-    { league: 'NBA', detail: '49 days out' },
-  ],
-  standfirst:
-    'Muncy walked it off in the tenth and the Dodgers sit two behind Milwaukee with fifty to play. The 49ers open preseason Saturday; the Warriors are still seven weeks out.',
-  leagues: [
+const card = (over: Partial<TeamCardData> = {}): TeamCardData => ({
+  record: null,
+  standing: null,
+  streak: null,
+  home: null,
+  road: null,
+  last10: null,
+  last: null,
+  next: null,
+  seriesStatus: null,
+  seasonEnded: null,
+  ...over,
+})
+
+const brief = (
+  tag: string,
+  league: string,
+  heads: string[],
+  leagueHeads: string[],
+): BriefItem[] => [
+  ...heads.map((h, i) => ({
+    h,
+    dek: i < 2 ? `${h.split(' ').slice(0, 5).join(' ')} — the details, in a sentence.` : null,
+    source: 'team' as const,
+    tag,
+    publishedAt: new Date(Date.now() - (i + 1) * 3.6e6).toISOString(),
+  })),
+  ...leagueHeads.map((h, i) => ({
+    h,
+    dek: null,
+    source: 'league' as const,
+    tag: league,
+    publishedAt: new Date(Date.now() - (i + 2) * 5.4e6).toISOString(),
+  })),
+]
+
+const soon = (hours: number) => new Date(Date.now() + hours * 3.6e6).toISOString()
+const ago = (hours: number) => new Date(Date.now() - hours * 3.6e6).toISOString()
+
+const row = (t: string, w: number, l: number, gb: string, strk: string, me = false) => ({
+  t,
+  w,
+  l,
+  pct: (w / (w + l)).toFixed(3).replace(/^0/, ''),
+  gb,
+  strk,
+  ...(me ? { me } : {}),
+})
+const final = (a: string, as: number, h: string, hs: number, hoursAgo: number, mine = false) => ({
+  a,
+  as,
+  h,
+  hs,
+  state: 'final' as const,
+  detail: 'Final',
+  startsAt: ago(hoursAgo),
+  mine,
+})
+const live = (a: string, as: number, h: string, hs: number, detail: string) => ({
+  a,
+  as,
+  h,
+  hs,
+  state: 'live' as const,
+  detail,
+  startsAt: ago(2),
+  mine: false,
+})
+const upcoming = (a: string, h: string, hours: number) => ({
+  a,
+  as: 0,
+  h,
+  hs: 0,
+  state: 'upcoming' as const,
+  detail: '',
+  startsAt: soon(hours),
+  mine: false,
+})
+
+const nfl49ers: SportColumn = {
+  league: 'NFL',
+  team: 'San Francisco 49ers',
+  teamAbbr: 'SF',
+  phase: 'regular',
+  phaseDetail: 'Week 4',
+  card: card({
+    record: '3-0',
+    standing: '1st in NFC West',
+    streak: 'W3',
+    home: '2-0',
+    road: '1-0',
+    last: { result: 'W', score: '36–30', opponent: 'ARI', homeAway: 'home', startsAt: ago(22) },
+    next: { opponent: 'LAR', homeAway: 'away', startsAt: soon(146), tv: 'FOX', label: null },
+  }),
+  table: {
+    title: 'NFC West',
+    rows: [
+      row('SF', 3, 0, '—', 'W3', true),
+      row('LAR', 2, 1, '1', 'W1'),
+      row('SEA', 1, 2, '2', 'L2'),
+      row('ARI', 1, 2, '2', 'L1'),
+    ],
+  },
+  scores: {
+    rows: [
+      final('ARI', 30, 'SF', 36, 22, true),
+      live('NYG', 10, 'DAL', 17, '3rd 4:12'),
+      upcoming('KC', 'NYJ', 3),
+      upcoming('GB', 'CHI', 7),
+      final('BUF', 24, 'MIA', 27, 25),
+      final('KC', 31, 'LV', 10, 24),
+      final('DET', 20, 'GB', 17, 25),
+      final('PHI', 27, 'WSH', 13, 25),
+      final('BAL', 23, 'CLE', 16, 25),
+      final('HOU', 17, 'JAX', 20, 25),
+      final('PIT', 14, 'CIN', 24, 25),
+      final('DEN', 27, 'LAC', 24, 21),
+      final('TB', 10, 'NO', 17, 25),
+      final('MIN', 31, 'ATL', 28, 21),
+    ],
+    total: 14,
+  },
+  postseason: null,
+  brief: brief(
+    '49ers',
+    'NFL',
+    [
+      'Purdy’s four touchdowns keep the 49ers perfect',
+      'McCaffrey limited in Thursday practice',
+      'Warner named NFC Defensive Player of the Week',
+      'Aiyuk ahead of schedule in his rehab',
+      'Shanahan on the red-zone turnaround',
+    ],
+    [
+      'League fines three after Sunday-night brawl',
+      'Chiefs’ Kelce to miss two weeks',
+      'Trade deadline: who is buying',
+    ],
+  ),
+  leaders: [
     {
-      league: 'MLB',
-      team: 'Los Angeles Dodgers',
-      seasonType: 'Regular Season',
-      record: '72–48',
-      standing: '1st in NL West',
-      home: '35-23',
-      away: '37-25',
-      next: 'KC @ LAD · Thu Aug 13',
-      headline: "Max Muncy's 10th-inning single lifts the Dodgers past the Royals 5-4",
-      dek: 'Max Muncy singled in Shohei Ohtani in the bottom of the 10th inning, lifting the Los Angeles Dodgers over the Kansas City Royals 5-4 on Tuesday night.',
-      caption: 'Muncy is met at the plate after the single that ended it in the tenth.',
-      more: [
-        {
-          h: "Dodgers' Blake Snell K's 10 in 6 innings in return from injury",
-          dek: 'Blake Snell struck out 10 batters in six innings in his return to the mound after three months out with loose bodies in his left elbow.',
-          meta: 'Wed Aug 12 · Headline',
-        },
-        {
-          h: "Tarik Skubal struggles in Dodgers' series opener",
-          dek: "Alden Gonzalez recaps Tarik Skubal's performance in his debut for the Dodgers.",
-          meta: 'Tue Aug 11 · Media',
-        },
+      cat: 'Passing yards',
+      abbr: 'YDS',
+      rows: [
+        ['B. Purdy', 'SF', '1012'],
+        ['J. Allen', 'BUF', '968'],
+        ['P. Mahomes', 'KC', '941'],
       ],
-      table: {
-        title: 'National League',
-        sub: 'top of the table',
-        rows: [
-          { t: 'MIL', w: 74, l: 46, pct: '.617', gb: '—', strk: 'L2' },
-          { t: 'ATL', w: 72, l: 48, pct: '.600', gb: '2', strk: 'W1' },
-          { t: 'LAD', w: 72, l: 48, pct: '.600', gb: '2', strk: 'W2', me: true },
-          { t: 'CHC', w: 70, l: 50, pct: '.583', gb: '4', strk: 'W2' },
-          { t: 'SD', w: 64, l: 57, pct: '.529', gb: '10.5', strk: 'W4' },
-          { t: 'PHI', w: 64, l: 57, pct: '.529', gb: '10.5', strk: 'L1' },
-          { t: 'NYM', w: 62, l: 58, pct: '.517', gb: '12', strk: 'L1' },
-          { t: 'SF', w: 60, l: 60, pct: '.500', gb: '14', strk: 'W1' },
-          { t: 'CIN', w: 59, l: 61, pct: '.492', gb: '15', strk: 'W2' },
-          { t: 'STL', w: 57, l: 63, pct: '.475', gb: '17', strk: 'W1' },
-        ],
-      },
-      scoresLabel: "Tuesday's",
-      scores: [
-        { a: 'KC', as: 4, h: 'LAD', hs: 5, star: 'M. Muncy', line: '2-5, RBI, walk-off' },
-        { a: 'CLE', as: 4, h: 'DET', hs: 6, star: 'C. DeLauter', line: '3-5, HR, RBI, R' },
-        { a: 'PIT', as: 0, h: 'MIA', hs: 2, star: 'E. Perez', line: '7.0 IP, 0 ER, 3 H, 7 SO' },
-        { a: 'CHC', as: 8, h: 'WSH', hs: 6, star: 'A. Bregman', line: '2-4, HR, RBI, 3 R' },
-        { a: 'SEA', as: 1, h: 'NYY', hs: 4, star: 'T. Grisham', line: '2-4, 2B, 2 RBI' },
-        { a: 'BOS', as: 3, h: 'TOR', hs: 5, star: 'C. Rafaela', line: '1-4, HR, 2 RBI, R' },
-        { a: 'NYM', as: 0, h: 'ATL', hs: 4, star: 'M. Olson', line: '1-3, HR, 2 RBI, 2 R' },
-        { a: 'BAL', as: 5, h: 'MIN', hs: 2, star: 'G. Henderson', line: '3-5, HR, 2B, 2 RBI' },
-        { a: 'CIN', as: 5, h: 'CHW', hs: 4, star: 'S. Burke', line: '7.0 IP, ER, 3 H, 8 SO' },
-        { a: 'TEX', as: 2, h: 'HOU', hs: 7, star: 'Y. Alvarez', line: '3-4, HR, 4 RBI' },
-        { a: 'STL', as: 6, h: 'MIL', hs: 3, star: 'M. Winn', line: '2-4, 2B, 3 RBI, R' },
-        { a: 'ARI', as: 1, h: 'SD', hs: 4, star: 'F. Tatis Jr.', line: '2-3, HR, 2 RBI, BB' },
-        { a: 'COL', as: 3, h: 'SF', hs: 8, star: 'H. Ramos', line: '3-5, 2 HR, 5 RBI' },
-        { a: 'OAK', as: 5, h: 'LAA', hs: 2, star: 'L. Severino', line: '6.2 IP, ER, 5 H, 6 SO' },
-        { a: 'PHI', as: 9, h: 'ATH', hs: 4, star: 'B. Marsh', line: '3-5, HR, 3 RBI, 2 R' },
+    },
+    {
+      cat: 'Rushing yards',
+      abbr: 'YDS',
+      rows: [
+        ['B. Robinson', 'ATL', '402'],
+        ['S. Barkley', 'PHI', '388'],
+        ['C. McCaffrey', 'SF', '361'],
       ],
-      leaders: [
-        {
-          cat: 'Home runs',
-          abbr: 'HR',
-          rows: [
-            ['M. Olson', 'ATL', '35'],
-            ['K. Schwarber', 'PHI', '35'],
-            ['Y. Alvarez', 'HOU', '35'],
-          ],
-        },
-        {
-          cat: 'Batting average',
-          abbr: 'AVG',
-          rows: [
-            ['Y. Alvarez', 'HOU', '.322'],
-            ['O. Lopez', 'MIA', '.318'],
-            ['L. Arraez', 'PHI', '.314'],
-          ],
-        },
-        {
-          cat: 'Runs batted in',
-          abbr: 'RBI',
-          rows: [
-            ['C. Abrams', 'WSH', '91'],
-            ['Y. Alvarez', 'HOU', '87'],
-            ['S. Stewart', 'CIN', '87'],
-          ],
-        },
-        {
-          cat: 'Earned run average',
-          abbr: 'ERA',
-          rows: [
-            ['J. Misiorowski', 'MIL', '1.76'],
-            ['C. Sale', 'ATL', '2.20'],
-            ['C. Schlittler', 'NYY', '2.21'],
-          ],
-        },
-        {
-          cat: 'Strikeouts',
-          abbr: 'K',
-          rows: [
-            ['J. Misiorowski', 'MIL', '204'],
-            ['D. Cease', 'TOR', '191'],
-            ['G. Cole', 'NYY', '188'],
-          ],
-        },
+    },
+    {
+      cat: 'Receiving yards',
+      abbr: 'YDS',
+      rows: [
+        ['J. Chase', 'CIN', '389'],
+        ['C. Lamb', 'DAL', '351'],
+        ['P. Nacua', 'LAR', '344'],
       ],
-      hot: [
-        { t: 'TB', rec: '73-46', strk: 'W8' },
-        { t: 'SD', rec: '64-57', strk: 'W4' },
-        { t: 'DET', rec: '59-60', strk: 'W3' },
+    },
+    {
+      cat: 'Passing TDs',
+      abbr: 'TD',
+      rows: [
+        ['B. Purdy', 'SF', '9'],
+        ['L. Jackson', 'BAL', '8'],
+        ['J. Goff', 'DET', '8'],
       ],
-      cold: [
-        { t: 'SEA', rec: '56-64', strk: 'L5' },
-        { t: 'BOS', rec: '64-55', strk: 'L4' },
-        { t: 'CLE', rec: '58-62', strk: 'L3' },
+    },
+    {
+      cat: 'Tackles',
+      abbr: 'TCK',
+      rows: [
+        ['F. Warner', 'SF', '41'],
+        ['R. Smith', 'PIT', '38'],
+        ['B. Wagner', 'WSH', '36'],
       ],
     },
   ],
-  elsewhere: [
-    {
-      league: 'NFL',
-      team: 'San Francisco 49ers',
-      record: '0-0',
-      tag: 'preseason',
-      note: 'Preseason opens Saturday at Denver.',
-      story: {
-        h: 'Purdy sharp in first full padded practice of camp',
-        meta: 'Tue Aug 11 · Headline',
-      },
-    },
-    {
-      league: 'NBA',
-      team: 'Golden State Warriors',
-      record: null,
-      note: 'Season opens Sep 30 · 49 days out.',
-      story: {
-        h: 'Curry still on track to finish career with Warriors, GM says',
-        meta: 'Wed Aug 12 · Headline',
-      },
-    },
+  hot: [
+    { t: 'DET', rec: '3-0', strk: 'W6' },
+    { t: 'KC', rec: '3-0', strk: 'W5' },
+    { t: 'SF', rec: '3-0', strk: 'W3' },
+  ],
+  cold: [
+    { t: 'NYG', rec: '0-3', strk: 'L4' },
+    { t: 'CHI', rec: '0-3', strk: 'L3' },
+    { t: 'CAR', rec: '1-2', strk: 'L2' },
   ],
 }
 
-const autumn: SportsSection = {
-  fixtures: [
-    { team: 'Dodgers', detail: 'vs SF · Mon 7:10p' },
-    { team: '49ers', detail: 'vs SEA · Sun 1:25p' },
-    { team: 'Warriors', detail: 'camp opens Tue' },
+const mlbDodgersRegular: SportColumn = {
+  league: 'MLB',
+  team: 'Los Angeles Dodgers',
+  teamAbbr: 'LAD',
+  phase: 'regular',
+  phaseDetail: 'Regular season',
+  card: card({
+    record: '96-60',
+    standing: '1st in NL West',
+    streak: 'W3',
+    last10: '8-2',
+    home: '51-27',
+    road: '45-33',
+    last: { result: 'W', score: '6–2', opponent: 'COL', homeAway: 'home', startsAt: ago(18) },
+    next: { opponent: 'COL', homeAway: 'home', startsAt: soon(5), tv: 'Sportsnet LA', label: null },
+  }),
+  table: {
+    title: 'National League West',
+    rows: [
+      row('LAD', 96, 60, '—', 'W3', true),
+      row('SD', 88, 68, '8', 'W2'),
+      row('ARI', 83, 73, '13', 'L2'),
+      row('SF', 63, 93, '33', 'L5'),
+      row('COL', 55, 101, '41', 'L1'),
+    ],
+  },
+  scores: {
+    rows: [
+      final('COL', 2, 'LAD', 6, 18, true),
+      live('NYY', 3, 'BOS', 1, 'Top 7th'),
+      upcoming('PHI', 'ATL', 4),
+      final('SD', 5, 'SF', 3, 17),
+      final('CHC', 4, 'MIL', 7, 19),
+      final('NYM', 2, 'WSH', 1, 19),
+      final('HOU', 8, 'SEA', 6, 17),
+      final('TOR', 3, 'TB', 4, 19),
+      final('CLE', 6, 'DET', 5, 19),
+      final('KC', 1, 'MIN', 0, 19),
+      final('TEX', 9, 'LAA', 2, 17),
+      final('ATH', 4, 'CWS', 3, 18),
+      final('BAL', 7, 'PIT', 2, 19),
+      final('CIN', 3, 'STL', 5, 19),
+      final('MIA', 2, 'ARI', 6, 17),
+    ],
+    total: 15,
+  },
+  postseason: null,
+  brief: brief(
+    'Dodgers',
+    'MLB',
+    [
+      'Muncy walks it off in the tenth',
+      'Snell sharp in his return from the IL',
+      'Ohtani reaches 50 homers',
+      'Betts back in the lineup Friday',
+      'Roberts sets the playoff rotation',
+    ],
+    [
+      'Wild-card race tightens as Mets fade',
+      'Judge chases a second triple crown',
+      'Umpire review changes approved for October',
+    ],
+  ),
+  leaders: [
+    {
+      cat: 'Home runs',
+      abbr: 'HR',
+      rows: [
+        ['S. Ohtani', 'LAD', '50'],
+        ['A. Judge', 'NYY', '47'],
+        ['C. Raleigh', 'SEA', '45'],
+      ],
+    },
+    {
+      cat: 'Batting average',
+      abbr: 'AVG',
+      rows: [
+        ['A. Judge', 'NYY', '.318'],
+        ['F. Freeman', 'LAD', '.311'],
+        ['B. Witt Jr.', 'KC', '.305'],
+      ],
+    },
   ],
+  hot: [
+    { t: 'LAD', rec: '96-60', strk: 'W3' },
+    { t: 'SD', rec: '88-68', strk: 'W2' },
+    { t: 'CLE', rec: '85-71', strk: 'W2' },
+  ],
+  cold: [
+    { t: 'SF', rec: '63-93', strk: 'L5' },
+    { t: 'NYM', rec: '80-76', strk: 'L4' },
+    { t: 'ARI', rec: '83-73', strk: 'L2' },
+  ],
+}
+
+const series = (
+  a: string,
+  aWins: number,
+  b: string,
+  bWins: number,
+  over: Partial<SeriesRow> = {},
+): SeriesRow => ({
+  a,
+  aWins,
+  b,
+  bWins,
+  detail: 'G2',
+  live: false,
+  done: false,
+  mine: false,
+  nextStartsAt: soon(26),
+  singleGame: false,
+  ...over,
+})
+
+/** The MLB field in the division series: the Dodgers' series and the other
+ *  NLDS, with the AL side and the finished wild-card round around them. */
+const mlbView = (lad: SeriesRow, otherNlds: SeriesRow): PostseasonView => ({
+  current: [
+    { round: 'NLDS', bestOf: 5, series: [lad, otherNlds] },
+    {
+      round: 'ALDS',
+      bestOf: 5,
+      series: [series('TB', 2, 'NYY', 0, { detail: 'G3' }), series('HOU', 1, 'CLE', 0)],
+    },
+  ],
+  completed: [
+    { round: 'ALWC', summary: 'NYY def BOS 2–1 · HOU def CHW 2–0' },
+    { round: 'NLWC', summary: 'PHI def ATL 2–1 · SD def CHC 2–0' },
+  ],
+  upcoming: [
+    { round: 'NLCS', bestOf: 7, startsAt: soon(24 * 9) },
+    { round: 'ALCS', bestOf: 7, startsAt: soon(24 * 10) },
+  ],
+})
+
+const mlbDodgersPostseason: SportColumn = {
+  ...mlbDodgersRegular,
+  phase: 'postseason',
+  phaseDetail: 'Postseason',
+  card: card({
+    seriesStatus: 'NLDS · LAD leads 1–0 · best of 5',
+    last: { result: 'W', score: '5–3', opponent: 'PHI', homeAway: 'home', startsAt: ago(20) },
+    next: {
+      opponent: 'PHI',
+      homeAway: 'home',
+      startsAt: soon(26),
+      tv: 'TBS',
+      label: 'NLDS Game 2',
+    },
+  }),
+  table: null,
+  scores: null,
+  leaders: null,
+  hot: null,
+  cold: null,
+  postseason: mlbView(
+    series('LAD', 1, 'PHI', 0, { mine: true }),
+    series('SD', 1, 'MIL', 1, { detail: 'Top 4th', live: true, nextStartsAt: null }),
+  ),
+}
+
+/** Out to San Diego — so the other NLDS is Philadelphia's, keeping each team
+ *  in exactly one series. */
+const mlbDodgersOut: SportColumn = {
+  ...mlbDodgersPostseason,
+  card: card({
+    seasonEnded: 'Out in NLDS, 1–3 to SD',
+    last: { result: 'L', score: '2–6', opponent: 'SD', homeAway: 'away', startsAt: ago(20) },
+  }),
+  postseason: mlbView(
+    series('SD', 3, 'LAD', 1, { mine: true, done: true, detail: 'Final', nextStartsAt: null }),
+    series('PHI', 2, 'MIL', 1, { detail: 'G4' }),
+  ),
+}
+
+const nflPreseason: SportColumn = {
+  ...nfl49ers,
+  phase: 'preseason',
+  phaseDetail: 'Preseason',
+  card: card({
+    next: { opponent: 'DEN', homeAway: 'away', startsAt: soon(50), tv: 'KPIX', label: null },
+  }),
+  table: null,
+  scores: null,
+  leaders: null,
+  hot: null,
+  cold: null,
+  brief: brief(
+    '49ers',
+    'NFL',
+    ['Purdy sharp in camp', 'Rookie corner turns heads', 'Kittle to sit the preseason opener'],
+    ['Preseason week 1: what to watch', 'New kickoff rules explained'],
+  ),
+}
+
+/** The NBA opener, relative like every other timestamp, so the off-season
+ *  column's "Season opens …", its NEXT game and the masthead's countdown
+ *  always agree. */
+const NBA_OPENER_DAYS = 23
+const nbaOpener = soon(24 * NBA_OPENER_DAYS)
+
+const nbaLakersOff: SportColumn = {
+  league: 'NBA',
+  team: 'Los Angeles Lakers',
+  teamAbbr: 'LAL',
+  phase: 'offseason',
+  phaseDetail: `Season opens ${new Date(nbaOpener).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+  card: card({
+    next: {
+      opponent: 'SAC',
+      homeAway: 'away',
+      startsAt: nbaOpener,
+      tv: 'Spectrum SportsNet',
+      label: null,
+    },
+  }),
+  table: null,
+  scores: null,
+  postseason: null,
+  leaders: null,
+  hot: null,
+  cold: null,
+  brief: brief(
+    'Lakers',
+    'NBA',
+    [
+      'Lakers open camp with rotation questions',
+      'James says he’s “fully healthy”',
+      'Reaves signs his extension',
+    ],
+    [
+      'League finalizes in-season tournament groups',
+      'Wembanyama cleared for full contact',
+      'Media day: five things we learned',
+    ],
+  ),
+}
+
+const nbaLakersPreseason: SportColumn = {
+  ...nbaLakersOff,
+  phase: 'preseason',
+  phaseDetail: 'Preseason',
+}
+
+const summer: SportsSection = {
   clock: [
-    { league: 'MLB', detail: 'six to play' },
-    { league: 'NFL', detail: 'week 3 of 18' },
-    { league: 'NBA', detail: 'camp week' },
+    { league: 'MLB', detail: 'postseason in 42 days' },
+    { league: 'NFL', detail: 'preseason wk 1' },
+    { league: 'NBA', detail: `${NBA_OPENER_DAYS} days out` },
   ],
-  standfirst:
-    'The Dodgers cut it to four with six to play and the 49ers are 2-1 after taking Arizona on the road. Two seasons now run side by side; the Warriors report for camp on Tuesday.',
-  leagues: [
-    {
-      league: 'MLB',
-      team: 'Los Angeles Dodgers',
-      seasonType: 'Regular Season',
-      record: '94–62',
-      standing: '1st in NL West',
-      home: '49-29',
-      away: '45-33',
-      next: 'SF @ LAD · Mon Sep 28',
-      headline: 'Ohtani goes deep twice as the Dodgers cut the magic number to four',
-      dek: 'Two home runs and a stolen base in a 7-2 win over San Diego leave Los Angeles needing four to clinch a thirteenth division title in fourteen years.',
-      caption: 'Ohtani rounds second on the second of two, in the fifth.',
-      more: [
-        {
-          h: 'Glasnow lines up for a Game 1 start if the Dodgers hold on',
-          dek: '',
-          meta: 'Sun Sep 27 · Headline',
-        },
-      ],
-      table: {
-        title: 'NL West',
-        sub: 'six to play',
-        rows: [
-          { t: 'LAD', w: 94, l: 62, pct: '.603', gb: '—', strk: 'W3', me: true },
-          { t: 'SD', w: 90, l: 66, pct: '.577', gb: '4', strk: 'L1' },
-          { t: 'ARI', w: 84, l: 72, pct: '.538', gb: '10', strk: 'W1' },
-          { t: 'SF', w: 78, l: 78, pct: '.500', gb: '16', strk: 'L2' },
-          { t: 'COL', w: 61, l: 95, pct: '.391', gb: '33', strk: 'L4' },
-        ],
-      },
-      scoresLabel: "Saturday's",
-      scores: [
-        { a: 'SD', as: 2, h: 'LAD', hs: 7, star: 'S. Ohtani', line: '3-4, 2 HR, 4 RBI, SB' },
-        { a: 'NYM', as: 1, h: 'ATL', hs: 3, star: 'S. Strider', line: '7.0 IP, ER, 4 H, 11 SO' },
-        { a: 'HOU', as: 5, h: 'SEA', hs: 4, star: 'J. Peña', line: '2-4, HR, 2 RBI' },
-        { a: 'NYY', as: 8, h: 'BAL', hs: 3, star: 'A. Judge', line: '3-5, HR, 4 RBI, 2 R' },
-        {
-          a: 'CHC',
-          as: 6,
-          h: 'MIL',
-          hs: 5,
-          star: 'P. Crow-Armstrong',
-          line: '2-4, 2B, 3 RBI',
-        },
-        { a: 'PHI', as: 4, h: 'MIA', hs: 0, star: 'Z. Wheeler', line: '8.0 IP, 0 ER, 3 H, 9 SO' },
-        { a: 'BOS', as: 3, h: 'TB', hs: 6, star: 'J. Lowe', line: '2-3, HR, 3 RBI' },
-      ],
-      leaders: [
-        {
-          cat: 'Home runs',
-          abbr: 'HR',
-          rows: [
-            ['S. Ohtani', 'LAD', '49'],
-            ['K. Schwarber', 'PHI', '46'],
-            ['A. Judge', 'NYY', '44'],
-          ],
-        },
-        {
-          cat: 'Earned run average',
-          abbr: 'ERA',
-          rows: [
-            ['Z. Wheeler', 'PHI', '2.11'],
-            ['T. Skubal', 'LAD', '2.24'],
-            ['C. Sale', 'ATL', '2.36'],
-          ],
-        },
-        {
-          cat: 'Batting average',
-          abbr: 'AVG',
-          rows: [
-            ['L. Arraez', 'PHI', '.331'],
-            ['Y. Alvarez', 'HOU', '.319'],
-            ['B. Witt Jr.', 'KC', '.316'],
-          ],
-        },
-      ],
-      hot: [
-        { t: 'LAD', rec: '94-62', strk: 'W3' },
-        { t: 'CLE', rec: '88-68', strk: 'W6' },
-        { t: 'TOR', rec: '91-65', strk: 'W4' },
-      ],
-      cold: [
-        { t: 'SD', rec: '90-66', strk: 'L1' },
-        { t: 'COL', rec: '61-95', strk: 'L4' },
-        { t: 'SF', rec: '78-78', strk: 'L2' },
-      ],
-    },
-    {
-      league: 'NFL',
-      team: 'San Francisco 49ers',
-      seasonType: 'Regular Season',
-      record: '2–1',
-      standing: '2nd in NFC West',
-      home: '1-1',
-      away: '1-0',
-      next: 'SF vs SEA · Sun Oct 4',
-      headline: 'Purdy throws three as the 49ers take Arizona on the road',
-      dek: 'San Francisco scored on four of five second-half drives in a 27-16 win, moving to 2-1 a week before Seattle visit Levi’s.',
-      caption: '',
-      more: [
-        {
-          h: 'Kittle listed as limited in Friday practice with a hamstring',
-          dek: '',
-          meta: 'Sat Sep 26 · Headline',
-        },
-      ],
-      table: {
-        title: 'NFC West',
-        sub: 'week three',
-        rows: [
-          { t: 'SEA', w: 3, l: 0, pct: '1.000', gb: '—', strk: 'W3' },
-          { t: 'SF', w: 2, l: 1, pct: '.667', gb: '1', strk: 'W1', me: true },
-          { t: 'LAR', w: 1, l: 2, pct: '.333', gb: '2', strk: 'L2' },
-          { t: 'ARI', w: 1, l: 2, pct: '.333', gb: '2', strk: 'L1' },
-        ],
-      },
-      scoresLabel: "Sunday's early",
-      scores: [
-        { a: 'SF', as: 27, h: 'ARI', hs: 16, star: 'B. Purdy', line: '24-31, 301 YDS, 3 TD' },
-        { a: 'GB', as: 21, h: 'CHI', hs: 17, star: 'J. Love', line: '19-27, 244 YDS, 2 TD' },
-        { a: 'BUF', as: 31, h: 'MIA', hs: 10, star: 'J. Allen', line: '22-30, 288 YDS, 3 TD' },
-        { a: 'DET', as: 24, h: 'MIN', hs: 20, star: 'J. Gibbs', line: '18 CAR, 112 YDS, 2 TD' },
-        { a: 'KC', as: 28, h: 'DEN', hs: 14, star: 'P. Mahomes', line: '25-34, 312 YDS, 3 TD' },
-        {
-          a: 'BAL',
-          as: 20,
-          h: 'CLE',
-          hs: 13,
-          star: 'L. Jackson',
-          line: '17-24, 210 YDS, 68 RUSH',
-        },
-        { a: 'PHI', as: 26, h: 'DAL', hs: 23, star: 'S. Barkley', line: '22 CAR, 141 YDS, TD' },
-      ],
-      leaders: [
-        {
-          cat: 'Passing yards',
-          abbr: 'YDS',
-          rows: [
-            ['J. Allen', 'BUF', '912'],
-            ['P. Mahomes', 'KC', '884'],
-            ['B. Purdy', 'SF', '861'],
-          ],
-        },
-        {
-          cat: 'Rushing yards',
-          abbr: 'YDS',
-          rows: [
-            ['S. Barkley', 'PHI', '388'],
-            ['J. Gibbs', 'DET', '341'],
-            ['D. Henry', 'BAL', '329'],
-          ],
-        },
-      ],
-      hot: [],
-      cold: [],
-    },
+  columns: [mlbDodgersRegular, nflPreseason, nbaLakersOff],
+}
+const autumn: SportsSection = {
+  clock: [
+    { league: 'NFL', detail: 'week 4 of 18' },
+    { league: 'MLB', detail: 'postseason in 6 days' },
+    { league: 'NBA', detail: 'preseason' },
   ],
-  elsewhere: [
-    {
-      league: 'NBA',
-      team: 'Golden State Warriors',
-      record: null,
-      tag: 'preseason',
-      note: 'Camp opens Tuesday · first preseason game Oct 6.',
-      story: {
-        h: 'Warriors open camp with the same starting five',
-        meta: 'Sat Sep 26 · Headline',
-      },
-    },
+  columns: [nfl49ers, mlbDodgersRegular, nbaLakersPreseason],
+}
+const postseason: SportsSection = {
+  clock: [
+    { league: 'MLB', detail: 'postseason' },
+    { league: 'NFL', detail: 'week 4 of 18' },
+    { league: 'NBA', detail: 'preseason' },
   ],
+  columns: [mlbDodgersPostseason, nfl49ers, nbaLakersPreseason],
+}
+const eliminated: SportsSection = {
+  ...postseason,
+  columns: [mlbDodgersOut, ...postseason.columns.slice(1)],
 }
 
 const SECTIONS: Record<string, SportsSection> = {
   'sports-summer': summer,
   'sports-autumn': autumn,
+  'sports-postseason': postseason,
+  'sports-eliminated': eliminated,
 }
 
 /** The fixture `SportsSection` for `scenario`, or `undefined` when it isn't one

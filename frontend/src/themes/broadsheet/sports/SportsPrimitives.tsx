@@ -1,5 +1,5 @@
-import type { StreakRow, SportsTrack } from '@/integrations/sports'
-import { SP_RULE, SP_ACCENT2 } from './sports-tokens'
+import type { StreakRow } from '@/integrations/sports'
+import { SP_RULE } from './sports-tokens'
 
 /** A win/loss streak — forest for a `W`, rust for an `L`. The one field in the
  *  feed that speaks to form, so it carries colour rather than plain ink. */
@@ -59,25 +59,6 @@ export function StreakList({ label, rows }: { label: string; rows: StreakRow[] }
           <Streak value={r.strk} />
         </div>
       ))}
-    </div>
-  )
-}
-
-/** A hairline league label above a track's block in the lower columns, so two
- *  parallel tracks on a split front read as separate sections. */
-export function TrackLabel({ track }: { track: SportsTrack }) {
-  return (
-    <div
-      style={{
-        fontFamily: 'var(--font-mono)',
-        fontSize: 9,
-        letterSpacing: '0.22em',
-        textTransform: 'uppercase',
-        color: SP_ACCENT2,
-        fontWeight: 700,
-      }}
-    >
-      {track.league}
     </div>
   )
 }

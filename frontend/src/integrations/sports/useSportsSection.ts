@@ -7,15 +7,16 @@ import type { SportsSection } from './section-types'
 /**
  * The aggregated Sports section — "The Sporting Page".
  *
- * Scenario-aware, like the media hooks: `?scenario=sports-summer` or
- * `sports-autumn` returns a fixture and makes no request; otherwise it fetches
- * the backend's aggregated `/sports/section`. That endpoint is stage 2 — this
- * hook and the whole screen are built and verified against fixtures first, the
- * same fixtures-first path the media theme took.
+ * Scenario-aware, like the media hooks: `?scenario=sports-summer`,
+ * `sports-autumn`, `sports-postseason` or `sports-eliminated` returns a fixture
+ * and makes no request (see `section-fixtures.ts` for what each one exercises);
+ * otherwise it fetches the backend's aggregated `/sports/section`.
  *
- * Cached for a good while: the section aggregates news, standings, scores and
- * season leaders, none of which move on a live-game cadence, and the leaders
- * portion is expensive enough that the backend resolves it on a schedule.
+ * Refetched every 15 minutes. Most of the section — news, standings, season
+ * leaders, the postseason field — moves slowly, and the leaders portion is
+ * expensive to resolve. The league slate does carry live games, so a live
+ * score here can trail the real one by up to that interval; the live-game
+ * panel on Home is where scores update in real time.
  */
 export function useSportsSection() {
   const fixture = sportsSectionFixtureFor(activeScenario)

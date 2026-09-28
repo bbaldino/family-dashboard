@@ -1,0 +1,98 @@
+{
+  "_comment": "Trimmed ESPN site/v2 /teams/19 (Dodgers), captured 2026-09-28: nextEvent[0] is the NLDS Game 1 placeholder (TBD @ LAD, seasonType 3, opponent id negative).",
+  "team": {
+    "id": "19",
+    "abbreviation": "LAD",
+    "displayName": "Los Angeles Dodgers",
+    "shortDisplayName": "Dodgers",
+    "standingSummary": "1st in NL West",
+    "record": {
+      "items": [
+        {
+          "type": "total",
+          "summary": "100-62"
+        },
+        {
+          "type": "home",
+          "summary": "51-30"
+        },
+        {
+          "type": "road",
+          "summary": "49-32"
+        }
+      ]
+    },
+    "nextEvent": [
+      {
+        "id": "401908007",
+        "date": "2026-10-03T04:00Z",
+        "shortName": "TBD @ LAD",
+        "season": {
+          "type": 3
+        },
+        "status": {
+          "type": {
+            "state": "pre",
+            "completed": false,
+            "shortDetail": "TBD"
+          }
+        },
+        "competitions": [
+          {
+            "notes": [
+              {
+                "type": "event",
+                "headline": "NLDS - Game 1"
+              }
+            ],
+            "series": null,
+            "broadcasts": [
+              {
+                "type": {
+                  "shortName": "TV"
+                },
+                "market": {
+                  "type": "National"
+                },
+                "media": {
+                  "shortName": "FOX"
+                }
+              },
+              {
+                "type": {
+                  "shortName": "TV"
+                },
+                "market": {
+                  "type": "National"
+                },
+                "media": {
+                  "shortName": "FS1"
+                }
+              }
+            ],
+            "competitors": [
+              {
+                "id": "19",
+                "homeAway": "home",
+                "winner": null,
+                "score": null,
+                "team": {
+                  "abbreviation": "LAD"
+                }
+              },
+              {
+                "id": "-2",
+                "homeAway": "away",
+                "winner": null,
+                "score": null,
+                "team": {
+                  "abbreviation": "TBD"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

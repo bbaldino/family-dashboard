@@ -24,6 +24,13 @@ pub fn scoreboard_days(now: chrono::DateTime<chrono::Utc>, window_hours: f64) ->
     let start = (now - span).date_naive();
     let end = (now + span).date_naive();
 
+    day_range(start, end)
+}
+
+/// `YYYYMMDD` for every day from `start` through `end`, inclusive. Shared by
+/// `scoreboard_days` (a window around now) and `section::postseason::postseason_days`
+/// (a fixed start through a lookahead).
+pub fn day_range(start: chrono::NaiveDate, end: chrono::NaiveDate) -> Vec<String> {
     let mut days = Vec::new();
     let mut day = start;
     while day <= end {
@@ -214,15 +221,38 @@ pub fn team_news_url(sport: &str, league: &str, team_id: &str) -> String {
     format!("{ESPN_BASE}/{sport}/{league}/news?team={team_id}&limit=16")
 }
 
-/// A league's full standings — a different host (`apis/v2`) from the scoreboard.
+/// A league's news feed — every team's stories, not one team's.
+pub fn league_news_url(sport: &str, league: &str) -> String {
+    format!("{ESPN_BASE}/{sport}/{league}/news?limit=16")
+}
+
+/// A league's standings at **division** level (`level=3`) — without it ESPN
+/// answers with league/conference tables, which is why the old page's
+/// "division" table read "National League". A different host (`apis/v2`)
+/// from the scoreboard.
 pub fn standings_url(sport: &str, league: &str) -> String {
-    format!("https://site.api.espn.com/apis/v2/sports/{sport}/{league}/standings")
+    format!("https://site.api.espn.com/apis/v2/sports/{sport}/{league}/standings?level=3")
 }
 
 /// A league's season leaders — the core API, whose entries are `$ref` links.
 pub fn leaders_url(sport: &str, league: &str, year: i32) -> String {
     format!(
         "https://sports.core.api.espn.com/v2/sports/{sport}/leagues/{league}/seasons/{year}/types/2/leaders"
+    )
+}
+
+/// A season type's document in the core API (`types/3` is the postseason) —
+/// carries that type's `startDate`/`endDate`.
+pub fn season_type_url(sport: &str, league: &str, year: i32, season_type: u8) -> String {
+    format!(
+        "https://sports.core.api.espn.com/v2/sports/{sport}/leagues/{league}/seasons/{year}/types/{season_type}"
+    )
+}
+
+/// A team's schedule for a season — `site.web.api`, a different host again.
+pub fn team_schedule_url(sport: &str, league: &str, team_id: &str, year: i32) -> String {
+    format!(
+        "https://site.web.api.espn.com/apis/site/v2/sports/{sport}/{league}/teams/{team_id}/schedule?season={year}"
     )
 }
 
@@ -385,6 +415,43 @@ mod tests {
         assert_eq!(ids, vec!["401", "402", "403"]);
         assert_eq!(merged["leagues"][0]["name"], "American League");
         assert_eq!(merged["season"]["year"], 2026);
+    }
+
+    #[test]
+    fn season_type_url_points_at_the_core_api_type() {
+        assert_eq!(
+            season_type_url("baseball", "mlb", 2026, 3),
+            "https://sports.core.api.espn.com/v2/sports/baseball/leagues/mlb/seasons/2026/types/3"
+        );
+    }
+
+    #[test]
+    fn team_schedule_url_points_at_the_site_web_api_host() {
+        assert_eq!(
+            team_schedule_url("baseball", "mlb", "19", 2026),
+            "https://site.web.api.espn.com/apis/site/v2/sports/baseball/mlb/teams/19/schedule?season=2026"
+        );
+    }
+
+    #[test]
+    fn league_news_has_no_team_filter() {
+        assert_eq!(
+            league_news_url("football", "nfl"),
+            "https://site.api.espn.com/apis/site/v2/sports/football/nfl/news?limit=16"
+        );
+    }
+
+    #[test]
+    fn day_range_is_inclusive_on_both_ends() {
+        let d = |s: &str| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").unwrap();
+        let days = day_range(d("2026-09-29"), d("2026-10-02"));
+        assert_eq!(days, vec!["20260929", "20260930", "20261001", "20261002"]);
+    }
+
+    #[test]
+    fn day_range_of_a_single_day_is_that_day_alone() {
+        let d = chrono::NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
+        assert_eq!(day_range(d, d), vec!["20260101"]);
     }
 
     #[test]

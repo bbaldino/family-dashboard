@@ -1,0 +1,344 @@
+{
+  "_comment": "Trimmed ESPN apis/v2 MLB standings?level=3 (division level), captured 2026-09-28. Kept National League → National League West and National League East (two divisions, so the parser must pick the team own). Stats trimmed to wins, losses, winPercent, gamesBehind, streak and Last Ten Games (the field this pins).",
+  "children": [
+    {
+      "name": "National League",
+      "children": [
+        {
+          "name": "National League East",
+          "standings": {
+            "entries": [
+              {
+                "team": {
+                  "abbreviation": "PHI",
+                  "id": "22"
+                },
+                "stats": [
+                  {
+                    "name": "gamesBehind",
+                    "displayValue": "6"
+                  },
+                  {
+                    "name": "losses",
+                    "displayValue": "74"
+                  },
+                  {
+                    "name": "streak",
+                    "displayValue": "W1"
+                  },
+                  {
+                    "name": "winPercent",
+                    "displayValue": ".543"
+                  },
+                  {
+                    "name": "wins",
+                    "displayValue": "88"
+                  },
+                  {
+                    "name": "Last Ten Games",
+                    "displayValue": "4-6"
+                  }
+                ]
+              },
+              {
+                "team": {
+                  "abbreviation": "ATL",
+                  "id": "15"
+                },
+                "stats": [
+                  {
+                    "name": "gamesBehind",
+                    "displayValue": "-"
+                  },
+                  {
+                    "name": "losses",
+                    "displayValue": "68"
+                  },
+                  {
+                    "name": "streak",
+                    "displayValue": "L1"
+                  },
+                  {
+                    "name": "winPercent",
+                    "displayValue": ".580"
+                  },
+                  {
+                    "name": "wins",
+                    "displayValue": "94"
+                  },
+                  {
+                    "name": "Last Ten Games",
+                    "displayValue": "5-5"
+                  }
+                ]
+              },
+              {
+                "team": {
+                  "abbreviation": "MIA",
+                  "id": "28"
+                },
+                "stats": [
+                  {
+                    "name": "gamesBehind",
+                    "displayValue": "14"
+                  },
+                  {
+                    "name": "losses",
+                    "displayValue": "82"
+                  },
+                  {
+                    "name": "streak",
+                    "displayValue": "W1"
+                  },
+                  {
+                    "name": "winPercent",
+                    "displayValue": ".494"
+                  },
+                  {
+                    "name": "wins",
+                    "displayValue": "80"
+                  },
+                  {
+                    "name": "Last Ten Games",
+                    "displayValue": "5-5"
+                  }
+                ]
+              },
+              {
+                "team": {
+                  "abbreviation": "WSH",
+                  "id": "20"
+                },
+                "stats": [
+                  {
+                    "name": "gamesBehind",
+                    "displayValue": "17"
+                  },
+                  {
+                    "name": "losses",
+                    "displayValue": "85"
+                  },
+                  {
+                    "name": "streak",
+                    "displayValue": "W1"
+                  },
+                  {
+                    "name": "winPercent",
+                    "displayValue": ".475"
+                  },
+                  {
+                    "name": "wins",
+                    "displayValue": "77"
+                  },
+                  {
+                    "name": "Last Ten Games",
+                    "displayValue": "6-4"
+                  }
+                ]
+              },
+              {
+                "team": {
+                  "abbreviation": "NYM",
+                  "id": "21"
+                },
+                "stats": [
+                  {
+                    "name": "gamesBehind",
+                    "displayValue": "20"
+                  },
+                  {
+                    "name": "losses",
+                    "displayValue": "88"
+                  },
+                  {
+                    "name": "streak",
+                    "displayValue": "L1"
+                  },
+                  {
+                    "name": "winPercent",
+                    "displayValue": ".457"
+                  },
+                  {
+                    "name": "wins",
+                    "displayValue": "74"
+                  },
+                  {
+                    "name": "Last Ten Games",
+                    "displayValue": "5-5"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "National League West",
+          "standings": {
+            "entries": [
+              {
+                "team": {
+                  "abbreviation": "SD",
+                  "id": "25"
+                },
+                "stats": [
+                  {
+                    "name": "gamesBehind",
+                    "displayValue": "9"
+                  },
+                  {
+                    "name": "losses",
+                    "displayValue": "71"
+                  },
+                  {
+                    "name": "streak",
+                    "displayValue": "W2"
+                  },
+                  {
+                    "name": "winPercent",
+                    "displayValue": ".562"
+                  },
+                  {
+                    "name": "wins",
+                    "displayValue": "91"
+                  },
+                  {
+                    "name": "Last Ten Games",
+                    "displayValue": "8-2"
+                  }
+                ]
+              },
+              {
+                "team": {
+                  "abbreviation": "LAD",
+                  "id": "19"
+                },
+                "stats": [
+                  {
+                    "name": "gamesBehind",
+                    "displayValue": "-"
+                  },
+                  {
+                    "name": "losses",
+                    "displayValue": "62"
+                  },
+                  {
+                    "name": "streak",
+                    "displayValue": "W3"
+                  },
+                  {
+                    "name": "winPercent",
+                    "displayValue": ".617"
+                  },
+                  {
+                    "name": "wins",
+                    "displayValue": "100"
+                  },
+                  {
+                    "name": "Last Ten Games",
+                    "displayValue": "8-2"
+                  }
+                ]
+              },
+              {
+                "team": {
+                  "abbreviation": "ARI",
+                  "id": "29"
+                },
+                "stats": [
+                  {
+                    "name": "gamesBehind",
+                    "displayValue": "14"
+                  },
+                  {
+                    "name": "losses",
+                    "displayValue": "76"
+                  },
+                  {
+                    "name": "streak",
+                    "displayValue": "L2"
+                  },
+                  {
+                    "name": "winPercent",
+                    "displayValue": ".531"
+                  },
+                  {
+                    "name": "wins",
+                    "displayValue": "86"
+                  },
+                  {
+                    "name": "Last Ten Games",
+                    "displayValue": "6-4"
+                  }
+                ]
+              },
+              {
+                "team": {
+                  "abbreviation": "SF",
+                  "id": "26"
+                },
+                "stats": [
+                  {
+                    "name": "gamesBehind",
+                    "displayValue": "35"
+                  },
+                  {
+                    "name": "losses",
+                    "displayValue": "97"
+                  },
+                  {
+                    "name": "streak",
+                    "displayValue": "L5"
+                  },
+                  {
+                    "name": "winPercent",
+                    "displayValue": ".401"
+                  },
+                  {
+                    "name": "wins",
+                    "displayValue": "65"
+                  },
+                  {
+                    "name": "Last Ten Games",
+                    "displayValue": "2-8"
+                  }
+                ]
+              },
+              {
+                "team": {
+                  "abbreviation": "COL",
+                  "id": "27"
+                },
+                "stats": [
+                  {
+                    "name": "gamesBehind",
+                    "displayValue": "42"
+                  },
+                  {
+                    "name": "losses",
+                    "displayValue": "104"
+                  },
+                  {
+                    "name": "streak",
+                    "displayValue": "L1"
+                  },
+                  {
+                    "name": "winPercent",
+                    "displayValue": ".358"
+                  },
+                  {
+                    "name": "wins",
+                    "displayValue": "58"
+                  },
+                  {
+                    "name": "Last Ten Games",
+                    "displayValue": "2-8"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

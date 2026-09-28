@@ -1,0 +1,89 @@
+import { describe, expect, it } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { InBrief } from './InBrief'
+import type { BriefItem } from '@/integrations/sports'
+
+const now = new Date('2026-09-28T18:00:00Z')
+const item = (i: number, over: Partial<BriefItem> = {}): BriefItem => ({
+  h: `Headline ${i}`,
+  dek: `Dek ${i}`,
+  source: 'team',
+  tag: '49ers',
+  publishedAt: '2026-09-28T16:00:00Z',
+  ...over,
+})
+
+describe('InBrief', () => {
+  it('shows deks only on the first items, and caps with +N more', () => {
+    render(<InBrief items={[1, 2, 3, 4].map((i) => item(i))} max={3} deks={1} now={now} />)
+    expect(screen.getByText('Dek 1')).toBeInTheDocument()
+    expect(screen.queryByText('Dek 2')).not.toBeInTheDocument()
+    expect(screen.queryByText('Headline 4')).not.toBeInTheDocument()
+    expect(screen.getByText('+1 more')).toBeInTheDocument()
+  })
+
+  it('tags each item and ages it', () => {
+    render(
+      <InBrief items={[item(1, { source: 'league', tag: 'NFL' })]} max={5} deks={0} now={now} />,
+    )
+    expect(screen.getByText('NFL')).toBeInTheDocument()
+    expect(screen.getByText(/2H AGO/)).toBeInTheDocument()
+  })
+
+  it('clamps headlines and deks to two lines, so every item has a known maximum height', () => {
+    // Real ESPN deks run to 250 characters (three-plus lines in a column);
+    // the column's fit relies on each item's clamped maximum, not the text.
+    render(<InBrief items={[item(1)]} max={5} deks={1} now={now} />)
+    for (const text of ['Headline 1', 'Dek 1']) {
+      const el = screen.getByText(text)
+      expect(el.style.display).toBe('-webkit-box')
+      expect(el.style.overflow).toBe('hidden')
+      expect(el.style.webkitLineClamp).toBe('2')
+    }
+  })
+
+  it('shows only the first `shown` items, keeping the rest measurable but hidden', () => {
+    const { container } = render(
+      <InBrief items={[1, 2, 3, 4, 5].map((i) => item(i))} max={4} deks={2} shown={2} now={now} />,
+    )
+    const candidates = container.querySelectorAll<HTMLElement>('[data-brief-item]')
+    expect(candidates).toHaveLength(4)
+    expect(candidates[0].style.visibility).toBe('')
+    expect(candidates[2].style.visibility).toBe('hidden')
+    expect(candidates[2]).toHaveAttribute('aria-hidden', 'true')
+    expect(screen.getByText('+3 more')).toBeInTheDocument()
+  })
+
+  it('keeps a repeated headline as its own item', () => {
+    const errors: unknown[] = []
+    const orig = console.error
+    console.error = (...args: unknown[]) => errors.push(args)
+    try {
+      render(<InBrief items={[item(1), item(1)]} max={5} deks={0} now={now} />)
+    } finally {
+      console.error = orig
+    }
+    expect(screen.getAllByText('Headline 1')).toHaveLength(2)
+    expect(errors.filter((e) => String(e).includes('same key'))).toEqual([])
+  })
+
+  it('hides the "+N more" line when told it does not fit', () => {
+    const { container } = render(
+      <InBrief
+        items={[1, 2].map((i) => item(i))}
+        max={5}
+        deks={0}
+        shown={0}
+        more={false}
+        now={now}
+      />,
+    )
+    const more = container.querySelector<HTMLElement>('[data-brief-more]')
+    expect(more?.style.visibility).toBe('hidden')
+  })
+
+  it('says so when there is no news', () => {
+    render(<InBrief items={[]} max={5} deks={2} now={now} />)
+    expect(screen.getByText('No news right now.')).toBeInTheDocument()
+  })
+})
