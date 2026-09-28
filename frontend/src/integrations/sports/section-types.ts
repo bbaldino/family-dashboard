@@ -139,6 +139,7 @@ export interface StandingsTable {
   rows: TableRow[]
 }
 
+/** A scoreboard line's own state, independent of the column's season phase. */
 export type GameStatus = 'live' | 'upcoming' | 'final'
 
 /** One line of the league's scoreboard slate. */
@@ -154,6 +155,8 @@ export interface ScoreLine {
   mine: boolean
 }
 
+/** The league's whole scoreboard for the slate — `total` counts every game
+ *  even when `rows` is capped for display. */
 export interface ScoreSlate {
   rows: ScoreLine[]
   total: number
@@ -173,6 +176,8 @@ export interface SeriesRow {
   nextStartsAt: string | null
 }
 
+/** One round of the postseason currently in progress — its own series, plural
+ *  when two leagues' rounds overlap (e.g. ALDS and NLDS at once). */
 export interface PostseasonRound {
   round: string
   bestOf: number | null

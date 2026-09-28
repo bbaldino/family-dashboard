@@ -92,6 +92,27 @@ describe('TeamCard', () => {
     expect(screen.getByText(/@ LAR/)).toBeInTheDocument()
   })
 
+  it('keeps a preseason card to the next game and phase', () => {
+    render(<TeamCard column={column({ phase: 'preseason', phaseDetail: 'Preseason' })} />)
+    expect(screen.getByText('Preseason')).toBeInTheDocument()
+    expect(screen.queryByText('3-0')).not.toBeInTheDocument()
+    expect(screen.queryByText(/LAST/)).not.toBeInTheDocument()
+    expect(screen.getByText(/@ LAR/)).toBeInTheDocument()
+  })
+
+  it('leads the form line with Last 10 when it is available, not the splits', () => {
+    render(<TeamCard column={column({ card: card({ last10: '8–2' }) })} />)
+    expect(screen.getByText(/W3 · Last 10: 8–2/)).toBeInTheDocument()
+    expect(screen.queryByText(/Home 2-0/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Road 1-0/)).not.toBeInTheDocument()
+  })
+
+  it('falls back to the home/road splits when Last 10 is absent', () => {
+    render(<TeamCard column={column({ card: card({ last10: null }) })} />)
+    expect(screen.getByText(/W3 · Home 2-0 · Road 1-0/)).toBeInTheDocument()
+    expect(screen.queryByText(/Last 10/)).not.toBeInTheDocument()
+  })
+
   it('omits LAST and NEXT when the schedule is unavailable', () => {
     render(<TeamCard column={column({ card: card({ last: null, next: null }) })} />)
     expect(screen.queryByText('LAST')).not.toBeInTheDocument()

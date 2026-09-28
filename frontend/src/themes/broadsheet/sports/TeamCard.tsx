@@ -38,11 +38,15 @@ export function TeamCard({ column }: { column: SportColumn }) {
   const { card, phase } = column
   const compact = phase === 'preseason' || phase === 'offseason'
   const status = card.seasonEnded ?? card.seriesStatus
+  // Streak, then either Last 10 or the home/road splits — never all three:
+  // Last 10 already summarises recent form, so the splits would be redundant.
   const form = [
     card.streak,
-    card.last10 && `Last 10: ${card.last10}`,
-    card.home && `Home ${card.home}`,
-    card.road && `Road ${card.road}`,
+    card.last10
+      ? `Last 10: ${card.last10}`
+      : [card.home && `Home ${card.home}`, card.road && `Road ${card.road}`]
+          .filter(Boolean)
+          .join(' · '),
   ]
     .filter(Boolean)
     .join(' · ')
