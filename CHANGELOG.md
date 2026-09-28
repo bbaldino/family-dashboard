@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.18.0](https://github.com/bbaldino/family-dashboard/compare/v0.17.0...v0.18.0) (2026-09-28)
+
+
+### Features
+
+* **broadsheet:** add league scores, postseason series and the league column ([8e3be5b](https://github.com/bbaldino/family-dashboard/commit/8e3be5bc9754183a65b5dd853e2a168eba1f6ca1))
+* **broadsheet:** add the by-sport column types, team card and In brief ([13c7f7d](https://github.com/bbaldino/family-dashboard/commit/13c7f7d444fd88b4ef88fa0da042af900c8d6a70))
+* **sports:** build a live/upcoming/final score slate per league ([67b0a20](https://github.com/bbaldino/family-dashboard/commit/67b0a20f30d5743ac8d3befc8cf1616240d8dd7d))
+* **sports:** build each column's In brief from team then league news ([c02aca0](https://github.com/bbaldino/family-dashboard/commit/c02aca0309d9dc4c01306a13fe13ce42acff37d5))
+* **sports:** classify each league's phase from its postseason window ([d7f02bd](https://github.com/bbaldino/family-dashboard/commit/d7f02bda2c7de6800f9c79a81b98415b538b033b))
+* **sports:** follow a league's whole postseason as a series list ([cf7930c](https://github.com/bbaldino/family-dashboard/commit/cf7930c6ee1485ef954d1dfd7e7fa0214f23f39d))
+* **sports:** lay the Sports page out as one column per league ([89eccda](https://github.com/bbaldino/family-dashboard/commit/89eccda4baf0e019dbdbc91f6fe041f03ffa052a))
+
+
+### Bug Fixes
+
+* **broadsheet:** clamp Sports free text and size the caps for its worst case ([efe1989](https://github.com/bbaldino/family-dashboard/commit/efe1989ed94541abaa3fd68b13eed5a8acfb26d0))
+* **broadsheet:** fit In brief to each Sports column and set the table in agate ([4b6cfec](https://github.com/bbaldino/family-dashboard/commit/4b6cfec3779cf2a072a1f4a0d17d336652fc58db))
+* **broadsheet:** form line prefers Last 10 over home/road splits, add missing type docs ([9d13b89](https://github.com/bbaldino/family-dashboard/commit/9d13b89c3b9874791331308146cf25743eab30bf))
+* **broadsheet:** measure LeagueColumn extras with flow-root, hide empty slate ([40dc20c](https://github.com/bbaldino/family-dashboard/commit/40dc20c91ca90de14368dccbc360d5a63b41ff12))
+* **broadsheet:** set the Sports column caps from measurement at 1920x1080 ([125ebb2](https://github.com/bbaldino/family-dashboard/commit/125ebb26def3d1ea9ae649ddad2861e7c7b8c78e))
+* **broadsheet:** tidy the Sports column's In brief fit, card rule and docs ([067247a](https://github.com/bbaldino/family-dashboard/commit/067247af2ac86436a9652a7489615aee354ed1ca))
+* **sports:** ask ESPN for division standings and read last ten ([31367c1](https://github.com/bbaldino/family-dashboard/commit/31367c1a1d74abae155c7205ec5a9f6cf8ff84dc))
+* **sports:** count a regular season's clock down to the postseason ([3d86811](https://github.com/bbaldino/family-dashboard/commit/3d86811a8d66d73775e83e359813e9d85950c630))
+* **sports:** count NFL weeks from the regular season's own calendar ([582fde4](https://github.com/bbaldino/family-dashboard/commit/582fde43eeef668936de367a13654ec28a13e152))
+* **sports:** make the season clock say the column's phase ([6495c90](https://github.com/bbaldino/family-dashboard/commit/6495c90dd53be02e906ac8627d79c21117d4dbef))
+* **sports:** never show a finished game as the team's next game ([7a74a3f](https://github.com/bbaldino/family-dashboard/commit/7a74a3fa975b0b053fae3eceff6be8cdddb800dc))
+* **sports:** read NFL playoff games as games, skip the Pro Bowl, bold only the leader ([e2cbdf5](https://github.com/bbaldino/family-dashboard/commit/e2cbdf5c6e22cce16caaecade1529d34c66ef7a3))
+* **sports:** read spring training as preseason and never score a postponed game ([059ceef](https://github.com/bbaldino/family-dashboard/commit/059ceef966eb7e918b5c1aa46e92eb9b26787de0))
+* **sports:** refetch a settled postseason day cached before it finished ([a111dd0](https://github.com/bbaldino/family-dashboard/commit/a111dd0112ba056b0fe91bd8c0fd6b2d897b7877))
+
 ## [0.17.0](https://github.com/bbaldino/family-dashboard/compare/v0.16.0...v0.17.0) (2026-09-28)
 
 
