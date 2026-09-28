@@ -11,7 +11,7 @@ use serde::Serialize;
 use super::espn;
 
 mod leaders;
-mod news;
+pub mod news;
 pub mod scores;
 pub mod season;
 pub mod standings;

@@ -214,6 +214,11 @@ pub fn team_news_url(sport: &str, league: &str, team_id: &str) -> String {
     format!("{ESPN_BASE}/{sport}/{league}/news?team={team_id}&limit=16")
 }
 
+/// A league's news feed — every team's stories, not one team's.
+pub fn league_news_url(sport: &str, league: &str) -> String {
+    format!("{ESPN_BASE}/{sport}/{league}/news?limit=16")
+}
+
 /// A league's standings at **division** level (`level=3`) — without it ESPN
 /// answers with league/conference tables, which is why the old page's
 /// "division" table read "National League". A different host (`apis/v2`)
@@ -418,6 +423,14 @@ mod tests {
         assert_eq!(
             team_schedule_url("baseball", "mlb", "19", 2026),
             "https://site.web.api.espn.com/apis/site/v2/sports/baseball/mlb/teams/19/schedule?season=2026"
+        );
+    }
+
+    #[test]
+    fn league_news_has_no_team_filter() {
+        assert_eq!(
+            league_news_url("football", "nfl"),
+            "https://site.api.espn.com/apis/site/v2/sports/football/nfl/news?limit=16"
         );
     }
 
