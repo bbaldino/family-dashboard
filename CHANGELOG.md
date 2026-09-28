@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.0](https://github.com/bbaldino/family-dashboard/compare/v0.16.0...v0.17.0) (2026-09-28)
+
+
+### Features
+
+* **broadsheet:** fit as many sports summaries as the column holds ([d1097b4](https://github.com/bbaldino/family-dashboard/commit/d1097b45cffa2eeae541766dfe7aaa37a853df57))
+
 ## [0.16.0](https://github.com/bbaldino/family-dashboard/compare/v0.15.0...v0.16.0) (2026-09-28)
 
 
