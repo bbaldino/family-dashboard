@@ -412,17 +412,23 @@ const nflPreseason: SportColumn = {
   ),
 }
 
+/** The NBA opener, relative like every other timestamp, so the off-season
+ *  column's "Season opens …", its NEXT game and the masthead's countdown
+ *  always agree. */
+const NBA_OPENER_DAYS = 23
+const nbaOpener = soon(24 * NBA_OPENER_DAYS)
+
 const nbaLakersOff: SportColumn = {
   league: 'NBA',
   team: 'Los Angeles Lakers',
   teamAbbr: 'LAL',
   phase: 'offseason',
-  phaseDetail: 'Season opens Oct 21',
+  phaseDetail: `Season opens ${new Date(nbaOpener).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
   card: card({
     next: {
       opponent: 'SAC',
       homeAway: 'away',
-      startsAt: soon(24 * 8),
+      startsAt: nbaOpener,
       tv: 'Spectrum SportsNet',
       label: null,
     },
@@ -459,7 +465,7 @@ const summer: SportsSection = {
   clock: [
     { league: 'MLB', detail: '42 days left' },
     { league: 'NFL', detail: 'preseason wk 1' },
-    { league: 'NBA', detail: '49 days out' },
+    { league: 'NBA', detail: `${NBA_OPENER_DAYS} days out` },
   ],
   columns: [mlbDodgersRegular, nflPreseason, nbaLakersOff],
 }
@@ -474,7 +480,7 @@ const autumn: SportsSection = {
 const postseason: SportsSection = {
   clock: [
     { league: 'MLB', detail: 'postseason' },
-    { league: 'NFL', detail: 'week 5 of 18' },
+    { league: 'NFL', detail: 'week 4 of 18' },
     { league: 'NBA', detail: 'preseason' },
   ],
   columns: [mlbDodgersPostseason, nfl49ers, nbaLakersPreseason],

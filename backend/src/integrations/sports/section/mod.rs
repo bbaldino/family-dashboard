@@ -28,13 +28,13 @@ use postseason::{
     POSTSEASON_LOOKAHEAD_DAYS, PostseasonView, TeamPostStatus, build_postseason, postseason_days,
 };
 use scores::{ScoreSlate, parse_slate};
-use season::{Phase, clock_detail, parse_post_window, parse_season, phase_detail, phase_for};
+use season::{Phase, clock_for, parse_post_window, parse_season, phase_detail, phase_for};
 use standings::parse_standings;
 use team::{LastGame, NextGame, card_games, record_summary, schedule_events, team_events};
 
 // ─── Output shape (mirrors the frontend `SportsSection`) ─────────────────
 
-#[derive(Serialize, Default)]
+#[derive(Serialize)]
 pub struct SportsSection {
     pub clock: Vec<ClockEntry>,
     pub columns: Vec<SportColumn>,
@@ -136,6 +136,12 @@ pub fn league_slots(
             seen.insert(league.0).then_some((i, t, league))
         })
         .collect()
+}
+
+/// Page order: postseason, regular season, preseason, off-season; columns in
+/// the same phase keep their tracked-teams order (the `usize`).
+fn order_columns<T>(columns: &mut [(usize, T)], phase: impl Fn(&T) -> Phase) {
+    columns.sort_by_key(|(i, c)| (phase(c), *i));
 }
 
 async fn articles(state: &SportsState, url: &str) -> Vec<serde_json::Value> {
@@ -331,18 +337,7 @@ async fn build_column(
 
     let clock = ClockEntry {
         league: league_tag,
-        detail: if phase == Phase::Postseason {
-            "postseason".to_string()
-        } else {
-            clock_detail(
-                &season.season_type,
-                today,
-                season.start,
-                season.end,
-                season.week,
-                season.total_weeks,
-            )
-        },
+        detail: clock_for(phase, &season, today),
     };
     Some((column, clock))
 }
@@ -369,7 +364,7 @@ pub async fn get_section(
         .into_iter()
         .flatten()
         .collect();
-    built.sort_by_key(|(i, (c, _))| (c.phase, *i));
+    order_columns(&mut built, |(c, _)| c.phase);
 
     Ok(axum::Json(SportsSection {
         clock: built.iter().map(|(_, (_, k))| k.clone()).collect(),
@@ -383,6 +378,20 @@ mod tests {
 
     fn tracked(json: serde_json::Value) -> Vec<super::super::types::TrackedTeam> {
         serde_json::from_value(json).unwrap()
+    }
+
+    #[test]
+    fn columns_order_by_phase_then_tracked_order() {
+        let mut built = vec![
+            (0, Phase::Offseason),
+            (1, Phase::Regular),
+            (2, Phase::Preseason),
+            (3, Phase::Regular),
+            (4, Phase::Postseason),
+        ];
+        order_columns(&mut built, |p| *p);
+        let got: Vec<usize> = built.iter().map(|(i, _)| *i).collect();
+        assert_eq!(got, [4, 1, 3, 2, 0]);
     }
 
     #[test]

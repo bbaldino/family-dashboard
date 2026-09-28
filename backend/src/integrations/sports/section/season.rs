@@ -8,7 +8,8 @@ pub(super) fn season_underway(season: &SeasonInfo, today: chrono::NaiveDate) -> 
     after_start && before_end
 }
 
-/// The masthead's season-clock detail for one league, from its `season` block.
+/// The season-clock detail for a regular-season or preseason league, from its
+/// `season` block (`clock_for` handles the postseason and off-season).
 ///
 /// - before the season opens → "N days out" (the countdown)
 /// - preseason → "preseason" (plus the week, when the feed carries one)
@@ -109,6 +110,28 @@ pub fn phase_detail(phase: Phase, season: &SeasonInfo, today: chrono::NaiveDate)
             Some(start) if start > today => format!("Season opens {}", start.format("%b %-d")),
             _ => "Off-season".to_string(),
         },
+    }
+}
+
+/// The masthead's season-clock detail for one league, saying the same phase
+/// its column shows. ESPN keeps labelling a finished league "Regular Season",
+/// so the off-season and postseason read from the phase, not the season type:
+/// off-season counts down to an announced opener, else reads "off-season".
+pub fn clock_for(phase: Phase, season: &SeasonInfo, today: chrono::NaiveDate) -> String {
+    match phase {
+        Phase::Postseason => "postseason".to_string(),
+        Phase::Offseason => match season.start {
+            Some(start) if start > today => format!("{} days out", (start - today).num_days()),
+            _ => "off-season".to_string(),
+        },
+        Phase::Regular | Phase::Preseason => clock_detail(
+            &season.season_type,
+            today,
+            season.start,
+            season.end,
+            season.week,
+            season.total_weeks,
+        ),
     }
 }
 
@@ -370,6 +393,42 @@ mod tests {
                 Phase::Preseason,
                 Phase::Offseason
             ]
+        );
+    }
+
+    /// The masthead clock says the same phase the column shows: a finished
+    /// league ESPN still labels "Regular Season" reads off-season, not
+    /// "regular season".
+    #[test]
+    fn clock_for_follows_the_phase() {
+        let today = date("2026-11-20");
+        let mlb = season("Regular Season", "2026-02-19", "2026-11-12", None);
+        let window = Some((date("2026-09-29"), date("2026-11-12")));
+        let phase = phase_for(&mlb, window, today);
+        assert_eq!(phase, Phase::Offseason);
+        assert_eq!(clock_for(phase, &mlb, today), "off-season");
+
+        let nba = season("Regular Season", "2026-10-21", "2027-06-20", None);
+        assert_eq!(
+            clock_for(Phase::Offseason, &nba, date("2026-09-28")),
+            "23 days out"
+        );
+        assert_eq!(
+            clock_for(Phase::Postseason, &mlb, date("2026-10-03")),
+            "postseason"
+        );
+        let nfl = SeasonInfo {
+            total_weeks: Some(18),
+            ..season("Regular Season", "2026-09-01", "2027-02-15", Some(4))
+        };
+        assert_eq!(
+            clock_for(Phase::Regular, &nfl, date("2026-09-28")),
+            "week 4 of 18"
+        );
+        let pre = season("Preseason", "2026-08-01", "2027-02-15", Some(2));
+        assert_eq!(
+            clock_for(Phase::Preseason, &pre, date("2026-08-17")),
+            "preseason wk 2"
         );
     }
 
