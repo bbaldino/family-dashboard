@@ -138,8 +138,9 @@ describe('the prior-game final report', () => {
   })
 
   // The "or the next game had started" half of the rule: once the next game
-  // is under way it takes the column whole, and the strip drops out on its
-  // own. No timer, no clock arithmetic.
+  // is under way it takes the column, and the full report drops out on its
+  // own — its score carries on as a line in the "Also today" strip instead.
+  // No timer, no clock arithmetic.
   it('does not appear during a live game', () => {
     const data: GamesResponse = {
       games: [game('live'), finished],
@@ -147,7 +148,7 @@ describe('the prior-game final report', () => {
       unavailableLeagues: [],
     }
     render(<SportsColumn data={data} isLoading={false} />)
-    expect(screen.queryByText(/Final ·/)).toBeNull()
+    expect(screen.queryByText('Recap unavailable.')).toBeNull()
   })
 
   // Why the lead order gained a rung: with only a finished game, the column
@@ -165,5 +166,78 @@ describe('the prior-game final report', () => {
     render(<SportsColumn data={data} isLoading={false} />)
     expect(screen.getByText(/no game|off day|dark/i)).toBeInTheDocument()
     expect(screen.queryByText(/Final ·/)).toBeNull()
+  })
+})
+
+/** A live game used to take the column whole, so a second live game — or one
+ *  that had just finished — vanished from Home entirely: a 49ers kickoff hid
+ *  a Dodgers–Giants game still in progress, then hid its final score. */
+describe('the "Also today" strip', () => {
+  const featured = game('live', { id: 'featured' })
+  const otherLive = game('live', {
+    id: 'other-live',
+    league: 'nfl',
+    home: team('SF', 29),
+    away: team('ARI', 20),
+    periodLabel: '8:06 - 4th',
+  })
+  const finalGame = (id: string, away: string, home: string, startTime: string) =>
+    game('final', {
+      id,
+      startTime,
+      home: team(home, 1),
+      away: team(away, 5),
+      periodLabel: 'Final/10',
+    })
+
+  beforeEach(() => {
+    useSportsPreview.mockReturnValue({ data: undefined })
+    useSportsFinalRecap.mockReturnValue({ data: undefined, isLoading: false, error: null })
+  })
+
+  it('lists another live game and a final beneath the live game, but not the live game itself', () => {
+    const data: GamesResponse = {
+      games: [featured, otherLive, finalGame('f1', 'NYY', 'BOS', '2026-05-22T12:05:00-07:00')],
+      hasLive: true,
+      unavailableLeagues: [],
+    }
+    render(<SportsColumn data={data} isLoading={false} />)
+
+    const strip = screen.getByTestId('also-today')
+    expect(strip).toHaveTextContent('Also today')
+    expect(strip).toHaveTextContent('ARI 20 · SF 29 · 8:06 - 4th')
+    expect(strip).toHaveTextContent('Final/10 · NYY 5 · BOS 1')
+    // The featured game (LAD @ MIL) leads above; it isn't repeated here.
+    expect(strip).not.toHaveTextContent('LAD')
+  })
+
+  it('caps at two games and names the rest', () => {
+    const data: GamesResponse = {
+      games: [
+        featured,
+        otherLive,
+        finalGame('f1', 'NYY', 'BOS', '2026-05-22T12:05:00-07:00'),
+        finalGame('f2', 'CHC', 'STL', '2026-05-22T10:05:00-07:00'),
+      ],
+      hasLive: true,
+      unavailableLeagues: [],
+    }
+    render(<SportsColumn data={data} isLoading={false} />)
+
+    const strip = screen.getByTestId('also-today')
+    expect(strip).toHaveTextContent('ARI 20')
+    expect(strip).toHaveTextContent('NYY 5')
+    expect(strip).not.toHaveTextContent('CHC')
+    expect(strip).toHaveTextContent('+1 more')
+  })
+
+  it('leaves out games still to come, and is absent when nothing else is on', () => {
+    const data: GamesResponse = {
+      games: [featured, game('upcoming', { id: 'later' }), game('postponed', { id: 'pp' })],
+      hasLive: true,
+      unavailableLeagues: [],
+    }
+    render(<SportsColumn data={data} isLoading={false} />)
+    expect(screen.queryByTestId('also-today')).toBeNull()
   })
 })
