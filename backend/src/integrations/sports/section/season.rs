@@ -33,7 +33,8 @@ pub(super) fn season_underway(season: &SeasonInfo, today: chrono::NaiveDate) -> 
 /// - anything else → the season type, lowercased
 ///
 /// `now`, `start`, `end` are dates; `week` is the current week number when the
-/// feed reports one (football only), and `total_weeks` the calendar length.
+/// feed reports one (football only), and `total_weeks` the current season
+/// type's own week count (its calendar entry's length, not the calendar's).
 pub fn clock_detail(
     season_type: &str,
     now: chrono::NaiveDate,
@@ -95,6 +96,22 @@ pub fn parse_season(scoreboard: &serde_json::Value) -> SeasonInfo {
         .and_then(|n| n.as_str())
         .unwrap_or("")
         .to_string();
+    // The calendar has one entry per season type (Preseason, Regular
+    // Season, Postseason, Off Season), each listing its own weeks. The
+    // count wanted is the current type's weeks — the calendar's own length
+    // is the number of season types, which is how "week 3 of 4" happened.
+    // Baseball and basketball calendars are bare date strings, so no entry
+    // matches and the count stays `None`.
+    let total_weeks = league
+        .and_then(|l| l.get("calendar"))
+        .and_then(|c| c.as_array())
+        .and_then(|cal| {
+            cal.iter()
+                .find(|e| e.get("label").and_then(|l| l.as_str()) == Some(season_type.as_str()))
+        })
+        .and_then(|e| e.get("entries"))
+        .and_then(|e| e.as_array())
+        .map(|a| a.len());
     SeasonInfo {
         season_type,
         start: parse_date(season.and_then(|s| s.get("startDate"))),
@@ -103,10 +120,7 @@ pub fn parse_season(scoreboard: &serde_json::Value) -> SeasonInfo {
             .get("week")
             .and_then(|w| w.get("number"))
             .and_then(|n| n.as_i64()),
-        total_weeks: league
-            .and_then(|l| l.get("calendar"))
-            .and_then(|c| c.as_array())
-            .map(|a| a.len()),
+        total_weeks,
         year: season
             .and_then(|s| s.get("year"))
             .and_then(|y| y.as_i64())
@@ -118,8 +132,33 @@ pub fn parse_season(scoreboard: &serde_json::Value) -> SeasonInfo {
 mod tests {
     use super::*;
 
+    const NFL_CALENDAR: &str =
+        include_str!("../../../../tests/fixtures/section/nfl_scoreboard_calendar.json");
+
     fn date(s: &str) -> chrono::NaiveDate {
         chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").unwrap()
+    }
+
+    /// ESPN's NFL calendar has one entry per season type (preseason, regular,
+    /// postseason, off-season); the week count is the regular season's own
+    /// entries (18), not the calendar's length (4) — the "week 3 of 4" bug.
+    #[test]
+    fn total_weeks_counts_the_current_season_types_own_entries() {
+        let sb: serde_json::Value = serde_json::from_str(NFL_CALENDAR).unwrap();
+        let s = parse_season(&sb);
+        assert_eq!(s.season_type, "Regular Season");
+        assert_eq!(s.week, Some(3));
+        assert_eq!(s.total_weeks, Some(18));
+    }
+
+    /// Baseball's calendar is a bare list of dates — no week concept at all.
+    #[test]
+    fn total_weeks_is_none_for_a_day_calendar() {
+        let sb = serde_json::json!({ "leagues": [{
+            "season": { "type": { "name": "Regular Season" } },
+            "calendar": ["2026-02-19T08:00Z", "2026-07-13T07:00Z"],
+        }] });
+        assert_eq!(parse_season(&sb).total_weeks, None);
     }
 
     #[test]
