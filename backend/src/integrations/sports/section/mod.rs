@@ -14,7 +14,7 @@ mod leaders;
 mod news;
 mod scores;
 pub mod season;
-mod standings;
+pub mod standings;
 pub mod team;
 
 use leaders::build_leaders;

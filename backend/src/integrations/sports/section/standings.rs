@@ -10,6 +10,7 @@ struct StandingEntry {
     pct: String,
     gb: String,
     strk: String,
+    last10: Option<String>,
 }
 
 /// Flatten a standings tree into `(division_name, entry)` pairs. ESPN nests
@@ -75,7 +76,16 @@ fn parse_standing_entry(e: &serde_json::Value, division: &str) -> Option<Standin
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .to_string(),
+        last10: stat(e, "Last Ten Games")
+            .and_then(|v| v.as_str())
+            .map(String::from),
     })
+}
+
+/// The followed team's own form, for its card.
+pub struct TeamStanding {
+    pub streak: String,
+    pub last10: Option<String>,
 }
 
 pub struct StandingsResult {
@@ -83,6 +93,7 @@ pub struct StandingsResult {
     pub rows: Vec<TableRow>,
     pub hot: Vec<StreakRow>,
     pub cold: Vec<StreakRow>,
+    pub team: Option<TeamStanding>,
 }
 
 /// The followed team's division table, plus league-wide "hot"/"cold" streak
@@ -135,11 +146,20 @@ pub fn parse_standings(standings: &serde_json::Value, team_abbr: &str) -> Standi
         strk: e.strk.clone(),
     };
 
+    let team = all
+        .iter()
+        .find(|e| e.abbr == team_abbr)
+        .map(|e| TeamStanding {
+            streak: e.strk.clone(),
+            last10: e.last10.clone(),
+        });
+
     StandingsResult {
         title: my_division,
         rows,
         hot: hot.iter().take(3).map(to_streak).collect(),
         cold: cold.iter().take(3).map(to_streak).collect(),
+        team,
     }
 }
 
@@ -229,5 +249,42 @@ mod tests {
         assert_eq!(r.hot.first().map(|s| s.strk.as_str()), Some("W8"));
         // SD's L3 leads the cold list.
         assert_eq!(r.cold.first().map(|s| s.t.as_str()), Some("SD"));
+    }
+
+    const NL_DIVISIONS: &str =
+        include_str!("../../../../tests/fixtures/section/mlb_standings_nl_divisions.json");
+
+    #[test]
+    fn division_level_standings_give_the_teams_own_division() {
+        let v: serde_json::Value = serde_json::from_str(NL_DIVISIONS).unwrap();
+        let r = parse_standings(&v, "LAD");
+        assert_eq!(r.title, "National League West");
+        assert_eq!(
+            r.rows.iter().map(|x| x.t.as_str()).collect::<Vec<_>>(),
+            ["LAD", "SD", "ARI", "SF", "COL"]
+        );
+    }
+
+    #[test]
+    fn the_followed_team_carries_its_streak_and_last_ten() {
+        let v: serde_json::Value = serde_json::from_str(NL_DIVISIONS).unwrap();
+        let t = parse_standings(&v, "LAD")
+            .team
+            .expect("LAD is in the standings");
+        assert_eq!(t.streak, "W3");
+        assert_eq!(t.last10.as_deref(), Some("8-2"));
+    }
+
+    /// A failed standings fetch arrives as `Null`: no rows, no team, no panic.
+    #[test]
+    fn missing_standings_yield_an_empty_table() {
+        let r = parse_standings(&serde_json::Value::Null, "LAD");
+        assert!(r.rows.is_empty());
+        assert!(r.team.is_none());
+    }
+
+    #[test]
+    fn standings_url_asks_for_divisions() {
+        assert!(super::super::super::espn::standings_url("baseball", "mlb").ends_with("?level=3"));
     }
 }

@@ -214,9 +214,12 @@ pub fn team_news_url(sport: &str, league: &str, team_id: &str) -> String {
     format!("{ESPN_BASE}/{sport}/{league}/news?team={team_id}&limit=16")
 }
 
-/// A league's full standings — a different host (`apis/v2`) from the scoreboard.
+/// A league's standings at **division** level (`level=3`) — without it ESPN
+/// answers with league/conference tables, which is why the old page's
+/// "division" table read "National League". A different host (`apis/v2`)
+/// from the scoreboard.
 pub fn standings_url(sport: &str, league: &str) -> String {
-    format!("https://site.api.espn.com/apis/v2/sports/{sport}/{league}/standings")
+    format!("https://site.api.espn.com/apis/v2/sports/{sport}/{league}/standings?level=3")
 }
 
 /// A league's season leaders — the core API, whose entries are `$ref` links.
