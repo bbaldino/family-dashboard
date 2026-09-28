@@ -419,24 +419,39 @@ fn parse_headline(competition: &serde_json::Value) -> Option<String> {
         .map(|s| s.to_string())
 }
 
-pub fn parse_summary_to_live_detail(summary: &serde_json::Value) -> Option<LiveGameDetail> {
+pub fn parse_summary_to_live_detail(
+    summary: &serde_json::Value,
+    league_id: &str,
+) -> Option<LiveGameDetail> {
     // Bail if the payload doesn't look like a real summary (e.g. error response)
     if !summary.is_object() || summary.get("header").is_none() {
         return None;
     }
 
-    let scoring_plays = parse_scoring_plays(summary);
-    let in_progress_scoring = current_inning_scoring(summary, &scoring_plays);
+    let basic = || BasicLiveDetail {
+        leaders: parse_game_leaders(summary),
+    };
+    let sport_specific = match league_id {
+        "mlb" => {
+            let scoring_plays = parse_scoring_plays(summary);
+            let in_progress_scoring = current_inning_scoring(summary, &scoring_plays);
+            SportSpecificLive::Mlb(Box::new(MlbLiveDetail {
+                matchup: parse_matchup(summary),
+                recent_plays: parse_recent_plays(summary, 5),
+                scoring_plays,
+                in_progress_scoring,
+                scoring_recap: None,
+                leaders: parse_game_leaders(summary),
+            }))
+        }
+        "nfl" => SportSpecificLive::Nfl(basic()),
+        "nba" => SportSpecificLive::Nba(basic()),
+        "nhl" => SportSpecificLive::Nhl(basic()),
+        _ => return None,
+    };
     Some(LiveGameDetail {
         win_probability: parse_win_probability(summary),
-        sport_specific: SportSpecificLive::Mlb(MlbLiveDetail {
-            matchup: parse_matchup(summary),
-            recent_plays: parse_recent_plays(summary, 5),
-            scoring_plays,
-            in_progress_scoring,
-            scoring_recap: None,
-            leaders: parse_game_leaders(summary),
-        }),
+        sport_specific,
     })
 }
 
@@ -652,13 +667,37 @@ fn play_from_value(p: &serde_json::Value) -> Play {
     }
 }
 
+/// Split the summary's per-team leader groups into home and away. A group's
+/// own `team.homeAway` is used when ESPN provides it, but NFL summaries omit
+/// it — there only the header's competitors say which side is home, so the
+/// group's team id is matched against those. A group whose side can't be
+/// determined is dropped rather than guessed onto one side.
 fn parse_game_leaders(summary: &serde_json::Value) -> GameLeaders {
     let groups = summary["leaders"].as_array().cloned().unwrap_or_default();
+    let competitors = summary["header"]["competitions"][0]["competitors"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    let side_of = |team: &serde_json::Value| -> Option<String> {
+        if let Some(side) = team["homeAway"].as_str() {
+            return Some(side.to_string());
+        }
+        let id = json_id(&team["id"])?;
+        competitors
+            .iter()
+            .find(|c| json_id(&c["id"]).as_deref() == Some(id.as_str()))
+            .and_then(|c| c["homeAway"].as_str())
+            .map(String::from)
+    };
     let mut home = Vec::new();
     let mut away = Vec::new();
 
     for team_group in groups {
-        let is_home = team_group["team"]["homeAway"].as_str() == Some("home");
+        let is_home = match side_of(&team_group["team"]).as_deref() {
+            Some("home") => true,
+            Some("away") => false,
+            _ => continue,
+        };
         if let Some(categories) = team_group["leaders"].as_array() {
             for cat in categories {
                 let category = cat["displayName"].as_str().unwrap_or("").to_string();

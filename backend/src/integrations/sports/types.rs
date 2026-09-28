@@ -262,11 +262,25 @@ pub struct InningRef {
     pub number: u32,
 }
 
+/// Tagged with the game's real league. Only baseball has a dedicated shape;
+/// the others carry just what ESPN's summary gives every sport alike, so
+/// nothing baseball-specific (matchup, inning-keyed plays) ever rides on a
+/// football, basketball or hockey game.
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
 #[serde(tag = "sport", rename_all = "lowercase")]
 pub enum SportSpecificLive {
-    Mlb(MlbLiveDetail),
-    // Nba(NbaLiveDetail) — future
+    // Boxed: far larger than the other variants (clippy::large_enum_variant).
+    Mlb(Box<MlbLiveDetail>),
+    Nfl(BasicLiveDetail),
+    Nba(BasicLiveDetail),
+    Nhl(BasicLiveDetail),
+}
+
+/// Live detail for a sport without a dedicated shape.
+#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct BasicLiveDetail {
+    pub leaders: GameLeaders,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]

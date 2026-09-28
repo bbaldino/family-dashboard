@@ -1,4 +1,4 @@
-import type { Game, GameLiveDetail } from '@/integrations/sports'
+import type { Game, MlbGameLiveDetail } from '@/integrations/sports'
 import { BaseDiamond } from './BaseDiamond'
 import { CountIndicator } from './CountIndicator'
 import { WinProbabilityBar } from './WinProbabilityBar'
@@ -10,7 +10,7 @@ import { MlbLinescore } from './MlbLinescore'
 
 interface MlbLiveCardProps {
   game: Game
-  detail: GameLiveDetail
+  detail: MlbGameLiveDetail
 }
 
 export function MlbLiveCard({ game, detail }: MlbLiveCardProps) {

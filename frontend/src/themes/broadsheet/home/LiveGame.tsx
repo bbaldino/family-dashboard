@@ -134,9 +134,12 @@ function ScoreLine({ home, away }: { home: GameTeam; away: GameTeam }) {
   )
 }
 
-/** Inning-by-inning line score, plus runs/hits/errors. Nothing to show without linescores. */
+/** Period-by-period line score, plus the total — and, for baseball only,
+ *  hits and errors (other sports have no H/E, so those columns would only
+ *  ever print "–"). Nothing to show without linescores. */
 function LineScoreTable({ game }: { game: Game }) {
   if (game.linescores.length === 0) return null
+  const isBaseball = game.league.toLowerCase() === 'mlb'
   const rows: {
     abbr: string
     entries: LinescoreEntry[]
@@ -181,14 +184,18 @@ function LineScoreTable({ game }: { game: Game }) {
               className="text-center font-bold"
               style={{ padding: '4px 0 4px 10px', color: 'var(--ink)' }}
             >
-              R
+              {isBaseball ? 'R' : 'T'}
             </th>
-            <th className="text-center font-normal" style={{ padding: '4px 0' }}>
-              H
-            </th>
-            <th className="text-center font-normal" style={{ padding: '4px 0' }}>
-              E
-            </th>
+            {isBaseball && (
+              <>
+                <th className="text-center font-normal" style={{ padding: '4px 0' }}>
+                  H
+                </th>
+                <th className="text-center font-normal" style={{ padding: '4px 0' }}>
+                  E
+                </th>
+              </>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -215,12 +222,16 @@ function LineScoreTable({ game }: { game: Game }) {
               >
                 {row.runs ?? '–'}
               </td>
-              <td className="text-center" style={{ color: 'var(--ink-muted)' }}>
-                {row.hits ?? '–'}
-              </td>
-              <td className="text-center" style={{ color: 'var(--ink-muted)' }}>
-                {row.errors ?? '–'}
-              </td>
+              {isBaseball && (
+                <>
+                  <td className="text-center" style={{ color: 'var(--ink-muted)' }}>
+                    {row.hits ?? '–'}
+                  </td>
+                  <td className="text-center" style={{ color: 'var(--ink-muted)' }}>
+                    {row.errors ?? '–'}
+                  </td>
+                </>
+              )}
             </tr>
           ))}
         </tbody>
@@ -313,10 +324,13 @@ function PlayLine({ play, accent }: { play: Play; accent?: boolean }) {
 export function LiveGame({ game }: { game: Game }) {
   const mlbSituation = game.situation?.type === 'mlb' ? game.situation : null
   const detail = game.liveDetail
-  const matchup = detail?.matchup
+  // Matchup, plays and the scoring recap are baseball-only; other sports'
+  // detail carries just win probability and leaders.
+  const mlbDetail = detail?.sport === 'mlb' ? detail : null
+  const matchup = mlbDetail?.matchup
   const winProbability = detail?.winProbability
   const leaders = detail?.leaders
-  const scoringRecap = detail?.scoringRecap ?? null
+  const scoringRecap = mlbDetail?.scoringRecap ?? null
 
   // The recap already collapses every completed inning into a sentence or
   // two — far cheaper on space than a line per play — so prefer it once
@@ -325,9 +339,9 @@ export function LiveGame({ game }: { game: Game }) {
   // it. Before a recap exists (first poll or so of a fresh live game), fall
   // back to the raw scoring list, capped the same way.
   const visibleScoringPlays = (
-    scoringRecap ? (detail?.inProgressScoring ?? []) : (detail?.scoringPlays ?? [])
+    scoringRecap ? (mlbDetail?.inProgressScoring ?? []) : (mlbDetail?.scoringPlays ?? [])
   ).slice(0, MAX_VISIBLE_SCORING_PLAYS)
-  const visibleRecentPlays = (detail?.recentPlays ?? []).slice(0, MAX_VISIBLE_RECENT_PLAYS)
+  const visibleRecentPlays = (mlbDetail?.recentPlays ?? []).slice(0, MAX_VISIBLE_RECENT_PLAYS)
   const visibleLeadersAway = (leaders?.away ?? []).slice(0, MAX_VISIBLE_LEADERS)
   const visibleLeadersHome = (leaders?.home ?? []).slice(0, MAX_VISIBLE_LEADERS)
 
