@@ -1,18 +1,69 @@
-import type { GamesResponse } from '@/integrations/sports'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import type { CSSProperties } from 'react'
+import type { Game, GamesResponse } from '@/integrations/sports'
 import { OffdayBlock } from './OffdayBlock'
 import { PregameBlock } from './PregameBlock'
 import { LiveGame } from './LiveGame'
 import { FinalReport } from './FinalReport'
 import { AlsoToday } from './AlsoToday'
-import { pickFeaturedGame, pickPriorFinal } from './featured-game'
+import { orderSummaries } from './featured-game'
+import { fitSummaryCount } from './summary-fit'
+
+/** Space above a live game that follows another summary. `FinalReport`
+ *  brings its own rule and margin, and the pregame block only ever leads, so
+ *  this is the one summary that needs a gap supplied. */
+const FOLLOWING_LIVE_GAP = 24
+
+/** One game's summary, by state. */
+function Summary({ game, lead }: { game: Game; lead: boolean }) {
+  if (game.state === 'live') {
+    return lead ? (
+      <LiveGame game={game} />
+    ) : (
+      <div style={{ paddingTop: FOLLOWING_LIVE_GAP }}>
+        <LiveGame game={game} />
+      </div>
+    )
+  }
+  if (game.state === 'upcoming') return <PregameBlock game={game} />
+  return <FinalReport game={game} />
+}
+
+/** `flow-root` so each block's `offsetHeight` includes its children's
+ *  margins (`FinalReport`'s top margin would otherwise collapse through the
+ *  wrapper and go uncounted). */
+const shownStyle: CSSProperties = { display: 'flow-root' }
+
+/** Laid out at the column's width but out of flow and invisible, so it can
+ *  still be measured — and so it can come back the moment there's room for
+ *  it, without remounting. */
+const hiddenStyle: CSSProperties = {
+  ...shownStyle,
+  position: 'absolute',
+  top: 0,
+  left: 0,
+  right: 0,
+  visibility: 'hidden',
+  pointerEvents: 'none',
+}
 
 /**
- * The right column of the Home screen: dispatches on game state. A live game
- * takes over with the full editorial treatment, with any other live games and
- * finals as one-line footnotes beneath it; a scheduled game gets the
- * pregame preview with the last result beneath it; a finished game with
- * nothing else on leads on its own; only a genuinely empty schedule falls
- * through to the off-day block.
+ * The right column of the Home screen: as many whole game summaries as fit,
+ * most relevant first — a live game, else the next game's pregame preview,
+ * else the most recent final leads; other live games and then finals follow
+ * — and an "Also today" strip at the foot naming any that didn't fit. Only a
+ * genuinely empty schedule falls through to the off-day block.
+ *
+ * **Fit by measurement, not a fixed count.** Every summary is rendered once;
+ * each is measured where it stands, and the ones that don't fit are laid out
+ * invisibly rather than unmounted, so their heights stay known and they can
+ * return when there's room — a recap arriving, or a panel getting shorter.
+ * Heights are re-read after every render and whenever the column or a
+ * summary resizes; the count only settles, it can't oscillate, because
+ * hiding a summary doesn't change any height being measured.
+ *
+ * The strip is pinned to the column's foot: if the lead alone overruns, its
+ * tail clips rather than the strip, which would clip whole.
  *
  * Takes sports data as props rather than calling `useSportsGames()` itself —
  * that hook opens its own SSE connection, and `Home` already calls it once
@@ -26,44 +77,73 @@ export function SportsColumn({
   isLoading: boolean
 }) {
   const games = data?.games ?? []
-  const featured = pickFeaturedGame(games)
-  const priorFinal = pickPriorFinal(games)
+  const summaries = orderSummaries(games)
 
-  // A live game takes the column. The full final report is deliberately not
-  // shown beside it — that is the "or the next game had started" half of the
-  // rule, and expressing it this way means it needs no clock of its own. The
-  // other games it would hide, finals included, get an entry each beneath it.
-  // The strip is pinned to the column's foot: if a long recap overruns, the
-  // live panel's tail clips rather than the strip, which would clip whole.
-  if (featured?.state === 'live') {
-    return (
-      <div className="flex flex-col h-full min-h-0">
-        <div className="min-h-0 overflow-hidden">
-          <LiveGame game={featured} />
-        </div>
-        <div className="flex-shrink-0">
-          <AlsoToday games={games} featuredId={featured.id} />
-        </div>
+  const rootRef = useRef<HTMLDivElement>(null)
+  // Starts at the lead alone, so the first paint can only under-fill, never
+  // overflow; the layout effect below corrects it before anything paints.
+  const [shownCount, setShownCount] = useState(1)
+  // The strip is one row, so its height hardly varies; it's kept from the
+  // last time it rendered. It renders on the first pass whenever there are
+  // two or more summaries (only the lead is shown then), so this is a real
+  // measurement before it's ever needed — the initial value is never used
+  // for a decision in practice.
+  const stripHeightRef = useRef(0)
+
+  const measure = useCallback(() => {
+    const root = rootRef.current
+    if (!root) return
+    const strip = root.querySelector<HTMLElement>('[data-strip-slot]')
+    if (strip && strip.offsetHeight > 0) stripHeightRef.current = strip.offsetHeight
+    const heights = [...root.querySelectorAll<HTMLElement>('[data-summary-id]')].map(
+      (el) => el.offsetHeight,
+    )
+    setShownCount(fitSummaryCount(heights, root.clientHeight, stripHeightRef.current))
+  }, [])
+
+  // Every render: a changed game list or a newly loaded recap can change any
+  // height. Setting the same count bails out, so this can't loop.
+  useLayoutEffect(measure)
+
+  const summaryIds = summaries.map((g) => g.id).join('|')
+  useEffect(() => {
+    const root = rootRef.current
+    if (!root || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(measure)
+    observer.observe(root)
+    root.querySelectorAll('[data-summary-id]').forEach((el) => observer.observe(el))
+    return () => observer.disconnect()
+  }, [summaryIds, measure])
+
+  if (summaries.length === 0) {
+    return <OffdayBlock data={data} isLoading={isLoading} />
+  }
+
+  const shownIds = new Set(summaries.slice(0, shownCount).map((g) => g.id))
+  const hasLeftovers = shownCount < summaries.length
+
+  return (
+    <div ref={rootRef} data-testid="sports-column" className="flex flex-col h-full min-h-0">
+      <div className="relative min-h-0 overflow-hidden">
+        {summaries.map((game, i) => {
+          const shown = i < shownCount
+          return (
+            <div
+              key={game.id}
+              data-summary-id={game.id}
+              aria-hidden={shown ? undefined : true}
+              style={shown ? shownStyle : hiddenStyle}
+            >
+              <Summary game={game} lead={i === 0} />
+            </div>
+          )
+        })}
       </div>
-    )
-  }
-
-  if (featured) {
-    return (
-      <>
-        <PregameBlock game={featured} />
-        {priorFinal && <FinalReport game={priorFinal} />}
-      </>
-    )
-  }
-
-  // A finished game leads rather than falling through to the off-day block.
-  // Without this rung the column announced "No game today." on an afternoon
-  // when a game had been played and was over — true only of what is still to
-  // come, and plainly false to anyone who had watched it.
-  if (priorFinal) {
-    return <FinalReport game={priorFinal} />
-  }
-
-  return <OffdayBlock data={data} isLoading={isLoading} />
+      {hasLeftovers && (
+        <div data-strip-slot className="flex-shrink-0">
+          <AlsoToday games={games} shownIds={shownIds} />
+        </div>
+      )}
+    </div>
+  )
 }
