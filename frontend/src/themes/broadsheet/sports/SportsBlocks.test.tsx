@@ -24,4 +24,13 @@ describe('DivisionTable', () => {
     expect(screen.getByText('SD')).toBeInTheDocument()
     expect(screen.getByText('ARI')).toBeInTheDocument()
   })
+  it('sets rows at a compact agate height', () => {
+    // Full-height rows (~38px) left an 8-team division no room for anything
+    // below it; agate rows keep the whole table while leaving room to read.
+    const rows = [{ t: 'LAD', w: 100, l: 62, pct: '.617', gb: '—', strk: 'W3', me: true }]
+    render(<DivisionTable table={{ title: 'National League West', rows }} />)
+    const cell = screen.getByText('LAD')
+    expect(cell.style.padding).toBe('2px 0px')
+    expect(cell.style.lineHeight).toBe('1.2')
+  })
 })

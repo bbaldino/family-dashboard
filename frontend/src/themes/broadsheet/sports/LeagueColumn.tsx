@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import type { SportColumn } from '@/integrations/sports'
+import type { BriefItem, SportColumn } from '@/integrations/sports'
 import { TeamCard } from './TeamCard'
-import { InBrief } from './InBrief'
+import { InBrief, BRIEF_FRAME_HEIGHT } from './InBrief'
 import { LeagueScores } from './LeagueScores'
 import { PostseasonSeries } from './PostseasonSeries'
 import { DivisionTable, LeaderBlock } from './SportsBlocks'
 import { StreakList } from './SportsPrimitives'
-import { fitLeadingCount } from './column-fit'
+import { fitBriefCount, fitLeadingCount } from './column-fit'
 import { COLUMN_CAPS } from './sports-tokens'
 import { shownFitStyle, hiddenFitStyle } from '@/themes/broadsheet/fit-styles'
 
@@ -60,9 +60,70 @@ function FittedExtras({ blocks }: { blocks: { key: string; node: ReactNode }[] }
 }
 
 /**
+ * Everything under a column's fixed blocks (card, table, scores or series):
+ * In brief, then the optional extras. The brief shows as many whole items as
+ * fit the room actually left — measured, up to `max` — and names the rest in
+ * "+N more"; the extras then get whatever the brief leaves. That is the
+ * spec's shedding order: extras give way first, then In brief, and the fixed
+ * blocks above never do.
+ */
+function FittedTail({
+  items,
+  max,
+  deks,
+  now,
+  extras,
+}: {
+  items: BriefItem[]
+  max: number
+  deks: number
+  now: Date
+  extras: { key: string; node: ReactNode }[]
+}) {
+  const boxRef = useRef<HTMLDivElement>(null)
+  const [shown, setShown] = useState(max)
+
+  const measure = useCallback(() => {
+    const box = boxRef.current
+    if (!box) return
+    const height = (sel: string) => box.querySelector<HTMLElement>(sel)?.offsetHeight ?? 0
+    const heights = [...box.querySelectorAll<HTMLElement>('[data-brief-item]')].map(
+      (el) => el.offsetHeight,
+    )
+    const available = box.clientHeight - BRIEF_FRAME_HEIGHT - height('[data-brief-head]')
+    setShown(fitBriefCount(heights, available, height('[data-brief-more]'), items.length))
+  }, [items.length])
+
+  useLayoutEffect(measure)
+  useEffect(() => {
+    const box = boxRef.current
+    if (!box || typeof ResizeObserver === 'undefined') return
+    // The box for the room, and every measured part for its own height — a
+    // late web font reflows the items without resizing the box.
+    const observer = new ResizeObserver(measure)
+    observer.observe(box)
+    box
+      .querySelectorAll('[data-brief-head], [data-brief-item], [data-brief-more]')
+      .forEach((el) => observer.observe(el))
+    return () => observer.disconnect()
+  }, [measure, items])
+
+  return (
+    <div
+      ref={boxRef}
+      data-testid="league-tail"
+      className="flex-1 min-h-0 flex flex-col relative overflow-hidden"
+    >
+      <InBrief items={items} max={max} deks={deks} now={now} shown={shown} />
+      {extras.length > 0 && <FittedExtras blocks={extras} />}
+    </div>
+  )
+}
+
+/**
  * One league's column, shaped by its phase: the regular season stacks the
- * team card, division table, league scores and In brief, with form and
- * leaders only as room allows; the postseason swaps table and scores for the
+ * team card, division table, league scores and In brief (as many items as
+ * fit), with form and leaders only as room allows; the postseason swaps table and scores for the
  * whole field's series list; preseason and off-season keep to a compact card
  * and In brief.
  */
@@ -124,8 +185,13 @@ export function LeagueColumn({ column, now }: { column: SportColumn; now: Date }
       {column.phase === 'postseason' && column.postseason && (
         <PostseasonSeries view={column.postseason} maxSeries={caps.postseason.series} />
       )}
-      <InBrief items={column.brief} max={briefMax} deks={caps.briefDeks} now={now} />
-      {extras.length > 0 && <FittedExtras blocks={extras} />}
+      <FittedTail
+        items={column.brief}
+        max={briefMax}
+        deks={caps.briefDeks}
+        now={now}
+        extras={extras}
+      />
     </div>
   )
 }

@@ -6,6 +6,8 @@ import { SP_RULE, SP_INK2, SP_ME_ROW } from './sports-tokens'
  *  handful of teams, and the table is one of the two blocks the spec forbids
  *  clipping (the other being the team card). The followed team's row is
  *  washed rust and its figures set in rust and bold, so a glance finds it.
+ *  Rows are set at agate height (~22px) so an eight-team division still
+ *  leaves the column room for scores and news.
  *  Empty rows (a failed standings fetch) read "Table unavailable." instead. */
 export function DivisionTable({ table }: { table: StandingsTable }) {
   const headStyle = (first: boolean) => ({
@@ -67,6 +69,7 @@ export function DivisionTable({ table }: { table: StandingsTable }) {
                 <tr
                   key={r.t}
                   style={{
+                    lineHeight: 1.2,
                     borderBottom: `1px dotted ${SP_RULE}`,
                     background: r.me ? SP_ME_ROW : 'transparent',
                   }}
@@ -77,7 +80,8 @@ export function DivisionTable({ table }: { table: StandingsTable }) {
                       fontSize: 14,
                       fontWeight: r.me ? 700 : 600,
                       color: r.me ? 'var(--rust)' : 'var(--ink)',
-                      padding: '5px 0',
+                      padding: '2px 0',
+                      lineHeight: 1.2,
                     }}
                   >
                     {r.t}

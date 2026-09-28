@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { LeagueColumn } from './LeagueColumn'
 import type { SportColumn } from '@/integrations/sports'
+import { COLUMN_CAPS } from './sports-tokens'
 
 const now = new Date('2026-09-28T18:00:00Z')
 const base: SportColumn = {
@@ -55,6 +56,56 @@ const base: SportColumn = {
   hot: null,
   cold: null,
 }
+
+/**
+ * jsdom lays nothing out — every height reads 0 — so the brief's fit is driven
+ * by stubbed heights, keyed on what `LeagueColumn` measures: the space left
+ * under card, table and scores (`league-tail`), the brief's heading, each
+ * candidate item and the "+N more" line. Anything unlisted reads 0.
+ */
+function stubBriefLayout({
+  tail,
+  head,
+  item,
+  more,
+}: {
+  tail: number
+  head: number
+  item: number
+  more: number
+}) {
+  vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockImplementation(function (
+    this: HTMLElement,
+  ) {
+    return this.dataset.testid === 'league-tail' ? tail : 0
+  })
+  vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockImplementation(function (
+    this: HTMLElement,
+  ) {
+    if (this.dataset.briefHead !== undefined) return head
+    if (this.dataset.briefItem !== undefined) return item
+    if (this.dataset.briefMore !== undefined) return more
+    return 0
+  })
+}
+
+const briefOf = (n: number) =>
+  Array.from({ length: n }, (_, i) => ({
+    h: `Story ${i + 1}`,
+    dek: `Dek ${i + 1}`,
+    source: 'team' as const,
+    tag: '49ers',
+    publishedAt: '2026-09-28T16:00:00Z',
+  }))
+
+const visibleItems = (container: HTMLElement) =>
+  [...container.querySelectorAll<HTMLElement>('[data-brief-item]')].filter(
+    (el) => el.style.visibility !== 'hidden',
+  ).length
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 describe('LeagueColumn', () => {
   it('stacks card, table, scores and brief in the regular season', () => {
@@ -126,5 +177,24 @@ describe('LeagueColumn', () => {
     )
     expect(screen.queryByText('Running hot')).not.toBeInTheDocument()
     expect(screen.queryByText('Passing yards')).not.toBeInTheDocument()
+  })
+  it('fits In brief to the room left under card, table and scores', () => {
+    // 300 of room, less the 18px frame and a 15px heading, leaves 267: four
+    // 60px items (240) plus the 19px "+N more" line fit; a fifth does not.
+    stubBriefLayout({ tail: 300, head: 15, item: 60, more: 19 })
+    const { container } = render(<LeagueColumn column={{ ...base, brief: briefOf(6) }} now={now} />)
+    expect(visibleItems(container)).toBe(4)
+    expect(screen.getByText('+2 more')).toBeInTheDocument()
+  })
+  it('never shows more than the phase cap, however much room there is', () => {
+    stubBriefLayout({ tail: 5000, head: 15, item: 60, more: 19 })
+    const { container } = render(
+      <LeagueColumn
+        column={{ ...base, brief: briefOf(COLUMN_CAPS.regular.brief + 3) }}
+        now={now}
+      />,
+    )
+    expect(visibleItems(container)).toBe(COLUMN_CAPS.regular.brief)
+    expect(screen.getByText('+3 more')).toBeInTheDocument()
   })
 })

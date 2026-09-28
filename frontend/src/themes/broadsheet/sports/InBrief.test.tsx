@@ -30,9 +30,9 @@ describe('InBrief', () => {
     expect(screen.getByText(/2H AGO/)).toBeInTheDocument()
   })
 
-  it('clamps headlines and deks to two lines, so a fixed item cap bounds the height', () => {
+  it('clamps headlines and deks to two lines, so every item has a known maximum height', () => {
     // Real ESPN deks run to 250 characters (three-plus lines in a column);
-    // the caps are sized against the clamped maximum, not the text.
+    // the column's fit relies on each item's clamped maximum, not the text.
     render(<InBrief items={[item(1)]} max={5} deks={1} now={now} />)
     for (const text of ['Headline 1', 'Dek 1']) {
       const el = screen.getByText(text)
@@ -40,6 +40,18 @@ describe('InBrief', () => {
       expect(el.style.overflow).toBe('hidden')
       expect(el.style.webkitLineClamp).toBe('2')
     }
+  })
+
+  it('shows only the first `shown` items, keeping the rest measurable but hidden', () => {
+    const { container } = render(
+      <InBrief items={[1, 2, 3, 4, 5].map((i) => item(i))} max={4} deks={2} shown={2} now={now} />,
+    )
+    const candidates = container.querySelectorAll<HTMLElement>('[data-brief-item]')
+    expect(candidates).toHaveLength(4)
+    expect(candidates[0].style.visibility).toBe('')
+    expect(candidates[2].style.visibility).toBe('hidden')
+    expect(candidates[2]).toHaveAttribute('aria-hidden', 'true')
+    expect(screen.getByText('+3 more')).toBeInTheDocument()
   })
 
   it('says so when there is no news', () => {
