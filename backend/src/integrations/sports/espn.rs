@@ -24,6 +24,13 @@ pub fn scoreboard_days(now: chrono::DateTime<chrono::Utc>, window_hours: f64) ->
     let start = (now - span).date_naive();
     let end = (now + span).date_naive();
 
+    day_range(start, end)
+}
+
+/// `YYYYMMDD` for every day from `start` through `end`, inclusive. Shared by
+/// `scoreboard_days` (a window around now) and `section::postseason::postseason_days`
+/// (a fixed start through a lookahead).
+pub fn day_range(start: chrono::NaiveDate, end: chrono::NaiveDate) -> Vec<String> {
     let mut days = Vec::new();
     let mut day = start;
     while day <= end {
@@ -432,6 +439,19 @@ mod tests {
             league_news_url("football", "nfl"),
             "https://site.api.espn.com/apis/site/v2/sports/football/nfl/news?limit=16"
         );
+    }
+
+    #[test]
+    fn day_range_is_inclusive_on_both_ends() {
+        let d = |s: &str| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").unwrap();
+        let days = day_range(d("2026-09-29"), d("2026-10-02"));
+        assert_eq!(days, vec!["20260929", "20260930", "20261001", "20261002"]);
+    }
+
+    #[test]
+    fn day_range_of_a_single_day_is_that_day_alone() {
+        let d = chrono::NaiveDate::from_ymd_opt(2026, 1, 1).unwrap();
+        assert_eq!(day_range(d, d), vec!["20260101"]);
     }
 
     #[test]
