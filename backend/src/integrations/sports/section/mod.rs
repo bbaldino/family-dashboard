@@ -179,9 +179,22 @@ async fn post_window(
     parse_post_window(&v)
 }
 
+/// Whether a cached day's scoreboard can be kept for good: every game on it
+/// is over. A copy fetched while the day was still ahead or under way holds
+/// games that were then `pre` or `in` — trusting that forever would freeze
+/// them unplayed, so it is refetched like a live day until it settles.
+fn day_is_final(board: &serde_json::Value) -> bool {
+    board["events"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .all(|e| e["status"]["type"]["state"].as_str() == Some("post"))
+}
+
 /// Every postseason day's scoreboard, one request per day. A day before
-/// yesterday is settled and cached for good; yesterday (late finishes),
-/// today and the days ahead are refetched every few minutes.
+/// yesterday whose cached copy is final (`day_is_final`) is kept for good;
+/// yesterday (late finishes), today, the days ahead, and any settled day
+/// cached before its games ended are refetched every few minutes.
 async fn postseason_boards(
     state: &SportsState,
     sport: &str,
@@ -194,8 +207,13 @@ async fn postseason_boards(
         let settled = day.as_str() < settled_before.as_str();
         async move {
             let key = format!("postday:{league}:{day}");
-            let max_age = if settled { u64::MAX } else { 300 };
-            if let Some(v) = state.cache.get(&key, max_age).await {
+            if let Some(v) = state.cache.get(&key, 300).await {
+                return Some(v);
+            }
+            if settled
+                && let Some(v) = state.cache.get(&key, u64::MAX).await
+                && day_is_final(&v)
+            {
                 return Some(v);
             }
             let v = espn::fetch_scoreboard(&state.client, sport, league, day)
@@ -392,6 +410,24 @@ mod tests {
         order_columns(&mut built, |p| *p);
         let got: Vec<usize> = built.iter().map(|(i, _)| *i).collect();
         assert_eq!(got, [4, 1, 3, 2, 0]);
+    }
+
+    fn board(states: &[&str]) -> serde_json::Value {
+        let events: Vec<serde_json::Value> = states
+            .iter()
+            .map(|s| serde_json::json!({ "status": { "type": { "state": s } } }))
+            .collect();
+        serde_json::json!({ "events": events })
+    }
+
+    /// A settled day is kept for good only once every game on it is over; a
+    /// copy cached while a game was still to come or under way is refetched.
+    #[test]
+    fn a_cached_day_is_final_only_when_every_game_is_over() {
+        assert!(day_is_final(&board(&["post", "post"])));
+        assert!(!day_is_final(&board(&["post", "pre"])));
+        assert!(!day_is_final(&board(&["in", "post"])));
+        assert!(day_is_final(&board(&[])), "a day with no games stays empty");
     }
 
     #[test]
