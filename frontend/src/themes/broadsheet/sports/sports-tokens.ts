@@ -53,3 +53,26 @@ export const CAPS = {
   single: { scores: 10, tableRows: 8, leaderCats: 4 },
   split: { scores: 4, tableRows: 3, leaderCats: [2, 1] as const },
 }
+
+/**
+ * Row caps per column shape — starting values, replaced by measurement in the
+ * by-sport rework's capacity step (see the doc comment written there). The
+ * division table has no cap: it is never truncated (spec + Global
+ * Constraints).
+ */
+export const COLUMN_CAPS = {
+  regular: { scores: 6, brief: 4 },
+  postseason: { series: 8, brief: 5 },
+  compact: { brief: 8 },
+  briefDeks: 2,
+}
+
+/** The small uppercase sub-label style shared by `LeagueScores`'s "Around the
+ *  <league>" header and `PostseasonSeries`'s round/status labels. */
+export const SP_SUB_LABEL = {
+  fontFamily: 'var(--font-mono)',
+  fontSize: 9,
+  letterSpacing: '0.16em',
+  textTransform: 'uppercase' as const,
+  color: 'var(--ink-muted)',
+}

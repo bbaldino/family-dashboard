@@ -1,18 +1,13 @@
-import type { SportsTrack } from '@/integrations/sports'
+import type { SportsTrack, StandingsTable, LeaderCategory } from '@/integrations/sports'
 import { Streak } from './SportsPrimitives'
 import { SP_RULE, SP_INK2, SP_ME_ROW } from './sports-tokens'
 
-/** A track's standings table, capped to `maxRows`. The followed team's row is
- *  washed rust and its figures set in rust and bold, so a glance finds it. */
-export function TableBlock({
-  track,
-  maxRows,
-  split,
-}: {
-  track: SportsTrack
-  maxRows: number
-  split: boolean
-}) {
+/** A league's standings table. Never truncated — a division is at most a
+ *  handful of teams, and the table is one of the two blocks the spec forbids
+ *  clipping (the other being the team card). The followed team's row is
+ *  washed rust and its figures set in rust and bold, so a glance finds it.
+ *  Empty rows (a failed standings fetch) read "Table unavailable." instead. */
+export function DivisionTable({ table }: { table: StandingsTable }) {
   const headStyle = (first: boolean) => ({
     fontFamily: 'var(--font-mono)',
     fontSize: 9,
@@ -30,66 +25,76 @@ export function TableBlock({
         style={{
           fontFamily: 'var(--font-display)',
           fontStyle: 'italic',
-          fontSize: split ? 15 : 17,
+          fontSize: 15,
           color: SP_INK2,
           margin: '3px 0 8px',
         }}
       >
-        {track.table.title}
-        {track.table.sub && (
-          <span style={{ fontSize: 13, color: 'var(--ink-muted)' }}> · {track.table.sub}</span>
-        )}
+        {table.title}
       </div>
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr>
-            <th style={headStyle(true)}>Team</th>
-            {['W', 'L', 'PCT', 'GB', 'STRK'].map((h) => (
-              <th key={h} style={headStyle(false)}>
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {track.table.rows.slice(0, maxRows).map((r) => {
-            const mono = (color: string) => ({
-              fontFamily: 'var(--font-mono)',
-              fontSize: 11,
-              textAlign: 'right' as const,
-              color,
-            })
-            return (
-              <tr
-                key={r.t}
-                style={{
-                  borderBottom: `1px dotted ${SP_RULE}`,
-                  background: r.me ? SP_ME_ROW : 'transparent',
-                }}
-              >
-                <td
+      {table.rows.length === 0 && (
+        <div
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontStyle: 'italic',
+            color: 'var(--ink-muted)',
+          }}
+        >
+          Table unavailable.
+        </div>
+      )}
+      {table.rows.length > 0 && (
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead>
+            <tr>
+              <th style={headStyle(true)}>Team</th>
+              {['W', 'L', 'PCT', 'GB', 'STRK'].map((h) => (
+                <th key={h} style={headStyle(false)}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {table.rows.map((r) => {
+              const mono = (color: string) => ({
+                fontFamily: 'var(--font-mono)',
+                fontSize: 11,
+                textAlign: 'right' as const,
+                color,
+              })
+              return (
+                <tr
+                  key={r.t}
                   style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: 14,
-                    fontWeight: r.me ? 700 : 600,
-                    color: r.me ? 'var(--rust)' : 'var(--ink)',
-                    padding: '5px 0',
+                    borderBottom: `1px dotted ${SP_RULE}`,
+                    background: r.me ? SP_ME_ROW : 'transparent',
                   }}
                 >
-                  {r.t}
-                </td>
-                <td style={mono(r.me ? 'var(--rust)' : 'var(--ink)')}>{r.w}</td>
-                <td style={mono('var(--ink-muted)')}>{r.l}</td>
-                <td style={mono(SP_INK2)}>{r.pct}</td>
-                <td style={mono('var(--ink-muted)')}>{r.gb}</td>
-                <td style={{ textAlign: 'right' }}>
-                  <Streak value={r.strk} />
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+                  <td
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: 14,
+                      fontWeight: r.me ? 700 : 600,
+                      color: r.me ? 'var(--rust)' : 'var(--ink)',
+                      padding: '5px 0',
+                    }}
+                  >
+                    {r.t}
+                  </td>
+                  <td style={mono(r.me ? 'var(--rust)' : 'var(--ink)')}>{r.w}</td>
+                  <td style={mono('var(--ink-muted)')}>{r.l}</td>
+                  <td style={mono(SP_INK2)}>{r.pct}</td>
+                  <td style={mono('var(--ink-muted)')}>{r.gb}</td>
+                  <td style={{ textAlign: 'right' }}>
+                    <Streak value={r.strk} />
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      )}
     </div>
   )
 }
@@ -209,13 +214,21 @@ export function ScoreBlock({
   )
 }
 
-/** A track's season leaders — `maxCats` categories, three deep each. Category
- *  names are league-specific (HR/AVG/ERA vs PPG/RPG/APG); the data carries
- *  them, so this only lays them out. */
-export function LeaderBlock({ track, maxCats }: { track: SportsTrack; maxCats: number }) {
+/** A league's season leaders — `maxCats` categories, `depth` deep each.
+ *  Category names are league-specific (HR/AVG/ERA vs PPG/RPG/APG); the data
+ *  carries them, so this only lays them out. */
+export function LeaderBlock({
+  leaders,
+  maxCats,
+  depth = 3,
+}: {
+  leaders: LeaderCategory[]
+  maxCats: number
+  depth?: number
+}) {
   return (
     <div>
-      {track.leaders.slice(0, maxCats).map((c) => (
+      {leaders.slice(0, maxCats).map((c) => (
         <div key={c.cat} style={{ marginBottom: 7 }}>
           <div
             style={{
@@ -250,7 +263,7 @@ export function LeaderBlock({ track, maxCats }: { track: SportsTrack; maxCats: n
               {c.abbr}
             </span>
           </div>
-          {c.rows.map(([name, team, value], j) => (
+          {c.rows.slice(0, depth).map(([name, team, value], j) => (
             <div
               key={name}
               style={{ display: 'flex', alignItems: 'baseline', gap: 6, padding: '1.5px 0' }}

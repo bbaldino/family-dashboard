@@ -5,7 +5,7 @@ import { mastheadKickerStyle, mastheadNumeralStyle } from '@/themes/broadsheet/u
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { useNow } from '@/themes/broadsheet/home/useNow'
 import { SportsLead } from '@/themes/broadsheet/sports/SportsLead'
-import { TableBlock, ScoreBlock, LeaderBlock } from '@/themes/broadsheet/sports/SportsBlocks'
+import { DivisionTable, ScoreBlock, LeaderBlock } from '@/themes/broadsheet/sports/SportsBlocks'
 import { StreakList, TrackLabel } from '@/themes/broadsheet/sports/SportsPrimitives'
 import { CAPS, SP_RULE } from '@/themes/broadsheet/sports/sports-tokens'
 
@@ -263,7 +263,12 @@ function SportsBody({ section, now }: { section: SportsSection; now: Date }) {
               }
             >
               {split && <TrackLabel track={t} />}
-              <TableBlock track={t} maxRows={caps.tableRows} split={split} />
+              {/* DivisionTable never truncates (the spec forbids clipping the
+                  table); this transitional call site trims to the old CAPS
+                  budget itself until Task 10 replaces this screen. */}
+              <DivisionTable
+                table={{ title: t.table.title, rows: t.table.rows.slice(0, caps.tableRows) }}
+              />
             </div>
           ))}
 
@@ -381,7 +386,7 @@ function SportsBody({ section, now }: { section: SportsSection; now: Date }) {
                     <TrackLabel track={t} />
                   </div>
                 )}
-                <LeaderBlock track={t} maxCats={n} />
+                <LeaderBlock leaders={t.leaders} maxCats={n} />
               </div>
             )
           })}
