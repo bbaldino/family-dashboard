@@ -81,6 +81,16 @@ fn event_state(event: &serde_json::Value) -> &str {
         .unwrap_or("")
 }
 
+/// A game that was played to the end. ESPN marks a postponed or cancelled
+/// game `post` too, but with `completed: false` — that is no result. A feed
+/// that omits `completed` is taken at its state.
+pub(super) fn is_final(event: &serde_json::Value) -> bool {
+    let completed = event["status"]["type"]["completed"]
+        .as_bool()
+        .or_else(|| event["competitions"][0]["status"]["type"]["completed"].as_bool());
+    event_state(event) == "post" && completed != Some(false)
+}
+
 /// `(mine, theirs)` competitors of an event, by team id.
 fn sides<'a>(
     event: &'a serde_json::Value,
@@ -153,7 +163,7 @@ pub fn card_games<'a>(
             .to_string();
 
         match event_state(event) {
-            "post" => {
+            "post" if is_final(event) => {
                 let (Some(m), Some(t)) = (score_of(&mine["score"]), score_of(&theirs["score"]))
                 else {
                     continue;
@@ -274,6 +284,27 @@ mod tests {
         );
         assert_eq!(score_of(&serde_json::json!({ "value": 3.0 })), Some(3));
         assert_eq!(score_of(&serde_json::Value::Null), None);
+    }
+
+    /// ESPN marks a postponed game `post` but not completed, with 0–0 on the
+    /// board. It is no result: the earlier finished game stays LAST.
+    #[test]
+    fn a_postponed_game_is_not_the_last_result() {
+        let game = |date: &str, completed: bool, mine: &str, theirs: &str| {
+            serde_json::json!({
+                "date": date,
+                "status": { "type": { "state": "post", "completed": completed } },
+                "competitions": [{ "competitors": [
+                    { "id": "19", "homeAway": "home", "team": { "abbreviation": "LAD" }, "score": mine },
+                    { "id": "26", "homeAway": "away", "team": { "abbreviation": "SF" }, "score": theirs },
+                ] }],
+            })
+        };
+        let played = game("2026-09-26T02:10Z", true, "5", "2");
+        let postponed = game("2026-09-27T02:10Z", false, "0", "0");
+        let (last, _) = card_games([&played, &postponed], "19", at("2026-09-28T12:00:00Z"));
+        let last = last.unwrap();
+        assert_eq!((last.result.as_str(), last.score.as_str()), ("W", "5–2"));
     }
 
     #[test]

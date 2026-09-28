@@ -164,8 +164,33 @@ fn parse_date(v: Option<&serde_json::Value>) -> Option<chrono::NaiveDate> {
         .and_then(|s| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").ok())
 }
 
+/// A season type's name, by its id rather than the league's own wording:
+/// MLB calls type 1 "Spring Training", the NFL "Preseason", and the phase and
+/// clock match on the name. Ids 1–3 (or the `pre`/`reg`/`post` abbreviation)
+/// map to "Preseason", "Regular Season" and "Postseason"; anything else keeps
+/// ESPN's name.
+fn canonical_season_type(t: &serde_json::Value) -> String {
+    let id = t.get("type").and_then(|n| n.as_i64()).or_else(|| {
+        t.get("id")
+            .and_then(super::super::transform::json_id)?
+            .parse()
+            .ok()
+    });
+    match (id, t.get("abbreviation").and_then(|a| a.as_str())) {
+        (Some(1), _) | (None, Some("pre")) => "Preseason".to_string(),
+        (Some(2), _) | (None, Some("reg")) => "Regular Season".to_string(),
+        (Some(3), _) | (None, Some("post")) => "Postseason".to_string(),
+        _ => t
+            .get("name")
+            .and_then(|n| n.as_str())
+            .unwrap_or("")
+            .to_string(),
+    }
+}
+
 /// The season block every scoreboard carries — the source for both the
-/// column's phase (via `season.type.name` and its dates) and the masthead
+/// column's phase (via `season.type`, see `canonical_season_type`, and its
+/// dates) and the masthead
 /// clock.
 pub fn parse_season(scoreboard: &serde_json::Value) -> SeasonInfo {
     let league = scoreboard
@@ -175,10 +200,8 @@ pub fn parse_season(scoreboard: &serde_json::Value) -> SeasonInfo {
     let season = league.and_then(|l| l.get("season"));
     let season_type = season
         .and_then(|s| s.get("type"))
-        .and_then(|t| t.get("name"))
-        .and_then(|n| n.as_str())
-        .unwrap_or("")
-        .to_string();
+        .map(canonical_season_type)
+        .unwrap_or_default();
     // The calendar has one entry per season type (Preseason, Regular
     // Season, Postseason, Off Season), each listing its own weeks. The
     // count wanted is the current type's weeks — the calendar's own length
@@ -406,6 +429,22 @@ mod tests {
         assert_eq!(phase_for(&s, w, date("2026-10-03")), Phase::Postseason);
         assert_eq!(phase_for(&s, w, date("2026-09-28")), Phase::Regular);
         assert_eq!(phase_for(&s, w, date("2026-11-12")), Phase::Offseason);
+    }
+
+    /// MLB names season type 1 "Spring Training", not "Preseason": the type's
+    /// id is what says preseason, whatever the league calls it.
+    #[test]
+    fn spring_training_is_the_preseason() {
+        let sb = serde_json::json!({ "leagues": [{ "season": {
+            "year": 2026,
+            "startDate": "2026-02-19T08:00Z",
+            "endDate": "2026-11-12T07:59Z",
+            "type": { "id": "1", "type": 1, "name": "Spring Training", "abbreviation": "pre" },
+        } }] });
+        let s = parse_season(&sb);
+        let today = date("2026-03-10");
+        assert_eq!(phase_for(&s, None, today), Phase::Preseason);
+        assert_eq!(clock_for(Phase::Preseason, &s, None, today), "preseason");
     }
 
     #[test]

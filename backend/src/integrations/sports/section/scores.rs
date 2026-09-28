@@ -38,7 +38,8 @@ pub struct ScoreSlate {
 
 /// Every game on the (yesterday + today) scoreboard: the followed team's game
 /// first, then live games, then today's upcoming ones soonest-first, then
-/// finals most-recent-first. Nothing is dropped here — the page caps.
+/// finals most-recent-first. Only postponed games (`post` but never
+/// completed) are dropped here — they're no result; the page caps the rest.
 pub fn parse_slate(scoreboard: &serde_json::Value, team_abbr: &str) -> ScoreSlate {
     let mut rows: Vec<ScoreLine> = scoreboard
         .get("events")
@@ -51,7 +52,7 @@ pub fn parse_slate(scoreboard: &serde_json::Value, team_abbr: &str) -> ScoreSlat
             let state = match event["status"]["type"]["state"].as_str()? {
                 "in" => GameStatus::Live,
                 "pre" => GameStatus::Upcoming,
-                "post" => GameStatus::Final,
+                "post" if super::team::is_final(event) => GameStatus::Final,
                 _ => return None,
             };
             let away = competitor(comp, "away")?;
@@ -139,6 +140,24 @@ mod tests {
         assert_eq!(s.rows[2].state, GameStatus::Upcoming);
         assert_eq!(s.rows[2].starts_at, "2026-09-28T23:10Z");
         assert_eq!(s.total, 5);
+    }
+
+    /// A postponed game is `post` but not completed: never a "Final" 0–0.
+    #[test]
+    fn a_postponed_game_is_not_a_final() {
+        let mut ppd = event("NYM", "ATL", "post", "Postponed", "2026-09-27T23:10Z");
+        ppd["status"]["type"]["completed"] = serde_json::json!(false);
+        let mut done = event("KC", "LV", "post", "Final", "2026-09-27T20:25Z");
+        done["status"]["type"]["completed"] = serde_json::json!(true);
+        let s = parse_slate(&serde_json::json!({ "events": [ppd, done] }), "SF");
+        assert!(
+            s.rows
+                .iter()
+                .all(|r| r.state != GameStatus::Final || r.a == "KC"),
+            "{:?}",
+            s.rows
+        );
+        assert_eq!(s.total, 1);
     }
 
     #[test]
