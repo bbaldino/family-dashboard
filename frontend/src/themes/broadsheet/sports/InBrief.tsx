@@ -1,7 +1,7 @@
 import type { BriefItem } from '@/integrations/sports'
 import { formatNewsAge } from '@/integrations/sports'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
-import { SP_RULE } from './sports-tokens'
+import { SP_RULE, clampLines } from './sports-tokens'
 
 const meta = {
   fontFamily: 'var(--font-mono)',
@@ -14,7 +14,8 @@ const meta = {
 /**
  * A column's headlines: the team's own first, then the league's (tagged in
  * rust so the two read apart). The newest `deks` items carry their one-line
- * summary; the rest are headline only. Capped at `max` with "+N more".
+ * summary; the rest are headline only. Capped at `max` with "+N more";
+ * headlines and deks each clamp to two lines, so the cap bounds the height.
  */
 export function InBrief({
   items,
@@ -64,6 +65,7 @@ export function InBrief({
               fontSize: 14,
               fontWeight: 600,
               lineHeight: 1.22,
+              ...clampLines(2),
             }}
           >
             {b.h}
@@ -76,6 +78,7 @@ export function InBrief({
                 fontSize: 12.5,
                 color: 'var(--ink-muted)',
                 marginTop: 1,
+                ...clampLines(2),
               }}
             >
               {b.dek}

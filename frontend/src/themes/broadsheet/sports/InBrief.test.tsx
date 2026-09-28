@@ -30,6 +30,18 @@ describe('InBrief', () => {
     expect(screen.getByText(/2H AGO/)).toBeInTheDocument()
   })
 
+  it('clamps headlines and deks to two lines, so a fixed item cap bounds the height', () => {
+    // Real ESPN deks run to 250 characters (three-plus lines in a column);
+    // the caps are sized against the clamped maximum, not the text.
+    render(<InBrief items={[item(1)]} max={5} deks={1} now={now} />)
+    for (const text of ['Headline 1', 'Dek 1']) {
+      const el = screen.getByText(text)
+      expect(el.style.display).toBe('-webkit-box')
+      expect(el.style.overflow).toBe('hidden')
+      expect(el.style.webkitLineClamp).toBe('2')
+    }
+  })
+
   it('says so when there is no news', () => {
     render(<InBrief items={[]} max={5} deks={2} now={now} />)
     expect(screen.getByText('No news right now.')).toBeInTheDocument()

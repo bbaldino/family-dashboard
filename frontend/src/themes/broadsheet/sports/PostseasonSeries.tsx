@@ -1,6 +1,6 @@
 import type { PostseasonRound, PostseasonView, SeriesRow } from '@/integrations/sports'
 import { formatFinalDate, formatUpcomingTime } from '@/integrations/sports'
-import { SP_RULE, SP_ME_ROW, SP_SUB_LABEL } from './sports-tokens'
+import { SP_RULE, SP_ME_ROW, SP_SUB_LABEL, clampLines } from './sports-tokens'
 
 const bestOf = (n: number | null) => (n ? ` · best of ${n}` : '')
 
@@ -86,6 +86,7 @@ export function PostseasonSeries({ view, maxSeries }: { view: PostseasonView; ma
                 fontSize: 10,
                 color: 'var(--ink-muted)',
                 padding: '2px 0',
+                ...clampLines(2),
               }}
             >
               {c.round} · {c.summary}

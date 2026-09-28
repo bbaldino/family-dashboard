@@ -55,4 +55,13 @@ describe('PostseasonSeries', () => {
     render(<PostseasonSeries view={view} maxSeries={1} />)
     expect(screen.getByText('+1 more')).toBeInTheDocument()
   })
+
+  it('clamps a finished round summary to two lines', () => {
+    // A four-series round's summary is free text that can wrap; clamping it
+    // keeps the postseason block's height bounded for the caps.
+    render(<PostseasonSeries view={view} maxSeries={8} />)
+    const done = screen.getByText(/PHI def ATL/)
+    expect(done.style.webkitLineClamp).toBe('2')
+    expect(done.style.overflow).toBe('hidden')
+  })
 })

@@ -21,37 +21,52 @@ export const SP_ME_ROW = 'color-mix(in srgb, var(--rust) 5%, transparent)'
 
 /**
  * Row caps per column shape — how many rows each block seats before rolling
- * the rest into a "+N more" line. **Measured at 1920×1080 (the 1600×900
- * canvas) against real ESPN data, not just the fixtures**: real deks run to
- * three lines and real headlines to two, where the fixtures' are one of each.
- * The division table has no cap: it is never truncated (spec + Global
- * Constraints), so it is the fixed cost everything else is sized around.
+ * the rest into a "+N more" line. **Sized for the worst case, not today's
+ * copy**: In brief headlines and deks, and finished-round summaries, clamp to
+ * two lines (`clampLines`), so every row has a known maximum height and a cap
+ * that fits that maximum fits any text. Measured at 1920×1080 (the 1600×900
+ * canvas) with every visible headline and dek at its two-line maximum, the
+ * division table in full (it is never truncated — spec + Global Constraints)
+ * and the other blocks at their caps.
  *
  * Metric: each column section's `scrollHeight - clientHeight` (a gap-to-footer
  * reading hides clipped content), plus the column's own slack — the room left
  * below In brief — since the section's 14px bottom padding lets content sink
  * that far before `scrollHeight` notices. At these values every column reads 0
- * in all four scenarios and live, and the slack stays ≥ 0 except a synthetic
- * worst case (live MLB with its longest dek promoted to the top: -4px, inside
- * the padding, nothing clipped).
+ * with slack ≥ 0 in the four scenarios, live, and each worst case below.
  *
- * - `regular` is bound by live MLB (5-row NL West table): 16px slack. One more
- *   score clips it by 17px (longest dek first); one more brief item by 29px.
- * - `briefDeks` is 1 (the spec allows 1–2): a second real dek clips live MLB
- *   by 27px — it costs more than a whole score row.
+ * - `regular` is bound by MLB (5-row division, the tallest a followed league
+ *   has): 7px worst-case slack. A 4th score clips it by 6px; a 3rd brief item
+ *   by 38px. Scores outrank the brief (the spec sheds In brief first), and a
+ *   3rd item would need scores cut to 1. An 8-team division (NHL) doesn't fit
+ *   at any sensible caps — 75px over at these.
+ * - `briefDeks` is 1 (the spec allows 1–2): a 2nd dek clips worst-case MLB by
+ *   18px and live NBA's narrow column by 4px.
  * - `postseason.brief` is bound by an eight-series first round (NBA/NHL) with
- *   real MLB news: 3px slack. A fourth item clips it by 25px.
+ *   its play-in done and three rounds to come: 18px slack. A 2nd item clips it
+ *   by 27px. MLB's own postseason (≤4 series) has 110–150px to spare.
  * - `postseason.series` is 8 — the most concurrent series any supported
  *   league's first round has, so it never actually trims.
- * - `compact.brief` is bound by live NBA (narrow 0.62fr column): 22px slack
- *   with its longest dek first. A ninth item clips it by 22px.
+ * - `compact.brief` is bound by live NBA (narrow 0.62fr column): 20px slack
+ *   (its headlines already run to two lines). A 10th item clips it by 25px.
  */
 export const COLUMN_CAPS = {
-  regular: { scores: 4, brief: 2 },
-  postseason: { series: 8, brief: 3 },
-  compact: { brief: 8 },
+  regular: { scores: 3, brief: 2 },
+  postseason: { series: 8, brief: 1 },
+  compact: { brief: 9 },
   briefDeks: 1,
 }
+
+/** Clamp a free-text block to `lines` whole lines with an ellipsis — how the
+ *  section bounds text it doesn't control (ESPN headlines, deks, round
+ *  summaries), so the fixed `COLUMN_CAPS` hold whatever the copy's length.
+ *  `LiveGame`'s scoring recap spells out the same four properties inline. */
+export const clampLines = (lines: number) => ({
+  display: '-webkit-box',
+  WebkitLineClamp: lines,
+  WebkitBoxOrient: 'vertical' as const,
+  overflow: 'hidden',
+})
 
 /** The small uppercase sub-label style shared by `LeagueScores`'s "Around the
  *  <league>" header and `PostseasonSeries`'s round/status labels. */
