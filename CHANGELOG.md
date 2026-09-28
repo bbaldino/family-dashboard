@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.16.0](https://github.com/bbaldino/family-dashboard/compare/v0.15.0...v0.16.0) (2026-09-28)
+
+
+### Features
+
+* **broadsheet:** list other live games and finals beneath a live game ([2bd2590](https://github.com/bbaldino/family-dashboard/commit/2bd2590d9c7f9313bd4d1cebcad0acfc8f78186a))
+
+
+### Bug Fixes
+
+* **sports:** tag live detail with its real league and split leaders by side ([8b052cf](https://github.com/bbaldino/family-dashboard/commit/8b052cf4cbef92b0adb70341b4174f28eaaa08f0))
+
 ## [0.15.0](https://github.com/bbaldino/family-dashboard/compare/v0.14.1...v0.15.0) (2026-09-27)
 
 
