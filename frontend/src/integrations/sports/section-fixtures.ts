@@ -463,7 +463,7 @@ const nbaLakersPreseason: SportColumn = {
 
 const summer: SportsSection = {
   clock: [
-    { league: 'MLB', detail: '42 days left' },
+    { league: 'MLB', detail: 'postseason in 42 days' },
     { league: 'NFL', detail: 'preseason wk 1' },
     { league: 'NBA', detail: `${NBA_OPENER_DAYS} days out` },
   ],
@@ -472,7 +472,7 @@ const summer: SportsSection = {
 const autumn: SportsSection = {
   clock: [
     { league: 'NFL', detail: 'week 4 of 18' },
-    { league: 'MLB', detail: '6 days left' },
+    { league: 'MLB', detail: 'postseason in 6 days' },
     { league: 'NBA', detail: 'preseason' },
   ],
   columns: [nfl49ers, mlbDodgersRegular, nbaLakersPreseason],

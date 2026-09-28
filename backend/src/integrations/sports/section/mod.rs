@@ -337,7 +337,7 @@ async fn build_column(
 
     let clock = ClockEntry {
         league: league_tag,
-        detail: clock_for(phase, &season, today),
+        detail: clock_for(phase, &season, window, today),
     };
     Some((column, clock))
 }

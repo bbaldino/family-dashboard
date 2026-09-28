@@ -14,17 +14,22 @@ pub(super) fn season_underway(season: &SeasonInfo, today: chrono::NaiveDate) -> 
 /// - before the season opens → "N days out" (the countdown)
 /// - preseason → "preseason" (plus the week, when the feed carries one)
 /// - regular season with a week (football) → "week N of M"
-/// - regular season without one (baseball, basketball) → "N days left"
+/// - regular season without one (baseball, basketball) → a countdown to the
+///   postseason: "postseason in N days", "postseason tomorrow"; plain
+///   "regular season" when the post window is unknown
 /// - anything else → the season type, lowercased
 ///
-/// `now`, `start`, `end` are dates; `week` is the current week number when the
-/// feed reports one (football only), and `total_weeks` the current season
-/// type's own week count (its calendar entry's length, not the calendar's).
+/// `now`, `start` are dates; `post_start` is the postseason window's first
+/// day (from the core API — the scoreboard's own `season.endDate` is the end
+/// of the whole year, postseason included, so it can't say when the regular
+/// season stops). `week` is the current week number when the feed reports one
+/// (football only), and `total_weeks` the current season type's own week
+/// count (its calendar entry's length, not the calendar's).
 pub fn clock_detail(
     season_type: &str,
     now: chrono::NaiveDate,
     start: Option<chrono::NaiveDate>,
-    end: Option<chrono::NaiveDate>,
+    post_start: Option<chrono::NaiveDate>,
     week: Option<i64>,
     total_weeks: Option<usize>,
 ) -> String {
@@ -41,8 +46,9 @@ pub fn clock_detail(
         },
         "Regular Season" => match (week, total_weeks) {
             (Some(w), Some(total)) => format!("week {w} of {total}"),
-            _ => match end {
-                Some(end) if end >= now => format!("{} days left", (end - now).num_days()),
+            _ => match post_start.map(|p| (p - now).num_days()) {
+                Some(1) => "postseason tomorrow".to_string(),
+                Some(days) if days > 1 => format!("postseason in {days} days"),
                 _ => "regular season".to_string(),
             },
         },
@@ -117,7 +123,13 @@ pub fn phase_detail(phase: Phase, season: &SeasonInfo, today: chrono::NaiveDate)
 /// its column shows. ESPN keeps labelling a finished league "Regular Season",
 /// so the off-season and postseason read from the phase, not the season type:
 /// off-season counts down to an announced opener, else reads "off-season".
-pub fn clock_for(phase: Phase, season: &SeasonInfo, today: chrono::NaiveDate) -> String {
+/// A regular season counts down to `post_window`'s start (see `clock_detail`).
+pub fn clock_for(
+    phase: Phase,
+    season: &SeasonInfo,
+    post_window: Option<(chrono::NaiveDate, chrono::NaiveDate)>,
+    today: chrono::NaiveDate,
+) -> String {
     match phase {
         Phase::Postseason => "postseason".to_string(),
         Phase::Offseason => match season.start {
@@ -128,7 +140,7 @@ pub fn clock_for(phase: Phase, season: &SeasonInfo, today: chrono::NaiveDate) ->
             &season.season_type,
             today,
             season.start,
-            season.end,
+            post_window.map(|(start, _)| start),
             season.week,
             season.total_weeks,
         ),
@@ -300,7 +312,7 @@ mod tests {
             "Regular Season",
             date("2026-08-17"),
             Some(date("2026-09-30")),
-            Some(date("2027-06-26")),
+            Some(date("2027-04-18")),
             None,
             None,
         );
@@ -313,25 +325,54 @@ mod tests {
             "Regular Season",
             date("2026-10-01"),
             Some(date("2026-09-01")),
-            Some(date("2027-02-01")),
+            Some(date("2027-01-09")),
             Some(3),
             Some(18),
         );
         assert_eq!(d, "week 3 of 18");
     }
 
+    /// The scoreboard's `season.endDate` is the end of the whole year —
+    /// postseason included (MLB 2026: Nov 12, the post window's own end) —
+    /// so counting to it read "45 days left" the day after MLB's regular
+    /// season ended. A day-calendar league counts to its postseason instead.
     #[test]
-    fn clock_falls_back_to_days_left_without_a_week() {
-        // MLB mid-season, no week concept.
+    fn clock_counts_down_to_the_postseason_without_a_week() {
+        // MLB mid-season, no week concept; postseason opens Sep 29.
+        let post_start = Some(date("2026-09-29"));
         let d = clock_detail(
             "Regular Season",
             date("2026-08-17"),
             Some(date("2026-02-19")),
-            Some(date("2026-11-12")),
+            post_start,
             None,
             None,
         );
-        assert_eq!(d, "87 days left");
+        assert_eq!(d, "postseason in 43 days");
+    }
+
+    /// Today's shape (2026-09-28): the regular season finished yesterday,
+    /// the post window opens tomorrow, the scoreboard still says "Regular
+    /// Season" with a Nov 12 end date.
+    #[test]
+    fn clock_on_the_eve_of_the_postseason_says_tomorrow() {
+        let today = date("2026-09-28");
+        let mlb = season("Regular Season", "2026-02-19", "2026-11-12", None);
+        let window = Some((date("2026-09-29"), date("2026-11-12")));
+        let phase = phase_for(&mlb, window, today);
+        assert_eq!(phase, Phase::Regular);
+        assert_eq!(clock_for(phase, &mlb, window, today), "postseason tomorrow");
+    }
+
+    /// Without the post window there's nothing honest to count to — the
+    /// scoreboard's end date is the year's, not the regular season's.
+    #[test]
+    fn clock_without_a_post_window_names_the_regular_season() {
+        let mlb = season("Regular Season", "2026-02-19", "2026-11-12", None);
+        assert_eq!(
+            clock_for(Phase::Regular, &mlb, None, date("2026-08-17")),
+            "regular season"
+        );
     }
 
     #[test]
@@ -340,7 +381,7 @@ mod tests {
             "Preseason",
             date("2026-08-17"),
             Some(date("2026-08-06")),
-            Some(date("2027-02-16")),
+            Some(date("2027-01-09")),
             Some(2),
             None,
         );
@@ -406,15 +447,15 @@ mod tests {
         let window = Some((date("2026-09-29"), date("2026-11-12")));
         let phase = phase_for(&mlb, window, today);
         assert_eq!(phase, Phase::Offseason);
-        assert_eq!(clock_for(phase, &mlb, today), "off-season");
+        assert_eq!(clock_for(phase, &mlb, window, today), "off-season");
 
         let nba = season("Regular Season", "2026-10-21", "2027-06-20", None);
         assert_eq!(
-            clock_for(Phase::Offseason, &nba, date("2026-09-28")),
+            clock_for(Phase::Offseason, &nba, None, date("2026-09-28")),
             "23 days out"
         );
         assert_eq!(
-            clock_for(Phase::Postseason, &mlb, date("2026-10-03")),
+            clock_for(Phase::Postseason, &mlb, window, date("2026-10-03")),
             "postseason"
         );
         let nfl = SeasonInfo {
@@ -422,12 +463,12 @@ mod tests {
             ..season("Regular Season", "2026-09-01", "2027-02-15", Some(4))
         };
         assert_eq!(
-            clock_for(Phase::Regular, &nfl, date("2026-09-28")),
+            clock_for(Phase::Regular, &nfl, None, date("2026-09-28")),
             "week 4 of 18"
         );
         let pre = season("Preseason", "2026-08-01", "2027-02-15", Some(2));
         assert_eq!(
-            clock_for(Phase::Preseason, &pre, date("2026-08-17")),
+            clock_for(Phase::Preseason, &pre, None, date("2026-08-17")),
             "preseason wk 2"
         );
     }
