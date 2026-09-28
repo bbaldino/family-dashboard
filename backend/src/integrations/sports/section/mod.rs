@@ -1,14 +1,18 @@
 //! Aggregation for the Sporting Page — the `/sports/section` endpoint.
 //!
-//! Turns the per-league ESPN feeds (scoreboard, team detail, standings, news,
-//! season leaders) into one `SportsSection`: leagues ranked by season type,
-//! the top one or two rendered as full tracks, the rest as brief "elsewhere"
-//! entries. The frontend lays this out verbatim; see `section-types.ts` there
-//! for the matching shape.
+//! Turns the per-league ESPN feeds (scoreboard, team detail, schedule,
+//! standings, news, season leaders, postseason days) into one `SportsSection`:
+//! one column per followed league, shaped by the league's `Phase` and ordered
+//! postseason → regular season → preseason → off-season, plus the masthead's
+//! season clock. The frontend lays this out verbatim; see `section-types.ts`
+//! there for the matching shape.
 
+use chrono::{DateTime, Duration, NaiveDate, Utc};
 use serde::Serialize;
 
 use super::espn;
+use super::routes::SportsState;
+use super::types::{LEAGUES, TrackedTeam};
 
 mod leaders;
 pub mod news;
@@ -19,70 +23,65 @@ pub mod standings;
 pub mod team;
 
 use leaders::build_leaders;
-use news::{NewsShape, shape_news};
-use scores::parse_scores;
-use season::{SeasonInfo, clock_detail, parse_season, season_rank, season_underway};
+use news::{BriefItem, brief_items};
+use postseason::{
+    POSTSEASON_LOOKAHEAD_DAYS, PostseasonView, TeamPostStatus, build_postseason, postseason_days,
+};
+use scores::{ScoreSlate, parse_slate};
+use season::{Phase, clock_detail, parse_post_window, parse_season, phase_detail, phase_for};
 use standings::parse_standings;
-use team::{TeamDetail, parse_team_detail};
+use team::{LastGame, NextGame, card_games, record_summary, schedule_events, team_events};
 
 // ─── Output shape (mirrors the frontend `SportsSection`) ─────────────────
 
 #[derive(Serialize, Default)]
 pub struct SportsSection {
-    pub fixtures: Vec<Fixture>,
     pub clock: Vec<ClockEntry>,
-    pub standfirst: String,
-    pub leagues: Vec<SportsTrack>,
-    pub elsewhere: Vec<ElsewhereEntry>,
+    pub columns: Vec<SportColumn>,
 }
 
-#[derive(Serialize)]
-pub struct Fixture {
-    pub team: String,
-    pub detail: String,
-}
-
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct ClockEntry {
     pub league: String,
     pub detail: String,
 }
 
 #[derive(Serialize)]
-pub struct SportsTrack {
+#[serde(rename_all = "camelCase")]
+pub struct SportColumn {
     pub league: String,
     pub team: String,
-    #[serde(rename = "seasonType")]
-    pub season_type: String,
-    pub record: String,
-    pub standing: String,
-    pub home: String,
-    pub away: String,
-    pub next: String,
-    pub headline: String,
-    pub dek: String,
-    pub caption: String,
-    pub more: Vec<MoreStory>,
-    pub table: StandingsTable,
-    #[serde(rename = "scoresLabel")]
-    pub scores_label: String,
-    pub scores: Vec<ScoreRow>,
-    pub leaders: Vec<LeaderCategory>,
-    pub hot: Vec<StreakRow>,
-    pub cold: Vec<StreakRow>,
+    pub team_abbr: String,
+    pub phase: Phase,
+    pub phase_detail: String,
+    pub card: TeamCard,
+    pub table: Option<StandingsTable>,
+    pub scores: Option<ScoreSlate>,
+    pub postseason: Option<PostseasonView>,
+    pub brief: Vec<BriefItem>,
+    pub leaders: Option<Vec<LeaderCategory>>,
+    pub hot: Option<Vec<StreakRow>>,
+    pub cold: Option<Vec<StreakRow>>,
 }
 
-#[derive(Serialize)]
-pub struct MoreStory {
-    pub h: String,
-    pub dek: String,
-    pub meta: String,
+#[derive(Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct TeamCard {
+    pub record: Option<String>,
+    pub standing: Option<String>,
+    pub streak: Option<String>,
+    pub home: Option<String>,
+    pub road: Option<String>,
+    pub last10: Option<String>,
+    pub last: Option<LastGame>,
+    pub next: Option<NextGame>,
+    pub series_status: Option<String>,
+    pub season_ended: Option<String>,
 }
 
 #[derive(Serialize)]
 pub struct StandingsTable {
     pub title: String,
-    pub sub: String,
     pub rows: Vec<TableRow>,
 }
 
@@ -96,17 +95,6 @@ pub struct TableRow {
     pub strk: String,
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub me: bool,
-}
-
-#[derive(Serialize)]
-pub struct ScoreRow {
-    pub a: String,
-    #[serde(rename = "as")]
-    pub away_score: i64,
-    pub h: String,
-    pub hs: i64,
-    pub star: String,
-    pub line: String,
 }
 
 #[derive(Serialize, serde::Deserialize)]
@@ -124,303 +112,293 @@ pub struct StreakRow {
     pub strk: String,
 }
 
-#[derive(Serialize)]
-pub struct ElsewhereEntry {
-    pub league: String,
-    pub team: String,
-    /// `null` off-season, a real `0-0` in preseason.
-    pub record: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tag: Option<String>,
-    pub note: String,
-    pub story: BriefStory,
-}
-
-#[derive(Serialize)]
-pub struct BriefStory {
-    pub h: String,
-    pub meta: String,
-}
-
 // ─── Route orchestration ─────────────────────────────────────────────────
 
-/// One league's fetched inputs, before it is shaped into a track or an
-/// elsewhere entry.
-struct LeagueCtx {
-    league_id: String,
-    sport: &'static str,
-    league: &'static str,
-    team_id: String,
-    /// The team object from `/teams/{id}` (the `team` field, unwrapped).
-    team: serde_json::Value,
-    season: SeasonInfo,
-    scoreboard: serde_json::Value,
+fn non_empty(s: String) -> Option<String> {
+    (!s.is_empty()).then_some(s)
 }
 
-fn team_str<'a>(ctx: &'a LeagueCtx, key: &str) -> &'a str {
-    ctx.team.get(key).and_then(|v| v.as_str()).unwrap_or("")
-}
-
-async fn build_track(
-    state: &super::routes::SportsState,
-    ctx: &LeagueCtx,
-    detail: &TeamDetail,
-    scores_label: &str,
-) -> SportsTrack {
-    let abbr = team_str(ctx, "abbreviation");
-
-    let standings = espn::fetch_json(&state.client, &espn::standings_url(ctx.sport, ctx.league))
-        .await
-        .unwrap_or(serde_json::Value::Null);
-    let standings = parse_standings(&standings, abbr);
-
-    let news = espn::fetch_json(
-        &state.client,
-        &espn::team_news_url(ctx.sport, ctx.league, &ctx.team_id),
-    )
-    .await
-    .ok()
-    .and_then(|v| v.get("articles").and_then(|a| a.as_array()).cloned())
-    .unwrap_or_default();
-    let news = shape_news(&news);
-
-    let leaders = build_leaders(state, ctx.sport, ctx.league, ctx.season.year).await;
-
-    SportsTrack {
-        league: ctx.league_id.to_uppercase(),
-        team: team_str(ctx, "displayName").to_string(),
-        season_type: ctx.season.season_type.clone(),
-        record: detail.record.clone(),
-        standing: detail.standing.clone(),
-        home: detail.home.clone(),
-        away: detail.away.clone(),
-        next: detail.next.clone(),
-        headline: news.headline,
-        dek: news.dek,
-        // No real photo caption in the feed; the plate stands in for the art.
-        caption: String::new(),
-        more: news.more,
-        table: StandingsTable {
-            // No sub: the division title stands alone. The mock's contextual
-            // subs ("top of the table", "six to play") can't be generated
-            // without an editorial line the feed doesn't carry, and repeating
-            // the standing here just echoes the lead above it.
-            title: standings.title,
-            sub: String::new(),
-            rows: standings.rows,
-        },
-        scores_label: scores_label.to_string(),
-        scores: parse_scores(&ctx.scoreboard, abbr),
-        leaders,
-        hot: standings.hot,
-        cold: standings.cold,
-    }
-}
-
-/// A below-the-fold league: its followed team's status and one headline. Off
-/// the top rank, so it gets no track. A record present (preseason `0-0`) shows
-/// with a tag; absent (off-season) shows the countdown alone.
-fn build_elsewhere(
-    ctx: &LeagueCtx,
-    detail: &TeamDetail,
-    now: chrono::NaiveDate,
-    news: &NewsShape,
-) -> ElsewhereEntry {
-    let in_season = season_rank(&ctx.season.season_type) < 3;
-    let record = if in_season && !detail.record.is_empty() {
-        Some(detail.record.clone())
-    } else {
-        None
-    };
-    let tag = match ctx.season.season_type.as_str() {
-        "Preseason" => Some("preseason".to_string()),
-        _ => None,
-    };
-    let note = clock_note(&ctx.season, now, detail);
-
-    ElsewhereEntry {
-        league: ctx.league_id.to_uppercase(),
-        team: ctx
-            .team
-            .get("displayName")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string(),
-        record,
-        tag,
-        note,
-        story: BriefStory {
-            h: news.headline.clone(),
-            meta: news.lead_meta.clone(),
-        },
-    }
-}
-
-/// The prose note under an elsewhere team — a countdown before the season opens
-/// ("Season opens Sep 30 · 44 days out"), the next game once it has, or a bare
-/// season-type phrase as a fallback.
-fn clock_note(season: &SeasonInfo, now: chrono::NaiveDate, detail: &TeamDetail) -> String {
-    if let Some(start) = season.start
-        && now < start
-    {
-        let days = (start - now).num_days();
-        return format!(
-            "Season opens {} · {} days out",
-            start.format("%b %-d"),
-            days
-        );
-    }
-    if !detail.next.is_empty() {
-        return format!("Next: {}", detail.next);
-    }
-    season.season_type.to_lowercase()
-}
-
-/// The Sporting Page — `/sports/section`.
-pub async fn get_section(
-    axum::extract::State(state): axum::extract::State<super::routes::SportsState>,
-) -> Result<axum::Json<SportsSection>, crate::error::AppError> {
-    let config = crate::integrations::IntegrationConfig::new(&state.pool, super::INTEGRATION_ID);
-    let tracked: Vec<super::types::TrackedTeam> =
-        config.get_json_or("tracked_teams", vec![]).await?;
-    if tracked.is_empty() {
-        return Ok(axum::Json(SportsSection::default()));
-    }
-
-    let today = chrono::Utc::now().date_naive();
-    let yesterday = today - chrono::Duration::days(1);
-    let scores_label = format!("{}'s", yesterday.format("%A"));
-    // ESPN's scoreboard 400s on the `dates=YYYYMMDD-YYYYMMDD` range syntax —
-    // fetch each day singly and let `fetch_scoreboard_window` merge them.
-    let days = vec![
-        yesterday.format("%Y%m%d").to_string(),
-        today.format("%Y%m%d").to_string(),
-    ];
-
-    // One league context per tracked league (first tracked team wins its league).
-    let mut ctxs: Vec<LeagueCtx> = Vec::new();
-    for &(league_id, sport, league) in super::types::LEAGUES {
-        let Some(team) = tracked.iter().find(|t| t.league == league_id) else {
-            continue;
-        };
-        let Ok(scoreboard) =
-            espn::fetch_scoreboard_window(&state.client, sport, league, &days).await
-        else {
-            continue;
-        };
-        let Ok(team_payload) = espn::fetch_json(
-            &state.client,
-            &espn::team_detail_url(sport, league, &team.team_id),
-        )
-        .await
-        else {
-            continue;
-        };
-        let team_obj = team_payload.get("team").cloned().unwrap_or(team_payload);
-        ctxs.push(LeagueCtx {
-            league_id: league_id.to_string(),
-            sport,
-            league,
-            team_id: team.team_id.clone(),
-            season: parse_season(&scoreboard),
-            team: team_obj,
-            scoreboard,
-        });
-    }
-    if ctxs.is_empty() {
-        return Ok(axum::Json(SportsSection::default()));
-    }
-
-    // Rank leagues; underway seasons lead over dormant ones (ESPN may still
-    // label an off-season league "Regular Season"), season_rank as tiebreak.
-    // The top two (at most) lead, the rest go to Elsewhere.
-    ctxs.sort_by_key(|c| {
-        (
-            !season_underway(&c.season, today),
-            season_rank(&c.season.season_type),
-        )
-    });
-
-    let details: Vec<TeamDetail> = ctxs.iter().map(|c| parse_team_detail(&c.team)).collect();
-
-    // Fixtures and clock cover every tracked league, in configured order.
-    let fixtures: Vec<Fixture> = ctxs
+/// One column per supported league, for the first tracked team in it, keeping
+/// the configured order (the tie-break between columns of the same phase).
+pub fn league_slots(
+    tracked: &[TrackedTeam],
+) -> Vec<(
+    usize,
+    &TrackedTeam,
+    (&'static str, &'static str, &'static str),
+)> {
+    let mut seen = std::collections::HashSet::new();
+    tracked
         .iter()
-        .zip(&details)
-        .map(|(c, d)| Fixture {
-            team: shorten_team(team_str(c, "displayName")),
-            detail: if d.next.is_empty() {
-                clock_note(&c.season, today, d)
-            } else {
-                d.next.clone()
-            },
+        .enumerate()
+        .filter_map(|(i, t)| {
+            let league = *LEAGUES.iter().find(|(id, _, _)| *id == t.league)?;
+            seen.insert(league.0).then_some((i, t, league))
         })
-        .collect();
-    let clock: Vec<ClockEntry> = ctxs
-        .iter()
-        .map(|c| ClockEntry {
-            league: c.league_id.to_uppercase(),
-            detail: clock_detail(
-                &c.season.season_type,
-                today,
-                c.season.start,
-                c.season.end,
-                c.season.week,
-                c.season.total_weeks,
-            ),
-        })
-        .collect();
+        .collect()
+}
 
-    let mut leagues = Vec::new();
-    let mut elsewhere = Vec::new();
-    for (ctx, detail) in ctxs.iter().zip(&details) {
-        if leagues.len() < 2 {
-            leagues.push(build_track(&state, ctx, detail, &scores_label).await);
-        } else {
-            // Elsewhere still wants one headline, so fetch this league's news.
-            let news = espn::fetch_json(
+async fn articles(state: &SportsState, url: &str) -> Vec<serde_json::Value> {
+    espn::fetch_json(&state.client, url)
+        .await
+        .ok()
+        .and_then(|v| v.get("articles").and_then(|a| a.as_array()).cloned())
+        .unwrap_or_default()
+}
+
+/// The postseason's dates for a season, cached half a day.
+async fn post_window(
+    state: &SportsState,
+    sport: &str,
+    league: &str,
+    year: i32,
+) -> Option<(NaiveDate, NaiveDate)> {
+    if year == 0 {
+        return None;
+    }
+    let key = format!("postwindow:{league}:{year}");
+    let v = match state.cache.get(&key, 12 * 3600).await {
+        Some(v) => v,
+        None => {
+            let v = espn::fetch_json(
                 &state.client,
-                &espn::team_news_url(ctx.sport, ctx.league, &ctx.team_id),
+                &espn::season_type_url(sport, league, year, 3),
             )
             .await
-            .ok()
-            .and_then(|v| v.get("articles").and_then(|a| a.as_array()).cloned())
-            .unwrap_or_default();
-            elsewhere.push(build_elsewhere(ctx, detail, today, &shape_news(&news)));
+            .ok()?;
+            state.cache.set(&key, v.clone()).await;
+            v
         }
-    }
-
-    // The lead story's dek stands in as the standfirst — a real sentence about
-    // the day's biggest result. A cross-league LLM summary could replace it,
-    // the same path preview and recap already use.
-    let standfirst = leagues.first().map(|t| t.dek.clone()).unwrap_or_default();
-
-    Ok(axum::Json(SportsSection {
-        fixtures,
-        clock,
-        standfirst,
-        leagues,
-        elsewhere,
-    }))
+    };
+    parse_post_window(&v)
 }
 
-/// A team's short name for the fixtures ear — the last word of its display name
-/// ("Los Angeles Dodgers" → "Dodgers"), matching the mock's ear.
-fn shorten_team(display: &str) -> String {
-    display
-        .split_whitespace()
-        .last()
-        .unwrap_or(display)
-        .to_string()
+/// Every postseason day's scoreboard, one request per day. A day before
+/// yesterday is settled and cached for good; yesterday (late finishes),
+/// today and the days ahead are refetched every few minutes.
+async fn postseason_boards(
+    state: &SportsState,
+    sport: &str,
+    league: &str,
+    days: &[String],
+    today: NaiveDate,
+) -> Vec<serde_json::Value> {
+    let settled_before = (today - Duration::days(1)).format("%Y%m%d").to_string();
+    let fetches = days.iter().map(|day| {
+        let settled = day.as_str() < settled_before.as_str();
+        async move {
+            let key = format!("postday:{league}:{day}");
+            let max_age = if settled { u64::MAX } else { 300 };
+            if let Some(v) = state.cache.get(&key, max_age).await {
+                return Some(v);
+            }
+            let v = espn::fetch_scoreboard(&state.client, sport, league, day)
+                .await
+                .ok()?;
+            state.cache.set(&key, v.clone()).await;
+            Some(v)
+        }
+    });
+    futures::future::join_all(fetches)
+        .await
+        .into_iter()
+        .flatten()
+        .collect()
+}
+
+/// One league's column. `None` only when the league's scoreboard or the
+/// team's own detail can't be read — without those there's no phase or card.
+/// Everything else degrades within its own block.
+async fn build_column(
+    state: &SportsState,
+    (league_id, sport, league): (&'static str, &'static str, &'static str),
+    team_id: &str,
+    now: DateTime<Utc>,
+) -> Option<(SportColumn, ClockEntry)> {
+    let today = now.date_naive();
+    let days = [
+        (today - Duration::days(1)).format("%Y%m%d").to_string(),
+        today.format("%Y%m%d").to_string(),
+    ];
+    let scoreboard = espn::fetch_scoreboard_window(&state.client, sport, league, &days)
+        .await
+        .ok()?;
+    let payload = espn::fetch_json(
+        &state.client,
+        &espn::team_detail_url(sport, league, team_id),
+    )
+    .await
+    .ok()?;
+    let team = payload.get("team").cloned().unwrap_or(payload);
+
+    let season = parse_season(&scoreboard);
+    let window = post_window(state, sport, league, season.year).await;
+    let phase = phase_for(&season, window, today);
+    let text = |k: &str| team[k].as_str().unwrap_or("").to_string();
+    let (display, abbr) = (text("displayName"), text("abbreviation"));
+    let short = non_empty(text("shortDisplayName")).unwrap_or_else(|| display.clone());
+    let league_tag = league_id.to_uppercase();
+
+    let (team_news_url, league_news_url) = (
+        espn::team_news_url(sport, league, team_id),
+        espn::league_news_url(sport, league),
+    );
+    let (team_news, league_news) = tokio::join!(
+        articles(state, &team_news_url),
+        articles(state, &league_news_url),
+    );
+
+    let mut card = TeamCard {
+        record: non_empty(record_summary(&team, "total")),
+        standing: non_empty(text("standingSummary")),
+        home: non_empty(record_summary(&team, "home")),
+        road: non_empty(record_summary(&team, "road")),
+        ..TeamCard::default()
+    };
+    let mut column = SportColumn {
+        league: league_tag.clone(),
+        team: display,
+        team_abbr: abbr.clone(),
+        phase,
+        phase_detail: phase_detail(phase, &season, today),
+        card: TeamCard::default(),
+        table: None,
+        scores: None,
+        postseason: None,
+        brief: brief_items(&team_news, &league_news, &short, &league_tag),
+        leaders: None,
+        hot: None,
+        cold: None,
+    };
+
+    match phase {
+        Phase::Regular => {
+            let standings_url = espn::standings_url(sport, league);
+            let schedule_url = espn::team_schedule_url(sport, league, team_id, season.year);
+            let (standings, schedule, leaders) = tokio::join!(
+                espn::fetch_json(&state.client, &standings_url),
+                espn::fetch_json(&state.client, &schedule_url),
+                build_leaders(state, sport, league, season.year),
+            );
+            let standings = parse_standings(&standings.unwrap_or(serde_json::Value::Null), &abbr);
+            if let Some(t) = &standings.team {
+                card.streak = non_empty(t.streak.clone());
+                card.last10 = t.last10.clone();
+            }
+            let schedule = schedule.ok();
+            let candidates = team_events(&team)
+                .into_iter()
+                .chain(schedule.as_ref().map(schedule_events).unwrap_or_default());
+            (card.last, card.next) = card_games(candidates, team_id, now);
+            column.table = Some(StandingsTable {
+                title: standings.title,
+                rows: standings.rows,
+            });
+            column.scores = Some(parse_slate(&scoreboard, &abbr));
+            column.leaders = (!leaders.is_empty()).then_some(leaders);
+            column.hot = Some(standings.hot);
+            column.cold = Some(standings.cold);
+        }
+        Phase::Postseason => {
+            let (start, _) = window?;
+            let boards = postseason_boards(
+                state,
+                sport,
+                league,
+                &postseason_days(start, today, POSTSEASON_LOOKAHEAD_DAYS),
+                today,
+            )
+            .await;
+            let (view, status) = build_postseason(&boards, team_id, now);
+            let events = boards
+                .iter()
+                .flat_map(|b| b["events"].as_array().into_iter().flatten());
+            (card.last, card.next) =
+                card_games(team_events(&team).into_iter().chain(events), team_id, now);
+            match status {
+                TeamPostStatus::Alive(s) => card.series_status = Some(s),
+                TeamPostStatus::Ended(s) => card.season_ended = Some(s),
+                TeamPostStatus::Missed => card.season_ended = Some("Missed the postseason".into()),
+                TeamPostStatus::Unknown => {}
+            }
+            column.postseason = Some(view);
+        }
+        Phase::Preseason | Phase::Offseason => {
+            (_, card.next) = card_games(team_events(&team), team_id, now);
+        }
+    }
+    column.card = card;
+
+    let clock = ClockEntry {
+        league: league_tag,
+        detail: if phase == Phase::Postseason {
+            "postseason".to_string()
+        } else {
+            clock_detail(
+                &season.season_type,
+                today,
+                season.start,
+                season.end,
+                season.week,
+                season.total_weeks,
+            )
+        },
+    };
+    Some((column, clock))
+}
+
+/// The Sporting Page — `/sports/section`: one column per followed league,
+/// postseason first, then regular season, preseason, off-season.
+pub async fn get_section(
+    axum::extract::State(state): axum::extract::State<SportsState>,
+) -> Result<axum::Json<SportsSection>, crate::error::AppError> {
+    let config = crate::integrations::IntegrationConfig::new(&state.pool, super::INTEGRATION_ID);
+    let tracked: Vec<TrackedTeam> = config.get_json_or("tracked_teams", vec![]).await?;
+    let now = Utc::now();
+
+    let builds = league_slots(&tracked).into_iter().map(|(i, t, league)| {
+        let state = &state;
+        async move {
+            build_column(state, league, &t.team_id, now)
+                .await
+                .map(|b| (i, b))
+        }
+    });
+    let mut built: Vec<(usize, (SportColumn, ClockEntry))> = futures::future::join_all(builds)
+        .await
+        .into_iter()
+        .flatten()
+        .collect();
+    built.sort_by_key(|(i, (c, _))| (c.phase, *i));
+
+    Ok(axum::Json(SportsSection {
+        clock: built.iter().map(|(_, (_, k))| k.clone()).collect(),
+        columns: built.into_iter().map(|(_, (c, _))| c).collect(),
+    }))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    fn tracked(json: serde_json::Value) -> Vec<super::super::types::TrackedTeam> {
+        serde_json::from_value(json).unwrap()
+    }
+
     #[test]
-    fn shortens_a_team_to_its_last_word() {
-        assert_eq!(shorten_team("Los Angeles Dodgers"), "Dodgers");
-        assert_eq!(shorten_team("Warriors"), "Warriors");
+    fn one_slot_per_league_in_configured_order_unknown_leagues_skipped() {
+        let t = tracked(serde_json::json!([
+            { "league": "mlb", "teamId": "19" },
+            { "league": "xfl", "teamId": "1" },
+            { "league": "nfl", "teamId": "25" },
+            { "league": "mlb", "teamId": "26" },
+        ]));
+        let slots = league_slots(&t);
+        let got: Vec<(usize, &str)> = slots
+            .iter()
+            .map(|(i, team, _)| (*i, team.team_id.as_str()))
+            .collect();
+        assert_eq!(got, [(0, "19"), (2, "25")]);
+        assert_eq!(slots[0].2, ("mlb", "baseball", "mlb"));
     }
 }

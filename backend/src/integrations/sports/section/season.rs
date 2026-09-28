@@ -1,23 +1,7 @@
-// ─── Season ranking ──────────────────────────────────────────────────────
-
-/// Where a season type sits in the priority order that decides which leagues
-/// lead. Lower is higher priority: a regular season outranks a preseason, so a
-/// league mid-season is never buried under one only in exhibition play. An
-/// unknown type sorts last, above nothing.
-pub fn season_rank(season_type: &str) -> u8 {
-    match season_type {
-        "Regular Season" => 0,
-        "Postseason" => 1,
-        "Preseason" => 2,
-        // off-season / unknown
-        _ => 3,
-    }
-}
-
-/// Whether a league's season is currently underway on `today`. Off-season /
-/// not-yet-started leagues (ESPN may still label them "Regular Season") are
-/// deprioritised so the track slots go to sports actually being played.
-/// Missing dates default to active — never demote a league for absent data.
+/// Whether a league's season is currently underway on `today`. ESPN may still
+/// label an off-season or not-yet-started league "Regular Season"; its dates
+/// are what tell `phase_for` the league is dormant. Missing dates default to
+/// active — never demote a league for absent data.
 pub(super) fn season_underway(season: &SeasonInfo, today: chrono::NaiveDate) -> bool {
     let after_start = season.start.is_none_or(|s| today >= s);
     let before_end = season.end.is_none_or(|e| today <= e);
@@ -145,8 +129,9 @@ fn parse_date(v: Option<&serde_json::Value>) -> Option<chrono::NaiveDate> {
         .and_then(|s| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").ok())
 }
 
-/// The season block every scoreboard carries — the source for both the ranking
-/// (via `season.type.name`) and the masthead clock.
+/// The season block every scoreboard carries — the source for both the
+/// column's phase (via `season.type.name` and its dates) and the masthead
+/// clock.
 pub fn parse_season(scoreboard: &serde_json::Value) -> SeasonInfo {
     let league = scoreboard
         .get("leagues")
@@ -236,13 +221,6 @@ mod tests {
             "calendar": ["2026-02-19T08:00Z", "2026-07-13T07:00Z"],
         }] });
         assert_eq!(parse_season(&sb).total_weeks, None);
-    }
-
-    #[test]
-    fn regular_season_outranks_preseason_and_offseason() {
-        assert!(season_rank("Regular Season") < season_rank("Preseason"));
-        assert!(season_rank("Preseason") < season_rank("off-season nonsense"));
-        assert!(season_rank("Regular Season") < season_rank("Postseason"));
     }
 
     fn season_info(start: Option<&str>, end: Option<&str>) -> SeasonInfo {

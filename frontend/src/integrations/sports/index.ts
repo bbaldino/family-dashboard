@@ -5,12 +5,9 @@ export { useSportsFinalRecap } from './useSportsFinalRecap'
 export { useSportsSection } from './useSportsSection'
 export type {
   SportsSection,
-  SportsTrack,
   TableRow,
-  ScoreRow,
   LeaderCategory,
   StreakRow,
-  ElsewhereEntry,
   SportPhase,
   LastGame,
   NextGame,

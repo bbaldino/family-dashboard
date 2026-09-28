@@ -1,5 +1,3 @@
-use super::MoreStory;
-
 // ─── News ────────────────────────────────────────────────────────────────
 
 /// Normalise a string to lowercase alphanumerics, for comparing a headline
@@ -44,65 +42,6 @@ fn keep_article(a: &serde_json::Value) -> bool {
     let headline = a["headline"].as_str().unwrap_or("");
     let desc = a["description"].as_str().unwrap_or("");
     !headline.is_empty() && team_tag_count(a) <= 3 && !is_headline_echo(headline, desc)
-}
-
-pub struct NewsShape {
-    pub headline: String,
-    pub dek: String,
-    /// The lead story's meta line, for an Elsewhere entry that shows one story.
-    pub lead_meta: String,
-    pub more: Vec<MoreStory>,
-}
-
-fn article_meta(article: &serde_json::Value) -> String {
-    let when = article
-        .get("published")
-        .and_then(|p| p.as_str())
-        .and_then(super::super::transform::parse_espn_timestamp)
-        .map(|dt| dt.format("%a %b %-d").to_string())
-        .unwrap_or_default();
-    let kind = article.get("type").and_then(|t| t.as_str()).unwrap_or("");
-    match (when.is_empty(), kind.is_empty()) {
-        (false, false) => format!("{when} · {kind}"),
-        (false, true) => when,
-        _ => kind.to_string(),
-    }
-}
-
-/// The lead story and two follow-ups from a team's news feed, after dropping
-/// league round-ups (too many team tags) and headline-echo items (no text
-/// beyond the headline). Everything left is a real, readable team story.
-pub fn shape_news(articles: &[serde_json::Value]) -> NewsShape {
-    let kept: Vec<&serde_json::Value> = articles.iter().filter(|a| keep_article(a)).collect();
-
-    let text = |a: &serde_json::Value, key: &str| {
-        a.get(key)
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string()
-    };
-
-    NewsShape {
-        headline: kept
-            .first()
-            .map(|a| text(a, "headline"))
-            .unwrap_or_default(),
-        dek: kept
-            .first()
-            .map(|a| clean_dek(&text(a, "description")))
-            .unwrap_or_default(),
-        lead_meta: kept.first().map(|a| article_meta(a)).unwrap_or_default(),
-        more: kept
-            .iter()
-            .skip(1)
-            .take(2)
-            .map(|a| MoreStory {
-                h: text(a, "headline"),
-                dek: clean_dek(&text(a, "description")),
-                meta: article_meta(a),
-            })
-            .collect(),
-    }
 }
 
 #[derive(serde::Serialize, Clone, Copy, Debug, PartialEq, Eq)]
@@ -189,62 +128,6 @@ pub fn brief_items(
 mod tests {
     use super::*;
 
-    fn article(headline: &str, desc: &str, team_tags: usize) -> serde_json::Value {
-        let cats: Vec<_> = (0..team_tags)
-            .map(|_| serde_json::json!({ "type": "team" }))
-            .collect();
-        serde_json::json!({
-            "headline": headline,
-            "description": desc,
-            "type": "Story",
-            "published": "2026-08-12T14:00Z",
-            "categories": cats,
-        })
-    }
-
-    #[test]
-    fn news_drops_league_roundups_and_keeps_team_stories() {
-        let articles = vec![
-            article(
-                "10 storylines that will shape the season",
-                "A league-wide look.",
-                30,
-            ),
-            article("Muncy walks it off", "A single scored Ohtani to end it.", 2),
-            article(
-                "Snell strikes out ten",
-                "Back from the IL after three months.",
-                1,
-            ),
-        ];
-        let n = shape_news(&articles);
-        // The 30-team round-up is skipped; the first real team story leads.
-        assert_eq!(n.headline, "Muncy walks it off");
-        assert_eq!(n.dek, "A single scored Ohtani to end it.");
-        assert_eq!(n.more.len(), 1);
-        assert_eq!(n.more[0].h, "Snell strikes out ten");
-        assert_eq!(n.more[0].meta, "Wed Aug 12 · Story");
-    }
-
-    #[test]
-    fn news_drops_headline_echo_items() {
-        let articles = vec![
-            // A video whose description just repeats the headline.
-            article(
-                "Royals vs. Dodgers: Game Highlights",
-                "Royals vs. Dodgers: Game Highlights",
-                2,
-            ),
-            article(
-                "Real story with a real dek",
-                "Something that isn't the headline.",
-                1,
-            ),
-        ];
-        let n = shape_news(&articles);
-        assert_eq!(n.headline, "Real story with a real dek");
-    }
-
     const NFL_NEWS: &str = include_str!("../../../../tests/fixtures/section/nfl_league_news.json");
 
     fn articles(json: &str) -> Vec<serde_json::Value> {
@@ -295,6 +178,23 @@ mod tests {
             ["Dated", "Undated"]
         );
         assert_eq!(items[1].published_at, "");
+    }
+
+    /// A league round-up tags twenty or thirty teams; a video's "description"
+    /// can just repeat its headline. Neither is a readable team story.
+    #[test]
+    fn team_feed_drops_roundups_and_headline_echoes() {
+        let teams = |n: usize| vec![serde_json::json!({ "type": "team" }); n];
+        let feed = [
+            serde_json::json!({ "headline": "10 storylines that will shape the season", "description": "A league-wide look.", "categories": teams(30) }),
+            serde_json::json!({ "headline": "Royals vs. Dodgers: Game Highlights", "description": "Royals vs. Dodgers: Game Highlights", "categories": teams(2) }),
+            serde_json::json!({ "headline": "Muncy walks it off", "description": "A single scored Ohtani to end it.", "categories": teams(2) }),
+        ];
+        let items = brief_items(&feed, &[], "Dodgers", "MLB");
+        assert_eq!(
+            items.iter().map(|i| i.h.as_str()).collect::<Vec<_>>(),
+            ["Muncy walks it off"]
+        );
     }
 
     #[test]
