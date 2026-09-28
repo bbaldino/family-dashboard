@@ -44,3 +44,20 @@ export function formatFinalDate(startTime: string): string {
   if (Number.isNaN(start.getTime())) return ''
   return start.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' })
 }
+
+/**
+ * A news item's age for the In brief meta line: minutes, then hours, then
+ * "YESTERDAY" by calendar day, then days. Upper-case, as the meta line sets
+ * it. Empty for a missing or unparseable date — the item still shows.
+ */
+export function formatNewsAge(publishedAt: string, now: Date): string {
+  const t = new Date(publishedAt)
+  if (!publishedAt || Number.isNaN(t.getTime())) return ''
+  const minutes = Math.max(1, Math.floor((now.getTime() - t.getTime()) / 60_000))
+  if (minutes < 60) return `${minutes}M AGO`
+  const yesterday = new Date(now)
+  yesterday.setDate(now.getDate() - 1)
+  if (t.toDateString() === yesterday.toDateString()) return 'YESTERDAY'
+  const hours = Math.floor(minutes / 60)
+  return hours < 24 ? `${hours}H AGO` : `${Math.floor(hours / 24)}D AGO`
+}
