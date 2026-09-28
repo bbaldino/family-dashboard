@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import type { CSSProperties, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import type { SportColumn } from '@/integrations/sports'
 import { TeamCard } from './TeamCard'
 import { InBrief } from './InBrief'
@@ -9,17 +9,7 @@ import { DivisionTable, LeaderBlock } from './SportsBlocks'
 import { StreakList } from './SportsPrimitives'
 import { fitLeadingCount } from './column-fit'
 import { COLUMN_CAPS } from './sports-tokens'
-
-/** Measured but not shown: out of flow so it can't push anything, invisible,
- *  and out of the accessibility tree. */
-const HIDDEN: CSSProperties = {
-  position: 'absolute',
-  left: 0,
-  right: 0,
-  top: 0,
-  visibility: 'hidden',
-  pointerEvents: 'none',
-}
+import { shownFitStyle, hiddenFitStyle } from '@/themes/broadsheet/fit-styles'
 
 /**
  * The optional tail of a regular-season column (form, then leaders): each
@@ -41,13 +31,15 @@ function FittedExtras({ blocks }: { blocks: { key: string; node: ReactNode }[] }
   }, [blocks])
 
   useLayoutEffect(measure)
+  const blockKeys = blocks.map((b) => b.key).join('|')
   useEffect(() => {
     const box = boxRef.current
     if (!box || typeof ResizeObserver === 'undefined') return
     const observer = new ResizeObserver(measure)
     observer.observe(box)
+    itemRefs.current.forEach((el) => el && observer.observe(el))
     return () => observer.disconnect()
-  }, [measure])
+  }, [blockKeys, measure])
 
   return (
     <div ref={boxRef} className="flex-1 min-h-0 relative overflow-hidden">
@@ -57,7 +49,7 @@ function FittedExtras({ blocks }: { blocks: { key: string; node: ReactNode }[] }
           ref={(el) => {
             itemRefs.current[i] = el
           }}
-          style={i < count ? undefined : HIDDEN}
+          style={i < count ? shownFitStyle : hiddenFitStyle}
           aria-hidden={i < count ? undefined : true}
         >
           {b.node}
@@ -123,7 +115,10 @@ export function LeagueColumn({ column, now }: { column: SportColumn; now: Date }
           <DivisionTable table={column.table} />
         </div>
       )}
-      {column.phase === 'regular' && column.scores && (
+      {/* An empty slate (no games at all, not just none shown) renders no
+          block — a bare "Around the <league>" header with nothing under it
+          reads as broken, not quiet. */}
+      {column.phase === 'regular' && column.scores && column.scores.total > 0 && (
         <LeagueScores league={column.league} slate={column.scores} max={caps.regular.scores} />
       )}
       {column.phase === 'postseason' && column.postseason && (

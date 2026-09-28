@@ -26,7 +26,21 @@ const base: SportColumn = {
     title: 'NFC West',
     rows: [{ t: 'SF', w: 3, l: 0, pct: '1.000', gb: '—', strk: 'W3', me: true }],
   },
-  scores: { rows: [], total: 0 },
+  scores: {
+    rows: [
+      {
+        a: 'ARI',
+        as: 30,
+        h: 'SF',
+        hs: 36,
+        state: 'final',
+        detail: 'Final',
+        startsAt: '2026-09-27T20:05Z',
+        mine: true,
+      },
+    ],
+    total: 1,
+  },
   postseason: null,
   brief: [
     {
@@ -79,5 +93,38 @@ describe('LeagueColumn', () => {
     )
     expect(screen.queryByText('NFC West')).not.toBeInTheDocument()
     expect(screen.getByTestId('in-brief')).toBeInTheDocument()
+  })
+  it('renders no scores block at all when the slate has no games', () => {
+    render(<LeagueColumn column={{ ...base, scores: { rows: [], total: 0 } }} now={now} />)
+    expect(screen.queryByTestId('league-scores')).not.toBeInTheDocument()
+    expect(screen.queryByText('Around the NFL')).not.toBeInTheDocument()
+  })
+  it('shows form and leaders in the regular season, and hides them outside it', () => {
+    const withExtras: SportColumn = {
+      ...base,
+      hot: [{ t: 'SF', rec: '3-0', strk: 'W3' }],
+      cold: [{ t: 'ARI', rec: '0-3', strk: 'L3' }],
+      leaders: [{ cat: 'Passing yards', abbr: 'YDS', rows: [['B. Purdy', 'SF', '1200']] }],
+    }
+    const { unmount } = render(<LeagueColumn column={withExtras} now={now} />)
+    expect(screen.getByText('Running hot')).toBeInTheDocument()
+    expect(screen.getByText('Cold snap')).toBeInTheDocument()
+    expect(screen.getByText('Passing yards')).toBeInTheDocument()
+    unmount()
+
+    render(
+      <LeagueColumn
+        column={{
+          ...withExtras,
+          phase: 'postseason',
+          table: null,
+          scores: null,
+          postseason: { current: [], completed: [], upcoming: [] },
+        }}
+        now={now}
+      />,
+    )
+    expect(screen.queryByText('Running hot')).not.toBeInTheDocument()
+    expect(screen.queryByText('Passing yards')).not.toBeInTheDocument()
   })
 })
