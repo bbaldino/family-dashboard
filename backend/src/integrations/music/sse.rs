@@ -91,7 +91,16 @@ fn build_queue_states(
                 Some(ref info) if !info.artist.is_empty() => current_item,
                 _ => player
                     .and_then(|p| p.get("current_media"))
-                    .and_then(|cm| track_info_from_current_media(cm, q, now))
+                    .and_then(|cm| {
+                        // An idle queue's clock is frozen (MA 2.10), so a
+                        // player-driven stream reads its own snapshot.
+                        let clock = if player_driven_state(q, player).is_some() {
+                            cm
+                        } else {
+                            q
+                        };
+                        track_info_from_current_media(cm, clock, state == "playing", now)
+                    })
                     .or(current_item),
             };
 
@@ -191,14 +200,24 @@ fn find_player<'a>(
 /// `playback_state` is then the truth. An idle queue only defers to a player
 /// that actually holds media, so a genuinely idle player stays idle.
 fn queue_state(q: &serde_json::Value, player: Option<&serde_json::Value>) -> String {
-    let queue_state = q["state"].as_str().unwrap_or("idle");
-    let player_state = player
-        .filter(|p| !p["current_media"].is_null())
-        .and_then(|p| p["playback_state"].as_str().or_else(|| p["state"].as_str()));
-    match (queue_state, player_state) {
-        ("idle", Some(s @ ("playing" | "paused"))) => s.to_string(),
-        _ => queue_state.to_string(),
+    player_driven_state(q, player)
+        .unwrap_or_else(|| q["state"].as_str().unwrap_or("idle"))
+        .to_string()
+}
+
+/// The player's state when it, not MA's queue, is driving playback: the
+/// queue is idle but the player holds media and is playing or paused.
+fn player_driven_state<'a>(
+    q: &serde_json::Value,
+    player: Option<&'a serde_json::Value>,
+) -> Option<&'a str> {
+    if q["state"].as_str().unwrap_or("idle") != "idle" {
+        return None;
     }
+    player
+        .filter(|p| !p["current_media"].is_null())
+        .and_then(|p| p["playback_state"].as_str().or_else(|| p["state"].as_str()))
+        .filter(|s| matches!(*s, "playing" | "paused"))
 }
 
 /// Age an elapsed-time snapshot forward to "now". MA's `elapsed_time` is a
@@ -230,16 +249,20 @@ fn live_elapsed(
 /// `current_item`, `current_media` has no year/label/track_number/source, so
 /// those are always `None`. Returns `None` if `title` is absent or empty.
 ///
-/// Elapsed comes from the queue's clock (`q`), not `current_media`'s. At a
-/// track change MA emits `player_updated` with the new title but the
-/// previous track's position on `current_media`, then silently resets it
-/// with no further player event — so a refetch on that event would cache the
-/// stale position for the whole track. The queue's `elapsed_time` is right
-/// throughout, and MA follows the reset with a `queue_updated` that
-/// refetches it.
+/// Elapsed comes from `clock`, which the caller picks by who drives playback:
+/// - The queue (MA 2.9, where a Connect queue reads playing): there, at a
+///   track change MA emitted `player_updated` with the new title but the
+///   previous track's position on `current_media`, then silently reset it,
+///   so only the queue's `elapsed_time` was right throughout.
+/// - `current_media` itself (MA 2.10, where the queue sits idle): the idle
+///   queue's clock is frozen, while the player's snapshot resets cleanly at
+///   each track change.
+///
+/// `playing` gates aging the snapshot forward to `now`.
 fn track_info_from_current_media(
     cm: &serde_json::Value,
-    q: &serde_json::Value,
+    clock: &serde_json::Value,
+    playing: bool,
     now: i64,
 ) -> Option<TrackInfo> {
     let name = cm["title"].as_str().unwrap_or("");
@@ -252,9 +275,13 @@ fn track_info_from_current_media(
         album: cm["album"].as_str().map(String::from),
         image_url: cm["image_url"].as_str().map(String::from),
         duration: cm["duration"].as_f64().map(|d| d as i64),
-        elapsed: q["elapsed_time"].as_f64().map(|elapsed_time| {
-            // The queue stamps this as fractional unix seconds.
-            let last_updated = q["elapsed_time_last_updated"].as_f64().map(|t| t as i64);
+        elapsed: clock["elapsed_time"].as_f64().map(|elapsed_time| {
+            // Stamped in unix seconds (fractional on the queue). Only a
+            // playing snapshot is aged: a paused one is where playback stopped.
+            let last_updated = clock["elapsed_time_last_updated"]
+                .as_f64()
+                .map(|t| t as i64)
+                .filter(|_| playing);
             live_elapsed(elapsed_time, last_updated, cm["duration"].as_f64(), now)
         }),
         uri: cm["uri"].as_str().map(String::from),
@@ -688,6 +715,8 @@ mod tests {
     /// owns the queue, so MA's queue reads `idle` with no `current_item` while
     /// the player itself is `playing` a track. Reading the queue's state
     /// showed a playing stream as paused.
+    const CONNECT_TRACK_START: i64 = 1_790_706_434;
+
     fn connect_on_ma_2_10(playback_state: &str) -> (serde_json::Value, serde_json::Value) {
         let players = serde_json::json!([
             {
@@ -700,7 +729,8 @@ mod tests {
                     "title": "Linger - Remastered 2026",
                     "artist": "The Cranberries",
                     "duration": 274,
-                    "elapsed_time": 0
+                    "elapsed_time": 0,
+                    "elapsed_time_last_updated": CONNECT_TRACK_START
                 }
             }
         ]);
@@ -710,7 +740,9 @@ mod tests {
                 "display_name": "Kitchen",
                 "state": "idle",
                 "items": 1,
+                // Frozen: MA 2.10 stops ticking an idle queue's clock.
                 "elapsed_time": 29.18,
+                "elapsed_time_last_updated": 1_790_704_499.18,
                 "current_item": null
             }
         ]);
@@ -721,12 +753,34 @@ mod tests {
     fn an_idle_queue_takes_its_players_state_during_external_playback() {
         for playback_state in ["playing", "paused"] {
             let (players, queues) = connect_on_ma_2_10(playback_state);
-            let states = build_queue_states(&players, &queues, 1_800_000_000);
+            let states = build_queue_states(&players, &queues, CONNECT_TRACK_START + 154);
             assert_eq!(states[0].state, playback_state);
             let info = states[0].current_item.as_ref().expect("expected a track");
             assert_eq!(info.name, "Linger - Remastered 2026");
-            assert_eq!(info.elapsed, Some(29));
         }
+    }
+
+    /// The idle queue's clock is frozen under 2.10 — aging it ran every
+    /// Connect track straight to its duration. The position comes from the
+    /// player's own snapshot, which resets at each track change (checked
+    /// live across a track change on 2026-09-29).
+    #[test]
+    fn external_playback_takes_its_position_from_the_player() {
+        let (players, queues) = connect_on_ma_2_10("playing");
+        let states = build_queue_states(&players, &queues, CONNECT_TRACK_START + 154);
+        let info = states[0].current_item.as_ref().expect("expected a track");
+        assert_eq!(info.elapsed, Some(154));
+    }
+
+    /// A paused snapshot is where playback stopped; aging it forward would
+    /// run the position on while nothing plays.
+    #[test]
+    fn a_paused_position_is_not_aged() {
+        let (mut players, queues) = connect_on_ma_2_10("paused");
+        players[0]["current_media"]["elapsed_time"] = serde_json::json!(80);
+        let states = build_queue_states(&players, &queues, CONNECT_TRACK_START + 600);
+        let info = states[0].current_item.as_ref().expect("expected a track");
+        assert_eq!(info.elapsed, Some(80));
     }
 
     /// A player that is idle itself, or has nothing loaded, doesn't override
