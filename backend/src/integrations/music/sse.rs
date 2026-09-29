@@ -75,7 +75,8 @@ fn build_queue_states(
         .map(|q| {
             let queue_id = q["queue_id"].as_str().unwrap_or("").to_string();
             let display_name = q["display_name"].as_str().unwrap_or("Unknown").to_string();
-            let state = q["state"].as_str().unwrap_or("idle").to_string();
+            let player = find_player(players, &queue_id);
+            let state = queue_state(q, player);
 
             let current_item = q
                 .get("current_item")
@@ -88,13 +89,15 @@ fn build_queue_states(
             // back to that when current_item is absent or artist-less.
             let current_item = match current_item {
                 Some(ref info) if !info.artist.is_empty() => current_item,
-                _ => find_player_current_media(players, &queue_id)
+                _ => player
+                    .and_then(|p| p.get("current_media"))
                     .and_then(|cm| track_info_from_current_media(cm, q, now))
                     .or(current_item),
             };
 
-            // Try to find volume from the player associated with this queue.
-            let volume_level = find_player_volume(players, &queue_id);
+            let volume_level = player
+                .and_then(|p| p["volume_level"].as_f64())
+                .map(|v| v as i32);
 
             QueueState {
                 queue_id,
@@ -169,35 +172,33 @@ fn track_info_from_current_item(
     })
 }
 
-/// Look up the volume level for a player queue from the players list.
-fn find_player_volume(players: &serde_json::Value, queue_id: &str) -> Option<i32> {
-    let empty = vec![];
-    let player_arr = players.as_array().unwrap_or(&empty);
-    for player in player_arr {
-        let active_source = player["active_source"].as_str().unwrap_or("");
-        let player_id = player["player_id"].as_str().unwrap_or("");
-        if active_source == queue_id || player_id == queue_id {
-            return player["volume_level"].as_f64().map(|v| v as i32);
-        }
-    }
-    None
-}
-
-/// Look up the `current_media` object for the player associated with a
-/// queue, using the same matching rule as `find_player_volume`.
-fn find_player_current_media<'a>(
+/// The player behind a queue: the one whose `player_id` is the queue's id, or
+/// whose `active_source` points at it (a grouped follower playing the
+/// leader's queue).
+fn find_player<'a>(
     players: &'a serde_json::Value,
     queue_id: &str,
 ) -> Option<&'a serde_json::Value> {
-    let player_arr = players.as_array()?;
-    for player in player_arr {
-        let active_source = player["active_source"].as_str().unwrap_or("");
-        let player_id = player["player_id"].as_str().unwrap_or("");
-        if active_source == queue_id || player_id == queue_id {
-            return player.get("current_media");
-        }
+    players.as_array()?.iter().find(|player| {
+        player["active_source"].as_str() == Some(queue_id)
+            || player["player_id"].as_str() == Some(queue_id)
+    })
+}
+
+/// A queue's playback state, corrected for external-source playback. Under
+/// Spotify Connect (MA 2.10+) Spotify owns the queue, so MA's own queue reads
+/// `idle` while its player is playing a track it was handed — the player's
+/// `playback_state` is then the truth. An idle queue only defers to a player
+/// that actually holds media, so a genuinely idle player stays idle.
+fn queue_state(q: &serde_json::Value, player: Option<&serde_json::Value>) -> String {
+    let queue_state = q["state"].as_str().unwrap_or("idle");
+    let player_state = player
+        .filter(|p| !p["current_media"].is_null())
+        .and_then(|p| p["playback_state"].as_str().or_else(|| p["state"].as_str()));
+    match (queue_state, player_state) {
+        ("idle", Some(s @ ("playing" | "paused"))) => s.to_string(),
+        _ => queue_state.to_string(),
     }
-    None
 }
 
 /// Age an elapsed-time snapshot forward to "now". MA's `elapsed_time` is a
@@ -681,6 +682,63 @@ mod tests {
             info.uri.as_deref(),
             Some("spotify_connect--DaDytfpf://audio_source/main")
         );
+    }
+
+    /// Spotify Connect under MA 2.10, from a live capture on 2026-09-29: Spotify
+    /// owns the queue, so MA's queue reads `idle` with no `current_item` while
+    /// the player itself is `playing` a track. Reading the queue's state
+    /// showed a playing stream as paused.
+    fn connect_on_ma_2_10(playback_state: &str) -> (serde_json::Value, serde_json::Value) {
+        let players = serde_json::json!([
+            {
+                "player_id": "b8:27:eb:0e:4d:ec",
+                "name": "Kitchen",
+                "playback_state": playback_state,
+                "active_source": "spotify_connect://audio_source/b8:27:eb:0e:4d:ec",
+                "current_media": {
+                    "uri": "spotify_connect://audio_source/b8:27:eb:0e:4d:ec",
+                    "title": "Linger - Remastered 2026",
+                    "artist": "The Cranberries",
+                    "duration": 274,
+                    "elapsed_time": 0
+                }
+            }
+        ]);
+        let queues = serde_json::json!([
+            {
+                "queue_id": "b8:27:eb:0e:4d:ec",
+                "display_name": "Kitchen",
+                "state": "idle",
+                "items": 1,
+                "elapsed_time": 29.18,
+                "current_item": null
+            }
+        ]);
+        (players, queues)
+    }
+
+    #[test]
+    fn an_idle_queue_takes_its_players_state_during_external_playback() {
+        for playback_state in ["playing", "paused"] {
+            let (players, queues) = connect_on_ma_2_10(playback_state);
+            let states = build_queue_states(&players, &queues, 1_800_000_000);
+            assert_eq!(states[0].state, playback_state);
+            let info = states[0].current_item.as_ref().expect("expected a track");
+            assert_eq!(info.name, "Linger - Remastered 2026");
+            assert_eq!(info.elapsed, Some(29));
+        }
+    }
+
+    /// A player that is idle itself, or has nothing loaded, doesn't override
+    /// an idle queue — only a player actually holding a track does.
+    #[test]
+    fn an_idle_queue_stays_idle_without_a_playing_player() {
+        let (players, queues) = connect_on_ma_2_10("idle");
+        assert_eq!(build_queue_states(&players, &queues, 0)[0].state, "idle");
+
+        let (mut players, queues) = connect_on_ma_2_10("playing");
+        players[0]["current_media"] = serde_json::Value::Null;
+        assert_eq!(build_queue_states(&players, &queues, 0)[0].state, "idle");
     }
 
     /// Regression: normal MA playback (the queue's `current_item` carries a
