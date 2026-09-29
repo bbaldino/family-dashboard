@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.1](https://github.com/bbaldino/family-dashboard/compare/v0.18.0...v0.18.1) (2026-09-29)
+
+
+### Bug Fixes
+
+* **music:** take a Spotify Connect queue's state from its player ([51648e5](https://github.com/bbaldino/family-dashboard/commit/51648e57d077f8febdb8c5899ebc525761a689fe))
+
 ## [0.18.0](https://github.com/bbaldino/family-dashboard/compare/v0.17.0...v0.18.0) (2026-09-28)
 
 
