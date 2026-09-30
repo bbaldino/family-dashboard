@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.4](https://github.com/bbaldino/family-dashboard/compare/v0.18.3...v0.18.4) (2026-09-30)
+
+
+### Bug Fixes
+
+* **music:** rebase MA imageproxy art onto the configured service URL ([68fbe1a](https://github.com/bbaldino/family-dashboard/commit/68fbe1a3471acbc22c7a45cb226a7f5b3502197d))
+
 ## [0.18.3](https://github.com/bbaldino/family-dashboard/compare/v0.18.2...v0.18.3) (2026-09-30)
 
 
