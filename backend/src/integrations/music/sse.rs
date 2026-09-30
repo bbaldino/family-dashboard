@@ -76,32 +76,31 @@ fn build_queue_states(
             let queue_id = q["queue_id"].as_str().unwrap_or("").to_string();
             let display_name = q["display_name"].as_str().unwrap_or("Unknown").to_string();
             let player = find_player(players, &queue_id);
-            let state = queue_state(q, player);
 
-            let current_item = q
+            // MA's player is the source of truth for what is playing now: its
+            // `current_media` is MA's own final view — the group leader's for
+            // a grouped player, a live external source's own (Spotify
+            // Connect), the queue's current item with the queue's clock for
+            // MA playback, or a radio stream's live metadata. The queue is
+            // only a fallback for the moment between tracks when the player
+            // holds no media, or when no player matches.
+            let state = player
+                .and_then(|p| p["playback_state"].as_str().or_else(|| p["state"].as_str()))
+                .or_else(|| q["state"].as_str())
+                .unwrap_or("idle")
+                .to_string();
+            let queue_item = q
                 .get("current_item")
                 .and_then(|item| track_info_from_current_item(item, q));
-
-            // External-source playback (e.g. MA's Spotify Connect plugin) leaves
-            // the queue's current_item as a generic placeholder with no artist
-            // (media_item.name == "Spotify Connect", artists == []). The real
-            // metadata lives on the associated player's current_media, so fall
-            // back to that when current_item is absent or artist-less.
-            let current_item = match current_item {
-                Some(ref info) if !info.artist.is_empty() => current_item,
-                _ => player
-                    .and_then(|p| p.get("current_media"))
-                    .and_then(|cm| {
-                        // An idle queue's clock is frozen (MA 2.10), so a
-                        // player-driven stream reads its own snapshot.
-                        let clock = if player_driven_state(q, player).is_some() {
-                            cm
-                        } else {
-                            q
-                        };
-                        track_info_from_current_media(cm, clock, state == "playing", now)
-                    })
-                    .or(current_item),
+            let current_item = match player.map(|p| &p["current_media"]) {
+                Some(cm) if has_title(cm) => {
+                    let mut info = track_info_from_current_media(cm, state == "playing", now);
+                    if same_queue_item(cm, q) {
+                        enrich_from_queue_item(&mut info, queue_item);
+                    }
+                    Some(info)
+                }
+                _ => queue_item,
             };
 
             let volume_level = player
@@ -181,43 +180,44 @@ fn track_info_from_current_item(
     })
 }
 
-/// The player behind a queue: the one whose `player_id` is the queue's id, or
-/// whose `active_source` points at it (a grouped follower playing the
-/// leader's queue).
+/// The player behind a queue: the one whose `player_id` is the queue's id,
+/// else one whose `active_source` points at it (a grouped follower playing
+/// the leader's queue).
 fn find_player<'a>(
     players: &'a serde_json::Value,
     queue_id: &str,
 ) -> Option<&'a serde_json::Value> {
-    players.as_array()?.iter().find(|player| {
-        player["active_source"].as_str() == Some(queue_id)
-            || player["player_id"].as_str() == Some(queue_id)
-    })
+    let players = players.as_array()?;
+    players
+        .iter()
+        .find(|p| p["player_id"].as_str() == Some(queue_id))
+        .or_else(|| {
+            players
+                .iter()
+                .find(|p| p["active_source"].as_str() == Some(queue_id))
+        })
 }
 
-/// A queue's playback state, corrected for external-source playback. Under
-/// Spotify Connect (MA 2.10+) Spotify owns the queue, so MA's own queue reads
-/// `idle` while its player is playing a track it was handed — the player's
-/// `playback_state` is then the truth. An idle queue only defers to a player
-/// that actually holds media, so a genuinely idle player stays idle.
-fn queue_state(q: &serde_json::Value, player: Option<&serde_json::Value>) -> String {
-    player_driven_state(q, player)
-        .unwrap_or_else(|| q["state"].as_str().unwrap_or("idle"))
-        .to_string()
+fn has_title(cm: &serde_json::Value) -> bool {
+    cm["title"].as_str().is_some_and(|t| !t.is_empty())
 }
 
-/// The player's state when it, not MA's queue, is driving playback: the
-/// queue is idle but the player holds media and is playing or paused.
-fn player_driven_state<'a>(
-    q: &serde_json::Value,
-    player: Option<&'a serde_json::Value>,
-) -> Option<&'a str> {
-    if q["state"].as_str().unwrap_or("idle") != "idle" {
-        return None;
+/// Whether the player's media is the queue's own current item — MA playback
+/// rather than an external source or a stale leftover queue.
+fn same_queue_item(cm: &serde_json::Value, q: &serde_json::Value) -> bool {
+    let id = cm["queue_item_id"].as_str();
+    id.is_some() && id == q["current_item"]["queue_item_id"].as_str()
+}
+
+/// `current_media` carries no year, label, track number or source; take them
+/// from the queue item it was built from.
+fn enrich_from_queue_item(info: &mut TrackInfo, queue_item: Option<TrackInfo>) {
+    if let Some(item) = queue_item {
+        info.year = item.year;
+        info.label = item.label;
+        info.track_number = item.track_number;
+        info.source = item.source;
     }
-    player
-        .filter(|p| !p["current_media"].is_null())
-        .and_then(|p| p["playback_state"].as_str().or_else(|| p["state"].as_str()))
-        .filter(|s| matches!(*s, "playing" | "paused"))
 }
 
 /// Age an elapsed-time snapshot forward to "now". MA's `elapsed_time` is a
@@ -242,43 +242,21 @@ fn live_elapsed(
     clamped as i64
 }
 
-/// Build a `TrackInfo` from a player's `current_media` field. This is the
-/// fallback source for external-source playback (e.g. MA's Spotify Connect
-/// plugin), where the queue's `current_item` is only a generic placeholder
-/// and the real track metadata lives here instead. Unlike a queue's
-/// `current_item`, `current_media` has no year/label/track_number/source, so
-/// those are always `None`. Returns `None` if `title` is absent or empty.
+/// Build a `TrackInfo` from a player's `current_media` — MA's final view of
+/// what the player is playing. It has no year/label/track_number/source (see
+/// `enrich_from_queue_item`). Callers check `has_title` first.
 ///
-/// Elapsed comes from `clock`, which the caller picks by who drives playback:
-/// - The queue (MA 2.9, where a Connect queue reads playing): there, at a
-///   track change MA emitted `player_updated` with the new title but the
-///   previous track's position on `current_media`, then silently reset it,
-///   so only the queue's `elapsed_time` was right throughout.
-/// - `current_media` itself (MA 2.10, where the queue sits idle): the idle
-///   queue's clock is frozen, while the player's snapshot resets cleanly at
-///   each track change.
-///
-/// `playing` gates aging the snapshot forward to `now`.
-fn track_info_from_current_media(
-    cm: &serde_json::Value,
-    clock: &serde_json::Value,
-    playing: bool,
-    now: i64,
-) -> Option<TrackInfo> {
-    let name = cm["title"].as_str().unwrap_or("");
-    if name.is_empty() {
-        return None;
-    }
-    Some(TrackInfo {
-        name: name.to_string(),
+/// The position is `current_media`'s own snapshot, aged forward to `now` only
+/// while `playing` (a paused snapshot is where playback stopped).
+fn track_info_from_current_media(cm: &serde_json::Value, playing: bool, now: i64) -> TrackInfo {
+    TrackInfo {
+        name: cm["title"].as_str().unwrap_or("").to_string(),
         artist: cm["artist"].as_str().unwrap_or("").to_string(),
         album: cm["album"].as_str().map(String::from),
         image_url: cm["image_url"].as_str().map(String::from),
         duration: cm["duration"].as_f64().map(|d| d as i64),
-        elapsed: clock["elapsed_time"].as_f64().map(|elapsed_time| {
-            // Stamped in unix seconds (fractional on the queue). Only a
-            // playing snapshot is aged: a paused one is where playback stopped.
-            let last_updated = clock["elapsed_time_last_updated"]
+        elapsed: cm["elapsed_time"].as_f64().map(|elapsed_time| {
+            let last_updated = cm["elapsed_time_last_updated"]
                 .as_f64()
                 .map(|t| t as i64)
                 .filter(|_| playing);
@@ -289,7 +267,7 @@ fn track_info_from_current_media(
         label: None,
         track_number: None,
         source: None,
-    })
+    }
 }
 
 /// Connect to MA WebSocket and authenticate.
@@ -660,57 +638,6 @@ mod tests {
         assert!(track_info_from_current_item(&q["current_item"], &q).is_none());
     }
 
-    /// External-source playback (e.g. MA's Spotify Connect plugin): the
-    /// queue's `current_item` is a generic placeholder
-    /// (`media_item.name == "Spotify Connect"`, `artists == []`), but the
-    /// associated player's `current_media` carries the real track metadata.
-    /// `build_queue_states` must fall back to the player when the queue item
-    /// has no real artist.
-    #[test]
-    fn build_queue_states_falls_back_to_player_current_media_for_external_source() {
-        let players = serde_json::json!([
-            {
-                "player_id": "upb827eb0e4dec",
-                "active_source": "upb827eb0e4dec",
-                "state": "playing",
-                "current_media": {
-                    "uri": "spotify_connect--DaDytfpf://audio_source/main",
-                    "media_type": "audio_source",
-                    "title": "Apocalypse",
-                    "artist": "Cigarettes After Sex",
-                    "album": "Cigarettes After Sex",
-                    "image_url": "https://i.scdn.co/image/ab67616d00001e02dfed999f959177dfc4f33cdc",
-                    "duration": 290,
-                    "queue_item_id": "7dd0a1ae9f634fb5aff91cbc62e67213"
-                }
-            }
-        ]);
-        let queues = serde_json::json!([
-            {
-                "queue_id": "upb827eb0e4dec",
-                "display_name": "Kitchen",
-                "state": "playing",
-                "items": 1,
-                "elapsed_time": 211.0,
-                "current_item": { "media_item": { "name": "Spotify Connect", "artists": [] } }
-            }
-        ]);
-
-        let states = build_queue_states(&players, &queues, 1_800_000_000);
-        assert_eq!(states.len(), 1);
-        let info = states[0].current_item.as_ref().expect("expected a track");
-
-        assert_eq!(info.name, "Apocalypse");
-        assert_eq!(info.artist, "Cigarettes After Sex");
-        assert_eq!(info.album.as_deref(), Some("Cigarettes After Sex"));
-        assert_eq!(info.duration, Some(290));
-        assert_eq!(info.elapsed, Some(211));
-        assert_eq!(
-            info.uri.as_deref(),
-            Some("spotify_connect--DaDytfpf://audio_source/main")
-        );
-    }
-
     /// Spotify Connect under MA 2.10, from a live capture on 2026-09-29: Spotify
     /// owns the queue, so MA's queue reads `idle` with no `current_item` while
     /// the player itself is `playing` a track. Reading the queue's state
@@ -749,6 +676,126 @@ mod tests {
         (players, queues)
     }
 
+    /// An idle player stays idle, whatever its queue says.
+    #[test]
+    fn an_idle_player_reads_idle() {
+        let (players, queues) = connect_on_ma_2_10("idle");
+        assert_eq!(build_queue_states(&players, &queues, 0)[0].state, "idle");
+    }
+
+    /// Live capture, 2026-09-29: the player streams Spotify Connect while its
+    /// queue still holds 25 leftover items from earlier MA playback, current
+    /// item "Go". The leftover has a real artist, which is what used to win.
+    #[test]
+    fn a_stale_leftover_queue_never_names_the_song() {
+        let (players, mut queues) = connect_on_ma_2_10("playing");
+        queues[0]["items"] = serde_json::json!(25);
+        queues[0]["current_item"] = serde_json::json!({
+            "queue_item_id": "c1f0",
+            "name": "The Chemical Brothers/Q-Tip - Go",
+            "duration": 260,
+            "media_item": {
+                "name": "Go",
+                "artists": [{ "name": "The Chemical Brothers" }],
+                "album": { "name": "Born in the Echoes", "year": 2015 },
+                "track_number": 3
+            }
+        });
+        let states = build_queue_states(&players, &queues, CONNECT_TRACK_START + 30);
+        let info = states[0].current_item.as_ref().expect("expected a track");
+        assert_eq!(info.name, "Linger - Remastered 2026");
+        assert_eq!(info.artist, "The Cranberries");
+        assert_eq!(info.duration, Some(274));
+        assert_eq!(info.elapsed, Some(30));
+        // Not the leftover item's credits either.
+        assert_eq!(info.year, None);
+        assert_eq!(info.track_number, None);
+    }
+
+    /// MA playback: MA builds `current_media` from the queue's current item
+    /// (same `queue_item_id`), so the player names the song and the queue item
+    /// fills in the credits `current_media` lacks.
+    #[test]
+    fn ma_playback_takes_credits_from_the_matching_queue_item() {
+        let players = serde_json::json!([
+            {
+                "player_id": "kitchen",
+                "playback_state": "playing",
+                "active_source": "kitchen",
+                "current_media": {
+                    "uri": "spotify--yC8brUbw://track/2LGdO5MtFdyphi2EihANZG",
+                    "title": "Knee Socks",
+                    "artist": "Arctic Monkeys",
+                    "album": "AM",
+                    "duration": 257,
+                    "queue_item_id": "qi-1",
+                    "elapsed_time": 40,
+                    "elapsed_time_last_updated": 1_800_000_000
+                }
+            }
+        ]);
+        let queues = serde_json::json!([
+            {
+                "queue_id": "kitchen",
+                "display_name": "Kitchen",
+                "state": "playing",
+                "current_item": {
+                    "queue_item_id": "qi-1",
+                    "media_item": {
+                        "name": "Knee Socks",
+                        "artists": [{ "name": "Arctic Monkeys" }],
+                        "album": { "name": "AM", "year": 2013 },
+                        "track_number": 11,
+                        "provider": "spotify--yC8brUbw"
+                    }
+                }
+            }
+        ]);
+        let states = build_queue_states(&players, &queues, 1_800_000_010);
+        let info = states[0].current_item.as_ref().expect("expected a track");
+        assert_eq!(info.name, "Knee Socks");
+        assert_eq!(info.elapsed, Some(50));
+        assert_eq!(info.year, Some(2013));
+        assert_eq!(info.track_number, Some(11));
+        assert_eq!(info.source.as_deref(), Some("spotify--yC8brUbw"));
+    }
+
+    /// Between tracks MA's player holds no media; the queue item fills in.
+    #[test]
+    fn with_no_player_media_the_queue_item_fills_in() {
+        let (mut players, mut queues) = connect_on_ma_2_10("playing");
+        players[0]["current_media"] = serde_json::Value::Null;
+        queues[0]["current_item"] = serde_json::json!({
+            "media_item": { "name": "Next Up", "artists": [{ "name": "Someone" }] }
+        });
+        let states = build_queue_states(&players, &queues, 0);
+        let info = states[0].current_item.as_ref().expect("expected a track");
+        assert_eq!(info.name, "Next Up");
+    }
+
+    /// A grouped follower also points its `active_source` at the leader's
+    /// queue; the queue's own player (the leader) is the one to read.
+    #[test]
+    fn the_queues_own_player_beats_a_grouped_follower() {
+        let players = serde_json::json!([
+            { "player_id": "deck", "active_source": "kitchen", "playback_state": "paused",
+              "volume_level": 10, "current_media": null },
+            { "player_id": "kitchen", "active_source": "kitchen", "playback_state": "playing",
+              "volume_level": 40,
+              "current_media": { "title": "Leader Song", "artist": "A" } }
+        ]);
+        let queues = serde_json::json!([
+            { "queue_id": "kitchen", "display_name": "Kitchen", "state": "playing" }
+        ]);
+        let states = build_queue_states(&players, &queues, 0);
+        assert_eq!(states[0].state, "playing");
+        assert_eq!(states[0].volume_level, Some(40));
+        assert_eq!(
+            states[0].current_item.as_ref().map(|i| i.name.as_str()),
+            Some("Leader Song")
+        );
+    }
+
     #[test]
     fn an_idle_queue_takes_its_players_state_during_external_playback() {
         for playback_state in ["playing", "paused"] {
@@ -781,103 +828,5 @@ mod tests {
         let states = build_queue_states(&players, &queues, CONNECT_TRACK_START + 600);
         let info = states[0].current_item.as_ref().expect("expected a track");
         assert_eq!(info.elapsed, Some(80));
-    }
-
-    /// A player that is idle itself, or has nothing loaded, doesn't override
-    /// an idle queue — only a player actually holding a track does.
-    #[test]
-    fn an_idle_queue_stays_idle_without_a_playing_player() {
-        let (players, queues) = connect_on_ma_2_10("idle");
-        assert_eq!(build_queue_states(&players, &queues, 0)[0].state, "idle");
-
-        let (mut players, queues) = connect_on_ma_2_10("playing");
-        players[0]["current_media"] = serde_json::Value::Null;
-        assert_eq!(build_queue_states(&players, &queues, 0)[0].state, "idle");
-    }
-
-    /// Regression: normal MA playback (the queue's `current_item` carries a
-    /// real name/artist) must keep coming from `current_item`, not be
-    /// overridden by the player's `current_media` even when both exist and
-    /// disagree. This pins the year/track_number fields that only
-    /// `current_item` carries.
-    #[test]
-    fn build_queue_states_prefers_queue_current_item_for_normal_playback() {
-        let players = serde_json::json!([
-            {
-                "player_id": "upb827eb0e4dec",
-                "active_source": "upb827eb0e4dec",
-                "state": "playing",
-                "current_media": {
-                    "title": "Some Other Song",
-                    "artist": "Some Other Artist",
-                }
-            }
-        ]);
-        let queues = serde_json::json!([
-            {
-                "queue_id": "upb827eb0e4dec",
-                "display_name": "Kitchen",
-                "state": "playing",
-                "items": 1,
-                "current_item": {
-                    "media_item": {
-                        "name": "Knee Socks",
-                        "artists": [{ "name": "Arctic Monkeys" }],
-                        "album": { "name": "AM", "year": 2013 },
-                        "track_number": 11,
-                    }
-                }
-            }
-        ]);
-
-        let states = build_queue_states(&players, &queues, 1_800_000_000);
-        assert_eq!(states.len(), 1);
-        let info = states[0].current_item.as_ref().expect("expected a track");
-
-        assert_eq!(info.name, "Knee Socks");
-        assert_eq!(info.artist, "Arctic Monkeys");
-        assert_eq!(info.year, Some(2013));
-        assert_eq!(info.track_number, Some(11));
-    }
-
-    /// Regression, from a live MA WebSocket capture at a Spotify Connect
-    /// track change: `player_updated` arrives with the new title but the
-    /// previous track's position (346s into a 209s song) on `current_media`,
-    /// freshly stamped, while the queue's clock has already reset. The
-    /// position must come from the queue, or the progress bar sits at the
-    /// end of the song for the whole track.
-    #[test]
-    fn build_queue_states_takes_external_source_position_from_the_queue_clock() {
-        let now = 1_790_470_600;
-        let players = serde_json::json!([
-            {
-                "player_id": "upb827eb0e4dec",
-                "active_source": "upb827eb0e4dec",
-                "current_media": {
-                    "title": "stupid song",
-                    "artist": "Some Artist",
-                    "duration": 209,
-                    "elapsed_time": 346,
-                    "elapsed_time_last_updated": now,
-                }
-            }
-        ]);
-        let queues = serde_json::json!([
-            {
-                "queue_id": "upb827eb0e4dec",
-                "display_name": "Kitchen",
-                "state": "playing",
-                "elapsed_time": 1.4789,
-                "elapsed_time_last_updated": (now - 10) as f64 + 0.6,
-                "current_item": { "media_item": { "name": "Spotify Connect", "artists": [] } }
-            }
-        ]);
-
-        let states = build_queue_states(&players, &queues, now);
-        let info = states[0].current_item.as_ref().expect("expected a track");
-
-        assert_eq!(info.name, "stupid song");
-        assert_eq!(info.duration, Some(209));
-        assert_eq!(info.elapsed, Some(11));
     }
 }
