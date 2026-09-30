@@ -23,6 +23,11 @@ impl MaClient {
         })
     }
 
+    /// The configured MA base URL (`music.service_url`), without a trailing slash.
+    pub fn base_url(&self) -> &str {
+        &self.base_url
+    }
+
     pub async fn command<T: DeserializeOwned>(
         &self,
         command: &str,

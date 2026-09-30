@@ -93,32 +93,53 @@ pub async fn top_tracks(
 
 /// Recursively rewrite image URLs in JSON to go through our backend proxy.
 /// Looks for keys like "image", "image_url", "imageUrl" that contain URL strings.
-pub(super) fn rewrite_image_urls(value: &mut serde_json::Value) {
+pub(super) fn rewrite_image_urls(value: &mut serde_json::Value, service_url: &str) {
     match value {
         serde_json::Value::Object(map) => {
             for (key, val) in map.iter_mut() {
                 if (key == "image" || key == "image_url" || key == "imageUrl") && val.is_string() {
-                    if let Some(url) = val.as_str() {
-                        // Only proxy HTTP URLs (mixed content). HTTPS URLs are fine as-is.
-                        if url.starts_with("http://") {
-                            *val = serde_json::Value::String(format!(
-                                "/api/music/image?url={}",
-                                urlencoding::encode(url)
-                            ));
-                        }
+                    if let Some(proxied) =
+                        val.as_str().and_then(|u| proxied_image_url(u, service_url))
+                    {
+                        *val = serde_json::Value::String(proxied);
                     }
                 } else {
-                    rewrite_image_urls(val);
+                    rewrite_image_urls(val, service_url);
                 }
             }
         }
         serde_json::Value::Array(arr) => {
             for item in arr.iter_mut() {
-                rewrite_image_urls(item);
+                rewrite_image_urls(item, service_url);
             }
         }
         _ => {}
     }
+}
+
+/// The path an image should be loaded from, or `None` when it can load as-is.
+/// Only plain-http images need our proxy (mixed content); https is fine.
+///
+/// MA's own `/imageproxy` URLs are built on MA's base address, which need not
+/// match `music.service_url` textually (an IP vs `music.home`) even though
+/// it is the same server — and the proxy only forwards URLs under the
+/// configured service. Such a URL is rebased onto `service_url` first.
+pub(super) fn proxied_image_url(url: &str, service_url: &str) -> Option<String> {
+    if !url.starts_with("http://") {
+        return None;
+    }
+    let rebased = url::Url::parse(url)
+        .ok()
+        .filter(|u| u.path().starts_with("/imageproxy"))
+        .map(|u| {
+            let query = u.query().map(|q| format!("?{q}")).unwrap_or_default();
+            format!("{}{}{}", service_url.trim_end_matches('/'), u.path(), query)
+        });
+    let target = rebased.as_deref().unwrap_or(url);
+    Some(format!(
+        "/api/music/image?url={}",
+        urlencoding::encode(target)
+    ))
 }
 
 async fn default_queue_id(pool: &SqlitePool) -> Result<String, AppError> {
@@ -404,7 +425,7 @@ pub async fn get_players(
     let mut data: serde_json::Value = client
         .command("players/all", serde_json::Value::Null)
         .await?;
-    rewrite_image_urls(&mut data);
+    rewrite_image_urls(&mut data, client.base_url());
     Ok(Json(data))
 }
 
@@ -425,7 +446,7 @@ pub async fn search(
         )
         .await?;
     let ma_elapsed_ms = started.elapsed().as_millis();
-    rewrite_image_urls(&mut data);
+    rewrite_image_urls(&mut data, client.base_url());
     let count = |k: &str| {
         data.get(k)
             .and_then(|v| v.as_array())
@@ -514,7 +535,7 @@ pub async fn get_queue(
             serde_json::json!({ "queue_id": queue_id }),
         )
         .await?;
-    rewrite_image_urls(&mut data);
+    rewrite_image_urls(&mut data, client.base_url());
     Ok(Json(data))
 }
 
@@ -591,6 +612,39 @@ pub async fn proxy_image(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Live capture, 2026-09-30: MA builds `/imageproxy` URLs on its own base
+    /// address (an IP), while `music.service_url` names it `music.home`. The
+    /// image proxy only forwards URLs under the configured service, so the
+    /// same server's art was refused until rebased.
+    #[test]
+    fn an_ma_imageproxy_url_is_rebased_onto_the_configured_service() {
+        let url = "http://192.168.1.220:8095/imageproxy/5e9932723bc2c671fe8e4ec1a0b6fcf0b9c9dbb255ecdee73b53f7d91bac6cfb?size=512&fmt=jpg";
+        assert_eq!(
+            proxied_image_url(url, "http://music.home:8095").as_deref(),
+            Some(
+                "/api/music/image?url=http%3A%2F%2Fmusic.home%3A8095%2Fimageproxy%2F5e9932723bc2c671fe8e4ec1a0b6fcf0b9c9dbb255ecdee73b53f7d91bac6cfb%3Fsize%3D512%26fmt%3Djpg"
+            )
+        );
+    }
+
+    /// Other plain-http images are proxied unchanged (the proxy's own check
+    /// decides what it will fetch); https images need no proxy at all.
+    #[test]
+    fn other_images_are_proxied_as_is_or_left_alone() {
+        assert_eq!(
+            proxied_image_url(
+                "http://music.home:8095/some/art.jpg",
+                "http://music.home:8095"
+            )
+            .as_deref(),
+            Some("/api/music/image?url=http%3A%2F%2Fmusic.home%3A8095%2Fsome%2Fart.jpg")
+        );
+        assert_eq!(
+            proxied_image_url("https://i.scdn.co/image/abc", "http://music.home:8095"),
+            None
+        );
+    }
 
     #[test]
     fn client_supplied_uris_true_when_artist_uri_present() {
