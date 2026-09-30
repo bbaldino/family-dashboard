@@ -252,10 +252,10 @@ pub async fn get_artist(
 
     let mut top_tracks_raw: serde_json::Value =
         client.command(TOP_TRACKS_CMD, args.clone()).await?;
-    rewrite_image_urls(&mut top_tracks_raw);
+    rewrite_image_urls(&mut top_tracks_raw, client.base_url());
 
     let mut albums_raw: serde_json::Value = client.command(ALBUMS_CMD, args.clone()).await?;
-    rewrite_image_urls(&mut albums_raw);
+    rewrite_image_urls(&mut albums_raw, client.base_url());
 
     // Genres/description live on the artist's own metadata, which the
     // top_tracks/artist_albums responses don't embed richly (the artist
@@ -344,7 +344,7 @@ pub async fn get_album(
         .ok_or_else(|| AppError::Internal(format!("invalid MA URI: {}", q.uri)))?;
 
     let mut tracks_raw: serde_json::Value = client.command(TRACKS_CMD, args.clone()).await?;
-    rewrite_image_urls(&mut tracks_raw);
+    rewrite_image_urls(&mut tracks_raw, client.base_url());
 
     // Label/description live on the album's own metadata, which
     // album_tracks's embedded album block doesn't carry at all — verified

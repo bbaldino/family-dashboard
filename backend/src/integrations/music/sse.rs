@@ -12,6 +12,7 @@ use crate::error::AppError;
 use crate::integrations::config_helpers::IntegrationConfig;
 
 use super::proxy::MaClient;
+use super::routes::proxied_image_url;
 use super::types::{QueueState, SseEvent, TrackInfo};
 
 /// Derive the WebSocket URL from the MA service URL.
@@ -22,20 +23,17 @@ fn ws_url_from_service_url(service_url: &str) -> String {
     format!("{}/ws", ws.trim_end_matches('/'))
 }
 
-/// Rewrite a direct MA image URL to go through our backend proxy.
-fn proxy_image_url(url: &str) -> String {
-    format!("/api/music/image?url={}", urlencoding::encode(url))
-}
-
-/// Rewrite HTTP image URLs in queue states to use the backend proxy.
-/// HTTPS URLs are left as-is since they don't cause mixed content issues.
-fn rewrite_image_urls(queues: &mut [QueueState]) {
+/// Point each queue's current image at where the page should load it from
+/// (see `proxied_image_url`).
+fn rewrite_image_urls(queues: &mut [QueueState], service_url: &str) {
     for q in queues.iter_mut() {
         if let Some(ref mut item) = q.current_item
-            && let Some(ref url) = item.image_url
-            && url.starts_with("http://")
+            && let Some(proxied) = item
+                .image_url
+                .as_deref()
+                .and_then(|u| proxied_image_url(u, service_url))
         {
-            item.image_url = Some(proxy_image_url(url));
+            item.image_url = Some(proxied);
         }
     }
 }
@@ -56,7 +54,7 @@ async fn fetch_full_state(pool: &SqlitePool) -> Result<SseEvent, AppError> {
         .map(|d| d.as_secs() as i64)
         .unwrap_or(0);
     let mut queues = build_queue_states(&players, &queues_raw, now);
-    rewrite_image_urls(&mut queues);
+    rewrite_image_urls(&mut queues, client.base_url());
     Ok(SseEvent::State { queues })
 }
 
