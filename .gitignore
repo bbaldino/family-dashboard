@@ -16,3 +16,6 @@ docs/superpowers
 # worktrees
 .worktrees/
 
+
+# Local Music Assistant API response captures (debugging scratch)
+backend/src/integrations/music/*.json
