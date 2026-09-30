@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.3](https://github.com/bbaldino/family-dashboard/compare/v0.18.2...v0.18.3) (2026-09-30)
+
+
+### Bug Fixes
+
+* **music:** take now-playing from MA's player, the source of truth ([f2a669d](https://github.com/bbaldino/family-dashboard/commit/f2a669d90298f7e1c73889eeb2e99759954d1e7e))
+
 ## [0.18.2](https://github.com/bbaldino/family-dashboard/compare/v0.18.1...v0.18.2) (2026-09-29)
 
 
