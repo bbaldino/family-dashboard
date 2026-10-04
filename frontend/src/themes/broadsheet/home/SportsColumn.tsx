@@ -9,24 +9,16 @@ import { orderSummaries } from './featured-game'
 import { fitSummaryCount } from './summary-fit'
 import { shownFitStyle, hiddenFitStyle } from '@/themes/broadsheet/fit-styles'
 
-/** Space above a live game that follows another summary. `FinalReport`
- *  brings its own rule and margin, and the pregame block only ever leads, so
- *  this is the one summary that needs a gap supplied. */
-const FOLLOWING_LIVE_GAP = 24
+/** Space above a live game or a pregame preview that follows another
+ *  summary. `FinalReport` brings its own rule and margin, so it is the one
+ *  summary that needs no gap supplied. */
+const FOLLOWING_SUMMARY_GAP = 24
 
 /** One game's summary, by state. */
 function Summary({ game, lead }: { game: Game; lead: boolean }) {
-  if (game.state === 'live') {
-    return lead ? (
-      <LiveGame game={game} />
-    ) : (
-      <div style={{ paddingTop: FOLLOWING_LIVE_GAP }}>
-        <LiveGame game={game} />
-      </div>
-    )
-  }
-  if (game.state === 'upcoming') return <PregameBlock game={game} />
-  return <FinalReport game={game} />
+  if (game.state === 'final') return <FinalReport game={game} />
+  const block = game.state === 'live' ? <LiveGame game={game} /> : <PregameBlock game={game} />
+  return lead ? block : <div style={{ paddingTop: FOLLOWING_SUMMARY_GAP }}>{block}</div>
 }
 
 /**
@@ -123,7 +115,7 @@ export function SportsColumn({
       </div>
       {hasLeftovers && (
         <div data-strip-slot className="flex-shrink-0">
-          <AlsoToday games={games} shownIds={shownIds} />
+          <AlsoToday summaries={summaries} shownIds={shownIds} />
         </div>
       )}
     </div>

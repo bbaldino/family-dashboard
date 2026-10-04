@@ -285,12 +285,32 @@ describe('the "Also today" strip', () => {
     expect(strip).toHaveTextContent('+1 more')
   })
 
-  it('leaves out games still to come, and is absent when nothing else is on', () => {
+  it('lists a game still to come that has no room, but never a postponed one', () => {
+    stubLayout({ column: 400, blocks: { featured: 380, later: 300 } })
     const data: GamesResponse = {
-      games: [featured, game('upcoming', { id: 'later' }), game('postponed', { id: 'pp' })],
+      games: [
+        featured,
+        game('upcoming', {
+          id: 'later',
+          startTime: '2026-10-05T00:00:00Z',
+          home: team('LAD', null),
+          away: team('ATL', null),
+        }),
+        game('postponed', { id: 'pp' }),
+      ],
       hasLive: true,
       unavailableLeagues: [],
     }
+    render(<SportsColumn data={data} isLoading={false} />)
+    const strip = screen.getByTestId('also-today')
+    expect(strip).toHaveTextContent('ATL @ LAD')
+    // formatUpcomingTime is mocked to pass its input through (see above).
+    expect(strip).toHaveTextContent('2026-10-05T00:00:00Z')
+    expect(strip).not.toHaveTextContent('+1 more')
+  })
+
+  it('is absent when nothing else is on', () => {
+    const data: GamesResponse = { games: [featured], hasLive: true, unavailableLeagues: [] }
     render(<SportsColumn data={data} isLoading={false} />)
     expect(screen.queryByTestId('also-today')).toBeNull()
   })
@@ -341,6 +361,64 @@ describe('fitting summaries to the column', () => {
     const strip = screen.getByTestId('also-today')
     expect(strip).toHaveTextContent('LAD 5 · SFG 1')
     expect(strip).not.toHaveTextContent('ARI')
+  })
+
+  /** Prod on 2026-10-04, with the preview height measured at 1920×1080
+   *  (303px) in a 595px column: the 49ers preview leads, tonight's Dodgers
+   *  game — which had no slot at all — follows as a strip line, and
+   *  yesterday's Dodgers final is gone, superseded by tonight's game. */
+  it("previews the next game, lists tonight's other game, and drops that team's old final", () => {
+    stubLayout({ column: 595, blocks: { 'nfl-today': 303, 'mlb-tonight': 303 } })
+    const data: GamesResponse = {
+      games: [
+        game('final', {
+          id: 'mlb-yesterday',
+          startTime: '2026-10-03T20:00:00Z',
+          home: team('LAD', 5),
+          away: team('ATL', 2),
+        }),
+        game('upcoming', {
+          id: 'nfl-today',
+          league: 'NFL',
+          startTime: '2026-10-04T20:25:00Z',
+          home: team('SF', null),
+          away: team('DEN', null),
+        }),
+        game('upcoming', {
+          id: 'mlb-tonight',
+          startTime: '2026-10-05T00:00:00Z',
+          home: team('LAD', null),
+          away: team('ATL', null),
+        }),
+      ],
+      hasLive: false,
+      unavailableLeagues: [],
+    }
+    const { container } = render(<SportsColumn data={data} isLoading={false} />)
+
+    expect(summary(container, 'nfl-today')).toBeVisible()
+    expect(summary(container, 'mlb-tonight')).not.toBeVisible()
+    expect(summary(container, 'mlb-yesterday')).toBeNull()
+    const strip = screen.getByTestId('also-today')
+    expect(strip).toHaveTextContent('ATL @ LAD')
+    expect(strip).not.toHaveTextContent('ATL 2')
+  })
+
+  it('spaces a preview that follows another summary, as a following live game is', () => {
+    stubLayout({ column: 800, blocks: { first: 230, second: 322 } })
+    const data: GamesResponse = {
+      games: [
+        game('upcoming', { id: 'first', startTime: '2026-10-04T20:25:00Z' }),
+        game('upcoming', { id: 'second', startTime: '2026-10-05T00:00:00Z' }),
+      ],
+      hasLive: false,
+      unavailableLeagues: [],
+    }
+    const { container } = render(<SportsColumn data={data} isLoading={false} />)
+    const gap = (id: string) =>
+      (summary(container, id).firstElementChild as HTMLElement).style.paddingTop
+    expect(gap('first')).toBe('')
+    expect(gap('second')).toBe('24px')
   })
 
   it('stacks a second live game beneath the first, and lists the final that no longer fits', () => {
