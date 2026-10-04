@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.5](https://github.com/bbaldino/family-dashboard/compare/v0.18.4...v0.18.5) (2026-10-04)
+
+
+### Bug Fixes
+
+* **broadsheet:** preview every upcoming game on Home, not just the next ([36a9b9e](https://github.com/bbaldino/family-dashboard/commit/36a9b9e4ac90689a3ac76c84cc713eb2a6247973))
+
 ## [0.18.4](https://github.com/bbaldino/family-dashboard/compare/v0.18.3...v0.18.4) (2026-09-30)
 
 
