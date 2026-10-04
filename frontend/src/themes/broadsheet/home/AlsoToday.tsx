@@ -1,3 +1,4 @@
+import { formatUpcomingTime } from '@/integrations/sports'
 import type { Game } from '@/integrations/sports'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 
@@ -19,19 +20,22 @@ function scoreline(game: Game): string {
 
 /** A live game leads with its score and trails its clock; a final leads with
  *  the result label (`Final/10` carries extra innings) the way `FinalReport`
- *  heads its own strip. */
+ *  heads its own strip; a game still to come is its matchup and start time. */
 function entryText(game: Game): string {
   if (game.state === 'final') return `${game.periodLabel ?? 'Final'} · ${scoreline(game)}`
+  if (game.state === 'upcoming') {
+    return `${game.away.abbreviation} @ ${game.home.abbreviation} · ${formatUpcomingTime(game.startTime)}`
+  }
   return game.periodLabel ? `${scoreline(game)} · ${game.periodLabel}` : scoreline(game)
 }
 
 /**
- * The games whose full summaries didn't fit the column: every live game and
- * final not in `shownIds`, as compact entries at the column's foot, so a game
- * that can't have a summary still doesn't vanish from Home. Upcoming games
- * are never listed — only the featured one has a summary at all. The
- * backend's sort (live first, then finals most recent first) is already the
- * order wanted here, so it isn't re-derived.
+ * The summaries that didn't fit the column: every game in `summaries` (in
+ * `orderSummaries` order — live, then upcoming, then finals) not in
+ * `shownIds`, as compact entries at the column's foot, so a game that can't
+ * have its full summary still doesn't vanish from Home. Taking the ordered
+ * summaries rather than every game means a final already superseded by its
+ * team's next game is left out here too.
  *
  * **One row, not a line per game.** Measured on the 1920×1080 canvas with a
  * fully dense MLB panel above (matchup, three leaders a side, a scoring
@@ -43,10 +47,14 @@ function entryText(game: Game): string {
  * 49ers and the Giants are both `SF`), and the entry has no logo to tell them
  * apart.
  */
-export function AlsoToday({ games, shownIds }: { games: Game[]; shownIds: ReadonlySet<string> }) {
-  const others = games.filter(
-    (g) => !shownIds.has(g.id) && (g.state === 'live' || g.state === 'final'),
-  )
+export function AlsoToday({
+  summaries,
+  shownIds,
+}: {
+  summaries: Game[]
+  shownIds: ReadonlySet<string>
+}) {
+  const others = summaries.filter((g) => !shownIds.has(g.id))
   if (others.length === 0) return null
 
   const visible = others.slice(0, MAX_ALSO_TODAY_GAMES)

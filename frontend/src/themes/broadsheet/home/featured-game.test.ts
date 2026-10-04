@@ -28,6 +28,13 @@ const game = (id: string, state: GameState, startTime = '2026-05-22T16:40:00-07:
     liveDetail: null,
   }) as Game
 
+const withTeams = (g: Game, league: string, away: string, home: string): Game => ({
+  ...g,
+  league,
+  away: { ...g.away, id: away, abbreviation: away },
+  home: { ...g.home, id: home, abbreviation: home },
+})
+
 describe('pickFeaturedGame', () => {
   it('returns undefined when there are no games', () => {
     expect(pickFeaturedGame([])).toBeUndefined()
@@ -90,13 +97,38 @@ describe('orderSummaries', () => {
     expect(ids(orderSummaries(games))).toEqual(['nfl', 'mlb'])
   })
 
-  it('leaves out upcoming games beyond the featured one, and postponed games', () => {
+  it('follows the featured game with the other upcoming games, soonest first, and leaves out postponed games', () => {
     const games = [
       game('next', 'upcoming', '2026-09-28T23:10:00Z'),
+      game('last', 'upcoming', '2026-09-30T23:10:00Z'),
       game('after', 'upcoming', '2026-09-29T23:10:00Z'),
       game('off', 'postponed', '2026-09-28T20:10:00Z'),
     ]
-    expect(ids(orderSummaries(games))).toEqual(['next'])
+    expect(ids(orderSummaries(games))).toEqual(['next', 'after', 'last'])
+  })
+
+  /** Prod on 2026-10-04: yesterday's Dodgers final, today's 49ers game, and
+   *  tonight's Dodgers game. Only the 49ers game had a summary — the
+   *  Dodgers' preview had nowhere to go, and yesterday's result stood in
+   *  for it. */
+  it("previews a later upcoming game and drops its team's older final", () => {
+    const games = [
+      withTeams(game('mlb-yesterday', 'final', '2026-10-03T20:00Z'), 'mlb', 'ATL', 'LAD'),
+      withTeams(game('nfl-today', 'upcoming', '2026-10-04T20:25Z'), 'nfl', 'DEN', 'SF'),
+      withTeams(game('mlb-tonight', 'upcoming', '2026-10-05T00:00Z'), 'mlb', 'ATL', 'LAD'),
+    ]
+    expect(ids(orderSummaries(games))).toEqual(['nfl-today', 'mlb-tonight'])
+  })
+
+  it('keeps a final when its teams have no newer game, and matches teams within a league only', () => {
+    const games = [
+      // Same team id as the upcoming game, but another league: not the same team.
+      withTeams(game('mlb-final', 'final', '2026-10-03T20:00Z'), 'mlb', 'ATL', 'SF'),
+      withTeams(game('nfl-next', 'upcoming', '2026-10-04T20:25Z'), 'nfl', 'DEN', 'SF'),
+      // A newer game for one team supersedes only finals involving that team.
+      withTeams(game('other-final', 'final', '2026-10-03T23:00Z'), 'mlb', 'NYY', 'BOS'),
+    ]
+    expect(ids(orderSummaries(games))).toEqual(['nfl-next', 'other-final', 'mlb-final'])
   })
 
   // Why this compares parsed instants rather than the strings: these two are

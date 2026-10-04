@@ -17,9 +17,13 @@ export function pickFeaturedGame(games: Game[]): Game | undefined {
 /**
  * Every game the Home sports column has a summary for, most relevant first:
  * the featured game (live, else the next upcoming), then any other live
- * games, then finals, most recent first. With nothing live or upcoming, the
- * most recent final leads. Upcoming games past the featured one and
- * postponed games have no summary, so they aren't here.
+ * games, then the other upcoming games soonest first, then finals, most
+ * recent first. With nothing live or upcoming, the most recent final leads.
+ * Postponed games have no summary, so they aren't here.
+ *
+ * A final whose team has a newer game in the feed is left out: once tonight's
+ * game is scheduled, last night's result is old news for that team, and it
+ * used to stand in for the preview that had no slot.
  *
  * `SportsColumn` shows as many of these whole as fit, in this order, and
  * lists the rest in the "Also today" strip.
@@ -33,8 +37,26 @@ export function orderSummaries(games: Game[]): Game[] {
   const featured = pickFeaturedGame(games)
   const others = games.filter((g) => g !== featured)
   const live = others.filter((g) => g.state === 'live')
-  const finals = others.filter((g) => g.state === 'final').sort(newestFirst)
-  return [...(featured ? [featured] : []), ...live, ...finals]
+  const upcoming = others.filter((g) => g.state === 'upcoming').sort((a, b) => newestFirst(b, a))
+  const finals = others
+    .filter((g) => g.state === 'final' && !hasNewerGame(g, games))
+    .sort(newestFirst)
+  return [...(featured ? [featured] : []), ...live, ...upcoming, ...finals]
+}
+
+/** Whether either of `final`'s teams plays again later in `games` — the same
+ *  team meaning the same id in the same league (ids repeat across leagues). */
+function hasNewerGame(final: Game, games: Game[]): boolean {
+  const teams = new Set([final.home?.id, final.away?.id].filter(Boolean))
+  if (teams.size === 0) return false
+  return games.some(
+    (g) =>
+      g !== final &&
+      g.league === final.league &&
+      g.state !== 'postponed' &&
+      newestFirst(g, final) < 0 &&
+      (teams.has(g.home?.id) || teams.has(g.away?.id)),
+  )
 }
 
 /** Parsed, never compared as text: `startTime` arrives both as `...T20:10Z`
