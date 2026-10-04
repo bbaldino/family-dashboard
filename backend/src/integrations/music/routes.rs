@@ -153,18 +153,123 @@ async fn default_queue_id(pool: &SqlitePool) -> Result<String, AppError> {
 ///
 /// The app's `play` means "replace the queue and start now." MA's *own* `play`
 /// option does not do that: it inserts the item after the current one and jumps
-/// to it, leaving the rest of the queue in place — and with `radio_mode` it
-/// never enters dynamic mode, so the queue keeps its `radio_source` but
-/// `is_dynamic` stays false and playback stops after the seed instead of
-/// continuing the station. MA's `replace` clears the queue and, for a radio
-/// seed, starts a continuous dynamic station. Map the app's `play` (and the
-/// default) to `replace`; the enqueue-without-replacing modes pass through.
+/// to it, leaving the rest of the queue in place, so a fresh pick would play
+/// over a stale queue. MA's `replace` clears the queue first. Map the app's
+/// `play` (and the default) to `replace`; the enqueue-without-replacing modes
+/// pass through. (How radio rides on top of this is `play_plan`.)
 fn ma_enqueue_option(mode: Option<&str>) -> &'static str {
     match mode {
         Some("next") => "next",
         Some("add") => "add",
         Some("replace_next") => "replace_next",
         _ => "replace",
+    }
+}
+
+/// One MA `player_queues/play_media` call: what to enqueue, and how.
+#[derive(Debug, PartialEq)]
+struct PlayMediaCall {
+    media: String,
+    option: &'static str,
+}
+
+/// The `play_media` calls a play request becomes.
+#[derive(Debug, PartialEq)]
+enum PlayPlan {
+    /// No radio: enqueue the item as asked.
+    Plain(PlayMediaCall),
+    /// Radio from a track: play the chosen track on its own first, then add
+    /// the station behind it. MA 2.10 recency-gates a radio pool, so a seed
+    /// played recently was dropped and the station started elsewhere; playing
+    /// it explicitly keeps the user's pick first whatever the pool decides.
+    TrackThenRadio {
+        track: PlayMediaCall,
+        radio: PlayMediaCall,
+    },
+    /// Radio from an album/artist/playlist: start the station itself — there
+    /// is no single chosen song to put first — with a plain play of the item
+    /// as the fallback.
+    Radio {
+        radio: PlayMediaCall,
+        fallback: PlayMediaCall,
+    },
+}
+
+/// MA 2.10's endless-mix radio for an item. Replaces the deprecated
+/// `radio_mode` flag, which MA now rewrites into this URI anyway.
+fn radio_playlist_uri(uri: &str) -> String {
+    format!("radio_playlist://playlist/{uri}")
+}
+
+/// Plan the `play_media` calls for a request. Radio applies only to a fresh
+/// pick (the app's "play", MA's `replace`): adding a station onto an existing
+/// queue would replace its upcoming tail with the station's pool.
+fn play_plan(
+    uri: &str,
+    media_type: Option<&str>,
+    radio: bool,
+    enqueue_mode: Option<&str>,
+) -> PlayPlan {
+    let option = ma_enqueue_option(enqueue_mode);
+    let item = PlayMediaCall {
+        media: uri.to_string(),
+        option,
+    };
+    if !radio || option != "replace" {
+        return PlayPlan::Plain(item);
+    }
+    let is_track = match media_type {
+        Some(t) => t == "track",
+        None => uri.contains("://track/"),
+    };
+    if is_track {
+        PlayPlan::TrackThenRadio {
+            track: item,
+            radio: PlayMediaCall {
+                media: radio_playlist_uri(uri),
+                option: "add",
+            },
+        }
+    } else {
+        PlayPlan::Radio {
+            radio: PlayMediaCall {
+                media: radio_playlist_uri(uri),
+                option: "replace",
+            },
+            fallback: item,
+        }
+    }
+}
+
+/// Carry out a plan through `send` (one `play_media` call each). A station
+/// that can't be built never costs the user their pick: after a track radio's
+/// track is playing, a failed station step is only logged; a refused
+/// album/artist station falls back to playing the item plainly.
+async fn run_play_plan<F, Fut>(plan: PlayPlan, mut send: F) -> Result<(), AppError>
+where
+    F: FnMut(PlayMediaCall) -> Fut,
+    Fut: std::future::Future<Output = Result<(), AppError>>,
+{
+    match plan {
+        PlayPlan::Plain(call) => send(call).await,
+        PlayPlan::TrackThenRadio { track, radio } => {
+            send(track).await?;
+            let media = radio.media.clone();
+            if let Err(err) = send(radio).await {
+                tracing::warn!("adding the radio station failed ({err}); playing {media} alone");
+            }
+            Ok(())
+        }
+        PlayPlan::Radio { radio, fallback } => match send(radio).await {
+            Ok(()) => Ok(()),
+            Err(err) => {
+                tracing::warn!(
+                    "starting the radio station failed ({err}); playing {} plainly",
+                    fallback.media
+                );
+                send(fallback).await
+            }
+        },
     }
 }
 
@@ -178,54 +283,19 @@ pub async fn play(
         None => default_queue_id(&pool).await?,
     };
 
-    // The app's "play" means "replace the queue and start now" (music-context.ts).
-    // `ma_enqueue_option` maps it to MA's "replace" — not MA's own "play", which
-    // only inserts and never engages radio's dynamic mode.
-    let option = ma_enqueue_option(req.enqueue_mode.as_deref());
-
-    let args = |radio: bool| {
-        let mut args = serde_json::json!({
-            "queue_id": queue_id,
-            "media": req.uri,
-            "option": option,
-        });
-        if radio {
-            args["radio_mode"] = serde_json::Value::Bool(true);
-        }
-        args
-    };
-
-    let wants_radio = req.radio == Some(true);
-    let result = client
-        .command_void("player_queues/play_media", args(wants_radio))
-        .await;
-
-    // Radio mode asks MA to seed a station from the chosen item, which it can
-    // only do via a provider that supports `similar_tracks`. Spotify is the
-    // only such provider here, and on this instance (MA 2.9.13) `radio_mode`
-    // now succeeds and seeds a station normally. The fallback below is kept
-    // as defense-in-depth for providers or MA versions that still reject
-    // `radio_mode` (older MA releases, e.g. 2.9.10, returned 500 for it) —
-    // without it, a plain tap on a track (which always asks for radio) could
-    // fail outright instead of degrading gracefully.
-    //
-    // Falling back rather than dropping radio outright: when the station can
-    // be built the user gets it, and when it can't they still get the track
-    // they asked for, instead of silence. If provider support is restored,
-    // this quietly stops firing.
-    match result {
-        Ok(()) => {}
-        Err(err) if wants_radio => {
-            tracing::warn!(
-                "play_media with radio_mode failed ({err}); retrying without radio for {}",
-                req.uri
-            );
-            client
-                .command_void("player_queues/play_media", args(false))
-                .await?;
-        }
-        Err(err) => return Err(err),
-    }
+    let plan = play_plan(
+        &req.uri,
+        req.media_type.as_deref(),
+        req.radio == Some(true),
+        req.enqueue_mode.as_deref(),
+    );
+    run_play_plan(plan, |c: PlayMediaCall| {
+        client.command_void(
+            "player_queues/play_media",
+            serde_json::json!({ "queue_id": queue_id, "media": c.media, "option": c.option }),
+        )
+    })
+    .await?;
 
     // Log the explicit selection so Recently Played reflects what the user
     // actually chose, not whatever ESPN/MA auto-advanced to next.
@@ -673,7 +743,7 @@ mod tests {
     #[test]
     fn play_maps_to_ma_replace_so_a_fresh_pick_clears_the_queue() {
         // The app's "play" is "replace and start"; MA's own "play" would insert
-        // into the existing queue and never engage radio's dynamic mode.
+        // into the existing queue, leaving its stale tail in place.
         assert_eq!(ma_enqueue_option(Some("play")), "replace");
         assert_eq!(ma_enqueue_option(None), "replace");
     }
@@ -682,5 +752,107 @@ mod tests {
     fn enqueue_without_replacing_modes_pass_through() {
         assert_eq!(ma_enqueue_option(Some("next")), "next");
         assert_eq!(ma_enqueue_option(Some("add")), "add");
+    }
+
+    const TRACK: &str = "spotify--yC8brUbw://track/5QLHGv0DfpeXLNFo7SFEy1";
+    const ALBUM: &str = "spotify--yC8brUbw://album/1HHsUi7OKkS4ySwvc3QaH1";
+
+    fn call(media: &str, option: &'static str) -> PlayMediaCall {
+        PlayMediaCall {
+            media: media.to_string(),
+            option,
+        }
+    }
+
+    /// MA 2.10 recency-gates a radio pool, so a seed played recently was
+    /// dropped and the station started elsewhere ("1979" on 2026-10-04). The
+    /// chosen track now plays on its own first, and the station is added
+    /// behind it.
+    #[test]
+    fn a_track_radio_plays_the_track_then_adds_the_station_behind_it() {
+        assert_eq!(
+            play_plan(TRACK, Some("track"), true, None),
+            PlayPlan::TrackThenRadio {
+                track: call(TRACK, "replace"),
+                radio: call(&format!("radio_playlist://playlist/{TRACK}"), "add"),
+            }
+        );
+    }
+
+    #[test]
+    fn a_track_is_recognised_from_its_uri_when_no_media_type_is_sent() {
+        assert!(matches!(
+            play_plan(TRACK, None, true, None),
+            PlayPlan::TrackThenRadio { .. }
+        ));
+    }
+
+    /// Album and artist radio have no single chosen song: start the station
+    /// itself, falling back to playing the item plainly if MA refuses it.
+    #[test]
+    fn an_album_radio_starts_the_station_with_a_plain_fallback() {
+        assert_eq!(
+            play_plan(ALBUM, Some("album"), true, None),
+            PlayPlan::Radio {
+                radio: call(&format!("radio_playlist://playlist/{ALBUM}"), "replace"),
+                fallback: call(ALBUM, "replace"),
+            }
+        );
+    }
+
+    #[test]
+    fn without_radio_or_when_enqueueing_it_is_one_plain_call() {
+        assert_eq!(
+            play_plan(TRACK, Some("track"), false, None),
+            PlayPlan::Plain(call(TRACK, "replace"))
+        );
+        // Radio only applies to a fresh pick: a dynamic pool added onto an
+        // existing queue would replace its upcoming tail.
+        assert_eq!(
+            play_plan(TRACK, Some("track"), true, Some("add")),
+            PlayPlan::Plain(call(TRACK, "add"))
+        );
+    }
+
+    /// Runs a plan against a fake MA that records each call and fails the
+    /// ones whose media is listed in `failing`.
+    async fn run(plan: PlayPlan, failing: &[&str]) -> (Result<(), AppError>, Vec<PlayMediaCall>) {
+        let sent = std::sync::Mutex::new(Vec::new());
+        let result = run_play_plan(plan, |c: PlayMediaCall| {
+            let fail = failing.contains(&c.media.as_str());
+            sent.lock().unwrap().push(c);
+            async move {
+                if fail {
+                    Err(AppError::Internal("MA refused".to_string()))
+                } else {
+                    Ok(())
+                }
+            }
+        })
+        .await;
+        (result, sent.into_inner().unwrap())
+    }
+
+    #[tokio::test]
+    async fn a_failed_station_step_keeps_the_chosen_track_playing() {
+        let radio = format!("radio_playlist://playlist/{TRACK}");
+        let (result, sent) = run(play_plan(TRACK, Some("track"), true, None), &[&radio]).await;
+        assert!(result.is_ok());
+        assert_eq!(sent, vec![call(TRACK, "replace"), call(&radio, "add")]);
+    }
+
+    #[tokio::test]
+    async fn a_failed_track_step_fails_the_request_without_adding_a_station() {
+        let (result, sent) = run(play_plan(TRACK, Some("track"), true, None), &[TRACK]).await;
+        assert!(result.is_err());
+        assert_eq!(sent, vec![call(TRACK, "replace")]);
+    }
+
+    #[tokio::test]
+    async fn a_refused_album_station_falls_back_to_a_plain_play() {
+        let radio = format!("radio_playlist://playlist/{ALBUM}");
+        let (result, sent) = run(play_plan(ALBUM, Some("album"), true, None), &[&radio]).await;
+        assert!(result.is_ok());
+        assert_eq!(sent, vec![call(&radio, "replace"), call(ALBUM, "replace")]);
     }
 }
