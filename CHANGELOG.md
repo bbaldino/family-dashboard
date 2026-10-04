@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.6](https://github.com/bbaldino/family-dashboard/compare/v0.18.5...v0.18.6) (2026-10-04)
+
+
+### Bug Fixes
+
+* **music:** start a track radio with the chosen track ([dcdc80d](https://github.com/bbaldino/family-dashboard/commit/dcdc80d567739913b610028fc91e78372f14fde9))
+
 ## [0.18.5](https://github.com/bbaldino/family-dashboard/compare/v0.18.4...v0.18.5) (2026-10-04)
 
 
