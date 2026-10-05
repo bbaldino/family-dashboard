@@ -265,13 +265,7 @@ pub async fn get_games(State(state): State<SportsState>) -> Result<Json<GamesRes
     // start time has already passed but ESPN hasn't yet flipped them to Live
     // — handles the case where the backend was idle when the game started.
     let now = chrono::Utc::now();
-    let any_expected_live = all_games.iter().any(|g| {
-        g.state == GameState::Upcoming
-            && chrono::DateTime::parse_from_rfc3339(&g.start_time)
-                .map(|t| t.with_timezone(&chrono::Utc) <= now)
-                .unwrap_or(false)
-    });
-    let should_poll_fast = any_live || any_expected_live;
+    let should_poll_fast = any_live || any_expected_live(&all_games, now);
 
     state.cache.set_live_flag(should_poll_fast).await;
 
@@ -355,21 +349,36 @@ async fn resolve_scoreboard(
     }
 }
 
+/// The earliest still-future start among upcoming games. Start times are
+/// ESPN's, often to the minute with no seconds, hence `parse_espn_timestamp`.
+fn next_start(
+    games: &[Game],
+    now: chrono::DateTime<chrono::Utc>,
+) -> Option<chrono::DateTime<chrono::Utc>> {
+    games
+        .iter()
+        .filter(|g| g.state == GameState::Upcoming)
+        .filter_map(|g| transform::parse_espn_timestamp(&g.start_time))
+        .filter(|t| *t > now)
+        .min()
+}
+
+/// Whether a game is scheduled to have started but ESPN hasn't yet flipped
+/// it to live — the window between first pitch and ESPN's update, when the
+/// page should already be polling at the live cadence.
+fn any_expected_live(games: &[Game], now: chrono::DateTime<chrono::Utc>) -> bool {
+    games.iter().any(|g| {
+        g.state == GameState::Upcoming
+            && transform::parse_espn_timestamp(&g.start_time).is_some_and(|t| t <= now)
+    })
+}
+
 async fn schedule_next_start_wakeup(
     state: &SportsState,
     games: &[Game],
     now: chrono::DateTime<chrono::Utc>,
 ) {
-    let earliest = games
-        .iter()
-        .filter(|g| g.state == GameState::Upcoming)
-        .filter_map(|g| {
-            chrono::DateTime::parse_from_rfc3339(&g.start_time)
-                .ok()
-                .map(|t| t.with_timezone(&chrono::Utc))
-        })
-        .filter(|t| *t > now)
-        .min();
+    let earliest = next_start(games, now);
 
     let mut guard = state.start_timer.lock().await;
     if let Some(prev) = guard.take() {
@@ -752,6 +761,51 @@ async fn fetch_cached_teams(
 mod tests {
     use super::*;
     use std::sync::atomic::{AtomicBool, Ordering};
+
+    fn game_at(state: &str, start_time: &str) -> Game {
+        let team = serde_json::json!({
+            "id": "1", "name": "T", "abbreviation": "T", "logo": "", "record": null,
+            "score": null, "winner": null, "color": null, "altColor": null,
+            "hits": null, "errors": null
+        });
+        serde_json::from_value(serde_json::json!({
+            "id": "g", "league": "mlb", "state": state, "name": "ATL @ LAD",
+            "startTime": start_time, "venue": null, "broadcast": null, "playoffRound": null,
+            "home": team, "away": team, "clock": null, "period": null, "periodLabel": null,
+            "leaders": [], "allLeaders": [], "situation": null, "lastPlay": null,
+            "headline": null, "linescores": [], "athletes": [], "espnUrl": null,
+            "liveDetail": null
+        }))
+        .unwrap()
+    }
+
+    fn utc(s: &str) -> chrono::DateTime<chrono::Utc> {
+        chrono::DateTime::parse_from_rfc3339(s)
+            .unwrap()
+            .with_timezone(&chrono::Utc)
+    }
+
+    /// ESPN's scoreboard gives start times to the minute, with no seconds
+    /// ("2026-10-05T00:00Z" — the Dodgers' NLDS Game 2 on 2026-10-04). The
+    /// strict RFC 3339 parse rejected that, so no start-time wakeup was ever
+    /// scheduled and the page sat on its idle poll through first pitch.
+    #[test]
+    fn the_next_start_reads_espn_minute_precision_times() {
+        let games = [game_at("upcoming", "2026-10-05T00:00Z")];
+        assert_eq!(
+            next_start(&games, utc("2026-10-04T23:50:00Z")),
+            Some(utc("2026-10-05T00:00:00Z"))
+        );
+    }
+
+    /// Once a minute-precision start has passed but ESPN still says "pre",
+    /// the response must report live so the page polls at the live cadence.
+    #[test]
+    fn a_passed_minute_precision_start_counts_as_expected_live() {
+        let games = [game_at("upcoming", "2026-10-05T00:00Z")];
+        assert!(any_expected_live(&games, utc("2026-10-05T00:01:00Z")));
+        assert!(!any_expected_live(&games, utc("2026-10-04T23:59:00Z")));
+    }
 
     fn scoreboard(marker: &str) -> serde_json::Value {
         serde_json::json!({ "events": [], "marker": marker })
