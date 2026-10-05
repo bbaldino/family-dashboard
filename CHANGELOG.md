@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.7](https://github.com/bbaldino/family-dashboard/compare/v0.18.6...v0.18.7) (2026-10-05)
+
+
+### Bug Fixes
+
+* **sports:** read ESPN's minute-precision start times at game time ([f275a77](https://github.com/bbaldino/family-dashboard/commit/f275a77b40b16c3376fc3c5678519c035e371faf))
+
 ## [0.18.6](https://github.com/bbaldino/family-dashboard/compare/v0.18.5...v0.18.6) (2026-10-04)
 
 
