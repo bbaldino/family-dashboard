@@ -6,7 +6,7 @@ describe('buildStandfirst', () => {
     const text = buildStandfirst({
       eventCount: 2,
       nextEventTitle: 'Pick up kids',
-      sportsState: 'none',
+      sports: { state: 'none' },
     })
     expect(text).toContain('Pick up kids')
   })
@@ -15,7 +15,7 @@ describe('buildStandfirst', () => {
     const text = buildStandfirst({
       eventCount: 0,
       nextEventTitle: null,
-      sportsState: 'none',
+      sports: { state: 'none' },
     })
     expect(text.length).toBeGreaterThan(20)
     expect(text).not.toContain('undefined')
@@ -26,16 +26,31 @@ describe('buildStandfirst', () => {
     const text = buildStandfirst({
       eventCount: 0,
       nextEventTitle: null,
-      sportsState: 'live',
+      sports: { state: 'live', league: 'mlb' },
     })
     expect(text.toLowerCase()).toMatch(/game|first pitch|underway/)
+  })
+
+  it.each([
+    ['mlb', 'first pitch is later'],
+    ['nba', 'tip-off is later'],
+    ['nfl', 'kickoff is later'],
+    ['nhl', 'puck drop is later'],
+    ['mls', 'the game is later'],
+  ])('words a %s pregame for its own sport', (league, clause) => {
+    const text = buildStandfirst({
+      eventCount: 0,
+      nextEventTitle: null,
+      sports: { state: 'pregame', league },
+    })
+    expect(text).toContain(clause)
   })
 
   it('is deterministic — same input, same prose', () => {
     const input = {
       eventCount: 3,
       nextEventTitle: 'Piano lesson',
-      sportsState: 'pregame' as const,
+      sports: { state: 'pregame', league: 'mlb' } as const,
     }
     expect(buildStandfirst(input)).toBe(buildStandfirst(input))
   })
@@ -45,7 +60,7 @@ describe('buildStandfirst', () => {
       const text = buildStandfirst({
         eventCount: count,
         nextEventTitle: count ? 'Something' : null,
-        sportsState: 'none',
+        sports: { state: 'none' },
       })
       expect(text.trimEnd()).toMatch(/[.!?]$/)
     }
@@ -55,7 +70,7 @@ describe('buildStandfirst', () => {
     const text = buildStandfirst({
       eventCount: 1,
       nextEventTitle: null,
-      sportsState: 'none',
+      sports: { state: 'none' },
     })
     expect(text).toContain('1 thing')
     expect(text).not.toContain('1 things')

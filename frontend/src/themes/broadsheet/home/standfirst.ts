@@ -1,9 +1,13 @@
+import { sportWording } from './sport-wording'
+
+export type StandfirstSports = { state: 'live' | 'pregame'; league: string } | { state: 'none' }
+
 export interface StandfirstInput {
   /** Events still to come today. */
   eventCount: number
   /** Title of the next event today, if any. */
   nextEventTitle: string | null
-  sportsState: 'live' | 'pregame' | 'none'
+  sports: StandfirstSports
 }
 
 function scheduleClause({ eventCount, nextEventTitle }: StandfirstInput): string {
@@ -14,9 +18,12 @@ function scheduleClause({ eventCount, nextEventTitle }: StandfirstInput): string
   return `${eventCount} things on the calendar today`
 }
 
-function sportsClause(state: StandfirstInput['sportsState']): string | null {
-  if (state === 'live') return 'the game is underway'
-  if (state === 'pregame') return 'first pitch is later'
+function sportsClause(sports: StandfirstSports): string | null {
+  if (sports.state === 'live') return 'the game is underway'
+  if (sports.state === 'pregame') {
+    const { start } = sportWording(sports.league)
+    return start ? `${start} is later` : 'the game is later'
+  }
   return null
 }
 
@@ -28,7 +35,7 @@ function sportsClause(state: StandfirstInput['sportsState']): string | null {
 export function buildStandfirst(input: StandfirstInput): string {
   const clauses = [scheduleClause(input)]
 
-  const sports = sportsClause(input.sportsState)
+  const sports = sportsClause(input.sports)
   if (sports) clauses.push(sports)
 
   const sentence =

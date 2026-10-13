@@ -12,9 +12,11 @@
  * remains the fallback whenever the generated line isn't ready.
  */
 
+import { sportWording } from './sport-wording'
+
 export type SportsFact =
-  | { kind: 'live' }
-  | { kind: 'pregame'; away: string; home: string; firstPitch: string }
+  | { kind: 'live'; league: string }
+  | { kind: 'pregame'; league: string; away: string; home: string; startTime: string }
   | { kind: 'none' }
 
 export interface StandfirstFactsInput {
@@ -40,9 +42,12 @@ function timeOfDay(now: Date): string {
 function sportsLine(sports: SportsFact): string | null {
   switch (sports.kind) {
     case 'live':
-      return 'Baseball: the game is on now'
-    case 'pregame':
-      return `Baseball: ${sports.away} at ${sports.home}, first pitch ${sports.firstPitch}`
+      return `${sportWording(sports.league).name}: the game is on now`
+    case 'pregame': {
+      const { name, start } = sportWording(sports.league)
+      const when = start ? `${start} ${sports.startTime}` : `starts ${sports.startTime}`
+      return `${name}: ${sports.away} at ${sports.home}, ${when}`
+    }
     case 'none':
       return null
   }
