@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.8](https://github.com/bbaldino/family-dashboard/compare/v0.18.7...v0.18.8) (2026-10-13)
+
+
+### Bug Fixes
+
+* **home:** word the standfirst's game for its own sport ([54a9e39](https://github.com/bbaldino/family-dashboard/commit/54a9e395372b30e55855105a7517a6ca67d61e29))
+
 ## [0.18.7](https://github.com/bbaldino/family-dashboard/compare/v0.18.6...v0.18.7) (2026-10-05)
 
 
