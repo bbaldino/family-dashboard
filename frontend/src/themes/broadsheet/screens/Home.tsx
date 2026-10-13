@@ -8,7 +8,7 @@ import { SportsColumn } from '@/themes/broadsheet/home/SportsColumn'
 import { pickFeaturedGame } from '@/themes/broadsheet/home/featured-game'
 import { HouseholdColumn } from '@/themes/broadsheet/home/HouseholdColumn'
 import { WeatherStrip } from '@/themes/broadsheet/home/WeatherStrip'
-import { buildStandfirst } from '@/themes/broadsheet/home/standfirst'
+import { buildStandfirst, type StandfirstSports } from '@/themes/broadsheet/home/standfirst'
 import { useNow } from '@/themes/broadsheet/home/useNow'
 import {
   isAllDay,
@@ -79,6 +79,10 @@ export function Home() {
   const featuredGame = pickFeaturedGame(games)
   const sportsState: 'live' | 'pregame' | 'none' =
     featuredGame?.state === 'live' ? 'live' : featuredGame ? 'pregame' : 'none'
+  const standfirstSports: StandfirstSports =
+    featuredGame == null
+      ? { state: 'none' }
+      : { state: featuredGame.state === 'live' ? 'live' : 'pregame', league: featuredGame.league }
 
   const { data: weather } = useWeatherData()
 
@@ -86,13 +90,14 @@ export function Home() {
     featuredGame == null
       ? { kind: 'none' }
       : featuredGame.state === 'live'
-        ? { kind: 'live' }
+        ? { kind: 'live', league: featuredGame.league }
         : featuredGame.state === 'upcoming'
           ? {
               kind: 'pregame',
+              league: featuredGame.league,
               away: featuredGame.away.name,
               home: featuredGame.home.name,
-              firstPitch: formatUpcomingTime(featuredGame.startTime),
+              startTime: formatUpcomingTime(featuredGame.startTime),
             }
           : { kind: 'none' }
 
@@ -113,7 +118,7 @@ export function Home() {
     buildStandfirst({
       eventCount: upcoming.length,
       nextEventTitle: nextEvent ? nextEvent.summary || 'Untitled' : null,
-      sportsState,
+      sports: standfirstSports,
     })
 
   return (

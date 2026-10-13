@@ -13,7 +13,13 @@ describe('buildStandfirstFacts', () => {
         { title: 'Soccer practice', time: '4:00 PM' },
         { title: 'Piano lesson', time: '5:00 PM' },
       ],
-      sports: { kind: 'pregame', away: 'the Dodgers', home: 'the Rockies', firstPitch: '7:10 PM' },
+      sports: {
+        kind: 'pregame',
+        league: 'mlb',
+        away: 'the Dodgers',
+        home: 'the Rockies',
+        startTime: '7:10 PM',
+      },
       weather: { tempF: 79, description: 'overcast clouds' },
     })
     expect(facts).toBe(
@@ -61,10 +67,44 @@ describe('buildStandfirstFacts', () => {
       now: mondayAfternoon,
       birthdays: [],
       events: [],
-      sports: { kind: 'live' },
+      sports: { kind: 'live', league: 'mlb' },
       weather: null,
     })
     expect(facts).toContain('- Baseball: the game is on now')
     expect(facts).not.toMatch(/\d+\s*[-–]\s*\d+/)
+  })
+
+  it.each([
+    ['nba', '- Basketball: the Warriors at the Lakers, tip-off 7:00 PM'],
+    ['nfl', '- Football: the Warriors at the Lakers, kickoff 7:00 PM'],
+    ['nhl', '- Hockey: the Warriors at the Lakers, puck drop 7:00 PM'],
+    ['mls', '- MLS: the Warriors at the Lakers, starts 7:00 PM'],
+  ])('words a %s pregame for its own sport', (league, line) => {
+    const facts = buildStandfirstFacts({
+      now: mondayAfternoon,
+      birthdays: [],
+      events: [],
+      sports: {
+        kind: 'pregame',
+        league,
+        away: 'the Warriors',
+        home: 'the Lakers',
+        startTime: '7:00 PM',
+      },
+      weather: null,
+    })
+    expect(facts).toContain(line)
+    expect(facts).not.toContain('first pitch')
+  })
+
+  it('names the sport of a live basketball game', () => {
+    const facts = buildStandfirstFacts({
+      now: mondayAfternoon,
+      birthdays: [],
+      events: [],
+      sports: { kind: 'live', league: 'nba' },
+      weather: null,
+    })
+    expect(facts).toContain('- Basketball: the game is on now')
   })
 })
