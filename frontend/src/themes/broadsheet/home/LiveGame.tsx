@@ -1,6 +1,7 @@
 import type { Game, GameTeam, LinescoreEntry, MlbSituationData, Play } from '@/integrations/sports'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { TeamCap } from '@/themes/broadsheet/ui/TeamCap'
+import { leaderStatText } from './leader-stat'
 
 /** Diamond of three bases, lit in rust when occupied. MLB-only situation data. */
 function BasesDiamond({ situation, size = 44 }: { situation: MlbSituationData; size?: number }) {
@@ -528,7 +529,9 @@ export function LiveGame({ game }: { game: Game }) {
                   style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}
                 >
                   <span>{l.playerName}</span>
-                  <span style={{ color: 'var(--ink-muted)' }}>{l.displayValue}</span>
+                  <span style={{ color: 'var(--ink-muted)' }}>
+                    {leaderStatText(game.league, l.category, l.displayValue)}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -543,7 +546,9 @@ export function LiveGame({ game }: { game: Game }) {
                   style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}
                 >
                   <span>{l.playerName}</span>
-                  <span style={{ color: 'var(--ink-muted)' }}>{l.displayValue}</span>
+                  <span style={{ color: 'var(--ink-muted)' }}>
+                    {leaderStatText(game.league, l.category, l.displayValue)}
+                  </span>
                 </li>
               ))}
             </ul>

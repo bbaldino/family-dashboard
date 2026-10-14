@@ -348,4 +348,26 @@ describe('LiveGame', () => {
     expect(awayColumn).toHaveTextContent('Jacoby Brissett')
     expect(awayColumn).not.toHaveTextContent('Brock Purdy')
   })
+
+  it("labels a basketball leader's bare figure with its stat", () => {
+    const detail: GameLiveDetail = {
+      sport: 'nba',
+      winProbability: null,
+      leaders: {
+        home: [
+          { category: 'Points', playerName: 'LeBron James', displayValue: '24' },
+          { category: 'Rebounds', playerName: 'Anthony Davis', displayValue: '11' },
+        ],
+        away: [{ category: 'Assists', playerName: 'Stephen Curry', displayValue: '8' }],
+      },
+    }
+    render(
+      <LiveGame
+        game={{ ...makeGame(detail), league: 'nba', home: team('LAL', 60), away: team('GSW', 58) }}
+      />,
+    )
+    expect(screen.getByText('24 PTS')).toBeInTheDocument()
+    expect(screen.getByText('11 REB')).toBeInTheDocument()
+    expect(screen.getByText('8 AST')).toBeInTheDocument()
+  })
 })
