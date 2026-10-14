@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.19.0](https://github.com/bbaldino/family-dashboard/compare/v0.18.9...v0.19.0) (2026-10-14)
+
+
+### Features
+
+* **home:** show as many countdowns as fit, up to six ([9009032](https://github.com/bbaldino/family-dashboard/commit/90090321c8bf27d1bb8bf2224ccc43cb607c5a2e))
+
 ## [0.18.9](https://github.com/bbaldino/family-dashboard/compare/v0.18.8...v0.18.9) (2026-10-14)
 
 
