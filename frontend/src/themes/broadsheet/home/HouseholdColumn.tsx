@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Check } from 'lucide-react'
 import { useCountdowns } from '@/integrations/countdowns'
 import type { CountdownItem } from '@/integrations/countdowns'
@@ -8,6 +9,7 @@ import type { LunchMenuData } from '@/integrations/nutrislice'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { useNow } from '@/themes/broadsheet/home/useNow'
 import { pickLunchPreview } from '@/themes/broadsheet/home/lunch-preview'
+import { fitWholeItems } from '@/themes/broadsheet/home/coming-up-fit'
 
 /* ───────────────────────── Lunch ─────────────────────────
  * Mock: broadsheet-v2.jsx:229-249. */
@@ -147,13 +149,13 @@ interface VisibleChoreGroup {
  *  constraint that forced 2/2 no longer exists and the caps rise to 4/4 to
  *  match the design's own `CHORE_TASK_CAP`.
  *
- *  `MAX_TASKS_PER_PERSON` then went 4 -> 6, measured against a real heavy day
- *  (two people, six chores each — twelve in total). At 6 the whole list shows
- *  with no "+N more" at all, and the lowest line in the column clears the
- *  body's bottom edge by **0.4px**. That is a fit, not a margin: one more
- *  chore for either person, a third person, or a webfont metric shift on a
- *  cold boot pushes Coming up under the fold, and this column clips with
- *  `overflow: hidden`, so it goes silently.
+ *  `MAX_TASKS_PER_PERSON` then went 4 -> 6, so a heavy day (two people, six
+ *  chores each) shows its whole list with no "+N more". It was measured then
+ *  as fitting with Coming up beneath by 0.4px; re-measured later (2026-10-14,
+ *  1600x900, a four-item lunch) that day leaves no room for even one row of
+ *  Coming up. Coming up now fits itself to whatever room is left and steps
+ *  aside whole on such days (see `ComingUpSection`), so chores keep priority
+ *  without anything being clipped mid-row.
  *
  *  That is a deliberate trade — days this busy are rare, and the alternative
  *  (the design's two-up people grid, halving the vertical cost) wraps task
@@ -373,7 +375,9 @@ function ChoresSection({
  * Mock: broadsheet-v2.jsx:288-301. The dotted leader rule that flexes to
  * fill the gap between title and count is the signature detail here. */
 
-const MAX_COMING_UP = 4
+/** At most three two-up rows. Fewer show whenever they don't all fit — see
+ *  `ComingUpSection`. */
+const MAX_COMING_UP = 6
 
 /** The countdown value: "Today!" on the day it arrives (`useCountdowns` filters
  *  out anything past), otherwise the plain "Nd" days-away count. */
@@ -381,13 +385,70 @@ function formatCountdown(daysUntil: number): string {
   return daysUntil <= 0 ? 'Today!' : `${daysUntil}d`
 }
 
+/**
+ * The last section in the column, so it gets whatever room lunch and chores
+ * leave — and that room swings with the day: measured at 1600x900, two people
+ * with three chores each leave space for all three rows, while six each push
+ * even the first row off the bottom. So rather than a fixed cap, it shows as
+ * many whole rows as actually fit (up to `MAX_COMING_UP`), measured live, and
+ * hides itself — kicker and all — when not even one does. A row is never cut
+ * in half: the column clips with `overflow: hidden`, silently.
+ *
+ * Every candidate stays rendered so it can be measured again when the room
+ * changes (a chore list growing, a late web font); ones that don't fit are
+ * just invisible. They sit after the ones that do, so hiding them moves
+ * nothing that's shown.
+ */
 function ComingUpSection({ items }: { items: CountdownItem[] }) {
+  const sectionRef = useRef<HTMLDivElement>(null)
+  const itemRefs = useRef<(HTMLLIElement | null)[]>([])
+  const candidates = useMemo(() => items.slice(0, MAX_COMING_UP), [items])
+  const [shownCount, setShownCount] = useState(candidates.length)
+
+  const measure = useCallback(() => {
+    const section = sectionRef.current
+    if (!section) return
+    const bottoms = candidates.map(
+      (_, i) => itemRefs.current[i]?.getBoundingClientRect().bottom ?? Infinity,
+    )
+    setShownCount(fitWholeItems(bottoms, section.getBoundingClientRect().bottom))
+  }, [candidates])
+
+  // Every render: new countdowns or a reflow above can change the fit.
+  // Setting the same count bails out, so this can't loop.
+  useLayoutEffect(measure)
+
+  useEffect(() => {
+    const section = sectionRef.current
+    if (!section || typeof ResizeObserver === 'undefined') return
+    // The section fills the column's remaining height, so it resizes when
+    // lunch or chores above it grow or shrink — even though nothing in it
+    // changed.
+    const observer = new ResizeObserver(measure)
+    observer.observe(section)
+    return () => observer.disconnect()
+  }, [measure])
+
+  const nothingFits = shownCount === 0
+
   return (
-    <div style={{ marginTop: 12, paddingTop: 8, borderTop: '1px solid var(--rule)' }}>
+    <div
+      ref={sectionRef}
+      data-testid="coming-up"
+      aria-hidden={nothingFits ? true : undefined}
+      style={{
+        flex: 1,
+        minHeight: 0,
+        marginTop: 12,
+        paddingTop: 8,
+        borderTop: '1px solid var(--rule)',
+        visibility: nothingFits ? 'hidden' : undefined,
+      }}
+    >
       <Kicker color="var(--ink-muted)">Coming up</Kicker>
-      {/* Two-up, per the design: four entries across two columns rather than
-          a single stack of three, so the column's width carries them instead
-          of its height. */}
+      {/* Two-up, per the design: entries across two columns rather than a
+          single stack, so the column's width carries them instead of its
+          height. */}
       <ul
         className="m-0 p-0"
         style={{
@@ -398,15 +459,21 @@ function ComingUpSection({ items }: { items: CountdownItem[] }) {
           gap: '2px 24px',
         }}
       >
-        {items.slice(0, MAX_COMING_UP).map((item) => (
+        {candidates.map((item, i) => (
           <li
             key={item.id}
+            ref={(el) => {
+              itemRefs.current[i] = el
+            }}
+            data-countdown-index={i}
+            aria-hidden={i < shownCount ? undefined : true}
             className="flex items-baseline"
             style={{
               gap: 8,
               fontFamily: 'var(--font-display)',
               fontSize: 12.5,
               color: 'var(--ink)',
+              visibility: i < shownCount ? undefined : 'hidden',
             }}
           >
             <span>{item.name}</span>
