@@ -358,6 +358,70 @@ describe('HouseholdColumn', () => {
     expect(screen.queryByText('Pick a chore')).not.toBeInTheDocument()
   })
 
+  describe('coming up fits whole rows', () => {
+    const countdowns = (n: number) =>
+      Array.from({ length: n }, (_, i) => ({
+        id: String(i),
+        name: `Countdown ${i}`,
+        date: new Date('2026-08-17'),
+        daysUntil: 10 + i,
+      }))
+
+    /** jsdom lays nothing out, so stand in for the browser: the section's
+     *  room ends at `limit`, and each two-up row ends 21px below the last. */
+    function layout(limit: number, firstRowBottom: number) {
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        const index = this.dataset.countdownIndex
+        const bottom =
+          this.dataset.testid === 'coming-up'
+            ? limit
+            : index != null
+              ? firstRowBottom + Math.floor(Number(index) / 2) * 21
+              : 0
+        return { bottom, top: 0, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0 } as DOMRect
+      })
+    }
+
+    const shown = () =>
+      screen
+        .getAllByText(/^Countdown \d$/)
+        .filter((el) => el.closest('li')?.getAttribute('aria-hidden') !== 'true')
+        .map((el) => el.textContent)
+
+    beforeEach(() => {
+      vi.restoreAllMocks()
+      useCountdowns.mockReturnValue({
+        data: countdowns(7),
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
+      })
+    })
+
+    it('shows up to six countdowns — three rows — when the room is there', () => {
+      layout(200, 100)
+      render(<HouseholdColumn />)
+      expect(shown()).toEqual([0, 1, 2, 3, 4, 5].map((i) => `Countdown ${i}`))
+      expect(screen.queryByText('Countdown 6')).not.toBeInTheDocument()
+    })
+
+    it('drops a whole row, never half of one, when the third does not fit', () => {
+      // Rows end at 100, 121, 142 against a 130 edge: row three goes as a pair.
+      layout(130, 100)
+      render(<HouseholdColumn />)
+      expect(shown()).toEqual([0, 1, 2, 3].map((i) => `Countdown ${i}`))
+    })
+
+    it('hides the whole section when not even one row fits', () => {
+      layout(90, 100)
+      render(<HouseholdColumn />)
+      expect(shown()).toEqual([])
+      expect(screen.getByTestId('coming-up')).toHaveAttribute('aria-hidden', 'true')
+    })
+  })
+
   describe('chore toggling', () => {
     function withChores() {
       useChores.mockReturnValue({
