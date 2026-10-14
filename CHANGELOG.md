@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.9](https://github.com/bbaldino/family-dashboard/compare/v0.18.8...v0.18.9) (2026-10-14)
+
+
+### Bug Fixes
+
+* **home:** label each live leader's stat ([7b73b6e](https://github.com/bbaldino/family-dashboard/commit/7b73b6e544f0e9946c3a18eec12b9fc7899b1f27))
+
 ## [0.18.8](https://github.com/bbaldino/family-dashboard/compare/v0.18.7...v0.18.8) (2026-10-13)
 
 
