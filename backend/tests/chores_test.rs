@@ -407,6 +407,129 @@ async fn test_pick_and_clear_pick() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+// 4b. Moving an assignment (drag between days)
+// ═══════════════════════════════════════════════════════════════════════
+
+#[tokio::test]
+async fn test_move_assignment_keeps_everything_but_the_slot() {
+    let (app, pool) = test_app().await;
+    let server = TestServer::new(app);
+
+    let alice = insert_person(&pool, "Alice", "#ff0000").await;
+    let meta = create_chore_json(
+        &server,
+        json!({"name": "Bonus Pick", "chore_type": "meta", "pick_from_tags": ["bonus"]}),
+    )
+    .await;
+    let bonus =
+        create_chore_json(&server, json!({"name": "Water Plants", "tags": ["bonus"]})).await;
+    let assignment = create_assignment_json(
+        &server,
+        json!({"chore_id": meta["id"], "person_id": alice, "week_of": "2026-03-16", "day_of_week": 1}),
+    )
+    .await;
+    let id = assignment["id"].as_i64().unwrap();
+    server
+        .post(&format!("/chores/assignments/{id}/pick"))
+        .json(&json!({"chore_id": bonus["id"]}))
+        .await
+        .assert_status_ok();
+    server
+        .post(&format!("/chores/assignments/{id}/complete"))
+        .await
+        .assert_status_ok();
+
+    let resp = server
+        .post(&format!("/chores/assignments/{id}/move"))
+        .json(&json!({"person_id": alice, "day_of_week": 4}))
+        .await;
+    resp.assert_status_ok();
+    let moved: serde_json::Value = resp.json();
+    assert_eq!(moved["id"], id);
+    assert_eq!(moved["day_of_week"], 4);
+
+    // Read back: same row, new day, and nothing else touched.
+    let all: Vec<serde_json::Value> = server
+        .get("/chores/assignments?week=2026-03-16")
+        .await
+        .json();
+    assert_eq!(all.len(), 1);
+    let a = &all[0];
+    assert_eq!(a["id"], id);
+    assert_eq!(a["day_of_week"], 4);
+    assert_eq!(a["person"]["id"], alice);
+    assert_eq!(a["chore"]["id"], meta["id"]);
+    assert_eq!(a["picked_chore"]["id"], bonus["id"]);
+    assert_eq!(a["completed"], true);
+    assert_eq!(a["week_of"], "2026-03-16");
+}
+
+#[tokio::test]
+async fn test_move_assignment_to_another_person() {
+    let (app, pool) = test_app().await;
+    let server = TestServer::new(app);
+
+    let alice = insert_person(&pool, "Alice", "#ff0000").await;
+    let bob = insert_person(&pool, "Bob", "#0000ff").await;
+    let chore = create_chore_json(&server, json!({"name": "Dishes"})).await;
+    let assignment = create_assignment_json(
+        &server,
+        json!({"chore_id": chore["id"], "person_id": alice, "week_of": "2026-03-16", "day_of_week": 0}),
+    )
+    .await;
+    let id = assignment["id"].as_i64().unwrap();
+
+    let resp = server
+        .post(&format!("/chores/assignments/{id}/move"))
+        .json(&json!({"person_id": bob, "day_of_week": 2}))
+        .await;
+    resp.assert_status_ok();
+    let moved: serde_json::Value = resp.json();
+    assert_eq!(moved["person"]["id"], bob);
+    assert_eq!(moved["person"]["name"], "Bob");
+    assert_eq!(moved["day_of_week"], 2);
+}
+
+#[tokio::test]
+async fn test_move_assignment_rejects_bad_targets() {
+    let (app, pool) = test_app().await;
+    let server = TestServer::new(app);
+
+    let alice = insert_person(&pool, "Alice", "#ff0000").await;
+    let chore = create_chore_json(&server, json!({"name": "Dishes"})).await;
+    let assignment = create_assignment_json(
+        &server,
+        json!({"chore_id": chore["id"], "person_id": alice, "week_of": "2026-03-16", "day_of_week": 0}),
+    )
+    .await;
+    let id = assignment["id"].as_i64().unwrap();
+
+    server
+        .post(&format!("/chores/assignments/{id}/move"))
+        .json(&json!({"person_id": alice, "day_of_week": 7}))
+        .await
+        .assert_status(StatusCode::BAD_REQUEST);
+    server
+        .post(&format!("/chores/assignments/{id}/move"))
+        .json(&json!({"person_id": 9999, "day_of_week": 1}))
+        .await
+        .assert_status(StatusCode::BAD_REQUEST);
+    server
+        .post("/chores/assignments/9999/move")
+        .json(&json!({"person_id": alice, "day_of_week": 1}))
+        .await
+        .assert_status(StatusCode::NOT_FOUND);
+
+    // The failed moves left it where it was.
+    let all: Vec<serde_json::Value> = server
+        .get("/chores/assignments?week=2026-03-16")
+        .await
+        .json();
+    assert_eq!(all[0]["day_of_week"], 0);
+    assert_eq!(all[0]["person"]["id"], alice);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
 // 5. Week copy
 // ═══════════════════════════════════════════════════════════════════════
 

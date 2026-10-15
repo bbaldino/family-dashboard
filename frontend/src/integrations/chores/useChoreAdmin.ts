@@ -176,6 +176,50 @@ export function useDeleteAssignment() {
   })
 }
 
+export interface AssignmentMove {
+  id: number
+  /** The week the assignment is in — names the cache entry to update. */
+  week_of: string
+  person_id: number
+  day_of_week: number
+}
+
+/**
+ * Move an assignment to another cell of its week (drag between days, or onto
+ * another person's row). The backend updates the row in place, so the chore,
+ * a meta-chore's pick and its done state all come along.
+ *
+ * Optimistic: the chip lands in its new cell as soon as it's dropped rather
+ * than snapping back to the old one for the length of the round trip, and goes
+ * back if the move fails.
+ */
+export function useMoveAssignment() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, person_id, day_of_week }: AssignmentMove) =>
+      choresIntegration.api.post<AssignmentResponse>(`/assignments/${id}/move`, {
+        person_id,
+        day_of_week,
+      }),
+    onMutate: async ({ id, week_of, person_id, day_of_week }) => {
+      const key = assignmentsKey(week_of)
+      await queryClient.cancelQueries({ queryKey: key })
+      const previous = queryClient.getQueryData<AssignmentResponse[]>(key)
+      const person = queryClient.getQueryData<Person[]>(PEOPLE_KEY)?.find((p) => p.id === person_id)
+      queryClient.setQueryData<AssignmentResponse[]>(key, (week) =>
+        week?.map((a) =>
+          a.id === id ? { ...a, day_of_week, person: person ?? { ...a.person, id: person_id } } : a,
+        ),
+      )
+      return { key, previous }
+    },
+    onError: (_err, _move, context) => {
+      if (context?.previous) queryClient.setQueryData(context.key, context.previous)
+    },
+    onSettled: () => invalidate(queryClient, [ASSIGNMENTS_PREFIX]),
+  })
+}
+
 // ----------------------------------------------------------------- weeks
 
 /**

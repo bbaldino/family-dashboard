@@ -1,14 +1,16 @@
 import { useDraggable } from '@dnd-kit/core'
 import type { Chore } from '@/integrations/chores'
+import type { DragPayload } from './drop-plan'
 
 interface DraggableChoreChipProps {
   chore: Chore
 }
 
 function DraggableChoreChip({ chore }: DraggableChoreChipProps) {
+  const payload: DragPayload = { kind: 'chore', chore }
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `chore-${chore.id}`,
-    data: { chore },
+    data: payload,
   })
 
   const style: React.CSSProperties = {

@@ -2,11 +2,13 @@ import { Fragment, useMemo, useState } from 'react'
 import {
   DndContext,
   DragOverlay,
+  useDraggable,
   useDroppable,
   PointerSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from '@dnd-kit/core'
 import { Button } from '@/ui/Button'
 import {
@@ -15,11 +17,13 @@ import {
   useCopyWeek,
   useCreateAssignment,
   useDeleteAssignment,
+  useMoveAssignment,
   usePeople,
   useRotateWeek,
 } from '@/integrations/chores'
-import type { AssignmentResponse, Chore } from '@/integrations/chores'
+import type { AssignmentResponse } from '@/integrations/chores'
 import { ChorePool } from './ChorePool'
+import { cellId, planDrop, type DragPayload } from './drop-plan'
 import { useCalendarEvents } from '@/integrations/calendar'
 import type { CalendarEvent } from '@/providers/google-calendar'
 import { eventLocalDateStr, parseLocalDate, toLocalDateStr } from '@/utils/date'
@@ -102,13 +106,33 @@ interface AssignmentChipProps {
   onRemove: () => void
 }
 
+/**
+ * An assignment in its cell. Tap to remove it; drag it to another day — or
+ * another person's row — to move it there with everything about it intact
+ * (see `useMoveAssignment`). The sensor's 5px activation distance is what
+ * tells the two apart, for a finger on the wall display as for a mouse — and
+ * once a drag has started, @dnd-kit swallows the click that follows its
+ * pointerup, so a chip dropped back on itself isn't removed (checked live).
+ */
 function AssignmentChip({ assignment, onRemove }: AssignmentChipProps) {
   const isMeta = assignment.chore.chore_type === 'meta'
+  const payload: DragPayload = { kind: 'assignment', assignment }
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: `assignment-${assignment.id}`,
+    data: payload,
+  })
 
   return (
     <button
+      ref={setNodeRef}
       type="button"
+      {...listeners}
+      {...attributes}
       onClick={onRemove}
+      style={{
+        opacity: isDragging ? 0.3 : 1,
+        touchAction: 'none', // Prevent browser scroll/zoom while dragging
+      }}
       className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium mb-1.5 mr-1 cursor-pointer active:opacity-60 transition-opacity ${
         isMeta
           ? 'border border-dashed border-blue-400 text-blue-300 bg-blue-900/20'
@@ -135,9 +159,15 @@ function DragOverlayChip({ name, isMeta }: { name: string; isMeta: boolean }) {
   )
 }
 
+/** The overlay's label for whatever is being dragged. */
+function dragLabel(payload: DragPayload): { name: string; isMeta: boolean } {
+  const chore = payload.kind === 'chore' ? payload.chore : payload.assignment.chore
+  return { name: chore.name, isMeta: chore.chore_type === 'meta' }
+}
+
 export function AssignmentsTab() {
   const [weekOf, setWeekOf] = useState(() => getMonday(new Date()))
-  const [activeChore, setActiveChore] = useState<Chore | null>(null)
+  const [activeDrag, setActiveDrag] = useState<DragPayload | null>(null)
 
   const weekStr = toLocalDateStr(weekOf)
 
@@ -146,6 +176,7 @@ export function AssignmentsTab() {
   const choreListQuery = useChoreList()
   const createAssignment = useCreateAssignment()
   const deleteAssignment = useDeleteAssignment()
+  const moveAssignment = useMoveAssignment()
   const copyWeek = useCopyWeek()
   const rotateWeek = useRotateWeek()
 
@@ -236,38 +267,33 @@ export function AssignmentsTab() {
     }
   }
 
-  function handleDragStart(event: { active: { data: { current?: { chore?: Chore } } } }) {
-    const chore = event.active.data.current?.chore ?? null
-    setActiveChore(chore)
+  function handleDragStart(event: DragStartEvent) {
+    setActiveDrag((event.active.data.current as DragPayload | undefined) ?? null)
+  }
+
+  function endDrag() {
+    setActiveDrag(null)
   }
 
   async function handleDragEnd(event: DragEndEvent) {
-    setActiveChore(null)
-    const { active, over } = event
-    if (!over) return
-
-    const chore = active.data.current?.chore as Chore | undefined
-    if (!chore) return
-
-    const droppableId = String(over.id)
-    const parts = droppableId.split('-')
-    if (parts.length < 2) return
-
-    const dayOfWeek = parseInt(parts[parts.length - 1], 10)
-    const personId = parseInt(parts.slice(0, parts.length - 1).join('-'), 10)
-
-    if (isNaN(dayOfWeek) || isNaN(personId)) return
+    endDrag()
+    const plan = planDrop(
+      event.active.data.current as DragPayload | undefined,
+      event.over ? String(event.over.id) : null,
+      weekStr,
+    )
+    if (!plan) return
 
     clearErrors()
     try {
-      await createAssignment.mutateAsync({
-        chore_id: chore.id,
-        person_id: personId,
-        week_of: weekStr,
-        day_of_week: dayOfWeek,
-      })
+      if (plan.kind === 'create') {
+        await createAssignment.mutateAsync(plan.body)
+      } else {
+        await moveAssignment.mutateAsync(plan.move)
+      }
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : 'Failed to assign chore')
+      const fallback = plan.kind === 'create' ? 'Failed to assign chore' : 'Failed to move chore'
+      setActionError(err instanceof Error ? err.message : fallback)
     }
   }
 
@@ -290,7 +316,12 @@ export function AssignmentsTab() {
   }
 
   return (
-    <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={endDrag}
+    >
       <div className="space-y-4" style={{ touchAction: 'none' }}>
         {error && (
           <div className="bg-red-900/30 border border-red-700 text-red-300 rounded-lg px-4 py-3 text-sm">
@@ -413,7 +444,7 @@ export function AssignmentsTab() {
                   {/* Day cells */}
                   {DAY_NAMES.map((_, dayIdx) => (
                     <div key={`${person.id}-${dayIdx}`} className="bg-bg-card p-1">
-                      <DroppableCell id={`${person.id}-${dayIdx}`}>
+                      <DroppableCell id={cellId(person.id, dayIdx)}>
                         {getAssignmentsForCell(person.id, dayIdx).map((assignment) => (
                           <AssignmentChip
                             key={assignment.id}
@@ -435,9 +466,7 @@ export function AssignmentsTab() {
       </div>
 
       <DragOverlay dropAnimation={null}>
-        {activeChore ? (
-          <DragOverlayChip name={activeChore.name} isMeta={activeChore.chore_type === 'meta'} />
-        ) : null}
+        {activeDrag ? <DragOverlayChip {...dragLabel(activeDrag)} /> : null}
       </DragOverlay>
     </DndContext>
   )

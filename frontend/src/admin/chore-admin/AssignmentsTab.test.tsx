@@ -18,9 +18,11 @@ import type { AssignmentResponse, Chore, Person } from '@/integrations/chores'
  * nothing at all until someone opens the tablet on Monday morning. So the week
  * the tab asks for, and the week each write names, are pinned explicitly.
  *
- * Drag-and-drop assignment creation is not covered: @dnd-kit's pointer sensor
- * needs real coordinates and a real drag, which `fireEvent` cannot produce.
- * That path is browser-checked instead.
+ * Drag-and-drop — creating from the pool, moving between cells — is not
+ * covered here: @dnd-kit's pointer sensor needs real coordinates and a real
+ * drag, which `fireEvent` cannot produce. What a drop means is tested in
+ * `drop-plan.test.ts`, the move's request and cache handling in
+ * `useChoreAdmin.test.tsx`; the drag itself is browser-checked.
  */
 
 function mondayOf(date: Date): Date {

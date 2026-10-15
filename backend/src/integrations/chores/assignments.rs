@@ -18,6 +18,7 @@ pub fn router(pool: SqlitePool) -> Router {
             get(list_assignments).post(create_assignment),
         )
         .route("/assignments/{id}", delete(delete_assignment))
+        .route("/assignments/{id}/move", post(move_assignment))
         .route("/assignments/{id}/complete", post(complete_assignment))
         .route("/assignments/{id}/uncomplete", post(uncomplete_assignment))
         .route("/assignments/{id}/pick", post(pick_chore))
@@ -72,7 +73,15 @@ async fn create_assignment(
     .fetch_one(&pool)
     .await?;
 
-    // Fetch back with JOINs
+    Ok((
+        StatusCode::CREATED,
+        Json(fetch_assignment(&pool, id).await?),
+    ))
+}
+
+/// One assignment with its chore, person and picked chore joined in — the
+/// shape every write hands back.
+async fn fetch_assignment(pool: &SqlitePool, id: i64) -> Result<AssignmentResponse, AppError> {
     let row = sqlx::query_as::<_, AssignmentRow>(
         r#"SELECT
             a.id, a.chore_id, a.person_id, a.week_of, a.day_of_week,
@@ -87,10 +96,48 @@ async fn create_assignment(
         WHERE a.id = ?1"#,
     )
     .bind(id)
-    .fetch_one(&pool)
+    .fetch_one(pool)
     .await?;
+    Ok(AssignmentResponse::from(row))
+}
 
-    Ok((StatusCode::CREATED, Json(AssignmentResponse::from(row))))
+/// Move an assignment to another day — and, dropped on another row, another
+/// person — within its week. An in-place update rather than delete-and-recreate,
+/// so the row keeps its id and everything else about it: the chore, a
+/// meta-chore's pick, and whether it's done.
+async fn move_assignment(
+    State(pool): State<SqlitePool>,
+    Path(id): Path<i64>,
+    Json(input): Json<MoveAssignment>,
+) -> Result<Json<AssignmentResponse>, AppError> {
+    if !(0..=6).contains(&input.day_of_week) {
+        return Err(AppError::BadRequest(format!(
+            "day_of_week must be 0-6, got {}",
+            input.day_of_week
+        )));
+    }
+    let person_exists = sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM people WHERE id = ?")
+        .bind(input.person_id)
+        .fetch_one(&pool)
+        .await?
+        > 0;
+    if !person_exists {
+        return Err(AppError::BadRequest(format!(
+            "Person {} not found",
+            input.person_id
+        )));
+    }
+
+    let result = sqlx::query("UPDATE assignments SET person_id = ?, day_of_week = ? WHERE id = ?")
+        .bind(input.person_id)
+        .bind(input.day_of_week)
+        .bind(id)
+        .execute(&pool)
+        .await?;
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound(format!("Assignment {} not found", id)));
+    }
+    Ok(Json(fetch_assignment(&pool, id).await?))
 }
 
 async fn delete_assignment(

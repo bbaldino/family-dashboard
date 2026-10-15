@@ -15,6 +15,7 @@ import {
   useDeleteAssignment,
   useDeleteChore,
   useDeletePerson,
+  useMoveAssignment,
   usePeople,
   useRotateWeek,
   useSavePerson,
@@ -490,5 +491,81 @@ describe('weeks', () => {
 
     expect(isInvalidated(queryClient, assignmentsKey(WEEK))).toBe(true)
     expect(isInvalidated(queryClient, TODAY_KEY)).toBe(true)
+  })
+
+  describe('useMoveAssignment', () => {
+    const move = { id: 10, week_of: WEEK, person_id: 2, day_of_week: 4 }
+
+    it('posts the new person and day to the move route', async () => {
+      mockFetch()
+      const { result } = setup(() => useMoveAssignment())
+
+      await result.current.mutateAsync(move)
+
+      expect(calls).toEqual([
+        {
+          url: '/api/chores/assignments/10/move',
+          method: 'POST',
+          body: { person_id: 2, day_of_week: 4 },
+        },
+      ])
+    })
+
+    it('moves the chip in the cached week at once, keeping every other field', async () => {
+      // A drop shouldn't snap back to its old cell while the request is out.
+      let release!: () => void
+      globalThis.fetch = vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            release = () =>
+              resolve({
+                ok: true,
+                status: 200,
+                json: () => Promise.resolve({}),
+                text: () => Promise.resolve('{}'),
+              } as Response)
+          }),
+      ) as unknown as typeof fetch
+      const queryClient = newClient()
+      queryClient.setQueryData(PEOPLE_KEY, PEOPLE)
+      queryClient.setQueryData(assignmentsKey(WEEK), ASSIGNMENTS)
+      const { result } = setup(() => useMoveAssignment(), queryClient)
+
+      const pending = result.current.mutateAsync(move)
+      await waitFor(() =>
+        expect(
+          queryClient.getQueryData<AssignmentResponse[]>(assignmentsKey(WEEK))?.[0].day_of_week,
+        ).toBe(4),
+      )
+      const optimistic = queryClient.getQueryData<AssignmentResponse[]>(assignmentsKey(WEEK))![0]
+      expect(optimistic).toEqual({ ...ASSIGNMENTS[0], person: PEOPLE[1], day_of_week: 4 })
+
+      release()
+      await pending
+    })
+
+    it('puts the chip back where it was when the move fails', async () => {
+      mockFetch(false)
+      const queryClient = newClient()
+      queryClient.setQueryData(PEOPLE_KEY, PEOPLE)
+      queryClient.setQueryData(assignmentsKey(WEEK), ASSIGNMENTS)
+      const { result } = setup(() => useMoveAssignment(), queryClient)
+
+      await expect(result.current.mutateAsync(move)).rejects.toThrow()
+
+      expect(queryClient.getQueryData(assignmentsKey(WEEK))).toEqual(ASSIGNMENTS)
+    })
+
+    it('invalidates the week and the dashboard after a move', async () => {
+      mockFetch()
+      const queryClient = newClient()
+      seedCaches(queryClient)
+      const { result } = setup(() => useMoveAssignment(), queryClient)
+
+      await result.current.mutateAsync(move)
+
+      expect(isInvalidated(queryClient, assignmentsKey(WEEK))).toBe(true)
+      expect(isInvalidated(queryClient, TODAY_KEY)).toBe(true)
+    })
   })
 })
