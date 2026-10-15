@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.0](https://github.com/bbaldino/family-dashboard/compare/v0.19.0...v0.20.0) (2026-10-15)
+
+
+### Features
+
+* **chores:** drag an assignment to another day to move it ([b322ed2](https://github.com/bbaldino/family-dashboard/commit/b322ed2fe87d1b56961d50e2217496d0e4ec0f62))
+
 ## [0.19.0](https://github.com/bbaldino/family-dashboard/compare/v0.18.9...v0.19.0) (2026-10-14)
 
 
