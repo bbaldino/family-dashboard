@@ -186,6 +186,12 @@ pub struct CreateAssignment {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct MoveAssignment {
+    pub person_id: i64,
+    pub day_of_week: i32,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct PickChore {
     pub chore_id: i64,
 }
