@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.1](https://github.com/bbaldino/family-dashboard/compare/v0.20.0...v0.20.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* **music:** refetch the queue when a play request completes ([6535ea3](https://github.com/bbaldino/family-dashboard/commit/6535ea38ae96a136833ddd671247015e4188a550))
+
 ## [0.20.0](https://github.com/bbaldino/family-dashboard/compare/v0.19.0...v0.20.0) (2026-10-15)
 
 
