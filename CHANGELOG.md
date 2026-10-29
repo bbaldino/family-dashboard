@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.0](https://github.com/bbaldino/family-dashboard/compare/v0.20.1...v0.21.0) (2026-10-29)
+
+
+### Features
+
+* **datebook:** Today button, and a sheet listing every event on a busy day ([840ef06](https://github.com/bbaldino/family-dashboard/commit/840ef06ccbc1a06c6cf64f39416c21be1b1455a2))
+
 ## [0.20.1](https://github.com/bbaldino/family-dashboard/compare/v0.20.0...v0.20.1) (2026-10-29)
 
 
