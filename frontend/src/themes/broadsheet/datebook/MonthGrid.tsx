@@ -57,11 +57,17 @@ export function MonthGrid({
   month,
   byDate,
   spans = [],
+  onOpenDay,
+  openDateKey = null,
 }: {
   year: number
   month: number
   byDate: Record<string, CalendarEvent[]>
   spans?: EventSpan[]
+  /** A cell that had to hide events was tapped — its "YYYY-MM-DD" key. */
+  onOpenDay?: (dateKey: string) => void
+  /** The day whose sheet is open, if any, so its cell can be outlined. */
+  openDateKey?: string | null
 }) {
   const weeks = getMonthGridWeeks(year, month)
   const todayKey = toLocalDateStr(new Date())
@@ -126,6 +132,8 @@ export function MonthGrid({
                     isLastRow={weekIndex === weeks.length - 1}
                     maxEvents={maxEvents}
                     lanes={lanes}
+                    onOpen={onOpenDay && (() => onOpenDay(dateKey))}
+                    isOpen={dateKey === openDateKey}
                   />
                 )
               })}

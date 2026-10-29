@@ -1,9 +1,11 @@
+import type { KeyboardEvent } from 'react'
 import type { CalendarEvent } from '@/providers/google-calendar'
 import { EventPill } from './EventPill'
 import { CELL_RULE, TODAY_BG } from './colors'
 import { LANE_H } from './month-spans'
 
 const MONTH_ABBR_FORMAT = new Intl.DateTimeFormat('en-US', { month: 'short' })
+const MONTH_DAY_FORMAT = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric' })
 
 export function DayCell({
   date,
@@ -15,6 +17,8 @@ export function DayCell({
   isLastRow,
   maxEvents,
   lanes = 0,
+  onOpen,
+  isOpen = false,
 }: {
   date: Date
   events: CalendarEvent[]
@@ -40,6 +44,12 @@ export function DayCell({
    *  gets 0 and keeps its chips at the top rather than sunk beneath space
    *  reserved for its neighbours' banners. */
   lanes?: number
+  /** Open the day sheet. Only offered when this cell had to hide events —
+   *  a day whose events all fit has nothing more to show. */
+  onOpen?: () => void
+  /** This day's sheet is open: the cell is outlined above the sheet's wash so
+   *  you can see which day you tapped. */
+  isOpen?: boolean
 }) {
   const dayNum = date.getDate()
   const isWeekend = date.getDay() === 0 || date.getDay() === 6
@@ -67,10 +77,32 @@ export function DayCell({
   // summarise the rest.
   const visible = events.length <= visibleCap + 1 ? events : events.slice(0, visibleCap)
   const hiddenCount = events.length - visible.length
+  // On any hidden event, not just when "+N more" shows: a cell whose chips all
+  // went to banner lanes hides events without saying so, and the sheet is the
+  // only way to see them.
+  const opensSheet = hiddenCount > 0 && onOpen !== undefined
 
   return (
     <div
+      {...(opensSheet && {
+        role: 'button',
+        tabIndex: 0,
+        'aria-label': `Show every event on ${MONTH_DAY_FORMAT.format(date)}`,
+        onClick: onOpen,
+        onKeyDown: (e: KeyboardEvent) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onOpen()
+          }
+        },
+      })}
       style={{
+        cursor: opensSheet ? 'pointer' : undefined,
+        outline: isOpen ? '3px solid var(--ink)' : undefined,
+        outlineOffset: -1,
+        // Between the sheet's wash (z 50) and its card (z 52), so the tapped
+        // day stays lit without covering the card.
+        zIndex: isOpen ? 51 : undefined,
         borderRight: isLastColumn ? 'none' : `1px solid ${CELL_RULE}`,
         borderBottom: isLastRow ? 'none' : `1px solid ${CELL_RULE}`,
         padding: '4px 6px',

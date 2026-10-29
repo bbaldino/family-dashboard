@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useMonthCalendar } from '@/integrations/calendar'
 import { useCountdowns } from '@/integrations/countdowns'
 import { DatebookMasthead } from '@/themes/broadsheet/datebook/DatebookMasthead'
@@ -6,7 +6,9 @@ import { MonthGrid } from '@/themes/broadsheet/datebook/MonthGrid'
 import { computeMonthTally } from '@/themes/broadsheet/datebook/tally'
 import { buildDatebookStandfirst } from '@/themes/broadsheet/datebook/standfirst'
 import { shiftMonth } from '@/themes/broadsheet/datebook/month-nav'
+import { DaySheet } from '@/themes/broadsheet/datebook/DaySheet'
 import { useNow } from '@/themes/broadsheet/home/useNow'
+import { parseLocalDate } from '@/utils/date'
 
 /**
  * The Datebook: broadsheet's month calendar, the same editorial register as
@@ -32,6 +34,10 @@ export function Calendar() {
     return { year: today.getFullYear(), month: today.getMonth() }
   })
 
+  // The day whose sheet is open, as a "YYYY-MM-DD" key into `byDate`.
+  const [openDay, setOpenDay] = useState<string | null>(null)
+  const closeDay = useCallback(() => setOpenDay(null), [])
+
   const { data: monthEvents } = useMonthCalendar(year, month)
   const { data: countdowns } = useCountdowns()
 
@@ -56,6 +62,12 @@ export function Calendar() {
   // or not.
   const goToPrevMonth = () => setDisplayed(({ year, month }) => shiftMonth(year, month, -1))
   const goToNextMonth = () => setDisplayed(({ year, month }) => shiftMonth(year, month, 1))
+  // The real date at the time of the tap, not `now`, which can be up to 30s
+  // stale across midnight at a month's end.
+  const goToToday = () => {
+    const today = new Date()
+    setDisplayed({ year: today.getFullYear(), month: today.getMonth() })
+  }
 
   return (
     <div
@@ -67,6 +79,7 @@ export function Calendar() {
         month={month}
         onPrevMonth={goToPrevMonth}
         onNextMonth={goToNextMonth}
+        onToday={goToToday}
         tally={tally}
         standfirst={standfirst}
         now={now}
@@ -77,9 +90,23 @@ export function Calendar() {
        *  `calendar.jsx:265` (`padding: 8px 56px 0`); the 64px the footer
        *  reserves is a spacer below, same as Home. */}
       <div className="flex-1 min-h-0 overflow-hidden" style={{ padding: '8px 56px 0' }}>
-        <MonthGrid year={year} month={month} byDate={byDate} spans={spans} />
+        <MonthGrid
+          year={year}
+          month={month}
+          byDate={byDate}
+          spans={spans}
+          onOpenDay={setOpenDay}
+          openDateKey={openDay}
+        />
       </div>
       <div style={{ flexShrink: 0, height: 64 }} />
+      {openDay && (
+        <DaySheet
+          date={parseLocalDate(openDay)}
+          events={byDate[openDay] ?? []}
+          onClose={closeDay}
+        />
+      )}
     </div>
   )
 }

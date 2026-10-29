@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { Calendar } from './Calendar'
 
 const useMonthCalendar = vi.hoisted(() => vi.fn())
@@ -73,6 +73,20 @@ describe('broadsheet Calendar (the Datebook)', () => {
     expect(finalMonth).toBe(expectedMonth)
   })
 
+  it('jumps back to the current month with the Today button after paging away', () => {
+    useMonthCalendar.mockReturnValue({ data: { byDate: {} }, isLoading: false })
+    render(<Calendar />)
+    const initialMonth = screen.getByRole('heading', { level: 1 }).textContent
+    const prevButton = screen.getByRole('button', { name: /previous month/i })
+    act(() => {
+      for (let i = 0; i < 14; i++) fireEvent.click(prevButton)
+    })
+    expect(screen.getByRole('heading', { level: 1 }).textContent).not.toBe(initialMonth)
+
+    fireEvent.click(screen.getByRole('button', { name: /today/i }))
+    expect(screen.getByRole('heading', { level: 1 }).textContent).toBe(initialMonth)
+  })
+
   it('re-fetches the month when navigating — useMonthCalendar is called with the newly displayed year/month', () => {
     useMonthCalendar.mockReturnValue({ data: { byDate: {} }, isLoading: false })
     render(<Calendar />)
@@ -85,6 +99,27 @@ describe('broadsheet Calendar (the Datebook)', () => {
     const expected = new Date(today.getFullYear(), today.getMonth() + 1, 1)
     expect(year).toBe(expected.getFullYear())
     expect(month).toBe(expected.getMonth())
+  })
+
+  it('opens a day that had to hide events, listing all of them, and closes it again', () => {
+    const key = todayKey()
+    const events = Array.from({ length: 9 }, (_, i) => ({
+      id: `e${i}`,
+      summary: `Errand ${i}`,
+      start: { dateTime: `${key}T${String(8 + i).padStart(2, '0')}:00:00` },
+      end: { dateTime: `${key}T${String(8 + i).padStart(2, '0')}:30:00` },
+    }))
+    useMonthCalendar.mockReturnValue({ data: { byDate: { [key]: events } }, isLoading: false })
+    render(<Calendar />)
+    expect(screen.queryByText('Errand 8')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /show every event/i }))
+    const sheet = screen.getByRole('dialog')
+    expect(within(sheet).getAllByTestId('day-sheet-event')).toHaveLength(9)
+    expect(within(sheet).getByText('Errand 8')).toBeInTheDocument()
+
+    fireEvent.click(within(sheet).getByRole('button', { name: /close/i }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('omits the birthday tally figure when the month has none', () => {

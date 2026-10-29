@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { DayCell } from './DayCell'
 import type { CalendarEvent } from '@/providers/google-calendar'
 
@@ -104,5 +104,30 @@ describe('DayCell', () => {
   it('never labels a day inside the currently displayed month', () => {
     render(<DayCell {...baseProps} date={new Date(2026, 4, 1)} isCurrentMonth />)
     expect(screen.queryByText('MAY')).not.toBeInTheDocument()
+  })
+
+  describe('opening the day', () => {
+    it('opens the day when it has events it could not show', () => {
+      const onOpen = vi.fn()
+      const events = Array.from({ length: 7 }, (_, i) => timed(`e${i}`, `Event ${i}`))
+      render(<DayCell {...baseProps} events={events} maxEvents={5} onOpen={onOpen} />)
+      fireEvent.click(screen.getByRole('button', { name: 'Show every event on May 10' }))
+      expect(onOpen).toHaveBeenCalledTimes(1)
+    })
+
+    it('opens a day whose chips all went to banner lanes, too', () => {
+      // No chip and no "+N more" line shows, but the events are still hidden.
+      const onOpen = vi.fn()
+      const events = Array.from({ length: 3 }, (_, i) => timed(`e${i}`, `Event ${i}`))
+      render(<DayCell {...baseProps} events={events} maxEvents={2} lanes={2} onOpen={onOpen} />)
+      fireEvent.click(screen.getByRole('button', { name: /show every event/i }))
+      expect(onOpen).toHaveBeenCalledTimes(1)
+    })
+
+    it('is not a button when every event fits', () => {
+      const events = Array.from({ length: 3 }, (_, i) => timed(`e${i}`, `Event ${i}`))
+      render(<DayCell {...baseProps} events={events} maxEvents={5} onOpen={vi.fn()} />)
+      expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    })
   })
 })
