@@ -9,6 +9,7 @@ function renderMasthead(overrides: Partial<Parameters<typeof DatebookMasthead>[0
       month={4}
       onPrevMonth={vi.fn()}
       onNextMonth={vi.fn()}
+      onToday={vi.fn()}
       tally={{ eventCount: 0, birthdayCount: 0 }}
       standfirst="Nothing on the calendar this month."
       now={new Date(2026, 4, 23)}
@@ -50,6 +51,27 @@ describe('DatebookMasthead', () => {
     fireEvent.click(screen.getByRole('button', { name: /next month/i }))
     expect(onPrevMonth).toHaveBeenCalledTimes(1)
     expect(onNextMonth).toHaveBeenCalledTimes(1)
+  })
+
+  it('jumps back to today from another month', () => {
+    const onToday = vi.fn()
+    renderMasthead({ month: 1, onToday, now: new Date(2026, 4, 23) })
+    const today = screen.getByRole('button', { name: /today/i })
+    expect(today).toBeEnabled()
+    fireEvent.click(today)
+    expect(onToday).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the Today button in place but disabled while showing the current month', () => {
+    // Kept rather than hidden so the nav row doesn't shift as you page
+    // away from and back to this month.
+    renderMasthead({ year: 2026, month: 4, now: new Date(2026, 4, 23) })
+    expect(screen.getByRole('button', { name: /today/i })).toBeDisabled()
+  })
+
+  it('treats the same month of another year as not the current month', () => {
+    renderMasthead({ year: 2025, month: 4, now: new Date(2026, 4, 23) })
+    expect(screen.getByRole('button', { name: /today/i })).toBeEnabled()
   })
 
   it('shows the event count in the Tally', () => {

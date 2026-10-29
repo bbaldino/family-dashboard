@@ -16,6 +16,18 @@ const navButtonStyle = {
   justifyContent: 'center',
 }
 
+/** The nav buttons' frame, sized to a word rather than a glyph. */
+const todayButtonStyle = {
+  ...navButtonStyle,
+  width: 'auto',
+  padding: '0 10px',
+  fontFamily: 'var(--font-mono)',
+  fontSize: 10,
+  letterSpacing: '0.18em',
+  textTransform: 'uppercase' as const,
+  color: 'var(--ink)',
+}
+
 const standfirstProseStyle = {
   fontFamily: 'var(--font-display)',
   fontStyle: 'italic' as const,
@@ -51,6 +63,7 @@ export function DatebookMasthead({
   month,
   onPrevMonth,
   onNextMonth,
+  onToday,
   tally,
   standfirst,
   now,
@@ -59,6 +72,8 @@ export function DatebookMasthead({
   month: number
   onPrevMonth: () => void
   onNextMonth: () => void
+  /** Back to the month holding `now`, after paging away from it. */
+  onToday: () => void
   tally: MonthTally
   standfirst: string
   /** Today's real date, for the standfirst's "Today · Weekday Nth" line —
@@ -68,6 +83,7 @@ export function DatebookMasthead({
   const prev = shiftMonth(year, month, -1)
   const next = shiftMonth(year, month, 1)
   const todayOrdinal = ordinalSuffix(now.getDate())
+  const showingToday = year === now.getFullYear() && month === now.getMonth()
 
   return (
     <div>
@@ -108,6 +124,20 @@ export function DatebookMasthead({
                 aria-label="Next month"
               >
                 ›
+              </button>
+              {/* Disabled rather than hidden on the current month, so the row
+                  doesn't shift as you page away and back. */}
+              <button
+                type="button"
+                style={{
+                  ...todayButtonStyle,
+                  cursor: showingToday ? 'default' : 'pointer',
+                  opacity: showingToday ? 0.35 : 1,
+                }}
+                onClick={onToday}
+                disabled={showingToday}
+              >
+                Today
               </button>
             </div>
           </>
