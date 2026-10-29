@@ -397,6 +397,52 @@ describe('MusicProvider play pending', () => {
     })
     await waitFor(() => expect(screen.getByTestId('pending')).toHaveTextContent(''))
   })
+
+  it('refetches the queue once the play request settles', async () => {
+    // A song-radio play is two MA calls: the track replaces the queue, then
+    // the station is added behind it. The now-playing change from the first
+    // triggers `useQueue`'s refetch while the queue is still one song long,
+    // so "up next" read 0 until the next poll. Only the play request's own
+    // completion comes after the station has landed.
+    let releasePlay: (() => void) | null = null
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation((url: string) => {
+        if (String(url).includes('/api/music/play')) {
+          return new Promise((resolve) => {
+            releasePlay = () =>
+              resolve({
+                ok: true,
+                json: () => Promise.resolve({}),
+                text: () => Promise.resolve(''),
+              })
+          })
+        }
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({}) })
+      }),
+    )
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const queueKey = ['music', 'queue', 'kitchen']
+    queryClient.setQueryData(queueKey, [{ media_item: { name: '1979', uri: 'spotify://track/x' } }])
+
+    const { MusicProvider, useMusic } = await freshMusicModules()
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MusicProvider>
+          <PendingProbe useMusic={useMusic as never} />
+        </MusicProvider>
+      </QueryClientProvider>,
+    )
+
+    screen.getByText('play').click()
+    await waitFor(() => expect(screen.getByTestId('pending')).toHaveTextContent('“Go”'))
+    expect(queryClient.getQueryState(queueKey)?.isInvalidated).toBe(false)
+
+    await act(async () => {
+      releasePlay?.()
+    })
+    await waitFor(() => expect(queryClient.getQueryState(queueKey)?.isInvalidated).toBe(true))
+  })
 })
 
 /**

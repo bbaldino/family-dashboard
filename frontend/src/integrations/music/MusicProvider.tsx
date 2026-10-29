@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useIntegrationConfig } from '@/platform'
 import { activeScenario } from '@/lib/scenario'
 import { musicIntegration } from './config'
@@ -10,6 +11,7 @@ import { musicStateFixtureFor } from './fixtures'
 import { anchorGroupLabel, deriveActiveQueue, resolveAnchorGroup } from './anchor'
 import { useAnchorId } from './useAnchorId'
 import { useGroupTopology } from './usePlayers'
+import { QUEUE_KEY_PREFIX } from './useQueue'
 
 /**
  * Queue-state fixture for the active scenario, computed once at module load
@@ -34,6 +36,7 @@ interface MusicProviderProps {
 }
 
 export function MusicProvider({ children }: MusicProviderProps) {
+  const queryClient = useQueryClient()
   const config = useIntegrationConfig(musicIntegration)
   const isConfigured = Boolean(config?.service_url) || fixtureQueues !== undefined
 
@@ -256,9 +259,15 @@ export function MusicProvider({ children }: MusicProviderProps) {
         )
       } finally {
         setPlayPending(null)
+        // The track change `useQueue` refetches on arrives too early for a
+        // song radio: the track replaces the queue first and the station is
+        // added behind it afterwards, so that refetch sees a one-song queue.
+        // The request returns only once both have landed. ("Play next" and
+        // "add to queue" change the queue without changing the track at all.)
+        void queryClient.invalidateQueries({ queryKey: QUEUE_KEY_PREFIX })
       }
     },
-    [runAction],
+    [runAction, queryClient],
   )
 
   const pause = useCallback(async () => {

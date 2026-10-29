@@ -20,10 +20,15 @@ export interface QueueItem {
   }
 }
 
+/** Every queue's items at once — what a play request invalidates. */
+export const QUEUE_KEY_PREFIX = ['music', 'queue'] as const
+
+const queueKey = (queueId: string | null | undefined) => [...QUEUE_KEY_PREFIX, queueId]
+
 /**
- * Fetch upcoming items for the given queue. Refetches periodically and
- * also whenever the active track changes (which signals the queue
- * advanced one step).
+ * Fetch upcoming items for the given queue. Refetches periodically, whenever
+ * the active track changes (which signals the queue advanced one step), and
+ * when a play request completes (`MusicProvider`'s `play`).
  */
 export function useQueue(queueId: string | null | undefined) {
   const queryClient = useQueryClient()
@@ -31,7 +36,7 @@ export function useQueue(queueId: string | null | undefined) {
   const currentUri = state.activeQueue?.currentItem?.uri ?? null
 
   const query = useQuery({
-    queryKey: ['music', 'queue', queueId],
+    queryKey: queueKey(queueId),
     queryFn: () => {
       const fixture = musicQueueItemsFixtureFor(activeScenario, queueId)
       return fixture
@@ -46,7 +51,7 @@ export function useQueue(queueId: string | null | undefined) {
   // the queue has advanced or been reshuffled.
   useEffect(() => {
     if (!queueId) return
-    queryClient.invalidateQueries({ queryKey: ['music', 'queue', queueId] })
+    queryClient.invalidateQueries({ queryKey: queueKey(queueId) })
   }, [currentUri, queueId, queryClient])
 
   return query
