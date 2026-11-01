@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.0](https://github.com/bbaldino/family-dashboard/compare/v0.21.0...v0.22.0) (2026-11-01)
+
+
+### Features
+
+* **home:** give the Today rows to what's still ahead ([a483a24](https://github.com/bbaldino/family-dashboard/commit/a483a2457995dd7bb0a43ac5f95e868c9f066805))
+
 ## [0.21.0](https://github.com/bbaldino/family-dashboard/compare/v0.20.1...v0.21.0) (2026-10-29)
 
 
