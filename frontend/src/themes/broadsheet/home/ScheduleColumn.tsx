@@ -7,6 +7,8 @@ import { useDrivingTime } from '@/integrations/driving-time'
 import type { EventDriveInfo } from '@/integrations/driving-time'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { formatEventTime } from './event-format'
+import { allDayLine, splitTodayDocket } from './today-docket'
+import { useNow } from './useNow'
 
 /** A rule lighter than `--rule` (the theme's hairline is full ink) for
  *  dividers that need to recede rather than draw a line — the mock's
@@ -95,7 +97,7 @@ function TodayEventRow({
 }
 
 /**
- * How many of today's events the hero ever renders in full.
+ * How many of today's events still ahead the hero ever renders in full.
  *
  * Every other list in this column was budgeted; this one wasn't, on the
  * reasoning that today's events are the point of the screen. But the hero
@@ -106,12 +108,15 @@ function TodayEventRow({
  * Four keeps the hero comfortably inside the column at the row heights
  * these events actually render at (42-59px each, depending on whether a
  * location and drive time are present), with the remainder named rather
- * than silently dropped.
+ * than silently dropped. Events that have already ended don't use a row —
+ * `splitTodayDocket` moves them into the one-line "earlier" note.
  */
 const MAX_HERO_EVENTS = 4
 
-/** The lead block: today's date, headline, and today's events — or a
- *  written blank-docket line. Mock: `broadsheet-v2.jsx:146-188`. */
+/** The lead block: today's date, headline, and today's events — all-day ones
+ *  in a line under the headline, timed ones still ahead as rows, the ones
+ *  already over as a single "earlier" line — or a written blank-docket line.
+ *  Mock: `broadsheet-v2.jsx:146-188`. */
 function TodayHero({
   today,
   driveInfo,
@@ -119,9 +124,11 @@ function TodayHero({
   today: CalendarDay | undefined
   driveInfo: Record<string, EventDriveInfo>
 }) {
+  const now = useNow()
   const allEvents = today?.events ?? []
-  const events = allEvents.slice(0, MAX_HERO_EVENTS)
-  const hiddenCount = allEvents.length - events.length
+  const { allDay, earlier, ahead } = splitTodayDocket(allEvents, now)
+  const events = ahead.slice(0, MAX_HERO_EVENTS)
+  const hiddenCount = ahead.length - events.length
 
   return (
     <div style={{ marginBottom: 14 }}>
@@ -151,6 +158,49 @@ function TodayHero({
       >
         What&apos;s on <span style={{ fontStyle: 'italic', color: 'var(--rust)' }}>today.</span>
       </h2>
+      {allDay.length > 0 && (
+        <div
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: 14,
+            color: 'var(--ink)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            paddingBottom: 6,
+          }}
+        >
+          <span
+            style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: '0.08em',
+              color: 'var(--rust)',
+              marginRight: 8,
+            }}
+          >
+            ALL DAY
+          </span>
+          {allDayLine(allDay)}
+        </div>
+      )}
+      {earlier.length > 0 && (
+        <div
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            fontStyle: 'italic',
+            color: 'var(--ink-muted)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            paddingBottom: 6,
+          }}
+        >
+          ✓ {earlier.length} earlier · {earlier.map((e) => e.summary || 'Untitled').join(', ')}
+        </div>
+      )}
       {events.length > 0 ? (
         <div>
           {events.map((event, i) => (
@@ -174,6 +224,21 @@ function TodayHero({
               +{hiddenCount} more today
             </div>
           )}
+        </div>
+      ) : earlier.length > 0 || allDay.length > 0 ? (
+        <div style={{ padding: '14px 0', borderTop: '2px solid var(--ink)' }}>
+          <p
+            className="m-0"
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontStyle: 'italic',
+              fontSize: 16,
+              color: 'var(--ink-muted)',
+              lineHeight: 1.4,
+            }}
+          >
+            — the rest of the day is clear —
+          </p>
         </div>
       ) : (
         <div style={{ padding: '14px 0', borderTop: '2px solid var(--ink)' }}>

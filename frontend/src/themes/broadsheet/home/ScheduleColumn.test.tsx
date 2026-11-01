@@ -1,11 +1,33 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { act, render, screen } from '@testing-library/react'
 import { ScheduleColumn } from './ScheduleColumn'
 
 const useGoogleCalendar = vi.hoisted(() => vi.fn())
 vi.mock('@/integrations/calendar', () => ({ useGoogleCalendar }))
 const useDrivingTime = vi.hoisted(() => vi.fn())
 vi.mock('@/integrations/driving-time', () => ({ useDrivingTime }))
+
+/** A timed event today with real start/end times, for the clock-aware tests. */
+const at = (summary: string, startHour: number, endHour: number) => ({
+  id: summary,
+  summary,
+  start: { dateTime: `2026-05-22T${String(startHour).padStart(2, '0')}:00:00-07:00` },
+  end: { dateTime: `2026-05-22T${String(endHour).padStart(2, '0')}:00:00-07:00` },
+})
+
+const allDay = (summary: string) => ({
+  id: summary,
+  summary,
+  start: { date: '2026-05-22' },
+  end: { date: '2026-05-23' },
+})
+
+const todayWith = (events: (ReturnType<typeof at> | ReturnType<typeof allDay>)[]) => ({
+  date: new Date('2026-05-22T00:00:00'),
+  label: 'Today',
+  isToday: true,
+  events,
+})
 
 const day = (dateIso: string, isToday: boolean, summaries: string[]) => ({
   date: new Date(dateIso),
@@ -24,6 +46,14 @@ describe('ScheduleColumn', () => {
     // useDrivingTime returns the Record<string, EventDriveInfo> map directly —
     // not a react-query-shaped result. See src/integrations/driving-time/useDrivingTime.ts.
     useDrivingTime.mockReturnValue({})
+    // `day()`'s events run 14:15-14:30; pin the clock before them so the Today
+    // hero treats every one as still ahead unless a test says otherwise.
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+    vi.setSystemTime(new Date('2026-05-22T09:00:00-07:00'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('renders today as the hero and the rest of the week as the week-ahead strip', () => {
@@ -134,5 +164,106 @@ describe('ScheduleColumn', () => {
     expect(screen.getByText('6 events')).toBeInTheDocument()
     // And the week-ahead still renders, which is the point of the cap.
     expect(screen.getByText('Tomorrow thing')).toBeInTheDocument()
+  })
+
+  describe('as the day goes on', () => {
+    const halloween = [
+      at('Parade', 9, 10),
+      at('Bake sale', 10, 11),
+      at('Costume swap', 11, 12),
+      at('Pumpkin carving', 12, 13),
+      at('Trick-or-treat', 17, 19),
+      at('Haunted house', 19, 21),
+    ]
+
+    it('gives the rows to what is still ahead and names what has ended in one line', () => {
+      vi.setSystemTime(new Date('2026-05-22T14:00:00-07:00'))
+      useGoogleCalendar.mockReturnValue({ data: [todayWith(halloween)], isLoading: false })
+
+      render(<ScheduleColumn />)
+      expect(screen.getByText('Trick-or-treat')).toBeInTheDocument()
+      expect(screen.getByText('Haunted house')).toBeInTheDocument()
+      expect(
+        screen.getByText('✓ 4 earlier · Parade, Bake sale, Costume swap, Pumpkin carving'),
+      ).toBeInTheDocument()
+      expect(screen.queryByText('Parade')).not.toBeInTheDocument()
+      expect(screen.queryByText(/more today/)).not.toBeInTheDocument()
+      // The count is still the whole day's.
+      expect(screen.getByText('6 events')).toBeInTheDocument()
+    })
+
+    it('keeps an event under way in the rows until it ends', () => {
+      vi.setSystemTime(new Date('2026-05-22T09:30:00-07:00'))
+      useGoogleCalendar.mockReturnValue({ data: [todayWith(halloween)], isLoading: false })
+
+      render(<ScheduleColumn />)
+      expect(screen.getByText('Parade')).toBeInTheDocument()
+      expect(screen.queryByText(/earlier/)).not.toBeInTheDocument()
+      expect(screen.getByText('+2 more today')).toBeInTheDocument()
+    })
+
+    it('moves a row out on its own once the event ends', () => {
+      vi.setSystemTime(new Date('2026-05-22T09:59:50-07:00'))
+      useGoogleCalendar.mockReturnValue({ data: [todayWith(halloween)], isLoading: false })
+
+      render(<ScheduleColumn />)
+      expect(screen.getByText('Parade')).toBeInTheDocument()
+
+      act(() => {
+        vi.advanceTimersByTime(30_000)
+      })
+      expect(screen.queryByText('Parade')).not.toBeInTheDocument()
+      expect(screen.getByText('✓ 1 earlier · Parade')).toBeInTheDocument()
+      // Parade's row went to the next event in line.
+      expect(screen.getByText('Trick-or-treat')).toBeInTheDocument()
+      expect(screen.getByText('+1 more today')).toBeInTheDocument()
+    })
+
+    it('says the day is done once everything has ended, not that it was empty', () => {
+      vi.setSystemTime(new Date('2026-05-22T22:00:00-07:00'))
+      useGoogleCalendar.mockReturnValue({ data: [todayWith(halloween)], isLoading: false })
+
+      render(<ScheduleColumn />)
+      expect(screen.getByText(/^✓ 6 earlier · Parade/)).toBeInTheDocument()
+      expect(screen.getByText('— the rest of the day is clear —')).toBeInTheDocument()
+      expect(screen.queryByText('— a rare blank docket —')).not.toBeInTheDocument()
+    })
+
+    it('puts all-day events in one line under the headline instead of in the rows', () => {
+      // 2026-11-01's real shape: two all-day birthdays, a timed reminder that
+      // morning, and one evening event.
+      vi.setSystemTime(new Date('2026-05-22T14:00:00-07:00'))
+      useGoogleCalendar.mockReturnValue({
+        data: [
+          todayWith([
+            allDay("John Oxaal's birthday"),
+            allDay("Alaire Orme's birthday"),
+            at("Alaire's Bday", 8, 9),
+            at('Bocce flea medicine', 18, 19),
+          ]),
+        ],
+        isLoading: false,
+      })
+
+      render(<ScheduleColumn />)
+      expect(screen.getByText('ALL DAY')).toBeInTheDocument()
+      expect(screen.getByText('Birthdays: John Oxaal, Alaire Orme')).toBeInTheDocument()
+      expect(screen.queryByText("John Oxaal's birthday")).not.toBeInTheDocument()
+      expect(screen.getByText("✓ 1 earlier · Alaire's Bday")).toBeInTheDocument()
+      expect(screen.getByText('Bocce flea medicine')).toBeInTheDocument()
+      expect(screen.getByText('4 events')).toBeInTheDocument()
+    })
+
+    it('says the rest of the day is clear when only all-day events are left', () => {
+      useGoogleCalendar.mockReturnValue({
+        data: [todayWith([allDay('Halloween')])],
+        isLoading: false,
+      })
+
+      render(<ScheduleColumn />)
+      expect(screen.getByText('Halloween')).toBeInTheDocument()
+      expect(screen.getByText('— the rest of the day is clear —')).toBeInTheDocument()
+      expect(screen.queryByText('— a rare blank docket —')).not.toBeInTheDocument()
+    })
   })
 })
