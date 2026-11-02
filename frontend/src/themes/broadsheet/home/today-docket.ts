@@ -7,12 +7,12 @@ import { isAllDay, isBirthdayEvent } from './event-format'
  * ended, `ahead` everything still to come or under way. Each keeps the
  * calendar's order.
  *
- * The Today hero only has room for a few rows, and before this split it filled
- * them in time order all day — on a busy day (Halloween, 2026-10-31) the
- * morning's finished events held every row while the evening's sat behind
- * "+N more today". The hero renders `ahead` in the rows and names `earlier` in
- * a single line instead, and puts `allDay` in a line of its own under the
- * headline (`allDayLine`), so a day of birthdays doesn't use up the rows either.
+ * The Today hero used to fill a few fixed rows in time order all day — on a
+ * busy day (Halloween, 2026-10-31) the morning's finished events held every row
+ * while the evening's sat behind "+N more today". Now `TodayDocket` lists
+ * `earlier` above a NOW rule and `ahead` below it, scrolled to now, and the
+ * hero puts `allDay` in a line of its own under the headline (`allDayLine`),
+ * where scrolling can't carry the day's birthdays out of sight.
  *
  * An event is over at its end time, so one under way keeps its row. An event
  * with no readable end counts as over once it starts; one whose start can't be
@@ -35,6 +35,14 @@ export function splitTodayDocket(
     else ahead.push(event)
   }
   return { allDay, earlier, ahead }
+}
+
+/** A timed event that has started and not yet ended — `TodayDocket` tags it,
+ *  since it sits below a NOW rule later than its own start time. */
+export function isUnderWay(event: CalendarEvent, now: Date): boolean {
+  if (!event.start.dateTime) return false
+  const start = new Date(event.start.dateTime).getTime()
+  return start <= now.getTime() && !hasEnded(event, now)
 }
 
 function hasEnded(event: CalendarEvent, now: Date): boolean {
