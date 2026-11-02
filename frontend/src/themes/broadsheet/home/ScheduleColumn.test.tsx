@@ -142,11 +142,10 @@ describe('ScheduleColumn', () => {
     expect(screen.getByText('+2 more')).toBeInTheDocument()
   })
 
-  it('caps the today hero at 4 events so it cannot push the week off the page', () => {
-    // The hero and the week-ahead strip share one fixed-height column, so an
-    // uncapped hero doesn't overflow itself — it clips the week below it.
-    // `?scenario=packed` (six events today) did exactly that: 30px cut off
-    // the bottom of the week-ahead strip.
+  it('lists every event today in the scrolling docket, not a capped few', () => {
+    // The hero and the week-ahead strip share one fixed-height column. The
+    // docket scrolls inside its own box rather than growing, so a packed day
+    // (`?scenario=packed` has six) can't push the week off the page.
     useGoogleCalendar.mockReturnValue({
       data: [
         day('2026-05-22T00:00:00', true, ['One', 'Two', 'Three', 'Four', 'Five', 'Six']),
@@ -156,13 +155,9 @@ describe('ScheduleColumn', () => {
     })
 
     render(<ScheduleColumn />)
-    expect(screen.getByText('Four')).toBeInTheDocument()
-    expect(screen.queryByText('Five')).not.toBeInTheDocument()
-    expect(screen.getByText('+2 more today')).toBeInTheDocument()
-    // The count above the headline still reports the real total, not the
-    // capped one — "4 events" when there are six would be a lie.
+    expect(screen.getAllByTestId('today-event')).toHaveLength(6)
+    expect(screen.queryByText(/more today/)).not.toBeInTheDocument()
     expect(screen.getByText('6 events')).toBeInTheDocument()
-    // And the week-ahead still renders, which is the point of the cap.
     expect(screen.getByText('Tomorrow thing')).toBeInTheDocument()
   })
 
@@ -176,47 +171,46 @@ describe('ScheduleColumn', () => {
       at('Haunted house', 19, 21),
     ]
 
-    it('gives the rows to what is still ahead and names what has ended in one line', () => {
+    const pastRows = () =>
+      screen
+        .getAllByTestId('today-event')
+        .filter((row) => row.hasAttribute('data-past'))
+        .map((row) => row.textContent)
+
+    it('keeps finished events in the list, struck through above a NOW rule', () => {
       vi.setSystemTime(new Date('2026-05-22T14:00:00-07:00'))
       useGoogleCalendar.mockReturnValue({ data: [todayWith(halloween)], isLoading: false })
 
       render(<ScheduleColumn />)
-      expect(screen.getByText('Trick-or-treat')).toBeInTheDocument()
+      expect(pastRows()).toEqual([
+        expect.stringContaining('Parade'),
+        expect.stringContaining('Bake sale'),
+        expect.stringContaining('Costume swap'),
+        expect.stringContaining('Pumpkin carving'),
+      ])
+      expect(screen.getByTestId('now-rule')).toHaveTextContent('NOW · 2:00 PM')
       expect(screen.getByText('Haunted house')).toBeInTheDocument()
-      expect(
-        screen.getByText('✓ 4 earlier · Parade, Bake sale, Costume swap, Pumpkin carving'),
-      ).toBeInTheDocument()
-      expect(screen.queryByText('Parade')).not.toBeInTheDocument()
-      expect(screen.queryByText(/more today/)).not.toBeInTheDocument()
-      // The count is still the whole day's.
       expect(screen.getByText('6 events')).toBeInTheDocument()
     })
 
-    it('keeps an event under way in the rows until it ends', () => {
-      vi.setSystemTime(new Date('2026-05-22T09:30:00-07:00'))
-      useGoogleCalendar.mockReturnValue({ data: [todayWith(halloween)], isLoading: false })
-
-      render(<ScheduleColumn />)
-      expect(screen.getByText('Parade')).toBeInTheDocument()
-      expect(screen.queryByText(/earlier/)).not.toBeInTheDocument()
-      expect(screen.getByText('+2 more today')).toBeInTheDocument()
-    })
-
-    it('moves a row out on its own once the event ends', () => {
+    it('moves an event above the NOW rule on its own once it ends', () => {
       vi.setSystemTime(new Date('2026-05-22T09:59:50-07:00'))
       useGoogleCalendar.mockReturnValue({ data: [todayWith(halloween)], isLoading: false })
 
       render(<ScheduleColumn />)
-      expect(screen.getByText('Parade')).toBeInTheDocument()
+      expect(pastRows()).toEqual([])
+      expect(screen.getByText('On now').closest('[data-testid="today-event"]')).toHaveTextContent(
+        'Parade',
+      )
 
       act(() => {
         vi.advanceTimersByTime(30_000)
       })
-      expect(screen.queryByText('Parade')).not.toBeInTheDocument()
-      expect(screen.getByText('✓ 1 earlier · Parade')).toBeInTheDocument()
-      // Parade's row went to the next event in line.
-      expect(screen.getByText('Trick-or-treat')).toBeInTheDocument()
-      expect(screen.getByText('+1 more today')).toBeInTheDocument()
+      expect(pastRows()).toEqual([expect.stringContaining('Parade')])
+      // Bake sale started as Parade ended, so the tag moved on with the clock.
+      expect(screen.getByText('On now').closest('[data-testid="today-event"]')).toHaveTextContent(
+        'Bake sale',
+      )
     })
 
     it('says the day is done once everything has ended, not that it was empty', () => {
@@ -224,12 +218,12 @@ describe('ScheduleColumn', () => {
       useGoogleCalendar.mockReturnValue({ data: [todayWith(halloween)], isLoading: false })
 
       render(<ScheduleColumn />)
-      expect(screen.getByText(/^✓ 6 earlier · Parade/)).toBeInTheDocument()
+      expect(pastRows()).toHaveLength(6)
       expect(screen.getByText('— the rest of the day is clear —')).toBeInTheDocument()
       expect(screen.queryByText('— a rare blank docket —')).not.toBeInTheDocument()
     })
 
-    it('puts all-day events in one line under the headline instead of in the rows', () => {
+    it('puts all-day events in one line under the headline instead of in the list', () => {
       // 2026-11-01's real shape: two all-day birthdays, a timed reminder that
       // morning, and one evening event.
       vi.setSystemTime(new Date('2026-05-22T14:00:00-07:00'))
@@ -249,7 +243,7 @@ describe('ScheduleColumn', () => {
       expect(screen.getByText('ALL DAY')).toBeInTheDocument()
       expect(screen.getByText('Birthdays: John Oxaal, Alaire Orme')).toBeInTheDocument()
       expect(screen.queryByText("John Oxaal's birthday")).not.toBeInTheDocument()
-      expect(screen.getByText("✓ 1 earlier · Alaire's Bday")).toBeInTheDocument()
+      expect(pastRows()).toEqual([expect.stringContaining("Alaire's Bday")])
       expect(screen.getByText('Bocce flea medicine')).toBeInTheDocument()
       expect(screen.getByText('4 events')).toBeInTheDocument()
     })

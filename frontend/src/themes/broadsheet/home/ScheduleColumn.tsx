@@ -1,122 +1,22 @@
 import { useMemo } from 'react'
-import { MapPin, Car } from 'lucide-react'
 import { useGoogleCalendar } from '@/integrations/calendar'
 import type { CalendarDay } from '@/integrations/calendar'
-import type { CalendarEvent } from '@/providers/google-calendar'
 import { useDrivingTime } from '@/integrations/driving-time'
 import type { EventDriveInfo } from '@/integrations/driving-time'
 import { Kicker } from '@/themes/broadsheet/ui/Kicker'
 import { formatEventTime } from './event-format'
 import { allDayLine, splitTodayDocket } from './today-docket'
 import { useNow } from './useNow'
-
-/** A rule lighter than `--rule` (the theme's hairline is full ink) for
- *  dividers that need to recede rather than draw a line — the mock's
- *  `C.ruleSoft`. Computed from the theme's own tokens rather than a new
- *  custom property (see the design brief's guidance on `ruleSoft`/`ink2`/
- *  `accent2`: approximate with what exists unless a token earns its place).
- *  `color-mix` is already how `grid` builds tinted surfaces from its palette
- *  tokens (e.g. `src/themes/grid/ui/WidgetCard.tsx`), so this follows suit. */
-const RULE_SOFT = 'color-mix(in srgb, var(--rule) 25%, var(--paper))'
+import { TodayDocket } from './TodayDocket'
 
 const TODAY_KICKER_DATE = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' })
 const WEEK_DAY_ABBR = new Intl.DateTimeFormat('en-US', { weekday: 'short' })
 const WEEK_DAY_DATE = new Intl.DateTimeFormat('en-US', { month: 'numeric', day: 'numeric' })
 
-/** One event in the Today hero: time, title + location, drive time. Mock:
- *  `broadsheet-v2.jsx:156-179`. */
-function TodayEventRow({
-  event,
-  driveInfo,
-  first,
-}: {
-  event: CalendarEvent
-  driveInfo?: EventDriveInfo
-  first: boolean
-}) {
-  return (
-    <div
-      className="grid items-baseline gap-3"
-      style={{
-        gridTemplateColumns: '70px 1fr auto',
-        padding: '9px 0',
-        borderTop: first ? '2px solid var(--ink)' : `1px solid ${RULE_SOFT}`,
-      }}
-    >
-      <div
-        style={{
-          fontFamily: 'var(--font-mono)',
-          fontSize: 12,
-          fontWeight: 700,
-          letterSpacing: '0.04em',
-          color: 'var(--ink)',
-        }}
-      >
-        {formatEventTime(event)}
-      </div>
-      <div className="min-w-0">
-        <div
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 17,
-            fontWeight: 600,
-            lineHeight: 1.25,
-            color: 'var(--ink)',
-          }}
-        >
-          {event.summary || 'Untitled'}
-        </div>
-        {event.location && (
-          <div
-            className="flex items-center gap-1 mt-0.5"
-            style={{ fontFamily: 'var(--font-body)', fontSize: 11.5, color: 'var(--ink-muted)' }}
-          >
-            <MapPin size={11} strokeWidth={1.5} />
-            {event.location}
-          </div>
-        )}
-      </div>
-      {driveInfo && (
-        <div className="text-right">
-          <div
-            className="flex items-center justify-end gap-1"
-            style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: 10,
-              color: 'var(--rust)',
-              letterSpacing: '0.06em',
-            }}
-          >
-            <Car size={11} strokeWidth={1.5} />
-            {driveInfo.displayText}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-/**
- * How many of today's events still ahead the hero ever renders in full.
- *
- * Every other list in this column was budgeted; this one wasn't, on the
- * reasoning that today's events are the point of the screen. But the hero
- * and the week-ahead strip share one fixed-height column, so an uncapped
- * hero doesn't overflow itself — it pushes the week off the bottom. Loading
- * `?scenario=packed` (six events today) clipped 30px off the week-ahead.
- *
- * Four keeps the hero comfortably inside the column at the row heights
- * these events actually render at (42-59px each, depending on whether a
- * location and drive time are present), with the remainder named rather
- * than silently dropped. Events that have already ended don't use a row —
- * `splitTodayDocket` moves them into the one-line "earlier" note.
- */
-const MAX_HERO_EVENTS = 4
-
 /** The lead block: today's date, headline, and today's events — all-day ones
- *  in a line under the headline, timed ones still ahead as rows, the ones
- *  already over as a single "earlier" line — or a written blank-docket line.
- *  Mock: `broadsheet-v2.jsx:146-188`. */
+ *  in a line under the headline, timed ones in a list that scrolls with the
+ *  clock (`TodayDocket`) — or a written blank-docket line. Mock:
+ *  `broadsheet-v2.jsx:146-188`. */
 function TodayHero({
   today,
   driveInfo,
@@ -127,8 +27,6 @@ function TodayHero({
   const now = useNow()
   const allEvents = today?.events ?? []
   const { allDay, earlier, ahead } = splitTodayDocket(allEvents, now)
-  const events = ahead.slice(0, MAX_HERO_EVENTS)
-  const hiddenCount = ahead.length - events.length
 
   return (
     <div style={{ marginBottom: 14 }}>
@@ -185,47 +83,9 @@ function TodayHero({
           {allDayLine(allDay)}
         </div>
       )}
-      {earlier.length > 0 && (
-        <div
-          style={{
-            fontFamily: 'var(--font-mono)',
-            fontSize: 10,
-            fontStyle: 'italic',
-            color: 'var(--ink-muted)',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            paddingBottom: 6,
-          }}
-        >
-          ✓ {earlier.length} earlier · {earlier.map((e) => e.summary || 'Untitled').join(', ')}
-        </div>
-      )}
-      {events.length > 0 ? (
-        <div>
-          {events.map((event, i) => (
-            <TodayEventRow
-              key={event.id}
-              event={event}
-              driveInfo={driveInfo[event.id]}
-              first={i === 0}
-            />
-          ))}
-          {hiddenCount > 0 && (
-            <div
-              style={{
-                fontFamily: 'var(--font-mono)',
-                fontSize: 10,
-                fontStyle: 'italic',
-                color: 'var(--ink-muted)',
-                paddingTop: 6,
-              }}
-            >
-              +{hiddenCount} more today
-            </div>
-          )}
-        </div>
-      ) : earlier.length > 0 || allDay.length > 0 ? (
+      {earlier.length > 0 || ahead.length > 0 ? (
+        <TodayDocket earlier={earlier} ahead={ahead} now={now} driveInfo={driveInfo} />
+      ) : allDay.length > 0 ? (
         <div style={{ padding: '14px 0', borderTop: '2px solid var(--ink)' }}>
           <p
             className="m-0"

@@ -19,14 +19,14 @@ import type { AqiLevel, UvLevel, PollenLevel } from '@/integrations/weather'
 /** A step deeper than `--paper` for the strip's background — the mock's
  *  `C.paperDeep`. No token for it (see the design brief's guidance on
  *  `ruleSoft`/`ink2`/`accent2`: approximate with what exists unless a token
- *  earns its place, the same reasoning `ScheduleColumn`'s `RULE_SOFT` and
+ *  earns its place, the same reasoning `TodayDocket`'s `RULE_SOFT` and
  *  `HouseholdColumn`'s `SOFT_ACCENT` already use for their own mock-only
  *  colours). */
 const PAPER_DEEP = 'color-mix(in srgb, var(--ink) 6%, var(--paper))'
 
 /** The mock's `C.ruleSoft` — a rule that recedes rather than draws a line,
  *  for the hourly grid's internal column dividers. Same formula as
- *  `ScheduleColumn`'s `RULE_SOFT`, redefined here rather than imported: this
+ *  `TodayDocket`'s `RULE_SOFT`, redefined here rather than imported: this
  *  codebase's established pattern (see `HouseholdColumn`'s `SOFT_ACCENT`) is
  *  each file re-deriving these from the shared tokens rather than a
  *  cross-file color util. */
