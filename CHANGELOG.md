@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.0](https://github.com/bbaldino/family-dashboard/compare/v0.22.0...v0.23.0) (2026-11-02)
+
+
+### Features
+
+* **home:** list all of today in a list that scrolls with the clock ([c84089c](https://github.com/bbaldino/family-dashboard/commit/c84089c49093d292b451961c3b9fa4f572c1fee7))
+
 ## [0.22.0](https://github.com/bbaldino/family-dashboard/compare/v0.21.0...v0.22.0) (2026-11-01)
 
 
