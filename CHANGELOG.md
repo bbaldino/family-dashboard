@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.1](https://github.com/bbaldino/family-dashboard/compare/v0.23.0...v0.23.1) (2026-11-03)
+
+
+### Bug Fixes
+
+* **ui:** turn off text selection outside form fields ([1efeb93](https://github.com/bbaldino/family-dashboard/commit/1efeb932e360c91fd80bb8faf9eceb229a97311c))
+
 ## [0.23.0](https://github.com/bbaldino/family-dashboard/compare/v0.22.0...v0.23.0) (2026-11-02)
 
 
