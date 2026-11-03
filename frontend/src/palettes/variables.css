@@ -164,8 +164,23 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* A wall display, not a document: a press that wanders before a drag
+     activates (the chore assignment chips wait 5px) otherwise starts a text
+     selection that takes over the gesture. Nothing outside a form field is
+     worth copying, so selection — and with it the long-press select/copy
+     menu — is off everywhere but where people type. The touch callout is
+     WebKit's own long-press menu (links, images). */
   body {
     @apply bg-background text-foreground;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  input,
+  textarea,
+  [contenteditable]:not([contenteditable='false']) {
+    -webkit-user-select: text;
+    user-select: text;
   }
   html {
     @apply font-sans;
