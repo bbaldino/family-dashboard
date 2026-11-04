@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.24.0](https://github.com/bbaldino/family-dashboard/compare/v0.23.1...v0.24.0) (2026-11-04)
+
+
+### Features
+
+* **media:** hold the volume bar to zoom it for fine control, and add ± buttons ([aa583a2](https://github.com/bbaldino/family-dashboard/commit/aa583a2048bf074434989dd8141af143be1fdabe))
+
 ## [0.23.1](https://github.com/bbaldino/family-dashboard/compare/v0.23.0...v0.23.1) (2026-11-03)
 
 
