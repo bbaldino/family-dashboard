@@ -192,7 +192,8 @@ describe('NowSpinning', () => {
       y: 0,
       toJSON: () => {},
     })
-    fireEvent.click(slider, { clientX: 50 })
+    fireEvent.pointerDown(slider, { clientX: 50 })
+    fireEvent.pointerUp(slider, { clientX: 50 })
     expect(setVolume).toHaveBeenCalledWith('kitchen', 50)
   })
 })

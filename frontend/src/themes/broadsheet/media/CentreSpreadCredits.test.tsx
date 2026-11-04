@@ -166,7 +166,8 @@ describe('CentreSpreadCredits', () => {
       y: 0,
       toJSON: () => {},
     })
-    fireEvent.click(slider, { clientX: 30 })
+    fireEvent.pointerDown(slider, { clientX: 30 })
+    fireEvent.pointerUp(slider, { clientX: 30 })
     expect(onSetVolume).toHaveBeenCalledWith('kitchen', 30)
   })
 })
